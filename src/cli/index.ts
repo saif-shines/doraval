@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runMain, showUsage } from "citty";
 
 const main = defineCommand({
   meta: {
@@ -12,6 +12,9 @@ const main = defineCommand({
     validate: () =>
       import("./commands/validate.js").then((m) => m.default),
     score: () => import("./commands/score.js").then((m) => m.default),
+  },
+  run() {
+    showUsage(main);
   },
 });
 

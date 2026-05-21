@@ -970,6 +970,9 @@ var main = defineCommand({
   subCommands: {
     validate: () => Promise.resolve().then(() => (init_validate(), exports_validate)).then((m) => m.default),
     score: () => Promise.resolve().then(() => (init_score(), exports_score)).then((m) => m.default)
+  },
+  run() {
+    showUsage(main);
   }
 });
 runMain(main);
