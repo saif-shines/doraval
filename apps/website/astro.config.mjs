@@ -10,6 +10,14 @@ export default defineConfig({
   integrations: [
     starlight({
       plugins: [lucode()],
+      expressiveCode: {
+        themes: ["github-dark", "github-light"],
+        styleOverrides: {
+          frames: {
+            tooltipSuccessBackground: "#22c55e",
+          },
+        },
+      },
       title: "doraval",
       description:
         "Lint and measure drift for AI agent skills and plugins",

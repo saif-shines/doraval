@@ -12,21 +12,16 @@ hero:
       link: https://github.com/saif-shines/doraval
       variant: minimal
       icon: external
+    - text: JSR
+      link: https://jsr.io/@hacksmith/doraval
+      variant: minimal
+      icon: external
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { PackageManagers } from 'starlight-package-managers';
 
-<CardGrid>
-  <Card title="skill validate" icon="approve-check">
-    Check frontmatter, required fields, and file layout. Instant, deterministic, zero network calls.
-  </Card>
-  <Card title="skill drift" icon="warning">
-    Measure deviation across 6 rubric categories — trigger, structure, voice, examples, guardrails, clarity.
-  </Card>
-  <Card title="skill judge" icon="star">
-    AI-driven qualitative assessment via LLM. *(Coming soon)*
-  </Card>
-  <Card title="CI-friendly" icon="setting">
-    JSON output and non-zero exit codes. Drop into any pipeline.
-  </Card>
-</CardGrid>
+<div style="display: flex; justify-content: center; width: 100%; margin-top: 2rem;">
+  <div style="position: relative; width: 100%; max-width: 36rem;">
+    <PackageManagers type="dlx" pkg="jsr add @hacksmith/doraval" pkgManagers={["npm", "pnpm", "yarn", "bun", "deno"]} />
+  </div>
+</div>
