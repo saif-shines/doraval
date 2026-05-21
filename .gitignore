@@ -40,3 +40,5 @@ package-lock.json
 docs/**
 !docs/specs/
 !docs/specs/**
+!docs/superpowers/
+!docs/superpowers/**
