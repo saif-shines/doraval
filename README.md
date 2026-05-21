@@ -1,10 +1,18 @@
 # doraval
 
-Validate, measure drift, and judge skills and plugins for AI coding agents.
+Lint and measure drift for AI agent skills and plugins.
 
-Supports any agent following the [Agent Skills spec](https://agentskills.io/specification): Claude Code, Cursor, Windsurf, Grok, and others.
+Works with any agent following the [Agent Skills spec](https://agentskills.io/specification) — Grok, Claude Code, Cursor, Windsurf, and others.
 
-## Install
+## Features
+
+- **Structural validation** — Verify frontmatter, required fields, and file layout
+- **Rubric drift detection** — Measure deviation across trigger phrases, voice, examples, guardrails, and clarity
+- **AI-driven judging** — Qualitative skill assessment via LLM *(coming soon)*
+- **CI-friendly** — JSON output and non-zero exit codes for pipeline integration
+- **Fast** — Deterministic checks run locally with zero network calls
+
+## Installation
 
 Requires [Bun](https://bun.sh) v1.2+.
 
@@ -12,11 +20,14 @@ Requires [Bun](https://bun.sh) v1.2+.
 bun install -g doraval
 ```
 
-Or run without installing:
+Or run directly:
 
 ```bash
 bunx doraval skill validate ./my-skill
 ```
+
+> [!NOTE]
+> doraval is also published on [JSR](https://jsr.io/@hacksmith/doraval) as `@hacksmith/doraval`.
 
 ## Usage
 
@@ -24,46 +35,87 @@ bunx doraval skill validate ./my-skill
 doraval skill <command> <path> [options]
 ```
 
-### Validate structure
+### `skill validate` — Structural checks
 
-Check that a skill has valid frontmatter, required fields, and expected file layout.
-
-```bash
-doraval skill validate ./skills/adding-mcp-oauth/
-```
-
-### Measure drift
-
-Measure how far a skill has drifted from rubric standards — trigger phrases, imperative voice, code examples, guardrails, and clarity.
+Verify that a skill directory has valid YAML frontmatter, required fields (`name`, `description`), a non-empty body, and expected sub-directories.
 
 ```bash
-doraval skill drift ./skills/adding-mcp-oauth/
+doraval skill validate ./skills/my-skill/
 ```
 
-### Judge (AI-driven)
+```
+  doraval skill validate — Structural validation
 
-Send a skill to an LLM for qualitative assessment of clarity, completeness, and effectiveness. *(Coming soon.)*
+  Path:  ./skills/my-skill/
+
+  ✓ YAML frontmatter present and parseable
+  ✓ name: "my-skill"
+  ✓ description field present
+  ✓ Markdown body is non-empty
+  ✓ references/ directory exists
+
+  Result: 0 error(s), 0 warning(s)
+```
+
+### `skill drift` — Rubric deviation
+
+Measure how far a skill has drifted from known-good rubric standards. Each check maps to a drift category:
+
+| Category | What it checks |
+|---|---|
+| **Trigger** | Description includes activation phrases (`Use when...`) |
+| **Structure** | Body has numbered steps or checklists |
+| **Voice** | Uses imperative language (`Create`, `Run`, `Ensure`) |
+| **Example** | Contains code blocks |
+| **Guardrail** | Has explicit `MUST` / `MUST NOT` constraints |
+| **Clarity** | Free of ambiguous words (`maybe`, `perhaps`, `consider`) |
 
 ```bash
-doraval skill judge ./skills/adding-mcp-oauth/
+doraval skill drift ./skills/my-skill/
 ```
 
-### Options
+```
+  doraval skill drift — Measuring rubric drift
+
+  Path:  ./skills/my-skill/
+
+  · Trigger    Description includes activation phrases
+  · Structure  Has step-by-step instructions
+  · Voice      Uses imperative voice ("Do X" not "You might X")
+  ↗ Example    No code blocks found — add examples if the skill involves code
+  ↗ Guardrail  No explicit constraints — add MUST / MUST NOT guardrails
+  · Clarity    No ambiguous language found
+
+  2/6 rubric areas have drifted.
+```
+
+### `skill judge` — AI-driven assessment
+
+> [!WARNING]
+> Not yet implemented. This command will send the skill to an LLM for qualitative review of clarity, completeness, and effectiveness.
+
+```bash
+doraval skill judge ./skills/my-skill/
+```
+
+## Options
+
+All `skill` subcommands accept these flags:
 
 | Flag | Short | Description |
 |---|---|---|
-| `--format` | `-f` | Output format: `table` (default) or `json` |
-| `--agent` | `-a` | Force a specific agent adapter |
+| `--format <type>` | `-f` | Output format: `table` (default) or `json` |
+| `--agent <name>` | `-a` | Force a specific agent adapter |
 | `--verbose` | `-v` | Show detailed diagnostics |
 | `--ci` | | Machine-friendly output, non-zero exit on issues |
 
-### JSON output (for CI/CD)
+### CI/CD integration
+
+Use `--format json` and `--ci` for pipeline-friendly output:
 
 ```bash
 doraval skill validate ./my-skill/ --format json --ci
 doraval skill drift ./my-skill/ --format json --ci
 ```
 
-## License
-
-MIT
+`validate` exits with code `1` when errors are found. Both commands write structured JSON to stdout when `--format json` is set — pipe it to `jq` or consume it programmatically.
