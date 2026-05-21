@@ -7,11 +7,11 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-<Aside type="caution" title="Coming soon">
-  `skill judge` is not yet implemented. This page describes the planned behavior.
+<Aside type="caution" title="Not yet implemented">
+  This command prints a notice and exits with code 2. The description below covers planned behavior.
 </Aside>
 
-`skill judge` sends a skill to an LLM for qualitative review — assessing clarity, completeness, and effectiveness beyond what deterministic checks can catch.
+`skill judge` will send a skill to an LLM for qualitative review — assessing clarity, completeness, and effectiveness beyond what deterministic checks can catch.
 
 ## Usage
 
@@ -21,24 +21,17 @@ doraval skill judge <path> [options]
 
 ## Why a separate command?
 
-`validate` and `drift` are deterministic — they check structure and heuristics locally with zero network calls. `judge` is different:
+`validate` and `drift` are deterministic and run locally with zero network calls. `judge` is different:
 
-1. **Requires an API key** or local model
-2. **Non-deterministic** — same input may produce different output
-3. **Slower** — network round-trip vs. instant local checks
-4. **Optional** — fast CI pipelines use `validate` + `drift`; deep feedback uses `judge`
-
-## Planned assessment areas
-
-- Is the instruction clear enough for an agent to follow?
-- Are there logical gaps in the steps?
-- Does the skill actually do what it claims?
-- Are edge cases handled?
+- **Requires an API key** or local model
+- **Non-deterministic** — same input may produce different output
+- **Slower** — network round-trip vs. instant local checks
+- **Optional** — fast CI uses `validate` + `drift`; deep feedback uses `judge`
 
 ## Options
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--format <type>` | `-f` | Output format: `table` (default) or `json` |
+| `--format <type>` | `-f` | `table` (default) or `json` |
 | `--agent <name>` | `-a` | Force a specific agent adapter |
 | `--verbose` | `-v` | Show detailed diagnostics |
