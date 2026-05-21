@@ -1,0 +1,54 @@
+---
+title: skill validate
+description: Structural validation for AI agent skills.
+sidebar:
+  order: 1
+---
+
+`skill validate` checks that a skill directory has the correct structure — valid YAML frontmatter, required fields, a non-empty body, and expected sub-directories.
+
+## Usage
+
+```bash
+doraval skill validate <path> [options]
+```
+
+## What it checks
+
+| Check | Description |
+|-------|-------------|
+| YAML frontmatter | Present and parseable |
+| `name` field | Required in frontmatter |
+| `description` field | Required in frontmatter |
+| Markdown body | Must be non-empty |
+| `references/` directory | Expected sub-directory |
+
+## Example output
+
+```
+  doraval skill validate — Structural validation
+
+  Path:  ./skills/my-skill/
+
+  ✓ YAML frontmatter present and parseable
+  ✓ name: "my-skill"
+  ✓ description field present
+  ✓ Markdown body is non-empty
+  ✓ references/ directory exists
+
+  Result: 0 error(s), 0 warning(s)
+```
+
+## Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--format <type>` | `-f` | Output format: `table` (default) or `json` |
+| `--agent <name>` | `-a` | Force a specific agent adapter |
+| `--verbose` | `-v` | Show detailed diagnostics |
+| `--ci` | | Machine-friendly output, non-zero exit on issues |
+
+## Exit codes
+
+- **0** — No errors found
+- **1** — One or more structural errors detected

@@ -1,0 +1,44 @@
+---
+title: Installation
+description: Install doraval on your machine.
+sidebar:
+  order: 2
+---
+
+doraval requires [Bun](https://bun.sh) v1.2 or later.
+
+## Install globally
+
+```bash
+bun install -g doraval
+```
+
+Once installed, run from anywhere:
+
+```bash
+doraval skill validate ./path/to/skill/
+```
+
+## Run without installing
+
+Use `bunx` to run doraval directly:
+
+```bash
+bunx doraval skill validate ./path/to/skill/
+```
+
+## JSR
+
+doraval is also published on [JSR](https://jsr.io/@hacksmith/doraval) as `@hacksmith/doraval`:
+
+```bash
+bunx jsr add @hacksmith/doraval
+```
+
+## Verify installation
+
+```bash
+doraval --help
+```
+
+You should see the top-level help with the `skill` subcommand listed.

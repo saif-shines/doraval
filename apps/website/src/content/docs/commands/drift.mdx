@@ -1,0 +1,53 @@
+---
+title: skill drift
+description: Measure rubric deviation in AI agent skills.
+sidebar:
+  order: 2
+---
+
+`skill drift` measures how far a skill has drifted from known-good rubric standards. Each check maps to a drift category — the output tells you exactly where to tighten up.
+
+## Usage
+
+```bash
+doraval skill drift <path> [options]
+```
+
+## Drift categories
+
+| Category | What it checks |
+|----------|---------------|
+| **Trigger** | Description includes activation phrases (`Use when...`) |
+| **Structure** | Body has numbered steps or checklists |
+| **Voice** | Uses imperative language (`Create`, `Run`, `Ensure`) |
+| **Example** | Contains code blocks |
+| **Guardrail** | Has explicit `MUST` / `MUST NOT` constraints |
+| **Clarity** | Free of ambiguous words (`maybe`, `perhaps`, `consider`) |
+
+## Example output
+
+```
+  doraval skill drift — Measuring rubric drift
+
+  Path:  ./skills/my-skill/
+
+  · Trigger    Description includes activation phrases
+  · Structure  Has step-by-step instructions
+  · Voice      Uses imperative voice ("Do X" not "You might X")
+  ↗ Example    No code blocks found — add examples if the skill involves code
+  ↗ Guardrail  No explicit constraints — add MUST / MUST NOT guardrails
+  · Clarity    No ambiguous language found
+
+  2/6 rubric areas have drifted.
+```
+
+A `·` means the category is clean. An `↗` means drift was detected, with a suggestion for how to fix it.
+
+## Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--format <type>` | `-f` | Output format: `table` (default) or `json` |
+| `--agent <name>` | `-a` | Force a specific agent adapter |
+| `--verbose` | `-v` | Show detailed diagnostics |
+| `--ci` | | Machine-friendly output, non-zero exit on issues |

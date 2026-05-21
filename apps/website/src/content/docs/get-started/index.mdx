@@ -1,0 +1,50 @@
+---
+title: What is doraval?
+description: Lint and measure drift for AI agent skills and plugins.
+sidebar:
+  order: 1
+---
+
+**doraval** is a CLI tool that validates, scores, and tests skills and plugins for AI coding agents.
+
+It works with any agent following the [Agent Skills spec](https://agentskills.io/specification) — Grok, Claude Code, Cursor, Windsurf, and others.
+
+## The problem
+
+AI agent skills are Markdown files with YAML frontmatter, structured steps, code examples, and guardrails. They're easy to write, but hard to keep consistent:
+
+- Missing frontmatter fields break agent discovery
+- Vague language ("maybe consider...") confuses agents
+- Missing examples leave agents guessing
+- No guardrails means unpredictable behavior
+
+Reviewing these by hand doesn't scale. doraval automates it.
+
+## What it does
+
+doraval has three subcommands, each targeting a different layer of quality:
+
+| Command | What it checks | Speed |
+|---------|---------------|-------|
+| `skill validate` | Structural correctness — frontmatter, required fields, file layout | Instant |
+| `skill drift` | Rubric deviation — trigger phrases, voice, examples, guardrails, clarity | Instant |
+| `skill judge` | AI-driven qualitative assessment via LLM | Seconds *(coming soon)* |
+
+## Quick start
+
+```bash
+# Install globally
+bun install -g doraval
+
+# Validate a skill
+doraval skill validate ./my-skill/
+
+# Check for rubric drift
+doraval skill drift ./my-skill/
+```
+
+Or run without installing:
+
+```bash
+bunx doraval skill validate ./my-skill/
+```
