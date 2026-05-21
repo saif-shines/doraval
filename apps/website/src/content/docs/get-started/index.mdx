@@ -5,41 +5,37 @@ sidebar:
   order: 1
 ---
 
-**doraval** is a CLI tool that validates, scores, and tests skills and plugins for AI coding agents.
+**doraval** is a CLI that validates structure and measures rubric drift for AI agent skills.
 
 It works with any agent following the [Agent Skills spec](https://agentskills.io/specification) — Grok, Claude Code, Cursor, Windsurf, and others.
 
-## The problem
+## Why
 
-AI agent skills are Markdown files with YAML frontmatter, structured steps, code examples, and guardrails. They're easy to write, but hard to keep consistent:
+AI agent skills are Markdown files with YAML frontmatter, structured steps, code examples, and guardrails. They look simple but are hard to keep consistent:
 
-- Missing frontmatter fields break agent discovery
-- Vague language ("maybe consider...") confuses agents
-- Missing examples leave agents guessing
-- No guardrails means unpredictable behavior
+- A missing `name` field means the agent can't discover the skill
+- Vague phrasing like "you might want to" confuses agents that need direct instructions
+- No code examples leaves agents guessing at syntax
+- No `MUST` / `MUST NOT` constraints means unpredictable behavior
 
-Reviewing these by hand doesn't scale. doraval automates it.
+Manual review doesn't scale. doraval automates these checks.
 
-## What it does
+## Three commands
 
-doraval has three subcommands, each targeting a different layer of quality:
-
-| Command | What it checks | Speed |
-|---------|---------------|-------|
+| Command | What it does | Speed |
+|---------|-------------|-------|
 | `skill validate` | Structural correctness — frontmatter, required fields, file layout | Instant |
-| `skill drift` | Rubric deviation — trigger phrases, voice, examples, guardrails, clarity | Instant |
-| `skill judge` | AI-driven qualitative assessment via LLM | Seconds *(coming soon)* |
+| `skill drift` | Rubric deviation — 6 categories of quality drift | Instant |
+| `skill judge` | AI-driven qualitative assessment via LLM | *(coming soon)* |
+
+`validate` and `drift` are deterministic and run locally with zero network calls. `judge` will require an LLM API key.
 
 ## Quick start
 
 ```bash
-# Install globally
 bun install -g doraval
 
-# Validate a skill
 doraval skill validate ./my-skill/
-
-# Check for rubric drift
 doraval skill drift ./my-skill/
 ```
 
