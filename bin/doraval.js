@@ -961,10 +961,63 @@ var init_score = __esm(() => {
 
 // src/cli/index.ts
 init_dist();
+// package.json
+var package_default = {
+  name: "doraval",
+  version: "0.0.2",
+  author: "Saif",
+  repository: {
+    type: "git",
+    url: "https://github.com/saif-shines/doraval.git"
+  },
+  devDependencies: {
+    "@types/bun": "latest"
+  },
+  bin: {
+    doraval: "./bin/doraval.js"
+  },
+  description: "Validate, score, and test skills and plugins for AI coding agents",
+  engines: {
+    bun: ">=1.2.0"
+  },
+  files: [
+    "bin/",
+    "dist/",
+    "README.md"
+  ],
+  keywords: [
+    "cli",
+    "skills",
+    "plugins",
+    "agent",
+    "validation",
+    "lint",
+    "claude-code",
+    "grok",
+    "cursor",
+    "windsurf",
+    "mcp"
+  ],
+  license: "MIT",
+  scripts: {
+    build: "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun",
+    dev: "bun run ./src/cli/index.ts",
+    test: "bun test",
+    prepublish: `node -e "const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}"`,
+    publish: "bun run build && bunx jsr publish"
+  },
+  type: "module",
+  dependencies: {
+    citty: "^0.2.2",
+    picocolors: "^1.1.1"
+  }
+};
+
+// src/cli/index.ts
 var main = defineCommand({
   meta: {
     name: "doraval",
-    version: "0.0.1",
+    version: package_default.version,
     description: "Validate, score, and test skills and plugins for AI coding agents"
   },
   subCommands: {
