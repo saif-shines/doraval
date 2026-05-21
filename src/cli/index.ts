@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { defineCommand, runMain, showUsage } from "citty";
-import pkg from "../../package.json";
+import pkg from "../../package.json" with { type: "json" };
 
 const main = defineCommand({
   meta: {
