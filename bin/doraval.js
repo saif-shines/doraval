@@ -46,7 +46,7 @@ var __export = (target, all) => {
 };
 var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
 
-// node_modules/citty/dist/_chunks/libs/scule.mjs
+// node_modules/.bun/citty@0.2.2/node_modules/citty/dist/_chunks/libs/scule.mjs
 function isUppercase(char = "") {
   if (NUMBER_CHAR_RE.test(char))
     return;
@@ -120,7 +120,7 @@ var init_scule = __esm(() => {
   ];
 });
 
-// node_modules/citty/dist/index.mjs
+// node_modules/.bun/citty@0.2.2/node_modules/citty/dist/index.mjs
 import { parseArgs as parseArgs$1 } from "util";
 function toArray(val) {
   if (Array.isArray(val))
@@ -594,7 +594,7 @@ var init_dist = __esm(() => {
   negativePrefixRe = /^no[-A-Z]/;
 });
 
-// node_modules/picocolors/picocolors.js
+// node_modules/.bun/picocolors@1.1.1/node_modules/picocolors/picocolors.js
 var require_picocolors = __commonJS((exports, module) => {
   var p = process || {};
   var argv = p.argv || [];
@@ -1046,12 +1046,19 @@ var package_default = {
     "mcp"
   ],
   license: "MIT",
+  workspaces: [
+    "apps/*"
+  ],
   scripts: {
     build: "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun",
     dev: "bun run ./src/cli/index.ts",
     test: "bun test",
     prepublish: `node -e "const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}"`,
-    publish: "bun run build && bunx jsr publish"
+    bump: "bun run scripts/bump.ts",
+    publish: "bun run build && bunx jsr publish",
+    "site:dev": "cd apps/website && bun run dev",
+    "site:build": "cd apps/website && bun run build",
+    "site:preview": "cd apps/website && bun run preview"
   },
   type: "module",
   dependencies: {
