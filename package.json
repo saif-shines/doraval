@@ -39,7 +39,8 @@
   "scripts": {
     "build": "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun",
     "dev": "bun run ./src/cli/index.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "publish": "bun run build && bunx jsr publish"
   },
   "type": "module",
   "dependencies": {
