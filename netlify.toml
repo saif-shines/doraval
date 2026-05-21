@@ -3,7 +3,3 @@
   command = "bun install && bun run build"
   publish = "dist"
 
-[[redirects]]
-  from = "/"
-  to = "/get-started/"
-  status = 200

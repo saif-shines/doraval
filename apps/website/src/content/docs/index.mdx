@@ -1,0 +1,32 @@
+---
+title: doraval
+description: Lint and measure drift for AI agent skills and plugins.
+template: splash
+hero:
+  tagline: Validate structure, measure rubric drift, and test AI agent skills — from the command line.
+  actions:
+    - text: Get Started
+      link: /get-started/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/saif-shines/doraval
+      variant: minimal
+      icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid>
+  <Card title="skill validate" icon="approve-check">
+    Check frontmatter, required fields, and file layout. Instant, deterministic, zero network calls.
+  </Card>
+  <Card title="skill drift" icon="warning">
+    Measure deviation across 6 rubric categories — trigger, structure, voice, examples, guardrails, clarity.
+  </Card>
+  <Card title="skill judge" icon="star">
+    AI-driven qualitative assessment via LLM. *(Coming soon)*
+  </Card>
+  <Card title="CI-friendly" icon="setting">
+    JSON output and non-zero exit codes. Drop into any pipeline.
+  </Card>
+</CardGrid>
