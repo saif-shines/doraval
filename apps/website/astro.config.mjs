@@ -4,9 +4,6 @@ import lucode from "lucode-starlight";
 
 export default defineConfig({
   site: "https://thehacksmith.dev",
-  redirects: {
-    "/": "/get-started/",
-  },
   image: {
     service: passthroughImageService(),
   },
