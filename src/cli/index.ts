@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 import { defineCommand, runMain, showUsage } from "citty";
+import pkg from "../../package.json";
 
 const main = defineCommand({
   meta: {
     name: "doraval",
-    version: "0.0.1",
+    version: pkg.version,
     description:
       "Validate, score, and test skills and plugins for AI coding agents",
   },
