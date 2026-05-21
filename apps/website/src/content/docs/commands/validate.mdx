@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-`skill validate` checks that a skill directory has the correct structure — valid YAML frontmatter, required fields, a non-empty body, and expected sub-directories.
+Checks that a skill directory has the correct structure — valid YAML frontmatter, required fields, a non-empty body, and expected sub-directories.
 
 ## Usage
 
@@ -13,17 +13,21 @@ sidebar:
 doraval skill validate <path> [options]
 ```
 
-## What it checks
+The `<path>` argument must point to a directory containing a `SKILL.md` file.
 
-| Check | Description |
-|-------|-------------|
-| YAML frontmatter | Present and parseable |
-| `name` field | Required in frontmatter |
-| `description` field | Required in frontmatter |
-| Markdown body | Must be non-empty |
-| `references/` directory | Expected sub-directory |
+## Checks
 
-## Example output
+| Check | Pass condition |
+|-------|---------------|
+| YAML frontmatter | Present, parseable, non-empty |
+| `name` | Required. Must be kebab-case (`a-z`, `0-9`, hyphens), 2–64 characters |
+| `description` | Required. Must be present in frontmatter |
+| Markdown body | Must be non-empty after frontmatter |
+| `references/` | Logged if directory exists |
+| `scripts/` | Logged if directory exists |
+| `assets/` | Logged if directory exists |
+
+## Example
 
 ```
   doraval skill validate — Structural validation
@@ -43,12 +47,34 @@ doraval skill validate <path> [options]
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--format <type>` | `-f` | Output format: `table` (default) or `json` |
+| `--format <type>` | `-f` | `table` (default) or `json` |
 | `--agent <name>` | `-a` | Force a specific agent adapter |
 | `--verbose` | `-v` | Show detailed diagnostics |
 | `--ci` | | Machine-friendly output, non-zero exit on issues |
 
+## JSON output
+
+```bash
+doraval skill validate ./my-skill/ --format json
+```
+
+Returns:
+
+```json
+{
+  "path": "./my-skill/",
+  "errors": [],
+  "warnings": [],
+  "passes": [
+    "YAML frontmatter present and parseable",
+    "name: \"my-skill\"",
+    "description field present",
+    "Markdown body is non-empty"
+  ]
+}
+```
+
 ## Exit codes
 
-- **0** — No errors found
-- **1** — One or more structural errors detected
+- **0** — No errors
+- **1** — Structural errors found, or path/SKILL.md not found
