@@ -1,7 +1,6 @@
 ---
 title: doraval
 description: Lint and measure drift for AI agent skills and plugins.
-template: splash
 hero:
   tagline: Validate structure, measure rubric drift, and test AI agent skills — from the command line.
   actions:
@@ -20,8 +19,4 @@ hero:
 
 import { PackageManagers } from 'starlight-package-managers';
 
-<div style="display: flex; justify-content: center; width: 100%; margin-top: 2rem;">
-  <div style="position: relative; width: 100%; max-width: 36rem;">
-    <PackageManagers type="dlx" pkg="jsr add @hacksmith/doraval" pkgManagers={["npm", "pnpm", "yarn", "bun", "deno"]} />
-  </div>
-</div>
+<PackageManagers type="dlx" pkg="jsr add @hacksmith/doraval" pkgManagers={["npm", "pnpm", "yarn", "bun", "deno"]} />
