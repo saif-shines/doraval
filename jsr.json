@@ -1,0 +1,6 @@
+{
+  "name": "@hacksmith/doraval",
+  "version": "0.0.1",
+  "license": "MIT",
+  "exports": "./src/cli/index.ts"
+}
