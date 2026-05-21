@@ -1,8 +1,21 @@
 /* Custom styles for doraval documentation site */
 
-.site-title {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+@layer lucode {
+  :root {
+    --sl-text-base: 1rem;
+    --sl-text-body: 1rem;
+    --sl-line-height: 1.75;
+    --sl-font: Inter, ui-sans-serif, system-ui, sans-serif;
+    --sl-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 17px;
+  }
+
+  .site-title {
+    font-family: var(--sl-font-mono);
+  }
+
+  .sidebar-content a {
+    font-size: 0.925rem;
+  }
 }
-
-
 
