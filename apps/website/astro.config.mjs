@@ -1,9 +1,9 @@
 import { defineConfig, passthroughImageService } from "astro/config";
 import starlight from "@astrojs/starlight";
-import starlightThemeGalaxy from "starlight-theme-galaxy";
+import starlightThemeTerminal from "starlight-theme-terminal";
 
 export default defineConfig({
-  site: "https://doraval.dev",
+  site: "https://thehacksmith.dev",
   redirects: {
     "/": "/get-started/",
   },
@@ -12,7 +12,7 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      plugins: [starlightThemeGalaxy()],
+      plugins: [starlightThemeTerminal()],
       title: "doraval",
       description:
         "Lint and measure drift for AI agent skills and plugins",
@@ -32,10 +32,6 @@ export default defineConfig({
         {
           label: "Commands",
           autogenerate: { directory: "commands" },
-        },
-        {
-          label: "Guides",
-          autogenerate: { directory: "guides" },
         },
       ],
     }),
