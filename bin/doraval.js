@@ -799,7 +799,7 @@ Fix the YAML syntax and retry.`);
         console.log(JSON.stringify(result, null, 2));
       } else {
         console.error(`
-  ${import_picocolors.default.bold("doraval")} v0.0.1 \u2014 Validating skill
+  ${import_picocolors.default.bold("doraval skill validate")} \u2014 Structural validation
 `);
         console.error(`  Path:  ${targetPath}
 `);
@@ -823,22 +823,22 @@ Fix the YAML syntax and retry.`);
   });
 });
 
-// src/cli/commands/score.ts
-var exports_score = {};
-__export(exports_score, {
-  default: () => score_default
+// src/cli/commands/drift.ts
+var exports_drift = {};
+__export(exports_drift, {
+  default: () => drift_default
 });
 import { existsSync as existsSync2 } from "fs";
 import { resolve as resolve2 } from "path";
-var import_picocolors2, score_default;
-var init_score = __esm(() => {
+var import_picocolors2, drift_default;
+var init_drift = __esm(() => {
   init_dist();
   init_frontmatter();
   import_picocolors2 = __toESM(require_picocolors(), 1);
-  score_default = defineCommand({
+  drift_default = defineCommand({
     meta: {
-      name: "score",
-      description: "Score quality and get actionable suggestions"
+      name: "drift",
+      description: "Measure how far a skill has drifted from rubric standards"
     },
     args: {
       path: {
@@ -885,76 +885,123 @@ var init_score = __esm(() => {
         console.error(`${import_picocolors2.default.red("\u2717")} Failed to parse YAML frontmatter in SKILL.md`);
         process.exit(1);
       }
-      const checks = [];
-      const suggestions = [];
+      const drifts = [];
       const desc = String(parsed.data.description || "");
       const hasTriggers = desc.includes("use when") || desc.includes("Use when") || desc.includes("trigger") || desc.includes("invoke");
-      checks.push({
-        pass: hasTriggers,
-        label: "Description includes trigger phrases"
+      drifts.push({
+        drifted: !hasTriggers,
+        category: "Trigger",
+        detail: hasTriggers ? "Description includes activation phrases" : 'No trigger phrases found \u2014 add "Use when..." to description'
       });
-      if (!hasTriggers) {
-        suggestions.push('Add trigger phrases to description (e.g. "Use when the user asks to...")');
-      }
       const body = parsed.content;
       const hasSteps = /^\s*\d+\.\s/m.test(body) || /^\s*[-*]\s/m.test(body);
-      checks.push({
-        pass: hasSteps,
-        label: "Has step-by-step instructions"
+      drifts.push({
+        drifted: !hasSteps,
+        category: "Structure",
+        detail: hasSteps ? "Has step-by-step instructions" : "No ordered steps or checklists \u2014 agent needs a clear sequence to follow"
       });
-      if (!hasSteps) {
-        suggestions.push("Add numbered steps or a checklist to guide the agent");
-      }
       const hasImperative = /\b(Create|Add|Run|Install|Configure|Set|Build|Use|Check|Verify|Ensure)\b/.test(body);
-      checks.push({
-        pass: hasImperative,
-        label: 'Uses imperative voice ("Do X" not "You might X")'
+      drifts.push({
+        drifted: !hasImperative,
+        category: "Voice",
+        detail: hasImperative ? 'Uses imperative voice ("Do X" not "You might X")' : "Passive or suggestive phrasing \u2014 use direct imperatives"
       });
       const hasCode = body.includes("```");
-      checks.push({ pass: hasCode, label: "Has code examples" });
-      if (!hasCode) {
-        suggestions.push("Add code examples if the skill involves code");
-      }
+      drifts.push({
+        drifted: !hasCode,
+        category: "Example",
+        detail: hasCode ? "Has code examples" : "No code blocks found \u2014 add examples if the skill involves code"
+      });
       const hasConstraints = /\bMUST\b/.test(body) || /\bMUST NOT\b/.test(body);
-      checks.push({
-        pass: hasConstraints,
-        label: "Has MUST/MUST NOT constraints"
+      drifts.push({
+        drifted: !hasConstraints,
+        category: "Guardrail",
+        detail: hasConstraints ? "Has MUST/MUST NOT constraints" : "No explicit constraints \u2014 add MUST / MUST NOT guardrails"
       });
-      if (!hasConstraints) {
-        suggestions.push("Add explicit constraints (MUST / MUST NOT) as guardrails");
-      }
       const ambiguous = body.match(/\b(maybe|possibly|consider|you might want to|perhaps)\b/gi);
-      const noAmbiguity = !ambiguous || ambiguous.length === 0;
-      checks.push({
-        pass: noAmbiguity,
-        label: "No ambiguous language"
+      const hasDriftedClarity = ambiguous && ambiguous.length > 0;
+      drifts.push({
+        drifted: !!hasDriftedClarity,
+        category: "Clarity",
+        detail: hasDriftedClarity ? `Ambiguous phrasing detected: ${ambiguous.slice(0, 3).join(", ")}` : "No ambiguous language found"
       });
-      if (!noAmbiguity) {
-        suggestions.push(`Remove ambiguous phrasing: ${ambiguous.slice(0, 3).join(", ")}`);
-      }
-      const passed = checks.filter((c) => c.pass).length;
-      const total = checks.length;
+      const driftCount = drifts.filter((d) => d.drifted).length;
+      const total = drifts.length;
       if (args.format === "json") {
-        console.log(JSON.stringify({ path: targetPath, passed, total, checks, suggestions }, null, 2));
+        console.log(JSON.stringify({ path: targetPath, driftCount, total, drifts }, null, 2));
       } else {
         console.error(`
-  ${import_picocolors2.default.bold("doraval")} v0.0.1 \u2014 Scoring skill
+  ${import_picocolors2.default.bold("doraval skill drift")} \u2014 Measuring rubric drift
 `);
-        for (const c of checks) {
-          const icon = c.pass ? import_picocolors2.default.green("\u2713") : import_picocolors2.default.yellow("\u26A0");
-          console.log(`  ${icon} ${c.label}`);
+        console.error(`  Path:  ${targetPath}
+`);
+        for (const d of drifts) {
+          const icon = d.drifted ? import_picocolors2.default.yellow("\u2197") : import_picocolors2.default.green("\xB7");
+          const cat = d.drifted ? import_picocolors2.default.yellow(d.category.padEnd(10)) : import_picocolors2.default.dim(d.category.padEnd(10));
+          console.log(`  ${icon} ${cat} ${d.detail}`);
         }
-        if (suggestions.length > 0) {
+        if (driftCount === 0) {
           console.log(`
-  ${import_picocolors2.default.bold("Suggestions:")}`);
-          suggestions.forEach((s, i) => {
-            console.log(`    ${i + 1}. ${s}`);
-          });
-        }
-        console.log(`
-  Score: ${passed}/${total} checks passed, ${suggestions.length} suggestion(s)
+  ${import_picocolors2.default.green("No drift detected.")} Skill aligns with rubric standards.
 `);
+        } else {
+          console.log(`
+  ${import_picocolors2.default.yellow(`${driftCount}/${total}`)} rubric areas have drifted.
+`);
+        }
       }
+    }
+  });
+});
+
+// src/cli/commands/judge.ts
+var exports_judge = {};
+__export(exports_judge, {
+  default: () => judge_default
+});
+var import_picocolors3, judge_default;
+var init_judge = __esm(() => {
+  init_dist();
+  import_picocolors3 = __toESM(require_picocolors(), 1);
+  judge_default = defineCommand({
+    meta: {
+      name: "judge",
+      description: "AI-driven qualitative assessment of a skill"
+    },
+    args: {
+      path: {
+        type: "positional",
+        description: "Path to skill directory",
+        required: true
+      },
+      agent: {
+        type: "string",
+        alias: "a",
+        description: "Force a specific agent adapter"
+      },
+      format: {
+        type: "string",
+        alias: "f",
+        description: "Output format (json or table)",
+        default: "table"
+      },
+      verbose: {
+        type: "boolean",
+        alias: "v",
+        description: "Show detailed diagnostics",
+        default: false
+      }
+    },
+    async run({ args }) {
+      console.error(`
+  ${import_picocolors3.default.bold("doraval skill judge")} \u2014 AI-driven assessment
+`);
+      console.error(`  Path:  ${args.path}
+`);
+      console.log(`  ${import_picocolors3.default.yellow("\u26A0")} Not yet implemented. This command will send the skill to an LLM`);
+      console.log(`    for qualitative review (clarity, completeness, effectiveness).
+`);
+      process.exit(2);
     }
   });
 });
@@ -964,7 +1011,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.0.5",
+  version: "0.0.6",
   author: "Saif",
   repository: {
     type: "git",
@@ -1014,6 +1061,20 @@ var package_default = {
 };
 
 // src/cli/index.ts
+var skill = defineCommand({
+  meta: {
+    name: "skill",
+    description: "Validate, measure drift, and judge AI agent skills"
+  },
+  subCommands: {
+    validate: () => Promise.resolve().then(() => (init_validate(), exports_validate)).then((m) => m.default),
+    drift: () => Promise.resolve().then(() => (init_drift(), exports_drift)).then((m) => m.default),
+    judge: () => Promise.resolve().then(() => (init_judge(), exports_judge)).then((m) => m.default)
+  },
+  run() {
+    showUsage(skill);
+  }
+});
 var main = defineCommand({
   meta: {
     name: "doraval",
@@ -1021,8 +1082,7 @@ var main = defineCommand({
     description: "Validate, score, and test skills and plugins for AI coding agents"
   },
   subCommands: {
-    validate: () => Promise.resolve().then(() => (init_validate(), exports_validate)).then((m) => m.default),
-    score: () => Promise.resolve().then(() => (init_score(), exports_score)).then((m) => m.default)
+    skill: () => Promise.resolve(skill)
   },
   run() {
     showUsage(main);

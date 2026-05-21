@@ -128,7 +128,7 @@ export default defineCommand({
       console.log(JSON.stringify(result, null, 2));
     } else {
       console.error(
-        `\n  ${pc.bold("doraval")} v0.0.1 — Validating skill\n`
+        `\n  ${pc.bold("doraval skill validate")} — Structural validation\n`
       );
       console.error(`  Path:  ${targetPath}\n`);
 
