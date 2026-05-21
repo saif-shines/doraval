@@ -1,6 +1,6 @@
 import { defineConfig, passthroughImageService } from "astro/config";
 import starlight from "@astrojs/starlight";
-import starlightThemeTerminal from "starlight-theme-terminal";
+import lucode from "lucode-starlight";
 
 export default defineConfig({
   site: "https://thehacksmith.dev",
@@ -12,7 +12,7 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      plugins: [starlightThemeTerminal()],
+      plugins: [lucode()],
       title: "doraval",
       description:
         "Lint and measure drift for AI agent skills and plugins",
