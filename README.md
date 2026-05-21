@@ -6,14 +6,16 @@ Supports any agent following the [Agent Skills spec](https://agentskills.io/spec
 
 ## Install
 
+Requires [Bun](https://bun.sh) v1.2+.
+
 ```bash
-npm install -g doraval
+bun install -g doraval
 ```
 
 Or run without installing:
 
 ```bash
-npx doraval validate ./my-skill
+bunx doraval validate ./my-skill
 ```
 
 ## Usage
