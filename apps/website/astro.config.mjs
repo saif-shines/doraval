@@ -38,6 +38,10 @@ export default defineConfig({
           label: "Commands",
           autogenerate: { directory: "commands" },
         },
+        {
+          label: "Concepts",
+          autogenerate: { directory: "concepts" },
+        },
       ],
     }),
   ],
