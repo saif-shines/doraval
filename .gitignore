@@ -37,8 +37,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .astro
 package-lock.json
 
-# docs: ignore scratch, track specs and backlog
-docs/**
-!docs/specs/
-!docs/specs/**
-!docs/backlog.md
+# local docs (not published)
+docs/
