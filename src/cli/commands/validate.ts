@@ -3,6 +3,9 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
 import { parseFrontmatter } from "../../core/frontmatter.js";
+import { validateSkillModel } from "../../core/skill-validate.js";
+
+const OPTIONAL_DIRS = ["references", "scripts", "assets"] as const;
 
 export default defineCommand({
   meta: {
@@ -59,11 +62,6 @@ export default defineCommand({
     }
 
     const raw = await Bun.file(skillMd).text();
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    const passes: string[] = [];
-
-    // Parse frontmatter
     let parsed;
     try {
       parsed = parseFrontmatter(raw);
@@ -74,55 +72,13 @@ export default defineCommand({
       process.exit(1);
     }
 
-    // Check: frontmatter exists
-    if (Object.keys(parsed.data).length === 0) {
-      errors.push("YAML frontmatter is empty or missing");
-    } else {
-      passes.push("YAML frontmatter present and parseable");
-    }
+    const existingDirs = OPTIONAL_DIRS.filter((dir) =>
+      existsSync(resolve(fullPath, dir))
+    );
+    const { errors, warnings, passes } = validateSkillModel(parsed, {
+      existingDirs: [...existingDirs],
+    });
 
-    // Check: name field
-    if (!parsed.data.name) {
-      errors.push('Missing required field: "name"');
-    } else {
-      const name = String(parsed.data.name);
-      const nameRegex = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
-      if (!nameRegex.test(name)) {
-        errors.push(
-          `Invalid name format: "${name}" — must be kebab-case (a-z, 0-9, hyphens)`
-        );
-      } else if (name.length < 2 || name.length > 64) {
-        errors.push(
-          `Name length out of range: ${name.length} chars (must be 2-64)`
-        );
-      } else {
-        passes.push(`name: "${name}"`);
-      }
-    }
-
-    // Check: description field
-    if (!parsed.data.description) {
-      errors.push('Missing required field: "description"');
-    } else {
-      passes.push("description field present");
-    }
-
-    // Check: body non-empty
-    if (!parsed.content.trim()) {
-      errors.push("Markdown body is empty");
-    } else {
-      passes.push("Markdown body is non-empty");
-    }
-
-    // Check: referenced directories exist
-    for (const dir of ["references", "scripts", "assets"]) {
-      const dirPath = resolve(fullPath, dir);
-      if (existsSync(dirPath)) {
-        passes.push(`${dir}/ directory exists`);
-      }
-    }
-
-    // Output
     if (args.format === "json") {
       const result = { path: targetPath, errors, warnings, passes };
       console.log(JSON.stringify(result, null, 2));
@@ -133,16 +89,16 @@ export default defineCommand({
       console.error(`  Path:  ${targetPath}\n`);
 
       for (const p of passes) {
-        console.log(`  ${pc.green("✓")} ${p}`);
+        console.error(`  ${pc.green("✓")} ${p}`);
       }
       for (const w of warnings) {
-        console.log(`  ${pc.yellow("⚠")} ${w}`);
+        console.error(`  ${pc.yellow("⚠")} ${w}`);
       }
       for (const e of errors) {
-        console.log(`  ${pc.red("✗")} ${e}`);
+        console.error(`  ${pc.red("✗")} ${e}`);
       }
 
-      console.log(
+      console.error(
         `\n  Result: ${errors.length} error(s), ${warnings.length} warning(s)\n`
       );
     }
@@ -150,5 +106,7 @@ export default defineCommand({
     if (errors.length > 0) {
       process.exit(1);
     }
+
+    process.exit(0);
   },
 });

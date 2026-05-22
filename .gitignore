@@ -37,8 +37,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .astro
 package-lock.json
 
-docs/**
-!docs/specs/
-!docs/specs/**
-!docs/superpowers/
-!docs/superpowers/**
+# local design docs (not published)
+docs/
