@@ -18,6 +18,20 @@ const skill = defineCommand({
   },
 });
 
+const journal = defineCommand({
+  meta: {
+    name: "journal",
+    description: "Decision memory with pushback — record, check, and sync project principles",
+  },
+  subCommands: {
+    init: () =>
+      import("./commands/journal/init.js").then((m) => m.default),
+  },
+  run() {
+    showUsage(journal);
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "doraval",
@@ -27,6 +41,7 @@ const main = defineCommand({
   },
   subCommands: {
     skill: () => Promise.resolve(skill),
+    journal: () => Promise.resolve(journal),
   },
   run() {
     showUsage(main);

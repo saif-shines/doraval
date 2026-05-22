@@ -1,0 +1,217 @@
+import { defineCommand } from "citty";
+import { existsSync } from "fs";
+import { basename, join } from "path";
+import { spawnSync } from "bun";
+import pc from "picocolors";
+import {
+  readConfig,
+  writeConfig,
+  ensureDoravalDirs,
+  getJournalsDir,
+  type JournalConfig,
+} from "../../../core/journal-config.js";
+
+// ── Helpers ────────────────────────────────────────────────────────
+
+function hasGhCli(): boolean {
+  const result = spawnSync(["gh", "--version"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return result.exitCode === 0;
+}
+
+function ghUser(): string | null {
+  const result = spawnSync(["gh", "api", "user", "--jq", ".login"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (result.exitCode !== 0) return null;
+  return result.stdout.toString().trim() || null;
+}
+
+function repoExists(repo: string): boolean {
+  const result = spawnSync(
+    ["gh", "api", `repos/${repo}`, "--jq", ".full_name"],
+    { stdout: "pipe", stderr: "pipe" }
+  );
+  return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
+}
+
+async function fetchRemoteFile(
+  repo: string,
+  path: string,
+  dest: string
+): Promise<boolean> {
+  const result = spawnSync(
+    ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", ".content"],
+    { stdout: "pipe", stderr: "pipe" }
+  );
+  if (result.exitCode !== 0) return false;
+
+  const b64 = result.stdout.toString().trim();
+  if (!b64) return false;
+
+  const decoded = Buffer.from(b64, "base64").toString("utf-8");
+  await Bun.write(dest, decoded);
+  return true;
+}
+
+function prompt(message: string, fallback: string): string {
+  process.stderr.write(`  ${message} ${pc.dim(`(${fallback})`)}: `);
+  const buf = new Uint8Array(1024);
+  const n = require("fs").readSync(0, buf);
+  const input = new TextDecoder().decode(buf.subarray(0, n)).trim();
+  return input || fallback;
+}
+
+// ── Command ────────────────────────────────────────────────────────
+
+export default defineCommand({
+  meta: {
+    name: "init",
+    description: "Register a project and link it to your journal repo",
+  },
+  args: {
+    repo: {
+      type: "string",
+      alias: "r",
+      description: "Journal repo (owner/name), e.g. saif-shines/saif-shines.md",
+    },
+    project: {
+      type: "string",
+      alias: "p",
+      description: "Project name (default: directory name)",
+    },
+  },
+
+  async run({ args }) {
+    console.error(
+      `\n  ${pc.bold("doraval journal init")} — Set up your journal\n`
+    );
+
+    // ── 0. Check gh CLI is available ───────────────────────────────
+    if (!hasGhCli()) {
+      console.error(
+        `  ${pc.red("✗")} The GitHub CLI (${pc.bold("gh")}) is not installed.\n`
+      );
+      console.error(
+        `  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`
+      );
+      console.error(`  Install it:\n`);
+      console.error(`    macOS:   ${pc.dim("brew install gh")}`);
+      console.error(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+      console.error(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
+      console.error(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
+      process.exit(1);
+    }
+
+    // ── 1. Resolve repo ────────────────────────────────────────────
+    let repo = args.repo as string | undefined;
+    if (!repo) {
+      const user = ghUser();
+      if (!user) {
+        console.error(
+          `  ${pc.yellow("⚠")} Not logged in to GitHub. Run ${pc.dim("gh auth login")} first.\n`
+        );
+        process.exit(1);
+      }
+      const defaultRepo = `${user}/${user}.md`;
+      repo = prompt("Journal repo", defaultRepo);
+    }
+
+    // ── 2. Resolve project name ────────────────────────────────────
+    let project = args.project as string | undefined;
+    if (!project) {
+      const defaultProject = basename(process.cwd());
+      project = prompt("Project name", defaultProject);
+    }
+
+    // ── 3. Verify repo exists on GitHub ───────────────────────────
+    if (!repoExists(repo!)) {
+      console.error(
+        `  ${pc.red("✗")} Repository ${pc.bold(repo!)} not found on GitHub.\n`
+      );
+      console.error(`  Create it first:\n`);
+      console.error(
+        `    ${pc.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}\n`
+      );
+      console.error(
+        `  The repo should be private. doraval will populate it on first ${pc.dim("doraval journal sync")}.\n`
+      );
+      process.exit(1);
+    }
+
+    // ── 4. Check if already initialized ────────────────────────────
+    const existing = await readConfig();
+    if (existing?.journal.projects[project]) {
+      console.error(
+        `  ${pc.yellow("⚠")} Project ${pc.bold(project)} is already registered.\n`
+      );
+      console.error(
+        `  Repo:   ${existing.journal.repo}`
+      );
+      console.error(
+        `  Remote: ${existing.journal.projects[project].remote_path}\n`
+      );
+      console.error(
+        `  To re-initialize, remove the project from ${pc.dim("~/.doraval/config.yml")} first.\n`
+      );
+      process.exit(0);
+    }
+
+    // ── 5. Build config ────────────────────────────────────────────
+    const journalsDir = getJournalsDir();
+    const remotePath = `projects/${project}.md`;
+    const localPath = join(journalsDir, `${project}.md`);
+
+    const config: JournalConfig = existing ?? {
+      journal: { repo: repo!, projects: {} },
+    };
+    // Update repo in case it changed
+    config.journal.repo = repo!;
+    config.journal.projects[project] = {
+      remote_path: remotePath,
+      local_path: localPath,
+    };
+
+    // ── 6. Create directories ──────────────────────────────────────
+    ensureDoravalDirs();
+
+    // ── 7. Fetch journal files from remote ─────────────────────────
+    console.error(`  ${pc.dim("Fetching journal files from")} ${repo}${pc.dim("...")}\n`);
+
+    const globalDest = join(journalsDir, "global.md");
+    const fetchedGlobal = await fetchRemoteFile(repo!, "global.md", globalDest);
+    if (fetchedGlobal) {
+      console.error(`  ${pc.green("✓")} global.md`);
+    } else {
+      console.error(`  ${pc.dim("·")} global.md ${pc.dim("(not found — will be created on first sync)")}`);
+      // Create an empty placeholder
+      await Bun.write(globalDest, "# Global Journal\n\nCross-project principles.\n");
+    }
+
+    const fetchedProject = await fetchRemoteFile(repo!, remotePath, localPath);
+    if (fetchedProject) {
+      console.error(`  ${pc.green("✓")} ${remotePath}`);
+    } else {
+      console.error(`  ${pc.dim("·")} ${remotePath} ${pc.dim("(not found — will be created on first sync)")}`);
+      await Bun.write(localPath, `# ${project} Journal\n\nProject-specific decisions.\n`);
+    }
+
+    // ── 8. Write config ────────────────────────────────────────────
+    await writeConfig(config);
+
+    console.error(
+      `\n  ${pc.green("✓")} Project ${pc.bold(project)} registered.\n`
+    );
+    console.error(`  Config:   ${pc.dim("~/.doraval/config.yml")}`);
+    console.error(`  Journals: ${pc.dim("~/.doraval/journals/")}`);
+    console.error(`  Pending:  ${pc.dim("~/.doraval/pending/")}\n`);
+    console.error(
+      `  Next: ${pc.dim("doraval journal list")} to view entries, ${pc.dim("doraval journal add")} to propose one.\n`
+    );
+
+    process.exit(0);
+  },
+});
