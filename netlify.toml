@@ -1,5 +1,4 @@
 [build]
-  base = "apps/website"
-  command = "bun install && bun run build"
-  publish = "dist"
+  command = "bun install && bun run site:build"
+  publish = "apps/website/dist"
 
