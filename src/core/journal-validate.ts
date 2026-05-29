@@ -1,0 +1,71 @@
+import type { JournalEntry } from "./journal-parse.js";
+
+export const CANONICAL_SCOPES = [
+  "naming",
+  "cli",
+  "architecture",
+  "testing",
+  "ux",
+  "api",
+  "docs",
+] as const;
+
+export const VALID_STATUSES = ["active", "superseded", "retired"] as const;
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export function validateEntry(entry: Partial<JournalEntry>): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Required fields
+  if (entry.pushback === undefined || entry.pushback === null) {
+    errors.push("pushback is required");
+  } else {
+    const pb = Number(entry.pushback);
+    if (!Number.isInteger(pb) || pb < 1 || pb > 10) {
+      errors.push("pushback must be an integer between 1 and 10");
+    }
+  }
+
+  if (!entry.scope || !Array.isArray(entry.scope) || entry.scope.length === 0) {
+    errors.push("scope is required and must be a non-empty array");
+  } else {
+    const invalidScopes = entry.scope.filter(
+      (s) => !CANONICAL_SCOPES.includes(s as any)
+    );
+    if (invalidScopes.length > 0) {
+      warnings.push(
+        `scope contains non-canonical tags: ${invalidScopes.join(", ")} (valid: ${CANONICAL_SCOPES.join(", ")})`
+      );
+    }
+  }
+
+  if (!entry.author || typeof entry.author !== "string") {
+    errors.push("author is required");
+  } else if (!entry.author.startsWith("human") && !entry.author.startsWith("agent:")) {
+    warnings.push(`author "${entry.author}" does not follow the recommended pattern (human or agent:<name>)`);
+  }
+
+  if (!entry.date || typeof entry.date !== "string") {
+    errors.push("date is required");
+  }
+
+  if (!entry.status || !VALID_STATUSES.includes(entry.status as any)) {
+    errors.push(`status must be one of: ${VALID_STATUSES.join(", ")}`);
+  }
+
+  if (!entry.title || typeof entry.title !== "string" || entry.title.trim() === "") {
+    errors.push("title is required");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}

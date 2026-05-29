@@ -26,6 +26,12 @@ const journal = defineCommand({
   subCommands: {
     init: () =>
       import("./commands/journal/init.js").then((m) => m.default),
+    list: () =>
+      import("./commands/journal/list.js").then((m) => m.default),
+    add: () =>
+      import("./commands/journal/add.js").then((m) => m.default),
+    sync: () =>
+      import("./commands/journal/sync.js").then((m) => m.default),
   },
   run() {
     showUsage(journal);

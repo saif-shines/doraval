@@ -8,6 +8,7 @@ import {
   writeConfig,
   ensureDoravalDirs,
   getJournalsDir,
+  sanitizeProjectName,
   type JournalConfig,
 } from "../../../core/journal-config.js";
 
@@ -104,6 +105,11 @@ export default defineCommand({
       alias: "p",
       description: "Project name (default: basename of current directory)",
     },
+    refresh: {
+      type: "boolean",
+      description: "Re-fetch journal files even if the project is already registered",
+      default: false,
+    },
   },
 
   async run({ args }) {
@@ -176,6 +182,9 @@ export default defineCommand({
       project = prompt("  Project name", defaultProject);
     }
 
+    // Sanitize for safety (filesystem + GitHub paths)
+    project = sanitizeProjectName(project);
+
     // ── 3. Verify repo exists on GitHub ───────────────────────────
     if (!repoExists(repo!)) {
       console.error(
@@ -193,7 +202,10 @@ export default defineCommand({
 
     // ── 4. Check if already initialized ────────────────────────────
     const existing = await readConfig();
-    if (existing?.journal.projects[project]) {
+    const alreadyRegistered = existing?.journal.projects[project];
+    const isRefresh = alreadyRegistered && args.refresh;
+
+    if (alreadyRegistered && !isRefresh) {
       console.error(
         `  ${pc.yellow("⚠")} Project ${pc.bold(project)} is already registered.\n`
       );
@@ -204,21 +216,24 @@ export default defineCommand({
         `  Remote: ${existing.journal.projects[project].remote_path}\n`
       );
       console.error(
-        `  To re-initialize, remove the project from ${pc.dim("~/.doraval/config.yml")} first.\n`
+        `  To refresh local files, run: ${pc.dim(`doraval journal init --refresh`)}\n` +
+          `  Or remove the project from ${pc.dim("~/.doraval/config.yml")} to fully re-initialize.\n`
       );
       process.exit(0);
     }
 
-    // ── 5. Build config ────────────────────────────────────────────
+    // ── 5. Prepare paths and config ────────────────────────────────
     const journalsDir = getJournalsDir();
     const remotePath = `projects/${project}.md`;
     const localPath = join(journalsDir, `${project}.md`);
 
+    // On refresh, prefer the already-stored repo unless --repo was explicitly passed
+    const effectiveRepo = isRefresh && !args.repo ? existing!.journal.repo : repo!;
+
     const config: JournalConfig = existing ?? {
-      journal: { repo: repo!, projects: {} },
+      journal: { repo: effectiveRepo, projects: {} },
     };
-    // Update repo in case it changed
-    config.journal.repo = repo!;
+    config.journal.repo = effectiveRepo;
     config.journal.projects[project] = {
       remote_path: remotePath,
       local_path: localPath,
@@ -227,20 +242,20 @@ export default defineCommand({
     // ── 6. Create directories ──────────────────────────────────────
     ensureDoravalDirs();
 
-    // ── 7. Fetch journal files from remote ─────────────────────────
-    console.error(`  ${pc.dim("Fetching journal files from")} ${repo}${pc.dim("...")}\n`);
+    // ── 7. Fetch / ensure journal files ────────────────────────────
+    const actionLabel = isRefresh ? "Refreshing" : "Fetching";
+    console.error(`  ${pc.dim(`${actionLabel} journal files from`)} ${effectiveRepo}${pc.dim("...")}\n`);
 
     const globalDest = join(journalsDir, "global.md");
-    const fetchedGlobal = await fetchRemoteFile(repo!, "global.md", globalDest);
+    const fetchedGlobal = await fetchRemoteFile(effectiveRepo, "global.md", globalDest);
     if (fetchedGlobal) {
       console.error(`  ${pc.green("✓")} global.md`);
     } else {
       console.error(`  ${pc.dim("·")} global.md ${pc.dim("(not found — will be created on first sync)")}`);
-      // Create an empty placeholder
       await Bun.write(globalDest, "# Global Journal\n\nCross-project principles.\n");
     }
 
-    const fetchedProject = await fetchRemoteFile(repo!, remotePath, localPath);
+    const fetchedProject = await fetchRemoteFile(effectiveRepo, remotePath, localPath);
     if (fetchedProject) {
       console.error(`  ${pc.green("✓")} ${remotePath}`);
     } else {

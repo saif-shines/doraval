@@ -35,6 +35,10 @@ export function getPendingDir(): string {
   return join(getDoravalDir(), "pending");
 }
 
+export function getPendingProjectDir(project: string): string {
+  return join(getPendingDir(), project);
+}
+
 // ── Ensure dirs ────────────────────────────────────────────────────
 
 export function ensureDoravalDirs(): void {
@@ -77,6 +81,37 @@ export function resolveProjectName(config: JournalConfig | null): string | null 
   if (!config) return null;
   const cwd = process.cwd();
   const base = cwd.split("/").pop() ?? "";
-  if (config.journal.projects[base]) return base;
+  if (config.journal.projects[base]) {
+    // Return sanitized version from config for safety
+    try {
+      return sanitizeProjectName(base);
+    } catch {
+      return null;
+    }
+  }
   return null;
+}
+
+/**
+ * Sanitizes a project name for safe use in filesystem paths and GitHub repo paths.
+ * Allows only safe characters. Throws on invalid input.
+ */
+export function sanitizeProjectName(name: string): string {
+  if (!name || typeof name !== "string") {
+    throw new Error("Project name must be a non-empty string");
+  }
+
+  // Strict allowlist for safety in paths and GitHub
+  let sanitized = name
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-_]+|[-_]+$/g, "")
+    .slice(0, 64);
+
+  if (!sanitized || sanitized.includes("..")) {
+    throw new Error(`Invalid or unsafe project name: "${name}"`);
+  }
+
+  return sanitized;
 }
