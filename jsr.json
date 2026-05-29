@@ -1,6 +1,6 @@
 {
   "name": "@hacksmith/doraval",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "license": "MIT",
   "description": "Validate, score, and test skills and plugins for AI coding agents",
   "exports": "./src/cli/index.ts"

@@ -15,8 +15,8 @@
   /* Reduce heading sizes site-wide (affects both content and Starlight UI surfaces) */
   :root {
     --sl-text-h1: 1.55rem;
-    --sl-text-h2: 1.18rem;
-    --sl-text-h3: 1.05rem;
+    --sl-text-h2: 1.08rem;
+    --sl-text-h3: 1rem;
     --sl-text-h4: 0.95rem;
   }
 
@@ -26,15 +26,17 @@
     font-weight: 600;
   }
 
+  /* Subheadings (##) — made noticeably smaller + tighter spacing */
   .sl-markdown-content h2 {
-    font-size: 1.12rem;
+    font-size: 1.02rem;
     line-height: 1.35;
-    padding-top: 0.75rem;
-    margin-top: 1.5rem;
+    padding-top: 0.5rem;
+    margin-top: 1.1rem;
+    font-weight: 500;
   }
 
   .sl-markdown-content h3 {
-    font-size: 1rem;
+    font-size: 0.95rem;
     line-height: 1.4;
   }
 
@@ -45,5 +47,36 @@
   .sidebar-content a {
     font-size: 0.9rem;
   }
+
+  /* Keep other lucode styles inside the layer */
+} /* close @layer lucode */
+
+/* =====================================================
+   HEADING OVERRIDES - MUST BE OUTSIDE ANY LAYER
+   Starlight's unlayered @media (min-width: 50em) rule was winning:
+     --sl-text-h2: var(--sl-text-4xl);  → 2.1875rem
+   This is why subheadings like "What You Get" stayed large.
+===================================================== */
+
+/* Desktop breakpoint - exactly matching Starlight's */
+@media (min-width: 50em) {
+  :root {
+    --sl-text-h1: 1.5rem !important;
+    --sl-text-h2: 1.18rem !important;   /* subheadings (##) like "What You Get" */
+    --sl-text-h3: 1.05rem !important;
+    --sl-text-h4: 0.95rem !important;
+  }
+}
+
+/* Direct selector with !important for maximum strength */
+.sl-markdown-content h2 {
+  font-size: 1.18rem !important;
+  font-weight: 500 !important;
+  margin-top: 1.1rem !important;
+  padding-top: 0.5rem !important;
+}
+
+.sl-markdown-content h1 {
+  font-size: 1.5rem !important;
 }
 
