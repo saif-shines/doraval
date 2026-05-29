@@ -108,16 +108,15 @@ Human/Agent → doraval journal add → ~/.doraval/pending/ → doraval journal 
 ## Commands
 
 ```bash
-doraval journal init     # Register a project (currently the only fully implemented command)
+doraval journal init     # One-time setup: register project + link to journal repo
+doraval journal list     # View active principles for the current project
+doraval journal add      # Propose a new decision / principle (stages locally)
+doraval journal sync     # Publish pending entries to the remote GitHub repo
 ```
 
-The following are planned (see the [implementation plan](https://github.com/saif-shines/doraval/blob/main/docs/specs/2026-05-25-journal-implementation-plan.md)):
+`journal check` and Principle drift integration into `skill drift` / `validate` are the major remaining pieces (see the [implementation plan](https://github.com/saif-shines/doraval/blob/main/docs/specs/2026-05-25-journal-implementation-plan.md)).
 
-- `doraval journal list` — View active principles
-- `doraval journal add` — Propose a new decision
-- `doraval journal check` — Check current work against the journal
-- `doraval journal sync` — Push pending entries to your private GitHub journal repo
-```
+For a clear explanation of the mental model and why the journal is built this way, see [How the Agent Journal Works](/concepts/journal-rationale).
 
 For details on the current command, see [journal init](/commands/journal-init).
 ## Integration with existing commands
