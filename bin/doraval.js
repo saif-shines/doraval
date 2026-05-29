@@ -1941,7 +1941,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.1.5",
+  version: "0.1.6",
   author: "Saif",
   repository: {
     type: "git",
@@ -1951,7 +1951,8 @@ var package_default = {
     "@types/bun": "latest"
   },
   bin: {
-    doraval: "./bin/doraval.js"
+    doraval: "./bin/doraval.js",
+    dora: "./bin/doraval.js"
   },
   description: "Validate, score, and test skills and plugins for AI coding agents",
   engines: {
