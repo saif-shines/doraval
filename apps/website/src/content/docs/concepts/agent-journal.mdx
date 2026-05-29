@@ -35,14 +35,20 @@ The journal has two layers:
 
 ## Setup
 
-Register a project once:
+Register a project with:
 
 ```bash
 doraval journal init
 ```
 
-This asks for the journal repo and project name, stores the mapping in `~/.doraval/config.yml`, and fetches the journal files. No per-project config needed.
+`journal init` is designed to be low-friction:
 
+- It detects a sensible default for your journal repo from the current git remote (preferred) or your active GitHub account.
+- It shows you where the default came from before prompting.
+- It remembers the journal repo you used previously, so subsequent projects are faster.
+- Fully scriptable via `--repo` / `--project` flags or `DORAVAL_JOURNAL_REPO` / `DORAVAL_PROJECT` environment variables.
+
+The command stores the mapping in `~/.doraval/config.yml` (never in your project) and fetches the journal files locally. No per-project config files, submodules, or symlinks are required.
 ## Entry format
 
 ```markdown
@@ -101,14 +107,19 @@ Human/Agent → doraval journal add → ~/.doraval/pending/ → doraval journal 
 
 ## Commands
 
-```
-doraval journal init           # One-time project registration
-doraval journal list           # Show active entries
-doraval journal check          # Check work against principles
-doraval journal add <title>    # Propose a new entry
-doraval journal sync           # Push pending, update index, archive
+```bash
+doraval journal init     # Register a project (currently the only fully implemented command)
 ```
 
+The following are planned (see the [implementation plan](https://github.com/saif-shines/doraval/blob/main/docs/specs/2026-05-25-journal-implementation-plan.md)):
+
+- `doraval journal list` — View active principles
+- `doraval journal add` — Propose a new decision
+- `doraval journal check` — Check current work against the journal
+- `doraval journal sync` — Push pending entries to your private GitHub journal repo
+```
+
+For details on the current command, see [journal init](/commands/journal-init).
 ## Integration with existing commands
 
 - `doraval skill drift` gains **Principle drift** — flags when a skill contradicts an active journal entry.

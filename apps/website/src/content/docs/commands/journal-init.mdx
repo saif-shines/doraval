@@ -1,0 +1,67 @@
+---
+title: journal init
+description: One-time setup for the Agent Journal.
+sidebar:
+  order: 4
+---
+
+Register a project with your private journal repository.
+
+```bash
+doraval journal init
+```
+
+This is currently the only fully implemented `doraval journal` command.
+
+## What it does
+
+`journal init` connects a local project directory to a journal stored in a private GitHub repository (following the pattern `yourname/yourname.md`).
+
+It:
+
+- Detects a good default for your journal repo (prefers the owner of the current git remote, falls back to your active GitHub account via the `gh` CLI).
+- Shows you exactly where the default came from.
+- Remembers the journal repo you chose previously for faster setup on new projects.
+- Creates the necessary local cache under `~/.doraval/`.
+- Fetches `global.md` and your project-specific journal file from GitHub.
+
+No files are added to your project repository. All configuration lives in your home directory.
+
+## Smart defaults
+
+`journal init` tries to be helpful:
+
+1. **Git remote** (highest priority) — If you're inside a git repo with a GitHub origin, it uses the owner of that repository.
+2. **Previously used journal repo** — If you've already run `init` before, it defaults to the same journal repo.
+3. **Active `gh` account** — Falls back to whatever `gh api user` returns.
+
+When the git remote owner and your active GitHub account differ (common for people with both personal and work accounts), it surfaces both so you can choose easily.
+
+## Non-interactive usage
+
+Fully scriptable:
+
+```bash
+doraval journal init --repo saif-shines/saif-shines.md --project doraval
+```
+
+Or via environment variables:
+
+```bash
+DORAVAL_JOURNAL_REPO=saif-shines/saif-shines.md \
+DORAVAL_PROJECT=doraval \
+doraval journal init
+```
+
+## Options
+
+| Flag              | Description                                      |
+|-------------------|--------------------------------------------------|
+| `-r, --repo`      | Journal repository (owner/name)                  |
+| `-p, --project`   | Project name (defaults to current directory name)|
+
+## After running init
+
+Your project is now linked. Future journal commands (once implemented) will automatically know which journal to read from and write to.
+
+See the [Agent Journal concept page](/concepts/agent-journal) for the broader vision.

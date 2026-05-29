@@ -30,6 +30,26 @@ function ghUser(): string | null {
   return result.stdout.toString().trim() || null;
 }
 
+/**
+ * Try to extract the owner from the current git repo's origin remote.
+ * Supports both https and ssh URL formats.
+ */
+export function getGitRemoteOwner(): string | null {
+  const result = spawnSync(["git", "config", "--get", "remote.origin.url"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (result.exitCode !== 0) return null;
+
+  const url = result.stdout.toString().trim();
+  if (!url) return null;
+
+  // https://github.com/owner/repo.git
+  // git@github.com:owner/repo.git
+  const match = url.match(/[:/]([^/]+)\/([^/.]+)(\.git)?$/);
+  return match ? match[1] : null;
+}
+
 function repoExists(repo: string): boolean {
   const result = spawnSync(
     ["gh", "api", `repos/${repo}`, "--jq", ".full_name"],
@@ -57,8 +77,9 @@ async function fetchRemoteFile(
   return true;
 }
 
-function prompt(message: string, fallback: string): string {
-  process.stderr.write(`  ${message} ${pc.dim(`(${fallback})`)}: `);
+function prompt(label: string, fallback: string): string {
+  // label should include leading spacing if desired, e.g. "  >"
+  process.stderr.write(`${label} ${pc.dim(`(${fallback})`)} `);
   const buf = new Uint8Array(1024);
   const n = require("fs").readSync(0, buf);
   const input = new TextDecoder().decode(buf.subarray(0, n)).trim();
@@ -76,12 +97,12 @@ export default defineCommand({
     repo: {
       type: "string",
       alias: "r",
-      description: "Journal repo (owner/name), e.g. saif-shines/saif-shines.md",
+      description: "Journal repo (owner/name). Smart default from git remote or gh account. Env: DORAVAL_JOURNAL_REPO",
     },
     project: {
       type: "string",
       alias: "p",
-      description: "Project name (default: directory name)",
+      description: "Project name (default: basename of current directory)",
     },
   },
 
@@ -107,24 +128,52 @@ export default defineCommand({
     }
 
     // ── 1. Resolve repo ────────────────────────────────────────────
-    let repo = args.repo as string | undefined;
+    // Precedence: --repo flag > DORAVAL_JOURNAL_REPO env > smart default
+    let repo = (args.repo as string | undefined) || process.env.DORAVAL_JOURNAL_REPO;
+
     if (!repo) {
-      const user = ghUser();
-      if (!user) {
+      const gitOwner = getGitRemoteOwner();
+      const ghLogin = ghUser();
+
+      // Build a smart default. Prefer git remote owner when available.
+      let defaultRepo: string;
+      let sourceNote = "";
+
+      if (gitOwner) {
+        defaultRepo = `${gitOwner}/${gitOwner}.md`;
+        if (ghLogin && ghLogin !== gitOwner) {
+          sourceNote = `  ${pc.dim("(from git remote; your active gh account is " + ghLogin + ")")}\n`;
+        } else {
+          sourceNote = `  ${pc.dim("(from git remote)")}\n`;
+        }
+      } else if (ghLogin) {
+        defaultRepo = `${ghLogin}/${ghLogin}.md`;
+        sourceNote = `  ${pc.dim("(from your active gh account)")}\n`;
+      } else {
         console.error(
           `  ${pc.yellow("⚠")} Not logged in to GitHub. Run ${pc.dim("gh auth login")} first.\n`
         );
         process.exit(1);
       }
-      const defaultRepo = `${user}/${user}.md`;
-      repo = prompt("Journal repo", defaultRepo);
+
+      // If we already have a config, prefer the previously used journal repo as default.
+      const existingConfig = await readConfig();
+      if (existingConfig?.journal.repo) {
+        defaultRepo = existingConfig.journal.repo;
+        sourceNote = `  ${pc.dim("(from your previous journal setup)")}\n`;
+      }
+
+      console.error(`  Journal repo ${pc.dim("(owner/name)")}`);
+      if (sourceNote) console.error(sourceNote);
+      repo = prompt("  >", defaultRepo);
     }
 
     // ── 2. Resolve project name ────────────────────────────────────
-    let project = args.project as string | undefined;
+    // Precedence: --project flag > DORAVAL_PROJECT env > basename of cwd
+    let project = (args.project as string | undefined) || process.env.DORAVAL_PROJECT;
     if (!project) {
       const defaultProject = basename(process.cwd());
-      project = prompt("Project name", defaultProject);
+      project = prompt("  Project name", defaultProject);
     }
 
     // ── 3. Verify repo exists on GitHub ───────────────────────────
@@ -203,13 +252,13 @@ export default defineCommand({
     await writeConfig(config);
 
     console.error(
-      `\n  ${pc.green("✓")} Project ${pc.bold(project)} registered.\n`
+      `\n  ${pc.green("✓")} Project ${pc.bold(project)} registered to ${pc.bold(repo!)}.\n`
     );
     console.error(`  Config:   ${pc.dim("~/.doraval/config.yml")}`);
     console.error(`  Journals: ${pc.dim("~/.doraval/journals/")}`);
     console.error(`  Pending:  ${pc.dim("~/.doraval/pending/")}\n`);
     console.error(
-      `  Next: ${pc.dim("doraval journal list")} to view entries, ${pc.dim("doraval journal add")} to propose one.\n`
+      `  You can now add entries with ${pc.dim("doraval journal add")} (coming soon) and view them with ${pc.dim("doraval journal list")}.\n`
     );
 
     process.exit(0);
