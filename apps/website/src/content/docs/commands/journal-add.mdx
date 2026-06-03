@@ -59,11 +59,12 @@ doraval journal add "We decided to always use 'update' for cache refreshes"
 | `-t, --tags`     | Comma-separated tags (renamed from --scope). Optional (default [] in relaxed path). Useful for both decisions and general notes. Valid: naming, cli, architecture, testing, ux, api, docs. (Legacy --scope still accepted for CLI compat.) |
 | `-a, --author`   | Default "human" (agents should use "agent:yourname"). |
 | `--status`       | active (default) | superseded | retired |
-| `-r, --rationale` | If you want to supply a one-line rationale on the CLI. The old automatic editor for multi-line rationale is no longer triggered by default (edit the pending file before sync, or use --json for rich content). |
+| `-r, --rationale` | Short one-line rationale on the CLI. For long/rich markdown bodies use `--raw-markdown <file-or->` (or `--json`). |
 | `-p, --project`  | Project name (defaults to directory mapping from config). |
 | `-j, --json`     | Full entry as JSON (or "-" for stdin). Highest precedence. |
+| `--raw-markdown` | Path to a raw markdown file (or "-" for stdin) to use as the entry body after the YAML metadata block. Title can be supplied positionally or extracted from the first "# Heading". Bypasses agent enrichment. Perfect for long-form notes and rich documents. |
 
-The entry is written as a single Markdown file with a `## Title` heading, a fenced YAML block, and the rationale body. The YAML always reflects the final values that were used (defaults, agent output, or explicit flags).
+The entry is written as a single Markdown file with a `## Title` heading, a fenced YAML block, and the body (rationale or raw markdown you provided). The YAML always reflects the final values that were used (defaults, agent output, or explicit flags). Long bodies supplied via --raw-markdown or --json are preserved exactly.
 
 ## What happens next
 
@@ -72,6 +73,37 @@ The entry is written as a single Markdown file with a `## Title` heading, a fenc
 - Until synced, it is invisible to `list` and other machines.
 
 See [journal sync](/commands/journal-sync) and the [single-writer pattern](/concepts/agent-journal#single-writer-pattern) explanation.
+
+## Long-form / raw markdown notes
+
+For long notes, research write-ups, design documents, or any rich markdown you want to capture "as is", use `--raw-markdown`:
+
+```bash
+# File that starts with a heading (title is auto-extracted)
+dora journal add --raw-markdown ./research/long-note.md --tags notes,research --pushback 1
+
+# Explicit title + raw body from file
+dora journal add "Meeting notes 2026-06" --raw-markdown ./notes/meeting.md --tags notes
+
+# From stdin (great with heredoc or pipes)
+cat <<'MD' | dora journal add --raw-markdown -
+# Architecture Decision: Use raw-markdown for long notes
+
+This note contains **rich** formatting, lists, and code.
+
+- Point one
+- Point two
+
+```ts
+// example
+const x = 1;
+```
+MD
+```
+
+The provided markdown becomes the body after the journal's YAML metadata block. The entry remains a first-class journal item (with tags, pushback, author, etc.) while the long content is stored verbatim.
+
+(For fully structured control from scripts/agents, `--json` with a long `"rationale"` string is still available.)
 
 ## Related
 

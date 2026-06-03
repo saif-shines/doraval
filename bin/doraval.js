@@ -1769,7 +1769,8 @@ var init_journal_validate = __esm(() => {
     "testing",
     "ux",
     "api",
-    "docs"
+    "docs",
+    "notes"
   ];
   VALID_STATUSES = ["active", "superseded", "retired"];
 });
@@ -1952,7 +1953,11 @@ var init_add = __esm(() => {
       rationale: {
         type: "string",
         alias: "r",
-        description: "Rationale / explanation (one line). For rich/multi-line content prefer the --json path or edit the pending file. The old auto-editor is no longer triggered on the main low-effort path."
+        description: "Rationale / explanation (one line). For rich/multi-line or long markdown content use --raw-markdown <file-or-> (or --json for full structured entries)."
+      },
+      rawMarkdown: {
+        type: "string",
+        description: 'Path to a raw markdown file (or "-" for stdin) to use as the entry body after the YAML block. Accepts --raw-markdown or --rawMarkdown. Title can be positional or extracted from the first "# Heading". Bypasses agent. Great for long notes and rich docs.'
       },
       project: {
         type: "string",
@@ -2019,8 +2024,32 @@ var init_add = __esm(() => {
           process.exit(1);
         }
       }
+      let rawBody;
+      const rawMdArg = args.rawMarkdown;
+      if (rawMdArg && !jsonInput) {
+        if (rawMdArg === "-" || rawMdArg === "") {
+          rawBody = (await new Response(Bun.stdin.stream()).text()).trim();
+        } else if (existsSync6(rawMdArg)) {
+          rawBody = (await Bun.file(rawMdArg).text()).trim();
+        } else {
+          rawBody = rawMdArg.trim();
+        }
+      }
       if (!title) {
-        title = args.title?.trim() || "Untitled decision";
+        title = args.title?.trim() || "";
+      }
+      if (!title && rawBody) {
+        const headingMatch = rawBody.match(/^#+\s+(.+?)(?:\r?\n|$)/m);
+        if (headingMatch) {
+          title = headingMatch[1].trim();
+          rawBody = rawBody.replace(/^#+\s+(.+?)(?:\r?\n|$)/m, "").trimStart();
+        } else {
+          console.error(`${import_picocolors9.default.red("\u2717")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
+          process.exit(1);
+        }
+      }
+      if (!title) {
+        title = "Untitled decision";
       }
       if (pushback === undefined) {
         const cliPb = args.pushback;
@@ -2034,12 +2063,20 @@ var init_add = __esm(() => {
           tags = cliTagsStr.split(",").map((s) => s.trim()).filter(Boolean);
         }
       }
-      if (!rationale) {
+      if (rawBody !== undefined && !args.pushback && !args.tags && !args.scope) {
+        if (tags.length === 0)
+          tags = ["notes"];
+        if (pushback === 5)
+          pushback = 1;
+      }
+      if (rawBody !== undefined) {
+        rationale = rawBody;
+      } else if (!rationale) {
         const cliRat = args.rationale?.trim();
         rationale = cliRat || title;
       }
       const cameFromExplicitJson = !!jsonInput;
-      const isThinInput = !args.pushback && !args.tags && !args.scope && !args.rationale;
+      const isThinInput = !args.pushback && !args.tags && !args.scope && !args.rationale && !rawMdArg;
       let agentCfg = null;
       let attemptedAgent = false;
       if (!cameFromExplicitJson && isThinInput) {
@@ -2544,7 +2581,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.2.0",
+  version: "0.2.1",
   author: "Saif",
   repository: {
     type: "git",

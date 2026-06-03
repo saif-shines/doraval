@@ -216,7 +216,11 @@ export default defineCommand({
     rationale: {
       type: "string",
       alias: "r",
-      description: "Rationale / explanation (one line). For rich/multi-line content prefer the --json path or edit the pending file. The old auto-editor is no longer triggered on the main low-effort path.",
+      description: "Rationale / explanation (one line). For rich/multi-line or long markdown content use --raw-markdown <file-or-> (or --json for full structured entries).",
+    },
+    rawMarkdown: {
+      type: "string",
+      description: 'Path to a raw markdown file (or "-" for stdin) to use as the entry body after the YAML block. Accepts --raw-markdown or --rawMarkdown. Title can be positional or extracted from the first "# Heading". Bypasses agent. Great for long notes and rich docs.',
     },
     project: {
       type: "string",
@@ -291,10 +295,42 @@ export default defineCommand({
       }
     }
 
-    // ── 2. Fall back to CLI args + relaxed defaults (the new low-effort human path)
-    if (!title) {
-      title = (args.title as string | undefined)?.trim() || "Untitled decision";
+    // ── 1b. Raw markdown body (for long notes / rich content). Supports file path, "-" (stdin), or literal content.
+    // Highest precedence for body after --json. Bypasses thin-input agent enrichment.
+    let rawBody: string | undefined;
+    const rawMdArg = args.rawMarkdown as string | undefined;
+    if (rawMdArg && !jsonInput) {
+      if (rawMdArg === "-" || rawMdArg === "") {
+        rawBody = (await new Response(Bun.stdin.stream()).text()).trim();
+      } else if (existsSync(rawMdArg)) {
+        rawBody = (await Bun.file(rawMdArg).text()).trim();
+      } else {
+        // Treat the value itself as literal markdown content (supports direct paste / shell $'...' / heredoc)
+        rawBody = rawMdArg.trim();
+      }
     }
+
+    // ── 2. Title resolution (positional first, then raw-markdown heading extraction)
+    if (!title) {
+      title = (args.title as string | undefined)?.trim() || "";
+    }
+
+    // Raw-markdown title extraction (before any "Untitled" default)
+    if (!title && rawBody) {
+      const headingMatch = rawBody.match(/^#+\s+(.+?)(?:\r?\n|$)/m);
+      if (headingMatch) {
+        title = headingMatch[1].trim();
+        rawBody = rawBody.replace(/^#+\s+(.+?)(?:\r?\n|$)/m, "").trimStart();
+      } else {
+        console.error(`${pc.red("✗")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
+        process.exit(1);
+      }
+    }
+
+    if (!title) {
+      title = "Untitled decision";
+    }
+
     if (pushback === undefined) {
       const cliPb = args.pushback as number | undefined;
       pushback = (cliPb !== undefined) ? Number(cliPb) : 5; // relaxed default
@@ -308,7 +344,16 @@ export default defineCommand({
       }
       // else leave as [] (relaxed default)
     }
-    if (!rationale) {
+
+    // Small UX bias for raw-markdown "notes": low pushback + notes tag when user didn't supply metadata.
+    if (rawBody !== undefined && !args.pushback && !args.tags && !args.scope) {
+      if (tags.length === 0) tags = ["notes"];
+      if (pushback === 5) pushback = 1;
+    }
+
+    if (rawBody !== undefined) {
+      rationale = rawBody;
+    } else if (!rationale) {
       const cliRat = (args.rationale as string | undefined)?.trim();
       rationale = cliRat || title; // relaxed default: seed from title
     }
@@ -317,7 +362,7 @@ export default defineCommand({
     // so that "not supplied" warnings don't fire when the agent will provide rich values,
     // and so agent output gets validated.
     const cameFromExplicitJson = !!jsonInput;
-    const isThinInput = !args.pushback && !args.tags && !args.scope && !args.rationale; // support legacy --scope in check
+    const isThinInput = !args.pushback && !args.tags && !args.scope && !args.rationale && !rawMdArg; // support legacy --scope in check; raw-markdown is explicit
 
     let agentCfg: any = null;
     let attemptedAgent = false;
@@ -374,10 +419,10 @@ export default defineCommand({
       }
     }
 
-    // Rationale is already resolved above (no auto editor on the plain `add "title"` path).
-    // If the caller wants a multi-paragraph rationale without putting it on the CLI,
-    // they can still use --rationale (one line) or edit the pending file before sync,
-    // or we can add an explicit --edit flag in the future.
+    // Rationale/body is already resolved above (no auto editor on the plain `add "title"` path).
+    // For rich/multi-line/long markdown bodies, use --raw-markdown <file-or-> (preferred for long notes)
+    // or --json (for full structured control). --rationale remains available for short one-liners.
+    // Edit the pending file before sync is always an option for last-minute tweaks.
     if (!rationale) {
       // Should not happen because of the default above, but be defensive
       rationale = title;

@@ -8,6 +8,7 @@ export const CANONICAL_TAGS = [
   "ux",
   "api",
   "docs",
+  "notes",
 ] as const;
 
 export const VALID_STATUSES = ["active", "superseded", "retired"] as const;

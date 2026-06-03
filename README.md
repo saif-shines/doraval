@@ -130,7 +130,7 @@ The journal lives in a private GitHub repo you control (by convention `yourname/
 dora init                     # Recommended: set up journal + the coding agent dora will use on the fly for rich `add`
 dora journal list             # View active principles
 dora journal update           # Pull latest from the remote into local cache
-dora journal add "..."        # Propose a decision or note (staged locally; uses configured agent + tags when input is minimal)
+dora journal add "..."        # Propose a decision/note (or long rich markdown via --raw-markdown); staged locally; uses configured agent when input is minimal
 dora journal sync             # Publish pending entries + refresh cache
 ```
 
