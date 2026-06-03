@@ -11,16 +11,12 @@ import {
   sanitizeProjectName,
   type JournalConfig,
 } from "../../../core/journal-config.js";
+import {
+  ensureGhCliOrExit,
+  refreshLocalJournalFile,
+} from "../../../core/journal-remote.js";
 
 // ── Helpers ────────────────────────────────────────────────────────
-
-function hasGhCli(): boolean {
-  const result = spawnSync(["gh", "--version"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return result.exitCode === 0;
-}
 
 function ghUser(): string | null {
   const result = spawnSync(["gh", "api", "user", "--jq", ".login"], {
@@ -57,25 +53,6 @@ function repoExists(repo: string): boolean {
     { stdout: "pipe", stderr: "pipe" }
   );
   return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
-}
-
-async function fetchRemoteFile(
-  repo: string,
-  path: string,
-  dest: string
-): Promise<boolean> {
-  const result = spawnSync(
-    ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", ".content"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-  if (result.exitCode !== 0) return false;
-
-  const b64 = result.stdout.toString().trim();
-  if (!b64) return false;
-
-  const decoded = Buffer.from(b64, "base64").toString("utf-8");
-  await Bun.write(dest, decoded);
-  return true;
 }
 
 function prompt(label: string, fallback: string): string {
@@ -118,20 +95,7 @@ export default defineCommand({
     );
 
     // ── 0. Check gh CLI is available ───────────────────────────────
-    if (!hasGhCli()) {
-      console.error(
-        `  ${pc.red("✗")} The GitHub CLI (${pc.bold("gh")}) is not installed.\n`
-      );
-      console.error(
-        `  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`
-      );
-      console.error(`  Install it:\n`);
-      console.error(`    macOS:   ${pc.dim("brew install gh")}`);
-      console.error(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-      console.error(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
-      console.error(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
-      process.exit(1);
-    }
+    ensureGhCliOrExit();
 
     // ── 1. Resolve repo ────────────────────────────────────────────
     // Precedence: --repo flag > DORAVAL_JOURNAL_REPO env > smart default
@@ -216,7 +180,8 @@ export default defineCommand({
         `  Remote: ${existing.journal.projects[project].remote_path}\n`
       );
       console.error(
-        `  To refresh local files, run: ${pc.dim(`doraval journal init --refresh`)}\n` +
+        `  To refresh local files, run: ${pc.dim(`doraval journal update`)}\n` +
+          `  (init --refresh still works for compatibility.)\n` +
           `  Or remove the project from ${pc.dim("~/.doraval/config.yml")} to fully re-initialize.\n`
       );
       process.exit(0);
@@ -247,16 +212,16 @@ export default defineCommand({
     console.error(`  ${pc.dim(`${actionLabel} journal files from`)} ${effectiveRepo}${pc.dim("...")}\n`);
 
     const globalDest = join(journalsDir, "global.md");
-    const fetchedGlobal = await fetchRemoteFile(effectiveRepo, "global.md", globalDest);
-    if (fetchedGlobal) {
+    const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
+    if (wroteGlobal) {
       console.error(`  ${pc.green("✓")} global.md`);
     } else {
       console.error(`  ${pc.dim("·")} global.md ${pc.dim("(not found — will be created on first sync)")}`);
       await Bun.write(globalDest, "# Global Journal\n\nCross-project principles.\n");
     }
 
-    const fetchedProject = await fetchRemoteFile(effectiveRepo, remotePath, localPath);
-    if (fetchedProject) {
+    const wroteProject = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
+    if (wroteProject) {
       console.error(`  ${pc.green("✓")} ${remotePath}`);
     } else {
       console.error(`  ${pc.dim("·")} ${remotePath} ${pc.dim("(not found — will be created on first sync)")}`);
@@ -273,7 +238,7 @@ export default defineCommand({
     console.error(`  Journals: ${pc.dim("~/.doraval/journals/")}`);
     console.error(`  Pending:  ${pc.dim("~/.doraval/pending/")}\n`);
     console.error(
-      `  You can now add entries with ${pc.dim("doraval journal add")} (coming soon) and view them with ${pc.dim("doraval journal list")}.\n`
+      `  Use ${pc.dim("doraval journal add")} to propose decisions and ${pc.dim("doraval journal list")} to view them.\n`
     );
 
     process.exit(0);

@@ -22,13 +22,15 @@ const skill = defineCommand({
 const journal = defineCommand({
   meta: {
     name: "journal",
-    description: "Decision memory with pushback — record, check, and sync project principles",
+    description: "Decision memory with pushback — record, view, and sync project principles",
   },
   subCommands: {
     init: () =>
       import("./commands/journal/init.js").then((m) => m.default),
     list: () =>
       import("./commands/journal/list.js").then((m) => m.default),
+    update: () =>
+      import("./commands/journal/update.js").then((m) => m.default),
     add: () =>
       import("./commands/journal/add.js").then((m) => m.default),
     sync: () =>

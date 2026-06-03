@@ -68,7 +68,7 @@ export default defineCommand({
         `${pc.yellow("⚠")} Could not find journal file for project "${project}".\n` +
           `Expected: ${pc.dim(projectFile)}\n` +
           `Journal repo: ${pc.dim(journalRepo)}\n\n` +
-          `Have you run ${pc.dim("doraval journal init --refresh")} (or the future ${pc.dim("doraval journal sync")})?`
+          `Run ${pc.dim("doraval journal update")} (or ${pc.dim("doraval journal init --refresh")}) to fetch it.`
       );
       process.exit(1);
     }
@@ -97,7 +97,7 @@ export default defineCommand({
           `  They will be staged locally until you run ${pc.dim("doraval journal sync")}.\n`
       );
       console.error(
-        `  If you expect content, try: ${pc.dim(`doraval journal init --refresh`)}\n`
+        `  If you expect content, try: ${pc.dim(`doraval journal update`)}\n`
       );
       return;
     }

@@ -1116,13 +1116,7 @@ function sanitizeProjectName(name) {
 }
 var init_journal_config = () => {};
 
-// src/cli/commands/journal/init.ts
-var exports_init = {};
-__export(exports_init, {
-  getGitRemoteOwner: () => getGitRemoteOwner,
-  default: () => init_default
-});
-import { basename, join as join2 } from "path";
+// src/core/journal-remote.ts
 var {spawnSync } = globalThis.Bun;
 function hasGhCli() {
   const result = spawnSync(["gh", "--version"], {
@@ -1131,8 +1125,92 @@ function hasGhCli() {
   });
   return result.exitCode === 0;
 }
+function ensureGhCliOrExit() {
+  if (hasGhCli())
+    return;
+  console.error(`  ${import_picocolors4.default.red("\u2717")} The GitHub CLI (${import_picocolors4.default.bold("gh")}) is not installed.
+`);
+  console.error(`  doraval uses ${import_picocolors4.default.bold("gh")} to fetch and sync journal files with GitHub.
+`);
+  console.error(`  Install it:
+`);
+  console.error(`    macOS:   ${import_picocolors4.default.dim("brew install gh")}`);
+  console.error(`    Linux:   ${import_picocolors4.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+  console.error(`    Windows: ${import_picocolors4.default.dim("winget install --id GitHub.cli")}
+`);
+  console.error(`  Then authenticate: ${import_picocolors4.default.dim("gh auth login")}
+`);
+  process.exit(1);
+}
+function fetchRemoteJournalFile(repo, path) {
+  const result = spawnSync(["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"], { stdout: "pipe", stderr: "pipe" });
+  if (result.exitCode !== 0) {
+    const stderr = result.stderr.toString();
+    if (stderr.includes("404") || stderr.includes("Not Found")) {
+      return null;
+    }
+    console.error(`Failed to fetch ${path} from ${repo}:`);
+    console.error(stderr);
+    process.exit(1);
+  }
+  try {
+    const parsed = JSON.parse(result.stdout.toString());
+    let decoded;
+    if (!parsed.encoding || parsed.encoding === "base64") {
+      decoded = Buffer.from(parsed.content, "base64").toString("utf-8");
+    } else {
+      decoded = parsed.content;
+    }
+    return {
+      content: decoded,
+      sha: parsed.sha
+    };
+  } catch {
+    console.error(`Unexpected response when fetching ${path} from ${repo}`);
+    process.exit(1);
+  }
+}
+async function refreshLocalJournalFile(repo, remotePath, localPath) {
+  const remote = fetchRemoteJournalFile(repo, remotePath);
+  if (!remote) {
+    return false;
+  }
+  await Bun.write(localPath, remote.content);
+  return true;
+}
+function getRemoteJournalFileMeta(repo, path) {
+  const result = spawnSync(["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"], { stdout: "pipe", stderr: "pipe" });
+  if (result.exitCode !== 0) {
+    const stderr = result.stderr.toString();
+    if (stderr.includes("404") || stderr.includes("Not Found")) {
+      return null;
+    }
+    console.error(`Failed to fetch ${path} from ${repo}:`);
+    console.error(stderr);
+    process.exit(1);
+  }
+  try {
+    return JSON.parse(result.stdout.toString());
+  } catch {
+    console.error(`Unexpected response when fetching ${path} from ${repo}`);
+    process.exit(1);
+  }
+}
+var import_picocolors4;
+var init_journal_remote = __esm(() => {
+  import_picocolors4 = __toESM(require_picocolors(), 1);
+});
+
+// src/cli/commands/journal/init.ts
+var exports_init = {};
+__export(exports_init, {
+  getGitRemoteOwner: () => getGitRemoteOwner,
+  default: () => init_default
+});
+import { basename, join as join2 } from "path";
+var {spawnSync: spawnSync2 } = globalThis.Bun;
 function ghUser() {
-  const result = spawnSync(["gh", "api", "user", "--jq", ".login"], {
+  const result = spawnSync2(["gh", "api", "user", "--jq", ".login"], {
     stdout: "pipe",
     stderr: "pipe"
   });
@@ -1141,7 +1219,7 @@ function ghUser() {
   return result.stdout.toString().trim() || null;
 }
 function getGitRemoteOwner() {
-  const result = spawnSync(["git", "config", "--get", "remote.origin.url"], {
+  const result = spawnSync2(["git", "config", "--get", "remote.origin.url"], {
     stdout: "pipe",
     stderr: "pipe"
   });
@@ -1154,32 +1232,22 @@ function getGitRemoteOwner() {
   return match ? match[1] : null;
 }
 function repoExists(repo) {
-  const result = spawnSync(["gh", "api", `repos/${repo}`, "--jq", ".full_name"], { stdout: "pipe", stderr: "pipe" });
+  const result = spawnSync2(["gh", "api", `repos/${repo}`, "--jq", ".full_name"], { stdout: "pipe", stderr: "pipe" });
   return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
 }
-async function fetchRemoteFile(repo, path, dest) {
-  const result = spawnSync(["gh", "api", `repos/${repo}/contents/${path}`, "--jq", ".content"], { stdout: "pipe", stderr: "pipe" });
-  if (result.exitCode !== 0)
-    return false;
-  const b64 = result.stdout.toString().trim();
-  if (!b64)
-    return false;
-  const decoded = Buffer.from(b64, "base64").toString("utf-8");
-  await Bun.write(dest, decoded);
-  return true;
-}
 function prompt(label, fallback) {
-  process.stderr.write(`${label} ${import_picocolors4.default.dim(`(${fallback})`)} `);
+  process.stderr.write(`${label} ${import_picocolors5.default.dim(`(${fallback})`)} `);
   const buf = new Uint8Array(1024);
   const n = __require("fs").readSync(0, buf);
   const input = new TextDecoder().decode(buf.subarray(0, n)).trim();
   return input || fallback;
 }
-var import_picocolors4, init_default;
+var import_picocolors5, init_default;
 var init_init = __esm(() => {
   init_dist();
   init_journal_config();
-  import_picocolors4 = __toESM(require_picocolors(), 1);
+  init_journal_remote();
+  import_picocolors5 = __toESM(require_picocolors(), 1);
   init_default = defineCommand({
     meta: {
       name: "init",
@@ -1204,23 +1272,9 @@ var init_init = __esm(() => {
     },
     async run({ args }) {
       console.error(`
-  ${import_picocolors4.default.bold("doraval journal init")} \u2014 Set up your journal
+  ${import_picocolors5.default.bold("doraval journal init")} \u2014 Set up your journal
 `);
-      if (!hasGhCli()) {
-        console.error(`  ${import_picocolors4.default.red("\u2717")} The GitHub CLI (${import_picocolors4.default.bold("gh")}) is not installed.
-`);
-        console.error(`  doraval uses ${import_picocolors4.default.bold("gh")} to fetch and sync journal files with GitHub.
-`);
-        console.error(`  Install it:
-`);
-        console.error(`    macOS:   ${import_picocolors4.default.dim("brew install gh")}`);
-        console.error(`    Linux:   ${import_picocolors4.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-        console.error(`    Windows: ${import_picocolors4.default.dim("winget install --id GitHub.cli")}
-`);
-        console.error(`  Then authenticate: ${import_picocolors4.default.dim("gh auth login")}
-`);
-        process.exit(1);
-      }
+      ensureGhCliOrExit();
       let repo = args.repo || process.env.DORAVAL_JOURNAL_REPO;
       if (!repo) {
         const gitOwner = getGitRemoteOwner();
@@ -1230,28 +1284,28 @@ var init_init = __esm(() => {
         if (gitOwner) {
           defaultRepo = `${gitOwner}/${gitOwner}.md`;
           if (ghLogin && ghLogin !== gitOwner) {
-            sourceNote = `  ${import_picocolors4.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
+            sourceNote = `  ${import_picocolors5.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
 `;
           } else {
-            sourceNote = `  ${import_picocolors4.default.dim("(from git remote)")}
+            sourceNote = `  ${import_picocolors5.default.dim("(from git remote)")}
 `;
           }
         } else if (ghLogin) {
           defaultRepo = `${ghLogin}/${ghLogin}.md`;
-          sourceNote = `  ${import_picocolors4.default.dim("(from your active gh account)")}
+          sourceNote = `  ${import_picocolors5.default.dim("(from your active gh account)")}
 `;
         } else {
-          console.error(`  ${import_picocolors4.default.yellow("\u26A0")} Not logged in to GitHub. Run ${import_picocolors4.default.dim("gh auth login")} first.
+          console.error(`  ${import_picocolors5.default.yellow("\u26A0")} Not logged in to GitHub. Run ${import_picocolors5.default.dim("gh auth login")} first.
 `);
           process.exit(1);
         }
         const existingConfig = await readConfig();
         if (existingConfig?.journal.repo) {
           defaultRepo = existingConfig.journal.repo;
-          sourceNote = `  ${import_picocolors4.default.dim("(from your previous journal setup)")}
+          sourceNote = `  ${import_picocolors5.default.dim("(from your previous journal setup)")}
 `;
         }
-        console.error(`  Journal repo ${import_picocolors4.default.dim("(owner/name)")}`);
+        console.error(`  Journal repo ${import_picocolors5.default.dim("(owner/name)")}`);
         if (sourceNote)
           console.error(sourceNote);
         repo = prompt("  >", defaultRepo);
@@ -1263,13 +1317,13 @@ var init_init = __esm(() => {
       }
       project = sanitizeProjectName(project);
       if (!repoExists(repo)) {
-        console.error(`  ${import_picocolors4.default.red("\u2717")} Repository ${import_picocolors4.default.bold(repo)} not found on GitHub.
+        console.error(`  ${import_picocolors5.default.red("\u2717")} Repository ${import_picocolors5.default.bold(repo)} not found on GitHub.
 `);
         console.error(`  Create it first:
 `);
-        console.error(`    ${import_picocolors4.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
+        console.error(`    ${import_picocolors5.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
 `);
-        console.error(`  The repo should be private. doraval will populate it on first ${import_picocolors4.default.dim("doraval journal sync")}.
+        console.error(`  The repo should be private. doraval will populate it on first ${import_picocolors5.default.dim("doraval journal sync")}.
 `);
         process.exit(1);
       }
@@ -1277,13 +1331,14 @@ var init_init = __esm(() => {
       const alreadyRegistered = existing?.journal.projects[project];
       const isRefresh = alreadyRegistered && args.refresh;
       if (alreadyRegistered && !isRefresh) {
-        console.error(`  ${import_picocolors4.default.yellow("\u26A0")} Project ${import_picocolors4.default.bold(project)} is already registered.
+        console.error(`  ${import_picocolors5.default.yellow("\u26A0")} Project ${import_picocolors5.default.bold(project)} is already registered.
 `);
         console.error(`  Repo:   ${existing.journal.repo}`);
         console.error(`  Remote: ${existing.journal.projects[project].remote_path}
 `);
-        console.error(`  To refresh local files, run: ${import_picocolors4.default.dim(`doraval journal init --refresh`)}
-` + `  Or remove the project from ${import_picocolors4.default.dim("~/.doraval/config.yml")} to fully re-initialize.
+        console.error(`  To refresh local files, run: ${import_picocolors5.default.dim(`doraval journal update`)}
+` + `  (init --refresh still works for compatibility.)
+` + `  Or remove the project from ${import_picocolors5.default.dim("~/.doraval/config.yml")} to fully re-initialize.
 `);
         process.exit(0);
       }
@@ -1301,24 +1356,24 @@ var init_init = __esm(() => {
       };
       ensureDoravalDirs();
       const actionLabel = isRefresh ? "Refreshing" : "Fetching";
-      console.error(`  ${import_picocolors4.default.dim(`${actionLabel} journal files from`)} ${effectiveRepo}${import_picocolors4.default.dim("...")}
+      console.error(`  ${import_picocolors5.default.dim(`${actionLabel} journal files from`)} ${effectiveRepo}${import_picocolors5.default.dim("...")}
 `);
       const globalDest = join2(journalsDir, "global.md");
-      const fetchedGlobal = await fetchRemoteFile(effectiveRepo, "global.md", globalDest);
-      if (fetchedGlobal) {
-        console.error(`  ${import_picocolors4.default.green("\u2713")} global.md`);
+      const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
+      if (wroteGlobal) {
+        console.error(`  ${import_picocolors5.default.green("\u2713")} global.md`);
       } else {
-        console.error(`  ${import_picocolors4.default.dim("\xB7")} global.md ${import_picocolors4.default.dim("(not found \u2014 will be created on first sync)")}`);
+        console.error(`  ${import_picocolors5.default.dim("\xB7")} global.md ${import_picocolors5.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(globalDest, `# Global Journal
 
 Cross-project principles.
 `);
       }
-      const fetchedProject = await fetchRemoteFile(effectiveRepo, remotePath, localPath);
-      if (fetchedProject) {
-        console.error(`  ${import_picocolors4.default.green("\u2713")} ${remotePath}`);
+      const wroteProject = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
+      if (wroteProject) {
+        console.error(`  ${import_picocolors5.default.green("\u2713")} ${remotePath}`);
       } else {
-        console.error(`  ${import_picocolors4.default.dim("\xB7")} ${remotePath} ${import_picocolors4.default.dim("(not found \u2014 will be created on first sync)")}`);
+        console.error(`  ${import_picocolors5.default.dim("\xB7")} ${remotePath} ${import_picocolors5.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(localPath, `# ${project} Journal
 
 Project-specific decisions.
@@ -1326,13 +1381,13 @@ Project-specific decisions.
       }
       await writeConfig(config);
       console.error(`
-  ${import_picocolors4.default.green("\u2713")} Project ${import_picocolors4.default.bold(project)} registered to ${import_picocolors4.default.bold(repo)}.
+  ${import_picocolors5.default.green("\u2713")} Project ${import_picocolors5.default.bold(project)} registered to ${import_picocolors5.default.bold(repo)}.
 `);
-      console.error(`  Config:   ${import_picocolors4.default.dim("~/.doraval/config.yml")}`);
-      console.error(`  Journals: ${import_picocolors4.default.dim("~/.doraval/journals/")}`);
-      console.error(`  Pending:  ${import_picocolors4.default.dim("~/.doraval/pending/")}
+      console.error(`  Config:   ${import_picocolors5.default.dim("~/.doraval/config.yml")}`);
+      console.error(`  Journals: ${import_picocolors5.default.dim("~/.doraval/journals/")}`);
+      console.error(`  Pending:  ${import_picocolors5.default.dim("~/.doraval/pending/")}
 `);
-      console.error(`  You can now add entries with ${import_picocolors4.default.dim("doraval journal add")} (coming soon) and view them with ${import_picocolors4.default.dim("doraval journal list")}.
+      console.error(`  Use ${import_picocolors5.default.dim("doraval journal add")} to propose decisions and ${import_picocolors5.default.dim("doraval journal list")} to view them.
 `);
       process.exit(0);
     }
@@ -1407,12 +1462,12 @@ __export(exports_list, {
   default: () => list_default
 });
 import { join as join3 } from "path";
-var import_picocolors5, list_default;
+var import_picocolors6, list_default;
 var init_list = __esm(() => {
   init_dist();
   init_journal_config();
   init_journal_parse();
-  import_picocolors5 = __toESM(require_picocolors(), 1);
+  import_picocolors6 = __toESM(require_picocolors(), 1);
   list_default = defineCommand({
     meta: {
       name: "list",
@@ -1446,9 +1501,9 @@ var init_list = __esm(() => {
         project = sanitizeProjectName(project);
       }
       if (!project) {
-        console.error(`${import_picocolors5.default.yellow("\u26A0")} No project mapping found.
+        console.error(`${import_picocolors6.default.yellow("\u26A0")} No project mapping found.
 
-` + `Run ${import_picocolors5.default.dim("doraval journal init")} first, or pass ${import_picocolors5.default.dim("--project <name>")}.`);
+` + `Run ${import_picocolors6.default.dim("doraval journal init")} first, or pass ${import_picocolors6.default.dim("--project <name>")}.`);
         process.exit(1);
       }
       const journalRepo = config?.journal.repo ?? "(unknown)";
@@ -1459,11 +1514,11 @@ var init_list = __esm(() => {
       try {
         raw = await Bun.file(projectFile).text();
       } catch {
-        console.error(`${import_picocolors5.default.yellow("\u26A0")} Could not find journal file for project "${project}".
-` + `Expected: ${import_picocolors5.default.dim(projectFile)}
-` + `Journal repo: ${import_picocolors5.default.dim(journalRepo)}
+        console.error(`${import_picocolors6.default.yellow("\u26A0")} Could not find journal file for project "${project}".
+` + `Expected: ${import_picocolors6.default.dim(projectFile)}
+` + `Journal repo: ${import_picocolors6.default.dim(journalRepo)}
 
-` + `Have you run ${import_picocolors5.default.dim("doraval journal init --refresh")} (or the future ${import_picocolors5.default.dim("doraval journal sync")})?`);
+` + `Run ${import_picocolors6.default.dim("doraval journal update")} (or ${import_picocolors6.default.dim("doraval journal init --refresh")}) to fetch it.`);
         process.exit(1);
       }
       let allEntries = parseJournalEntries(raw);
@@ -1475,37 +1530,145 @@ var init_list = __esm(() => {
         return;
       }
       console.error(`
-  ${import_picocolors5.default.bold("doraval journal list")} \u2014 ${project}  ${import_picocolors5.default.dim(`(from ${journalRepo})`)}
+  ${import_picocolors6.default.bold("doraval journal list")} \u2014 ${project}  ${import_picocolors6.default.dim(`(from ${journalRepo})`)}
 `);
       if (allEntries.length === 0) {
-        console.error(`  ${import_picocolors5.default.dim("No active entries found for")} ${import_picocolors5.default.bold(project)}.
+        console.error(`  ${import_picocolors6.default.dim("No active entries found for")} ${import_picocolors6.default.bold(project)}.
 `);
-        console.error(`  Journal repo: ${import_picocolors5.default.dim(journalRepo)}`);
-        console.error(`  Local file:   ${import_picocolors5.default.dim(projectFile)}
+        console.error(`  Journal repo: ${import_picocolors6.default.dim(journalRepo)}`);
+        console.error(`  Local file:   ${import_picocolors6.default.dim(projectFile)}
 `);
-        console.error(`  ${import_picocolors5.default.dim("This is normal for a freshly initialized project.")}
-` + `  Use ${import_picocolors5.default.dim("doraval journal add")} to propose decisions.
-` + `  They will be staged locally until you run ${import_picocolors5.default.dim("doraval journal sync")}.
+        console.error(`  ${import_picocolors6.default.dim("This is normal for a freshly initialized project.")}
+` + `  Use ${import_picocolors6.default.dim("doraval journal add")} to propose decisions.
+` + `  They will be staged locally until you run ${import_picocolors6.default.dim("doraval journal sync")}.
 `);
-        console.error(`  If you expect content, try: ${import_picocolors5.default.dim(`doraval journal init --refresh`)}
+        console.error(`  If you expect content, try: ${import_picocolors6.default.dim(`doraval journal update`)}
 `);
         return;
       }
       for (const entry of allEntries) {
         const pb = entry.pushback;
-        let pbColor = import_picocolors5.default.green;
+        let pbColor = import_picocolors6.default.green;
         if (pb >= 7)
-          pbColor = import_picocolors5.default.red;
+          pbColor = import_picocolors6.default.red;
         else if (pb >= 4)
-          pbColor = import_picocolors5.default.yellow;
+          pbColor = import_picocolors6.default.yellow;
         const scopeStr = entry.scope.join(", ");
-        const statusNote = entry.status !== "active" ? import_picocolors5.default.dim(` [${entry.status}]`) : "";
-        console.error(`  ${pbColor(String(pb).padStart(2))}  ${import_picocolors5.default.bold(entry.title)}${statusNote}`);
-        console.error(`      ${import_picocolors5.default.dim("scope:")} ${scopeStr}`);
-        console.error(`      ${import_picocolors5.default.dim("by:")} ${entry.author}  ${import_picocolors5.default.dim("on")} ${entry.date}
+        const statusNote = entry.status !== "active" ? import_picocolors6.default.dim(` [${entry.status}]`) : "";
+        console.error(`  ${pbColor(String(pb).padStart(2))}  ${import_picocolors6.default.bold(entry.title)}${statusNote}`);
+        console.error(`      ${import_picocolors6.default.dim("scope:")} ${scopeStr}`);
+        console.error(`      ${import_picocolors6.default.dim("by:")} ${entry.author}  ${import_picocolors6.default.dim("on")} ${entry.date}
 `);
       }
-      console.error(`  ${import_picocolors5.default.dim(`${allEntries.length} entries shown from ${journalRepo}.`)}
+      console.error(`  ${import_picocolors6.default.dim(`${allEntries.length} entries shown from ${journalRepo}.`)}
+`);
+    }
+  });
+});
+
+// src/cli/commands/journal/update.ts
+var exports_update = {};
+__export(exports_update, {
+  default: () => update_default
+});
+import { existsSync as existsSync4 } from "fs";
+import { join as join4 } from "path";
+var import_picocolors7, update_default;
+var init_update = __esm(() => {
+  init_dist();
+  init_journal_config();
+  init_journal_remote();
+  import_picocolors7 = __toESM(require_picocolors(), 1);
+  update_default = defineCommand({
+    meta: {
+      name: "update",
+      description: "Refresh local journal cache from the remote GitHub repo"
+    },
+    args: {
+      project: {
+        type: "string",
+        alias: "p",
+        description: "Project name (defaults to directory-based mapping)"
+      },
+      all: {
+        type: "boolean",
+        description: "Refresh all registered projects (and global.md)",
+        default: false
+      }
+    },
+    async run({ args }) {
+      ensureGhCliOrExit();
+      const config = await readConfig();
+      if (!config?.journal.repo) {
+        console.error(`${import_picocolors7.default.red("\u2717")} No journal repo configured. Run ${import_picocolors7.default.dim("doraval journal init")} first.`);
+        process.exit(1);
+      }
+      const journalRepo = config.journal.repo;
+      ensureDoravalDirs();
+      const journalsDir = getJournalsDir();
+      console.error(`
+  ${import_picocolors7.default.bold("doraval journal update")} \u2014 ${import_picocolors7.default.dim(journalRepo)}
+`);
+      const projectsToUpdate = [];
+      if (args.all) {
+        for (const name of Object.keys(config.journal.projects)) {
+          try {
+            projectsToUpdate.push(sanitizeProjectName(name));
+          } catch {}
+        }
+      } else {
+        let project = args.project;
+        if (!project) {
+          project = resolveProjectName(config) ?? undefined;
+        }
+        if (project) {
+          try {
+            projectsToUpdate.push(sanitizeProjectName(project));
+          } catch {
+            console.error(`${import_picocolors7.default.red("\u2717")} Invalid project name: ${project}`);
+            process.exit(1);
+          }
+        }
+      }
+      const globalLocal = join4(journalsDir, "global.md");
+      const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", globalLocal);
+      if (gotGlobal) {
+        console.error(`  ${import_picocolors7.default.green("\u2713")} global.md`);
+      } else {
+        console.error(`  ${import_picocolors7.default.dim("\xB7")} global.md ${import_picocolors7.default.dim("(not present on remote)")}`);
+      }
+      if (projectsToUpdate.length === 0) {
+        if (args.all) {
+          console.error(`
+  ${import_picocolors7.default.dim("No projects registered.")}
+`);
+        } else {
+          console.error(`
+  ${import_picocolors7.default.yellow("\u26A0")} No project mapping found.
+` + `  Run ${import_picocolors7.default.dim("doraval journal init")} or pass ${import_picocolors7.default.dim("--project <name>")} / ${import_picocolors7.default.dim("--all")}.
+`);
+        }
+        return;
+      }
+      for (const project of projectsToUpdate) {
+        const remotePath = `projects/${project}.md`;
+        const localPath = join4(journalsDir, `${project}.md`);
+        const got = await refreshLocalJournalFile(journalRepo, remotePath, localPath);
+        if (got) {
+          console.error(`  ${import_picocolors7.default.green("\u2713")} ${remotePath}`);
+        } else {
+          console.error(`  ${import_picocolors7.default.dim("\xB7")} ${remotePath} ${import_picocolors7.default.dim("(not present on remote \u2014 will be created on first sync)")}`);
+          if (!existsSync4(localPath)) {
+            await Bun.write(localPath, `# ${project} Journal
+
+Project-specific decisions.
+`);
+          }
+        }
+      }
+      const summary = args.all && projectsToUpdate.length > 1 ? `${projectsToUpdate.length} projects + global` : projectsToUpdate.length === 1 ? projectsToUpdate[0] : "journals";
+      console.error(`
+  ${import_picocolors7.default.dim("Local cache refreshed for")} ${import_picocolors7.default.bold(summary)}.
 `);
     }
   });
@@ -1570,22 +1733,22 @@ var exports_add = {};
 __export(exports_add, {
   default: () => add_default
 });
-import { existsSync as existsSync4 } from "fs";
-import { join as join4 } from "path";
-var {spawnSync: spawnSync2 } = globalThis.Bun;
+import { existsSync as existsSync5 } from "fs";
+import { join as join5 } from "path";
+var {spawnSync: spawnSync3 } = globalThis.Bun;
 function slugify(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "untitled";
 }
 async function openEditor(initialContent) {
   const editor = process.env.EDITOR || process.env.VISUAL || "vi";
   const tmpDir = process.env.TMPDIR || "/tmp";
-  const tmpFile = join4(tmpDir, `doraval-journal-${Date.now()}.md`);
+  const tmpFile = join5(tmpDir, `doraval-journal-${Date.now()}.md`);
   await Bun.write(tmpFile, initialContent);
-  const result = spawnSync2([editor, tmpFile], {
+  const result = spawnSync3([editor, tmpFile], {
     stdio: ["inherit", "inherit", "inherit"]
   });
   if (result.exitCode !== 0) {
-    console.error(import_picocolors6.default.red("Editor exited with error. Aborting."));
+    console.error(import_picocolors8.default.red("Editor exited with error. Aborting."));
     process.exit(1);
   }
   const content = await Bun.file(tmpFile).text();
@@ -1594,12 +1757,12 @@ async function openEditor(initialContent) {
   } catch {}
   return content;
 }
-var import_picocolors6, add_default;
+var import_picocolors8, add_default;
 var init_add = __esm(() => {
   init_dist();
   init_journal_config();
   init_journal_validate();
-  import_picocolors6 = __toESM(require_picocolors(), 1);
+  import_picocolors8 = __toESM(require_picocolors(), 1);
   add_default = defineCommand({
     meta: {
       name: "add",
@@ -1655,9 +1818,9 @@ var init_add = __esm(() => {
         project = sanitizeProjectName(project);
       }
       if (!project) {
-        console.error(`${import_picocolors6.default.yellow("\u26A0")} No project mapping found.
+        console.error(`${import_picocolors8.default.yellow("\u26A0")} No project mapping found.
 
-` + `Run ${import_picocolors6.default.dim("doraval journal init")} first, or pass ${import_picocolors6.default.dim("--project <name>")}.`);
+` + `Run ${import_picocolors8.default.dim("doraval journal init")} first, or pass ${import_picocolors8.default.dim("--project <name>")}.`);
         process.exit(1);
       }
       const title = args.title.trim();
@@ -1675,15 +1838,15 @@ var init_add = __esm(() => {
       };
       const validation = validateEntry(entry);
       if (!validation.valid) {
-        console.error(`${import_picocolors6.default.red("\u2717")} Invalid entry:
+        console.error(`${import_picocolors8.default.red("\u2717")} Invalid entry:
 `);
         for (const err of validation.errors) {
-          console.error(`  ${import_picocolors6.default.red("\u2022")} ${err}`);
+          console.error(`  ${import_picocolors8.default.red("\u2022")} ${err}`);
         }
         process.exit(1);
       }
       for (const warn of validation.warnings) {
-        console.error(`${import_picocolors6.default.yellow("\u26A0")} ${warn}`);
+        console.error(`${import_picocolors8.default.yellow("\u26A0")} ${warn}`);
       }
       let rationale = args.rationale?.trim();
       if (!rationale) {
@@ -1707,13 +1870,13 @@ status: ${status}
           const full = await openEditor(skeleton);
           rationale = full.replace(skeleton, "").trim();
         } else {
-          console.error(`${import_picocolors6.default.red("\u2717")} --rationale is required when not running interactively.
+          console.error(`${import_picocolors8.default.red("\u2717")} --rationale is required when not running interactively.
 ` + `You can also pipe rationale via stdin in a future version.`);
           process.exit(1);
         }
       }
       if (!rationale) {
-        console.error(`${import_picocolors6.default.red("\u2717")} Rationale cannot be empty.`);
+        console.error(`${import_picocolors8.default.red("\u2717")} Rationale cannot be empty.`);
         process.exit(1);
       }
       const content = `## ${title}
@@ -1730,24 +1893,24 @@ ${rationale}
 `;
       ensureDoravalDirs();
       const pendingDir = getPendingProjectDir(project);
-      if (!existsSync4(pendingDir)) {
-        Bun.write(join4(pendingDir, ".gitkeep"), "");
+      if (!existsSync5(pendingDir)) {
+        Bun.write(join5(pendingDir, ".gitkeep"), "");
       }
       const date = entry.date;
       const slug = slugify(title);
       const filename = `${date}-${slug}.md`;
-      const filePath = join4(pendingDir, filename);
+      const filePath = join5(pendingDir, filename);
       await Bun.write(filePath, content);
       console.error(`
-  ${import_picocolors6.default.green("\u2713")} Entry staged successfully.
+  ${import_picocolors8.default.green("\u2713")} Entry staged successfully.
 `);
-      console.error(`  Project:  ${import_picocolors6.default.bold(project)}`);
-      console.error(`  Title:    ${import_picocolors6.default.bold(title)}`);
+      console.error(`  Project:  ${import_picocolors8.default.bold(project)}`);
+      console.error(`  Title:    ${import_picocolors8.default.bold(title)}`);
       console.error(`  Pushback: ${pushback}`);
       console.error(`  Scope:    ${scope.join(", ")}`);
-      console.error(`  File:     ${import_picocolors6.default.dim(filePath)}
+      console.error(`  File:     ${import_picocolors8.default.dim(filePath)}
 `);
-      console.error(`  Run ${import_picocolors6.default.dim("doraval journal sync")} (once implemented) to publish it to your journal repo.
+      console.error(`  Run ${import_picocolors8.default.dim("doraval journal sync")} to publish it to your journal repo.
 `);
     }
   });
@@ -1758,27 +1921,9 @@ var exports_sync = {};
 __export(exports_sync, {
   default: () => sync_default
 });
-import { readdirSync, existsSync as existsSync5 } from "fs";
-import { join as join5 } from "path";
-var {spawnSync: spawnSync3 } = globalThis.Bun;
-function getGitHubFile(repo, path) {
-  const result = spawnSync3(["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"], { stdout: "pipe", stderr: "pipe" });
-  if (result.exitCode !== 0) {
-    const stderr = result.stderr.toString();
-    if (stderr.includes("404") || stderr.includes("Not Found")) {
-      return null;
-    }
-    console.error(import_picocolors7.default.red(`Failed to fetch ${path} from ${repo}:`));
-    console.error(stderr);
-    process.exit(1);
-  }
-  try {
-    return JSON.parse(result.stdout.toString());
-  } catch {
-    console.error(import_picocolors7.default.red(`Unexpected response when fetching ${path}`));
-    process.exit(1);
-  }
-}
+import { readdirSync, existsSync as existsSync6 } from "fs";
+import { join as join6 } from "path";
+var {spawnSync: spawnSync4 } = globalThis.Bun;
 function updateGitHubFile(repo, path, content, message, sha) {
   const payload = {
     message,
@@ -1801,21 +1946,22 @@ function updateGitHubFile(repo, path, content, message, sha) {
   if (sha) {
     args.push("-f", `sha=${sha}`);
   }
-  const result = spawnSync3(args, {
+  const result = spawnSync4(args, {
     stdout: "pipe",
     stderr: "pipe"
   });
   if (result.exitCode !== 0) {
-    console.error(import_picocolors7.default.red(`Failed to update ${path} on ${repo}:`));
+    console.error(import_picocolors9.default.red(`Failed to update ${path} on ${repo}:`));
     console.error(result.stderr.toString());
     process.exit(1);
   }
 }
-var import_picocolors7, sync_default;
+var import_picocolors9, sync_default;
 var init_sync = __esm(() => {
   init_dist();
   init_journal_config();
-  import_picocolors7 = __toESM(require_picocolors(), 1);
+  init_journal_remote();
+  import_picocolors9 = __toESM(require_picocolors(), 1);
   sync_default = defineCommand({
     meta: {
       name: "sync",
@@ -1843,46 +1989,58 @@ var init_sync = __esm(() => {
         project = sanitizeProjectName(project);
       }
       if (!project) {
-        console.error(`${import_picocolors7.default.yellow("\u26A0")} No project mapping found.
+        console.error(`${import_picocolors9.default.yellow("\u26A0")} No project mapping found.
 
-` + `Run ${import_picocolors7.default.dim("doraval journal init")} first, or pass ${import_picocolors7.default.dim("--project <name>")}.`);
+` + `Run ${import_picocolors9.default.dim("doraval journal init")} first, or pass ${import_picocolors9.default.dim("--project <name>")}.`);
         process.exit(1);
       }
       if (!config?.journal.repo) {
-        console.error(`${import_picocolors7.default.red("\u2717")} No journal repo configured. Run ${import_picocolors7.default.dim("doraval journal init")} first.`);
+        console.error(`${import_picocolors9.default.red("\u2717")} No journal repo configured. Run ${import_picocolors9.default.dim("doraval journal init")} first.`);
         process.exit(1);
       }
+      ensureGhCliOrExit();
       const journalRepo = config.journal.repo;
       const pendingDir = getPendingProjectDir(project);
-      if (!existsSync5(pendingDir)) {
-        console.error(`${import_picocolors7.default.yellow("\u26A0")} No pending entries for project "${project}". Nothing to sync.`);
-        process.exit(0);
-      }
-      const pendingFiles = readdirSync(pendingDir).filter((f) => f.endsWith(".md") && f !== ".gitkeep").sort();
-      if (pendingFiles.length === 0) {
-        console.error(`${import_picocolors7.default.yellow("\u26A0")} No pending entries for project "${project}". Nothing to sync.`);
-        process.exit(0);
-      }
       console.error(`
-  ${import_picocolors7.default.bold("doraval journal sync")} \u2014 ${project}
+  ${import_picocolors9.default.bold("doraval journal sync")} \u2014 ${project}
 `);
-      console.error(`  Journal repo: ${import_picocolors7.default.dim(journalRepo)}`);
+      console.error(`  Journal repo: ${import_picocolors9.default.dim(journalRepo)}`);
+      ensureDoravalDirs();
+      const journalsDir = getJournalsDir();
+      const remoteProjectPath = `projects/${project}.md`;
+      const localProjectPath = join6(journalsDir, `${project}.md`);
+      console.error(`  ${import_picocolors9.default.dim("Refreshing local cache from remote...")}`);
+      const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", join6(journalsDir, "global.md"));
+      if (gotGlobal) {
+        console.error(`  ${import_picocolors9.default.dim("\u2713 global.md")}`);
+      }
+      const gotProjectCache = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
+      if (gotProjectCache) {
+        console.error(`  ${import_picocolors9.default.dim(`\u2713 ${remoteProjectPath}`)}`);
+      }
+      const pendingFiles = existsSync6(pendingDir) ? readdirSync(pendingDir).filter((f) => f.endsWith(".md") && f !== ".gitkeep").sort() : [];
+      if (pendingFiles.length === 0) {
+        console.error(`
+  ${import_picocolors9.default.yellow("\u26A0")} No pending entries. Local cache is now up to date.
+`);
+        process.exit(0);
+      }
       console.error(`  Found ${pendingFiles.length} pending entr${pendingFiles.length === 1 ? "y" : "ies"}
 `);
       const remotePath = `projects/${project}.md`;
-      const currentFile = getGitHubFile(journalRepo, remotePath);
+      const currentFile = getRemoteJournalFileMeta(journalRepo, remotePath);
       let existingContent = "";
       let currentSha;
       if (currentFile) {
         existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
         currentSha = currentFile.sha;
-        console.error(`  ${import_picocolors7.default.dim("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)")}`);
+        console.error(`  ${import_picocolors9.default.dim("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)")}`);
       } else {
-        console.error(`  ${import_picocolors7.default.dim("No existing file on remote \u2014 will create it")}`);
+        console.error(`  ${import_picocolors9.default.dim("No existing file on remote \u2014 will create it")}`);
       }
       let newEntries = "";
       for (const file of pendingFiles) {
-        const fullPath = join5(pendingDir, file);
+        const fullPath = join6(pendingDir, file);
         const entryContent = await Bun.file(fullPath).text();
         newEntries += `
 ` + entryContent.trim() + `
@@ -1901,36 +2059,31 @@ var init_sync = __esm(() => {
       }
       const commitMessage = args.message || `journal: add ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} for ${project}`;
       console.error(`
-  ${import_picocolors7.default.dim("Pushing to remote...")}`);
+  ${import_picocolors9.default.dim("Pushing to remote...")}`);
       try {
         updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
-        console.error(`  ${import_picocolors7.default.green("\u2713")} Successfully pushed to ${remotePath}`);
+        console.error(`  ${import_picocolors9.default.green("\u2713")} Successfully pushed to ${remotePath}`);
       } catch (err) {
-        console.error(`${import_picocolors7.default.red("\u2717")} Failed to push to GitHub.`);
+        console.error(`${import_picocolors9.default.red("\u2717")} Failed to push to GitHub.`);
         process.exit(1);
       }
       for (const file of pendingFiles) {
-        const fullPath = join5(pendingDir, file);
+        const fullPath = join6(pendingDir, file);
         try {
           await Bun.file(fullPath).unlink();
         } catch {}
       }
-      console.error(`  ${import_picocolors7.default.green("\u2713")} Cleared local pending entries`);
-      ensureDoravalDirs();
-      const journalsDir = getJournalsDir();
-      const localProjectPath = join5(journalsDir, `${project}.md`);
+      console.error(`  ${import_picocolors9.default.green("\u2713")} Cleared local pending entries`);
       try {
-        const updatedFile = getGitHubFile(journalRepo, remotePath);
-        if (updatedFile) {
-          const decoded = Buffer.from(updatedFile.content, "base64").toString("utf8");
-          await Bun.write(localProjectPath, decoded);
-          console.error(`  ${import_picocolors7.default.green("\u2713")} Re-fetched ${project}.md into local cache`);
+        const wrote = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
+        if (wrote) {
+          console.error(`  ${import_picocolors9.default.green("\u2713")} Re-fetched ${project}.md into local cache`);
         }
       } catch {
-        console.error(`  ${import_picocolors7.default.yellow("\u26A0")} Could not re-fetch updated file (you can run sync again later)`);
+        console.error(`  ${import_picocolors9.default.yellow("\u26A0")} Could not re-fetch updated file (you can run sync again later)`);
       }
       console.error(`
-  ${import_picocolors7.default.green("Done!")} ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} published.
+  ${import_picocolors9.default.green("Done!")} ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} published.
 `);
     }
   });
@@ -1941,7 +2094,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.1.7",
+  version: "0.1.10",
   author: "Saif",
   repository: {
     type: "git",
@@ -1999,7 +2152,7 @@ var package_default = {
 };
 
 // src/cli/index.ts
-var import_picocolors8 = __toESM(require_picocolors(), 1);
+var import_picocolors10 = __toESM(require_picocolors(), 1);
 var skill = defineCommand({
   meta: {
     name: "skill",
@@ -2017,11 +2170,12 @@ var skill = defineCommand({
 var journal = defineCommand({
   meta: {
     name: "journal",
-    description: "Decision memory with pushback \u2014 record, check, and sync project principles"
+    description: "Decision memory with pushback \u2014 record, view, and sync project principles"
   },
   subCommands: {
     init: () => Promise.resolve().then(() => (init_init(), exports_init)).then((m) => m.default),
     list: () => Promise.resolve().then(() => (init_list(), exports_list)).then((m) => m.default),
+    update: () => Promise.resolve().then(() => (init_update(), exports_update)).then((m) => m.default),
     add: () => Promise.resolve().then(() => (init_add(), exports_add)).then((m) => m.default),
     sync: () => Promise.resolve().then(() => (init_sync(), exports_sync)).then((m) => m.default)
   },
@@ -2053,7 +2207,7 @@ var main = defineCommand({
   },
   run() {
     console.log(`
-` + import_picocolors8.default.blue(doraemonArt) + `
+` + import_picocolors10.default.blue(doraemonArt) + `
 `);
     showUsage(main);
   }

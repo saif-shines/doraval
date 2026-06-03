@@ -217,7 +217,7 @@ ${rationale}
     console.error(`  Scope:    ${scope.join(", ")}`);
     console.error(`  File:     ${pc.dim(filePath)}\n`);
     console.error(
-      `  Run ${pc.dim("doraval journal sync")} (once implemented) to publish it to your journal repo.\n`
+      `  Run ${pc.dim("doraval journal sync")} to publish it to your journal repo.\n`
     );
   },
 });

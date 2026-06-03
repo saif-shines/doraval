@@ -1,0 +1,58 @@
+---
+title: journal update
+description: Refresh your local journal cache from the remote GitHub repo.
+sidebar:
+  order: 5
+---
+
+Pull the latest `global.md` and project journal files from your remote journal repository into the local cache at `~/.doraval/journals/`.
+
+```bash
+doraval journal update
+```
+
+This is the recommended command to run at the start of a session, before `skill drift`, or any time you want fresh principles without publishing new ones.
+
+## Why it exists
+
+- `init --refresh` works but is awkward (init sounds like a one-time setup command).
+- `sync` only pulls as a side effect when you have pending entries.
+- `update` gives you a clear, dedicated "get latest" operation that is always safe and has no side effects on the remote.
+
+## Options
+
+| Flag            | Description                                              |
+|-----------------|----------------------------------------------------------|
+| `-p, --project` | Project name (defaults to the mapping for current dir)   |
+| `--all`         | Refresh *every* registered project plus `global.md`      |
+
+## What it does
+
+- Requires the GitHub CLI (`gh`) and a valid journal configuration (run `journal init` first).
+- Always fetches `global.md` (cross-project principles).
+- Fetches the target project's `projects/<name>.md`.
+- Overwrites the corresponding files in `~/.doraval/journals/`.
+- If a remote file doesn't exist yet, it creates a minimal local stub so that `list` and future commands don't explode.
+- Never writes to the remote repository.
+
+## Typical usage
+
+```bash
+# At the beginning of a coding session
+doraval journal update
+
+# Before checking for drift against your principles
+doraval journal update && doraval skill drift ./my-skill/
+
+# Refresh everything you have registered
+doraval journal update --all
+```
+
+## Relationship to other commands
+
+- `init` — initial registration + first fetch. Use `--refresh` only if you really want the prompts.
+- `update` — the everyday "make my cache current" command.
+- `sync` — publish local pending entries (it now also does a refresh first for safety).
+- `list` — reads only from the local cache (run `update` first if you suspect staleness).
+
+See the [Agent Journal concept](/concepts/agent-journal) for the full picture.

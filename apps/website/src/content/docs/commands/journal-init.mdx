@@ -11,7 +11,7 @@ Register a project with your private journal repository.
 doraval journal init
 ```
 
-`journal init` is the prerequisite command. The full `journal` group also includes `list`, `add`, and `sync`. See the [design rationale](/concepts/journal-rationale) for why the architecture exists.
+`journal init` is the prerequisite command. The full `journal` group also includes `list`, `update`, `add`, and `sync`. See the [design rationale](/concepts/journal-rationale) for why the architecture exists.
 
 ## What it does
 
@@ -59,9 +59,16 @@ doraval journal init
 |-------------------|--------------------------------------------------|
 | `-r, --repo`      | Journal repository (owner/name)                  |
 | `-p, --project`   | Project name (defaults to current directory name)|
+| `--refresh`       | Re-fetch files even if the project is already registered |
+
+## Refreshing later
+
+After the initial setup, use `doraval journal update` to pull the latest principles from the remote into your local cache (`~/.doraval/journals/`).
+
+`init --refresh` still works for the same purpose (handy in scripts).
 
 ## After running init
 
-Your project is now linked. Future journal commands (once implemented) will automatically know which journal to read from and write to.
+Your project is now linked. Use `doraval journal list`, `update`, `add`, and `sync` to work with it.
 
 See the [Agent Journal concept page](/concepts/agent-journal) for the broader vision.

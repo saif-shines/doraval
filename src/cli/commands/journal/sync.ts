@@ -11,40 +11,11 @@ import {
   ensureDoravalDirs,
   sanitizeProjectName,
 } from "../../../core/journal-config.js";
-
-interface GitHubFile {
-  sha: string;
-  content: string; // base64
-  encoding: string;
-}
-
-/**
- * Get file metadata + content from GitHub using gh CLI.
- * Returns null if the file does not exist (404).
- */
-function getGitHubFile(repo: string, path: string): GitHubFile | null {
-  const result = spawnSync(
-    ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-
-  if (result.exitCode !== 0) {
-    const stderr = result.stderr.toString();
-    if (stderr.includes("404") || stderr.includes("Not Found")) {
-      return null;
-    }
-    console.error(pc.red(`Failed to fetch ${path} from ${repo}:`));
-    console.error(stderr);
-    process.exit(1);
-  }
-
-  try {
-    return JSON.parse(result.stdout.toString()) as GitHubFile;
-  } catch {
-    console.error(pc.red(`Unexpected response when fetching ${path}`));
-    process.exit(1);
-  }
-}
+import {
+  ensureGhCliOrExit,
+  getRemoteJournalFileMeta,
+  refreshLocalJournalFile,
+} from "../../../core/journal-remote.js";
 
 /**
  * Update or create a file on GitHub.
@@ -131,30 +102,52 @@ export default defineCommand({
       process.exit(1);
     }
 
+    ensureGhCliOrExit();
+
     const journalRepo = config.journal.repo;
     const pendingDir = getPendingProjectDir(project);
 
-    if (!existsSync(pendingDir)) {
-      console.error(`${pc.yellow("⚠")} No pending entries for project "${project}". Nothing to sync.`);
-      process.exit(0);
-    }
-
-    const pendingFiles = readdirSync(pendingDir)
-      .filter((f) => f.endsWith(".md") && f !== ".gitkeep")
-      .sort();
-
-    if (pendingFiles.length === 0) {
-      console.error(`${pc.yellow("⚠")} No pending entries for project "${project}". Nothing to sync.`);
-      process.exit(0);
-    }
-
     console.error(`\n  ${pc.bold("doraval journal sync")} — ${project}\n`);
     console.error(`  Journal repo: ${pc.dim(journalRepo)}`);
+
+    // ── Always pull latest into local cache first ──────────────────
+    // This ensures `list`, future `check`, and principle drift see up-to-date entries,
+    // and that the merge base we read below is the absolute latest from the remote.
+    ensureDoravalDirs();
+    const journalsDir = getJournalsDir();
+    const remoteProjectPath = `projects/${project}.md`;
+    const localProjectPath = join(journalsDir, `${project}.md`);
+
+    console.error(`  ${pc.dim("Refreshing local cache from remote...")}`);
+
+    const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", join(journalsDir, "global.md"));
+    if (gotGlobal) {
+      console.error(`  ${pc.dim("✓ global.md")}`);
+    }
+
+    const gotProjectCache = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
+    if (gotProjectCache) {
+      console.error(`  ${pc.dim(`✓ ${remoteProjectPath}`)}`);
+    }
+
+    const pendingFiles = existsSync(pendingDir)
+      ? readdirSync(pendingDir)
+          .filter((f) => f.endsWith(".md") && f !== ".gitkeep")
+          .sort()
+      : [];
+
+    if (pendingFiles.length === 0) {
+      console.error(`\n  ${pc.yellow("⚠")} No pending entries. Local cache is now up to date.\n`);
+      process.exit(0);
+    }
+
     console.error(`  Found ${pendingFiles.length} pending entr${pendingFiles.length === 1 ? "y" : "ies"}\n`);
 
     // 1. Read current remote file (or start fresh)
+    // Note: we already refreshed the local cache above; this re-reads the authoritative
+    // remote (with sha) so the append + conditional PUT is safe.
     const remotePath = `projects/${project}.md`;
-    const currentFile = getGitHubFile(journalRepo, remotePath);
+    const currentFile = getRemoteJournalFileMeta(journalRepo, remotePath);
 
     let existingContent = "";
     let currentSha: string | undefined;
@@ -212,15 +205,10 @@ export default defineCommand({
     console.error(`  ${pc.green("✓")} Cleared local pending entries`);
 
     // 6. Re-fetch the updated file into local journals cache (best effort)
-    ensureDoravalDirs();
-    const journalsDir = getJournalsDir();
-    const localProjectPath = join(journalsDir, `${project}.md`);
-
+    // We already did a pre-sync refresh; this gets the exact post-push state.
     try {
-      const updatedFile = getGitHubFile(journalRepo, remotePath);
-      if (updatedFile) {
-        const decoded = Buffer.from(updatedFile.content, "base64").toString("utf8");
-        await Bun.write(localProjectPath, decoded);
+      const wrote = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
+      if (wrote) {
         console.error(`  ${pc.green("✓")} Re-fetched ${project}.md into local cache`);
       }
     } catch {

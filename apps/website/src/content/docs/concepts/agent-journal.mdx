@@ -103,22 +103,43 @@ Agents and humans **propose** entries. Only `doraval journal sync` **writes** to
 Human/Agent → doraval journal add → ~/.doraval/pending/ → doraval journal sync → GitHub
 ```
 
-`sync` also updates `projects/_index.md` and auto-archives entries older than 1 year when files exceed 300 lines.
+`sync` publishes pending entries to the remote and refreshes your local cache. (Advanced maintenance features like `projects/_index.md` and auto-archiving older entries are planned but not yet implemented.)
 
 ## Commands
 
 ```bash
 doraval journal init     # One-time setup: register project + link to journal repo
 doraval journal list     # View active principles for the current project
+doraval journal update   # Pull the latest from the remote GitHub repo into local cache
 doraval journal add      # Propose a new decision / principle (stages locally)
-doraval journal sync     # Publish pending entries to the remote GitHub repo
+doraval journal sync     # Publish pending entries + refresh cache
 ```
+
+## Typical workflow
+
+```bash
+# Start of a session or before using journal-aware tools
+doraval journal update
+
+# Explore current principles
+doraval journal list
+
+# Capture a decision you just made
+doraval journal add "Always use 'update' not 'refresh' for cache pulls" \
+  --pushback 6 \
+  --scope cli,docs
+
+# At the end of the session (or when ready to share)
+doraval journal sync
+```
+
+`update` keeps the local `~/.doraval/journals/` mirror fresh. `sync` always refreshes first, then publishes anything in `pending/`.
 
 `journal check` and Principle drift integration into `skill drift` / `validate` are the major remaining pieces (see the [implementation plan](https://github.com/saif-shines/doraval/blob/main/docs/specs/2026-05-25-journal-implementation-plan.md)).
 
 For a clear explanation of the mental model and why the journal is built this way, see [How the Agent Journal Works](/concepts/journal-rationale).
 
-For details on the current command, see [journal init](/commands/journal-init).
+See the individual command pages under **Commands** (e.g. [journal init](/commands/journal-init), [journal update](/commands/journal-update)) for flag details and examples.
 ## Integration with existing commands
 
 - `doraval skill drift` gains **Principle drift** — flags when a skill contradicts an active journal entry.

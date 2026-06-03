@@ -119,3 +119,23 @@ doraval skill drift ./my-skill/ --format json --ci
 ```
 
 `validate` exits with code `1` when errors are found. Both commands write structured JSON to stdout when `--format json` is set — pipe it to `jq` or consume it programmatically.
+
+## `journal` — Decision memory with pushback
+
+Record, view, and sync project principles and decisions so that future you (and agents) don't accidentally contradict past choices.
+
+The journal lives in a private GitHub repo you control (by convention `yourname/yourname.md`). All config and cache lives under `~/.doraval/`.
+
+```bash
+doraval journal init          # One-time link of this project to your journal repo
+doraval journal list          # View active principles
+doraval journal update        # Pull latest from the remote into local cache
+doraval journal add "..."     # Propose a new decision (staged locally)
+doraval journal sync          # Publish pending entries + refresh cache
+```
+
+`update` is the recommended way to keep your local mirror fresh (e.g. at the start of a session or before `skill drift`).
+
+Requires the GitHub CLI (`gh`) for talking to the remote journal repo.
+
+See the docs site for full details and rationale.

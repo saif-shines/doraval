@@ -1,0 +1,54 @@
+---
+title: journal add
+description: Propose a new decision or principle (stages it locally for later sync).
+sidebar:
+  order: 7
+---
+
+Stage a new journal entry locally. It will live in `~/.doraval/pending/<project>/` until you run `sync`.
+
+```bash
+doraval journal add "Title of the decision"
+```
+
+## Required options
+
+| Flag             | Description                                      |
+|------------------|--------------------------------------------------|
+| `--pushback <1-10>` | How strongly to argue if this principle is violated |
+| `--scope <tags>`    | Comma-separated canonical scopes (e.g. `cli,naming`) |
+
+## Optional options
+
+| Flag            | Default     | Description |
+|-----------------|-------------|-------------|
+| `--author`      | `human`     | `human` or `agent:<name>` (e.g. `agent:grok`) |
+| `--status`      | `active`    | `active`, `superseded`, or `retired` |
+| `--rationale`   | (opens $EDITOR) | Inline rationale text. If omitted, an editor is opened with a template. |
+
+## Example
+
+```bash
+doraval journal add "Use 'update' not 'refresh' for cache pulls" \
+  --pushback 6 \
+  --scope cli,docs \
+  --rationale "Keeps the mental model consistent with 'sync' being the publisher."
+```
+
+The entry is written as a single Markdown file with a `## Title` heading, a fenced YAML block, and the rationale body.
+
+## What happens next
+
+- The file is placed in `~/.doraval/pending/<project>/`.
+- Run `doraval journal sync` to publish it to the remote repo (and clear the pending directory).
+- Until synced, it is invisible to `list` and other machines.
+
+See [journal sync](/commands/journal-sync) and the [single-writer pattern](/concepts/agent-journal#single-writer-pattern) explanation.
+
+## Related
+
+- [journal list](/commands/journal-list)
+- [journal sync](/commands/journal-sync)
+- [journal update](/commands/journal-update)
+
+Full mental model: [How the Agent Journal Works](/concepts/journal-rationale).
