@@ -371,7 +371,7 @@ export default defineCommand({
       agentCfg = (fullConfigForAgent as any)?.agent;
       if (agentCfg) {
         attemptedAgent = true;
-        console.error(`  ${pc.dim("(querying your configured coding agent...)")}`);
+        console.error(`  ${pc.dim(pc.gray("(querying your configured coding agent...)"))}`);
         const agentResult = await invokeConfiguredAgentForEntry(title, agentCfg);
         if (agentResult) {
           if (agentResult.title) title = String(agentResult.title).trim();
@@ -455,34 +455,34 @@ ${rationale}
 
     await Bun.write(filePath, content);
 
-    console.error(`\n  ${pc.green("✓")} Entry staged successfully.\n`);
-    console.error(`  Project:  ${pc.bold(project)}`);
-    console.error(`  Title:    ${pc.bold(title)}`);
-    console.error(`  Pushback: ${pushback}`);
-    console.error(`  Tags:     ${tags.join(", ") || pc.dim("(none)")}`);
+    console.error(`\n  ${pc.green("✓")} ${pc.white("Entry staged successfully.")}\n`);
+    console.error(`  Project:  ${pc.bold(pc.white(project))}`);
+    console.error(`  Title:    ${pc.bold(pc.white(title))}`);
+    console.error(`  Pushback: ${pc.white(String(pushback))}`);
+    console.error(`  Tags:     ${pc.gray(tags.join(", ") || pc.dim("(none)"))}`);
     const authorDisplay = author.startsWith("agent:") ? pc.cyan(author) : author;
     console.error(`  Author:   ${authorDisplay}`);
     if (author.startsWith("agent:")) {
-      console.error(`            ${pc.dim("(enriched on the fly by your configured coding agent)")}`);
+      console.error(`            ${pc.dim(pc.gray("(enriched on the fly by your configured coding agent)"))}`);
     }
-    console.error(`  File:     ${pc.dim(filePath)}\n`);
+    console.error(`  File:     ${pc.dim(pc.gray(filePath))}\n`);
 
     if (isThinInput && !author.startsWith("agent:")) {
       if (attemptedAgent) {
         console.error(
-          `  ${pc.dim("Note:")} Your configured agent was called but did not return a usable enrichment this time (see warning above).\n` +
+          `  ${pc.dim(pc.gray("Note:"))} Your configured agent was called but did not return a usable enrichment this time (see warning above).\n` +
           `        The raw title + defaults were used. Edit the pending file or tweak the agent template with dora init.\n`
         );
       } else {
         console.error(
-          `  ${pc.dim("Tip:")} run ${pc.dim("dora init")} to configure a coding agent (Claude, Cursor, etc.)\n` +
+          `  ${pc.dim(pc.gray("Tip:"))} run ${pc.dim(pc.gray("dora init"))} to configure a coding agent (Claude, Cursor, etc.)\n` +
           `        so minimal adds like this get rich titles, tags, and rationales automatically.\n`
         );
       }
     }
 
     console.error(
-      `  Run ${pc.dim("dora journal sync")} (or ${pc.dim("doraval journal sync")}) to publish it to your journal repo.\n`
+      `  Run ${pc.dim(pc.gray("dora journal sync"))} (or ${pc.dim(pc.gray("doraval journal sync"))}) to publish it to your journal repo.\n`
     );
 
     process.exit(0);

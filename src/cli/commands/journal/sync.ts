@@ -107,8 +107,8 @@ export default defineCommand({
     const journalRepo = config.journal.repo;
     const pendingDir = getPendingProjectDir(project);
 
-    console.error(`\n  ${pc.bold("dora journal sync")} — ${project}\n`);
-    console.error(`  Journal repo: ${pc.dim(journalRepo)}`);
+    console.error(`\n  ${pc.bold(pc.white("dora journal sync"))} — ${pc.white(project)}\n`);
+    console.error(`  Journal repo: ${pc.dim(pc.gray(journalRepo))}`);
 
     // ── Always pull latest into local cache first ──────────────────
     // This ensures `list`, future `check`, and principle drift see up-to-date entries,
@@ -118,16 +118,16 @@ export default defineCommand({
     const remoteProjectPath = `projects/${project}.md`;
     const localProjectPath = join(journalsDir, `${project}.md`);
 
-    console.error(`  ${pc.dim("Refreshing local cache from remote...")}`);
+    console.error(`  ${pc.dim(pc.gray("Refreshing local cache from remote..."))}`);
 
     const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", join(journalsDir, "global.md"));
     if (gotGlobal) {
-      console.error(`  ${pc.dim("✓ global.md")}`);
+      console.error(`  ${pc.dim(pc.gray("✓ global.md"))}`);
     }
 
     const gotProjectCache = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
     if (gotProjectCache) {
-      console.error(`  ${pc.dim(`✓ ${remoteProjectPath}`)}`);
+      console.error(`  ${pc.dim(pc.gray(`✓ ${remoteProjectPath}`))}`);
     }
 
     const pendingFiles = existsSync(pendingDir)
@@ -155,9 +155,9 @@ export default defineCommand({
     if (currentFile) {
       existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
       currentSha = currentFile.sha;
-      console.error(`  ${pc.dim("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)")}`);
+      console.error(`  ${pc.dim(pc.gray("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)"))}`);
     } else {
-      console.error(`  ${pc.dim("No existing file on remote — will create it")}`);
+      console.error(`  ${pc.dim(pc.gray("No existing file on remote — will create it"))}`);
     }
 
     // 2. Collect all pending content
@@ -185,13 +185,13 @@ export default defineCommand({
       (args.message as string) ||
       `journal: add ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} for ${project}`;
 
-    console.error(`\n  ${pc.dim("Pushing to remote...")}`);
+    console.error(`\n  ${pc.dim(pc.gray("Pushing to remote..."))}`);
 
     try {
       updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
-      console.error(`  ${pc.green("✓")} Successfully pushed to ${remotePath}`);
+      console.error(`  ${pc.green("✓")} ${pc.white("Successfully pushed to")} ${pc.white(remotePath)}`);
     } catch (err) {
-      console.error(`${pc.red("✗")} Failed to push to GitHub.`);
+      console.error(`${pc.red("✗")} ${pc.white("Failed to push to GitHub.")}`);
       process.exit(1);
     }
 
@@ -202,21 +202,21 @@ export default defineCommand({
         await Bun.file(fullPath).unlink();
       } catch {}
     }
-    console.error(`  ${pc.green("✓")} Cleared local pending entries`);
+    console.error(`  ${pc.green("✓")} ${pc.white("Cleared local pending entries")}`);
 
     // 6. Re-fetch the updated file into local journals cache (best effort)
     // We already did a pre-sync refresh; this gets the exact post-push state.
     try {
       const wrote = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
       if (wrote) {
-        console.error(`  ${pc.green("✓")} Re-fetched ${project}.md into local cache`);
+        console.error(`  ${pc.green("✓")} ${pc.white("Re-fetched")} ${pc.white(project)}.md ${pc.white("into local cache")}`);
       }
     } catch {
       console.error(`  ${pc.yellow("⚠")} Could not re-fetch updated file (you can run sync again later)`);
     }
 
     console.error(
-      `\n  ${pc.green("Done!")} ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} published.\n`
+      `\n  ${pc.green("Done!")} ${pc.white(pendingFiles.length + " entr" + (pendingFiles.length === 1 ? "y" : "ies") + " published.")}\n`
     );
 
     process.exit(0);

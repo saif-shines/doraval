@@ -128,7 +128,7 @@ export default defineCommand({
 
     ensureDoravalDirs();
 
-    console.error(`  ${pc.dim("Fetching journal files from")} ${effectiveRepo}${pc.dim("...")}\n`);
+    console.error(`  ${pc.dim(pc.gray("Fetching journal files from"))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
 
     const globalDest = join(journalsDir, "global.md");
     const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
@@ -149,29 +149,29 @@ export default defineCommand({
 
     await writeConfig(config);
 
-    console.error(`\n  ${pc.green("✓")} Journal ready for project ${pc.bold(project)}.\n`);
+    console.error(`\n  ${pc.green("✓")} ${pc.white("Journal ready for project")} ${pc.bold(pc.white(project))}.\n`);
 
     // 2. Agent configuration (the new part the user asked for)
     const existingAgent = (await readConfig())?.agent;
     if (existingAgent?.command) {
-      console.error(`  ${pc.bold("Coding agent (already configured)")}\n`);
-      console.error(`    Current: ${pc.dim(existingAgent.command)}  template: ${pc.dim(existingAgent.prompt_template || "(default)")}\n`);
+      console.error(`  ${pc.bold(pc.white("Coding agent (already configured)"))}\n`);
+      console.error(`    Current: ${pc.dim(pc.gray(existingAgent.command))}  template: ${pc.dim(pc.gray(existingAgent.prompt_template || "(default)"))}\n`);
       const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
       if (!/^y/i.test(String(change))) {
-        console.error(`  ${pc.dim("Keeping existing agent config. You can re-run dora init later to change it.")}\n`);
+        console.error(`  ${pc.dim(pc.gray("Keeping existing agent config. You can re-run dora init later to change it."))}\n`);
         // Force a write with current serialize to ensure agent is persisted cleanly with latest format
         const cfg = (await readConfig()) || { journal: { repo: effectiveRepo, projects: {} } };
         if (existingAgent) cfg.agent = existingAgent;
         await writeConfig(cfg);
-        console.error(`  ${pc.green("All set!")} Try: ${pc.dim("dora journal add \"short decision\"")} (it will use the agent when input is minimal).\n`);
+        console.error(`  ${pc.green("All set!")} ${pc.white("Try:")} ${pc.dim(pc.gray("dora journal add \"short decision\""))} ${pc.white("(it will use the agent when input is minimal).")}\n`);
         process.exit(0);
         return;
       }
       console.error(""); // spacer before the questions
     } else {
-      console.error(`  ${pc.bold("Coding agent for on-the-fly use in journal add")}\n`);
+      console.error(`  ${pc.bold(pc.white("Coding agent for on-the-fly use in journal add"))}\n`);
       console.error(`  dora can use your existing coding agent (Claude Code, Cursor, etc.) behind the scenes\n`);
-      console.error(`  when you run ${pc.dim("dora journal add \"short decision\"")} so you get rich pushback/tags/rationale (tags for decisions or notes)\n`);
+      console.error(`  when you run ${pc.dim(pc.gray("dora journal add \"short decision\""))} so you get rich pushback/tags/rationale (tags for decisions or notes)\n`);
       console.error(`  with almost no extra typing.\n`);
     }
 
@@ -195,7 +195,7 @@ export default defineCommand({
     }
 
     let agentCmd = detected || "claude";
-    console.error(`  Detected / default agent command: ${pc.dim(agentCmd)}`);
+    console.error(`  Detected / default agent command: ${pc.dim(pc.gray(agentCmd))}`);
     agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
 
     let template = detected ? (common.find(c => c.name === detected)?.template || '-p "{{prompt}}" --output-format json') : '-p "{{prompt}}" --output-format json';
@@ -210,12 +210,12 @@ export default defineCommand({
     };
     await writeConfig(finalConfig);
 
-    console.error(`\n  ${pc.green("✓")} Agent configured. Future ${pc.dim("dora journal add \"...\"")} calls will try to use it on the fly (when input is minimal).\n`);
-    console.error(`  You can re-run ${pc.dim("dora init")} anytime to change the agent.\n`);
+    console.error(`\n  ${pc.green("✓")} ${pc.white("Agent configured. Future")} ${pc.dim(pc.gray("dora journal add \"...\""))} ${pc.white("calls will try to use it on the fly (when input is minimal).")}\n`);
+    console.error(`  You can re-run ${pc.dim(pc.gray("dora init"))} anytime to change the agent.\n`);
     console.error(`  Example one-liner that will now feel magical:\n`);
-    console.error(`    ${pc.dim("dora journal add \"We decided to use the new cache command name\"")}\n`);
+    console.error(`    ${pc.dim(pc.gray("dora journal add \"We decided to use the new cache command name\""))}\n`);
 
-    console.error(`  ${pc.green("All set!")} Next steps: ${pc.dim("dora journal list")}, ${pc.dim("dora journal add \"...\"")}, or ${pc.dim("dora journal update")}.\n`);
+    console.error(`  ${pc.green("All set!")} ${pc.white("Next steps:")} ${pc.dim(pc.gray("dora journal list"))}, ${pc.dim(pc.gray("dora journal add \"...\""))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);
 
     process.exit(0);
   },

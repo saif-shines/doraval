@@ -1265,7 +1265,7 @@ var init_init = __esm(() => {
     },
     async run({ args }) {
       console.error(`
-  ${import_picocolors6.default.bold("dora journal init")} (or top-level ${import_picocolors6.default.dim("dora init")}) \u2014 Set up your journal
+  ${import_picocolors6.default.bold(import_picocolors6.default.white("dora journal init"))} (or top-level ${import_picocolors6.default.dim(import_picocolors6.default.gray("dora init"))}) \u2014 Set up your journal
 `);
       ensureGhCliOrExit();
       let repo = args.repo || process.env.DORAVAL_JOURNAL_REPO;
@@ -1298,7 +1298,7 @@ var init_init = __esm(() => {
           sourceNote = `  ${import_picocolors6.default.dim("(from your previous journal setup)")}
 `;
         }
-        console.error(`  Journal repo ${import_picocolors6.default.dim("(owner/name)")}`);
+        console.error(`  Journal repo ${import_picocolors6.default.dim(import_picocolors6.default.gray("(owner/name)"))}`);
         if (sourceNote)
           console.error(sourceNote);
         repo = prompt("  >", defaultRepo);
@@ -1310,7 +1310,7 @@ var init_init = __esm(() => {
       }
       project = sanitizeProjectName(project);
       if (!repoExists(repo)) {
-        console.error(`  ${import_picocolors6.default.red("\u2717")} Repository ${import_picocolors6.default.bold(repo)} not found on GitHub.
+        console.error(`  ${import_picocolors6.default.red("\u2717")} Repository ${import_picocolors6.default.bold(import_picocolors6.default.white(repo))} not found on GitHub.
 `);
         console.error(`  Create it first:
 `);
@@ -1324,14 +1324,14 @@ var init_init = __esm(() => {
       const alreadyRegistered = existing?.journal.projects[project];
       const isRefresh = alreadyRegistered && args.refresh;
       if (alreadyRegistered && !isRefresh) {
-        console.error(`  ${import_picocolors6.default.yellow("\u26A0")} Project ${import_picocolors6.default.bold(project)} is already registered.
+        console.error(`  ${import_picocolors6.default.yellow("\u26A0")} Project ${import_picocolors6.default.bold(import_picocolors6.default.white(project))} is already registered.
 `);
-        console.error(`  Repo:   ${existing.journal.repo}`);
+        console.error(`  Repo:   ${import_picocolors6.default.gray(existing.journal.repo)}`);
         console.error(`  Remote: ${existing.journal.projects[project].remote_path}
 `);
-        console.error(`  To refresh local files, run: ${import_picocolors6.default.dim(`dora journal update`)}
+        console.error(`  To refresh local files, run: ${import_picocolors6.default.dim(import_picocolors6.default.gray(`dora journal update`))}
 ` + `  (init --refresh still works for compatibility.)
-` + `  Or remove the project from ${import_picocolors6.default.dim("~/.doraval/config.yml")} to fully re-initialize.
+` + `  Or remove the project from ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/config.yml"))} to fully re-initialize.
 `);
         process.exit(0);
       }
@@ -1349,7 +1349,7 @@ var init_init = __esm(() => {
       };
       ensureDoravalDirs();
       const actionLabel = isRefresh ? "Refreshing" : "Fetching";
-      console.error(`  ${import_picocolors6.default.dim(`${actionLabel} journal files from`)} ${effectiveRepo}${import_picocolors6.default.dim("...")}
+      console.error(`  ${import_picocolors6.default.dim(import_picocolors6.default.gray(`${actionLabel} journal files from`))} ${import_picocolors6.default.gray(effectiveRepo)}${import_picocolors6.default.dim(import_picocolors6.default.gray("..."))}
 `);
       const globalDest = join2(journalsDir, "global.md");
       const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
@@ -1374,13 +1374,13 @@ Project-specific decisions.
       }
       await writeConfig(config);
       console.error(`
-  ${import_picocolors6.default.green("\u2713")} Project ${import_picocolors6.default.bold(project)} registered to ${import_picocolors6.default.bold(repo)}.
+  ${import_picocolors6.default.green("\u2713")} Project ${import_picocolors6.default.bold(import_picocolors6.default.white(project))} registered to ${import_picocolors6.default.bold(import_picocolors6.default.white(repo))}.
 `);
-      console.error(`  Config:   ${import_picocolors6.default.dim("~/.doraval/config.yml")}`);
-      console.error(`  Journals: ${import_picocolors6.default.dim("~/.doraval/journals/")}`);
-      console.error(`  Pending:  ${import_picocolors6.default.dim("~/.doraval/pending/")}
+      console.error(`  Config:   ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/config.yml"))}`);
+      console.error(`  Journals: ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/journals/"))}`);
+      console.error(`  Pending:  ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/pending/"))}
 `);
-      console.error(`  Use ${import_picocolors6.default.dim("dora journal add")} to propose decisions and ${import_picocolors6.default.dim("dora journal list")} to view them.
+      console.error(`  Use ${import_picocolors6.default.dim(import_picocolors6.default.gray("dora journal add"))} to propose decisions and ${import_picocolors6.default.dim(import_picocolors6.default.gray("dora journal list"))} to view them.
 `);
       process.exit(0);
     }
@@ -1653,7 +1653,7 @@ var init_update = __esm(() => {
       ensureDoravalDirs();
       const journalsDir = getJournalsDir();
       console.error(`
-  ${import_picocolors8.default.bold("dora journal update")} \u2014 ${import_picocolors8.default.dim(journalRepo)}
+  ${import_picocolors8.default.bold(import_picocolors8.default.white("dora journal update"))} \u2014 ${import_picocolors8.default.dim(import_picocolors8.default.gray(journalRepo))}
 `);
       const projectsToUpdate = [];
       if (args.all) {
@@ -1686,7 +1686,7 @@ var init_update = __esm(() => {
       if (projectsToUpdate.length === 0) {
         if (args.all) {
           console.error(`
-  ${import_picocolors8.default.dim("No projects registered.")}
+  ${import_picocolors8.default.dim(import_picocolors8.default.gray("No projects registered."))}
 `);
         } else {
           console.error(`
@@ -1714,7 +1714,7 @@ Project-specific decisions.
       }
       const summary = args.all && projectsToUpdate.length > 1 ? `${projectsToUpdate.length} projects + global` : projectsToUpdate.length === 1 ? projectsToUpdate[0] : "journals";
       console.error(`
-  ${import_picocolors8.default.dim("Local cache refreshed for")} ${import_picocolors8.default.bold(summary)}.
+  ${import_picocolors8.default.dim(import_picocolors8.default.gray("Local cache refreshed for"))} ${import_picocolors8.default.bold(import_picocolors8.default.white(summary))}.
 `);
     }
   });
@@ -2084,7 +2084,7 @@ var init_add = __esm(() => {
         agentCfg = fullConfigForAgent?.agent;
         if (agentCfg) {
           attemptedAgent = true;
-          console.error(`  ${import_picocolors9.default.dim("(querying your configured coding agent...)")}`);
+          console.error(`  ${import_picocolors9.default.dim(import_picocolors9.default.gray("(querying your configured coding agent...)"))}`);
           const agentResult = await invokeConfiguredAgentForEntry(title, agentCfg);
           if (agentResult) {
             if (agentResult.title)
@@ -2156,31 +2156,31 @@ ${rationale}
       const filePath = join5(pendingDir, filename);
       await Bun.write(filePath, content);
       console.error(`
-  ${import_picocolors9.default.green("\u2713")} Entry staged successfully.
+  ${import_picocolors9.default.green("\u2713")} ${import_picocolors9.default.white("Entry staged successfully.")}
 `);
-      console.error(`  Project:  ${import_picocolors9.default.bold(project)}`);
-      console.error(`  Title:    ${import_picocolors9.default.bold(title)}`);
-      console.error(`  Pushback: ${pushback}`);
-      console.error(`  Tags:     ${tags.join(", ") || import_picocolors9.default.dim("(none)")}`);
+      console.error(`  Project:  ${import_picocolors9.default.bold(import_picocolors9.default.white(project))}`);
+      console.error(`  Title:    ${import_picocolors9.default.bold(import_picocolors9.default.white(title))}`);
+      console.error(`  Pushback: ${import_picocolors9.default.white(String(pushback))}`);
+      console.error(`  Tags:     ${import_picocolors9.default.gray(tags.join(", ") || import_picocolors9.default.dim("(none)"))}`);
       const authorDisplay = author.startsWith("agent:") ? import_picocolors9.default.cyan(author) : author;
       console.error(`  Author:   ${authorDisplay}`);
       if (author.startsWith("agent:")) {
-        console.error(`            ${import_picocolors9.default.dim("(enriched on the fly by your configured coding agent)")}`);
+        console.error(`            ${import_picocolors9.default.dim(import_picocolors9.default.gray("(enriched on the fly by your configured coding agent)"))}`);
       }
-      console.error(`  File:     ${import_picocolors9.default.dim(filePath)}
+      console.error(`  File:     ${import_picocolors9.default.dim(import_picocolors9.default.gray(filePath))}
 `);
       if (isThinInput && !author.startsWith("agent:")) {
         if (attemptedAgent) {
-          console.error(`  ${import_picocolors9.default.dim("Note:")} Your configured agent was called but did not return a usable enrichment this time (see warning above).
+          console.error(`  ${import_picocolors9.default.dim(import_picocolors9.default.gray("Note:"))} Your configured agent was called but did not return a usable enrichment this time (see warning above).
 ` + `        The raw title + defaults were used. Edit the pending file or tweak the agent template with dora init.
 `);
         } else {
-          console.error(`  ${import_picocolors9.default.dim("Tip:")} run ${import_picocolors9.default.dim("dora init")} to configure a coding agent (Claude, Cursor, etc.)
+          console.error(`  ${import_picocolors9.default.dim(import_picocolors9.default.gray("Tip:"))} run ${import_picocolors9.default.dim(import_picocolors9.default.gray("dora init"))} to configure a coding agent (Claude, Cursor, etc.)
 ` + `        so minimal adds like this get rich titles, tags, and rationales automatically.
 `);
         }
       }
-      console.error(`  Run ${import_picocolors9.default.dim("dora journal sync")} (or ${import_picocolors9.default.dim("doraval journal sync")}) to publish it to your journal repo.
+      console.error(`  Run ${import_picocolors9.default.dim(import_picocolors9.default.gray("dora journal sync"))} (or ${import_picocolors9.default.dim(import_picocolors9.default.gray("doraval journal sync"))}) to publish it to your journal repo.
 `);
       process.exit(0);
     }
@@ -2273,21 +2273,21 @@ var init_sync = __esm(() => {
       const journalRepo = config.journal.repo;
       const pendingDir = getPendingProjectDir(project);
       console.error(`
-  ${import_picocolors10.default.bold("dora journal sync")} \u2014 ${project}
+  ${import_picocolors10.default.bold(import_picocolors10.default.white("dora journal sync"))} \u2014 ${import_picocolors10.default.white(project)}
 `);
-      console.error(`  Journal repo: ${import_picocolors10.default.dim(journalRepo)}`);
+      console.error(`  Journal repo: ${import_picocolors10.default.dim(import_picocolors10.default.gray(journalRepo))}`);
       ensureDoravalDirs();
       const journalsDir = getJournalsDir();
       const remoteProjectPath = `projects/${project}.md`;
       const localProjectPath = join6(journalsDir, `${project}.md`);
-      console.error(`  ${import_picocolors10.default.dim("Refreshing local cache from remote...")}`);
+      console.error(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray("Refreshing local cache from remote..."))}`);
       const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", join6(journalsDir, "global.md"));
       if (gotGlobal) {
-        console.error(`  ${import_picocolors10.default.dim("\u2713 global.md")}`);
+        console.error(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray("\u2713 global.md"))}`);
       }
       const gotProjectCache = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
       if (gotProjectCache) {
-        console.error(`  ${import_picocolors10.default.dim(`\u2713 ${remoteProjectPath}`)}`);
+        console.error(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray(`\u2713 ${remoteProjectPath}`))}`);
       }
       const pendingFiles = existsSync7(pendingDir) ? readdirSync2(pendingDir).filter((f) => f.endsWith(".md") && f !== ".gitkeep").sort() : [];
       if (pendingFiles.length === 0) {
@@ -2305,9 +2305,9 @@ var init_sync = __esm(() => {
       if (currentFile) {
         existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
         currentSha = currentFile.sha;
-        console.error(`  ${import_picocolors10.default.dim("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)")}`);
+        console.error(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)"))}`);
       } else {
-        console.error(`  ${import_picocolors10.default.dim("No existing file on remote \u2014 will create it")}`);
+        console.error(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray("No existing file on remote \u2014 will create it"))}`);
       }
       let newEntries = "";
       for (const file of pendingFiles) {
@@ -2330,12 +2330,12 @@ var init_sync = __esm(() => {
       }
       const commitMessage = args.message || `journal: add ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} for ${project}`;
       console.error(`
-  ${import_picocolors10.default.dim("Pushing to remote...")}`);
+  ${import_picocolors10.default.dim(import_picocolors10.default.gray("Pushing to remote..."))}`);
       try {
         updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
-        console.error(`  ${import_picocolors10.default.green("\u2713")} Successfully pushed to ${remotePath}`);
+        console.error(`  ${import_picocolors10.default.green("\u2713")} ${import_picocolors10.default.white("Successfully pushed to")} ${import_picocolors10.default.white(remotePath)}`);
       } catch (err) {
-        console.error(`${import_picocolors10.default.red("\u2717")} Failed to push to GitHub.`);
+        console.error(`${import_picocolors10.default.red("\u2717")} ${import_picocolors10.default.white("Failed to push to GitHub.")}`);
         process.exit(1);
       }
       for (const file of pendingFiles) {
@@ -2344,17 +2344,17 @@ var init_sync = __esm(() => {
           await Bun.file(fullPath).unlink();
         } catch {}
       }
-      console.error(`  ${import_picocolors10.default.green("\u2713")} Cleared local pending entries`);
+      console.error(`  ${import_picocolors10.default.green("\u2713")} ${import_picocolors10.default.white("Cleared local pending entries")}`);
       try {
         const wrote = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
         if (wrote) {
-          console.error(`  ${import_picocolors10.default.green("\u2713")} Re-fetched ${project}.md into local cache`);
+          console.error(`  ${import_picocolors10.default.green("\u2713")} ${import_picocolors10.default.white("Re-fetched")} ${import_picocolors10.default.white(project)}.md ${import_picocolors10.default.white("into local cache")}`);
         }
       } catch {
         console.error(`  ${import_picocolors10.default.yellow("\u26A0")} Could not re-fetch updated file (you can run sync again later)`);
       }
       console.error(`
-  ${import_picocolors10.default.green("Done!")} ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} published.
+  ${import_picocolors10.default.green("Done!")} ${import_picocolors10.default.white(pendingFiles.length + " entr" + (pendingFiles.length === 1 ? "y" : "ies") + " published.")}
 `);
       process.exit(0);
     }
@@ -2476,7 +2476,7 @@ var init_init2 = __esm(() => {
         local_path: localPath
       };
       ensureDoravalDirs();
-      console.error(`  ${import_picocolors11.default.dim("Fetching journal files from")} ${effectiveRepo}${import_picocolors11.default.dim("...")}
+      console.error(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Fetching journal files from"))} ${import_picocolors11.default.gray(effectiveRepo)}${import_picocolors11.default.dim(import_picocolors11.default.gray("..."))}
 `);
       const globalDest = join7(journalsDir, "global.md");
       const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
@@ -2501,34 +2501,34 @@ Project-specific decisions.
       }
       await writeConfig(config);
       console.error(`
-  ${import_picocolors11.default.green("\u2713")} Journal ready for project ${import_picocolors11.default.bold(project)}.
+  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("Journal ready for project")} ${import_picocolors11.default.bold(import_picocolors11.default.white(project))}.
 `);
       const existingAgent = (await readConfig())?.agent;
       if (existingAgent?.command) {
-        console.error(`  ${import_picocolors11.default.bold("Coding agent (already configured)")}
+        console.error(`  ${import_picocolors11.default.bold(import_picocolors11.default.white("Coding agent (already configured)"))}
 `);
-        console.error(`    Current: ${import_picocolors11.default.dim(existingAgent.command)}  template: ${import_picocolors11.default.dim(existingAgent.prompt_template || "(default)")}
+        console.error(`    Current: ${import_picocolors11.default.dim(import_picocolors11.default.gray(existingAgent.command))}  template: ${import_picocolors11.default.dim(import_picocolors11.default.gray(existingAgent.prompt_template || "(default)"))}
 `);
         const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
         if (!/^y/i.test(String(change))) {
-          console.error(`  ${import_picocolors11.default.dim("Keeping existing agent config. You can re-run dora init later to change it.")}
+          console.error(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Keeping existing agent config. You can re-run dora init later to change it."))}
 `);
           const cfg = await readConfig() || { journal: { repo: effectiveRepo, projects: {} } };
           if (existingAgent)
             cfg.agent = existingAgent;
           await writeConfig(cfg);
-          console.error(`  ${import_picocolors11.default.green("All set!")} Try: ${import_picocolors11.default.dim('dora journal add "short decision"')} (it will use the agent when input is minimal).
+          console.error(`  ${import_picocolors11.default.green("All set!")} ${import_picocolors11.default.white("Try:")} ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "short decision"'))} ${import_picocolors11.default.white("(it will use the agent when input is minimal).")}
 `);
           process.exit(0);
           return;
         }
         console.error("");
       } else {
-        console.error(`  ${import_picocolors11.default.bold("Coding agent for on-the-fly use in journal add")}
+        console.error(`  ${import_picocolors11.default.bold(import_picocolors11.default.white("Coding agent for on-the-fly use in journal add"))}
 `);
         console.error(`  dora can use your existing coding agent (Claude Code, Cursor, etc.) behind the scenes
 `);
-        console.error(`  when you run ${import_picocolors11.default.dim('dora journal add "short decision"')} so you get rich pushback/tags/rationale (tags for decisions or notes)
+        console.error(`  when you run ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "short decision"'))} so you get rich pushback/tags/rationale (tags for decisions or notes)
 `);
         console.error(`  with almost no extra typing.
 `);
@@ -2549,7 +2549,7 @@ Project-specific decisions.
         }
       }
       let agentCmd = detected || "claude";
-      console.error(`  Detected / default agent command: ${import_picocolors11.default.dim(agentCmd)}`);
+      console.error(`  Detected / default agent command: ${import_picocolors11.default.dim(import_picocolors11.default.gray(agentCmd))}`);
       agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
       let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}" --output-format json' : '-p "{{prompt}}" --output-format json';
       console.error(`  Prompt template (use {{prompt}} placeholder):`);
@@ -2561,15 +2561,15 @@ Project-specific decisions.
       };
       await writeConfig(finalConfig);
       console.error(`
-  ${import_picocolors11.default.green("\u2713")} Agent configured. Future ${import_picocolors11.default.dim('dora journal add "..."')} calls will try to use it on the fly (when input is minimal).
+  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("Agent configured. Future")} ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "..."'))} ${import_picocolors11.default.white("calls will try to use it on the fly (when input is minimal).")}
 `);
-      console.error(`  You can re-run ${import_picocolors11.default.dim("dora init")} anytime to change the agent.
+      console.error(`  You can re-run ${import_picocolors11.default.dim(import_picocolors11.default.gray("dora init"))} anytime to change the agent.
 `);
       console.error(`  Example one-liner that will now feel magical:
 `);
-      console.error(`    ${import_picocolors11.default.dim('dora journal add "We decided to use the new cache command name"')}
+      console.error(`    ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "We decided to use the new cache command name"'))}
 `);
-      console.error(`  ${import_picocolors11.default.green("All set!")} Next steps: ${import_picocolors11.default.dim("dora journal list")}, ${import_picocolors11.default.dim('dora journal add "..."')}, or ${import_picocolors11.default.dim("dora journal update")}.
+      console.error(`  ${import_picocolors11.default.green("All set!")} ${import_picocolors11.default.white("Next steps:")} ${import_picocolors11.default.dim(import_picocolors11.default.gray("dora journal list"))}, ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "..."'))}, or ${import_picocolors11.default.dim(import_picocolors11.default.gray("dora journal update"))}.
 `);
       process.exit(0);
     }
@@ -2581,7 +2581,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.2.2",
+  version: "0.2.3",
   author: "Saif",
   repository: {
     type: "git",

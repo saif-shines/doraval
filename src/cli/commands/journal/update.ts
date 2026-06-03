@@ -48,7 +48,7 @@ export default defineCommand({
     ensureDoravalDirs();
     const journalsDir = getJournalsDir();
 
-    console.error(`\n  ${pc.bold("dora journal update")} — ${pc.dim(journalRepo)}\n`);
+    console.error(`\n  ${pc.bold(pc.white("dora journal update"))} — ${pc.dim(pc.gray(journalRepo))}\n`);
 
     // Determine which projects to refresh
     const projectsToUpdate: string[] = [];
@@ -86,7 +86,7 @@ export default defineCommand({
 
     if (projectsToUpdate.length === 0) {
       if (args.all) {
-        console.error(`\n  ${pc.dim("No projects registered.")}\n`);
+        console.error(`\n  ${pc.dim(pc.gray("No projects registered."))}\n`);
       } else {
         console.error(
           `\n  ${pc.yellow("⚠")} No project mapping found.\n` +
@@ -121,6 +121,6 @@ export default defineCommand({
         ? projectsToUpdate[0]
         : "journals";
 
-    console.error(`\n  ${pc.dim("Local cache refreshed for")} ${pc.bold(summary)}.\n`);
+    console.error(`\n  ${pc.dim(pc.gray("Local cache refreshed for"))} ${pc.bold(pc.white(summary))}.\n`);
   },
 });

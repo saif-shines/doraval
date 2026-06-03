@@ -47,7 +47,7 @@ export default defineCommand({
 
   async run({ args }) {
     console.error(
-      `\n  ${pc.bold("dora journal init")} (or top-level ${pc.dim("dora init")}) — Set up your journal\n`
+      `\n  ${pc.bold(pc.white("dora journal init"))} (or top-level ${pc.dim(pc.gray("dora init"))}) — Set up your journal\n`
     );
 
     // ── 0. Check gh CLI is available ───────────────────────────────
@@ -89,7 +89,7 @@ export default defineCommand({
         sourceNote = `  ${pc.dim("(from your previous journal setup)")}\n`;
       }
 
-      console.error(`  Journal repo ${pc.dim("(owner/name)")}`);
+      console.error(`  Journal repo ${pc.dim(pc.gray("(owner/name)"))}`);
       if (sourceNote) console.error(sourceNote);
       repo = prompt("  >", defaultRepo);
     }
@@ -108,7 +108,7 @@ export default defineCommand({
     // ── 3. Verify repo exists on GitHub ───────────────────────────
     if (!repoExists(repo!)) {
       console.error(
-        `  ${pc.red("✗")} Repository ${pc.bold(repo!)} not found on GitHub.\n`
+        `  ${pc.red("✗")} Repository ${pc.bold(pc.white(repo!))} not found on GitHub.\n`
       );
       console.error(`  Create it first:\n`);
       console.error(
@@ -127,18 +127,18 @@ export default defineCommand({
 
     if (alreadyRegistered && !isRefresh) {
       console.error(
-        `  ${pc.yellow("⚠")} Project ${pc.bold(project)} is already registered.\n`
+        `  ${pc.yellow("⚠")} Project ${pc.bold(pc.white(project))} is already registered.\n`
       );
       console.error(
-        `  Repo:   ${existing.journal.repo}`
+        `  Repo:   ${pc.gray(existing.journal.repo)}`
       );
       console.error(
         `  Remote: ${existing.journal.projects[project].remote_path}\n`
       );
       console.error(
-        `  To refresh local files, run: ${pc.dim(`dora journal update`)}\n` +
+        `  To refresh local files, run: ${pc.dim(pc.gray(`dora journal update`))}\n` +
           `  (init --refresh still works for compatibility.)\n` +
-          `  Or remove the project from ${pc.dim("~/.doraval/config.yml")} to fully re-initialize.\n`
+          `  Or remove the project from ${pc.dim(pc.gray("~/.doraval/config.yml"))} to fully re-initialize.\n`
       );
       process.exit(0);
     }
@@ -165,7 +165,7 @@ export default defineCommand({
 
     // ── 7. Fetch / ensure journal files ────────────────────────────
     const actionLabel = isRefresh ? "Refreshing" : "Fetching";
-    console.error(`  ${pc.dim(`${actionLabel} journal files from`)} ${effectiveRepo}${pc.dim("...")}\n`);
+    console.error(`  ${pc.dim(pc.gray(`${actionLabel} journal files from`))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
 
     const globalDest = join(journalsDir, "global.md");
     const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
@@ -188,13 +188,13 @@ export default defineCommand({
     await writeConfig(config);
 
     console.error(
-      `\n  ${pc.green("✓")} Project ${pc.bold(project)} registered to ${pc.bold(repo!)}.\n`
+      `\n  ${pc.green("✓")} Project ${pc.bold(pc.white(project))} registered to ${pc.bold(pc.white(repo!))}.\n`
     );
-    console.error(`  Config:   ${pc.dim("~/.doraval/config.yml")}`);
-    console.error(`  Journals: ${pc.dim("~/.doraval/journals/")}`);
-    console.error(`  Pending:  ${pc.dim("~/.doraval/pending/")}\n`);
+    console.error(`  Config:   ${pc.dim(pc.gray("~/.doraval/config.yml"))}`);
+    console.error(`  Journals: ${pc.dim(pc.gray("~/.doraval/journals/"))}`);
+    console.error(`  Pending:  ${pc.dim(pc.gray("~/.doraval/pending/"))}\n`);
     console.error(
-      `  Use ${pc.dim("dora journal add")} to propose decisions and ${pc.dim("dora journal list")} to view them.\n`
+      `  Use ${pc.dim(pc.gray("dora journal add"))} to propose decisions and ${pc.dim(pc.gray("dora journal list"))} to view them.\n`
     );
 
     process.exit(0);
