@@ -1,6 +1,6 @@
 import type { JournalEntry } from "./journal-parse.js";
 
-export const CANONICAL_SCOPES = [
+export const CANONICAL_TAGS = [
   "naming",
   "cli",
   "architecture",
@@ -22,9 +22,10 @@ export function validateEntry(entry: Partial<JournalEntry>): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Required fields
+  // Relaxed fields for low-friction quick add (pushback/tags may be supplied later or via agent on-the-fly).
+  // We only hard-error on obviously bad *values* when they are present.
   if (entry.pushback === undefined || entry.pushback === null) {
-    errors.push("pushback is required");
+    warnings.push("pushback not supplied (will use default 5 when staging via journal add)");
   } else {
     const pb = Number(entry.pushback);
     if (!Number.isInteger(pb) || pb < 1 || pb > 10) {
@@ -32,15 +33,15 @@ export function validateEntry(entry: Partial<JournalEntry>): ValidationResult {
     }
   }
 
-  if (!entry.scope || !Array.isArray(entry.scope) || entry.scope.length === 0) {
-    errors.push("scope is required and must be a non-empty array");
+  if (!entry.tags || !Array.isArray(entry.tags) || entry.tags.length === 0) {
+    warnings.push("tags not supplied or empty (will use [] when staging via journal add; consider canonical tags)");
   } else {
-    const invalidScopes = entry.scope.filter(
-      (s) => !CANONICAL_SCOPES.includes(s as any)
+    const invalidTags = entry.tags.filter(
+      (s) => !CANONICAL_TAGS.includes(s as any)
     );
-    if (invalidScopes.length > 0) {
+    if (invalidTags.length > 0) {
       warnings.push(
-        `scope contains non-canonical tags: ${invalidScopes.join(", ")} (valid: ${CANONICAL_SCOPES.join(", ")})`
+        `tags contains non-canonical values: ${invalidTags.join(", ")} (valid: ${CANONICAL_TAGS.join(", ")})`
       );
     }
   }

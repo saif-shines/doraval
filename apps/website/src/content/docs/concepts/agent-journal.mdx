@@ -7,7 +7,7 @@ sidebar:
 
 An **agent journal** is a structured decision log that lives in a private GitHub repo. It records the decisions, directions, and philosophies behind a project. Both humans and AI coding agents can propose entries. Only the doraval CLI writes to the remote.
 
-When a change conflicts with a recorded principle, the journal pushes back — not as a blocker, but as an argument with calibrated intensity.
+When a change conflicts with a recorded principle (or you just want to capture a useful note), the journal can push back (for decisions) or simply record tagged notes.
 
 ## The problem
 
@@ -35,11 +35,13 @@ The journal has two layers:
 
 ## Setup
 
-Register a project with:
+Register everything (journal + the coding agent dora should use on the fly when you later run `journal add`) with the recommended top-level command:
 
 ```bash
-doraval journal init
+dora init
 ```
+
+(You can still use the more focused `doraval journal init` if you only want the journal part.)
 
 `journal init` is designed to be low-friction:
 
@@ -56,7 +58,7 @@ The command stores the mapping in `~/.doraval/config.yml` (never in your project
 
 ​```yaml
 pushback: 7
-scope: [naming, cli]
+tags: [naming, cli]
 author: human
 date: 2026-05-25
 status: active
@@ -72,7 +74,7 @@ standard, not a grade.
 | Field | Description |
 |---|---|
 | `pushback` | 1–10. How hard the journal argues if violated. |
-| `scope` | Tags: `naming`, `cli`, `architecture`, `testing`, `ux`, `api`, `docs`. |
+| `tags` | Tags for categorization (decisions or notes): `naming`, `cli`, `architecture`, `testing`, `ux`, `api`, `docs`. |
 | `author` | `human` or `agent:<name>`. |
 | `date` | ISO date. |
 | `status` | `active`, `superseded`, or `retired`. |
@@ -92,7 +94,7 @@ Even pushback 10 is an argument, not a gate.
 
 Two-stage hybrid approach:
 
-1. **Scope-tag filter** (cheap): Match the current action's domain against entry scope tags. Fast and deterministic.
+1. **Tag filter** (cheap): Match the current action's domain against entry tags. Fast and deterministic.
 2. **Semantic check** (matches only): For entries that pass the filter, the human (v1) or agent (v2) judges whether the change actually contradicts the principle.
 
 ## Single writer pattern
@@ -127,7 +129,7 @@ doraval journal list
 # Capture a decision you just made
 doraval journal add "Always use 'update' not 'refresh' for cache pulls" \
   --pushback 6 \
-  --scope cli,docs
+  --tags cli,docs
 
 # At the end of the session (or when ready to share)
 doraval journal sync

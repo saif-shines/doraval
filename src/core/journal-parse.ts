@@ -3,7 +3,7 @@ import { YAML } from "bun";
 export interface JournalEntry {
   title: string;
   pushback: number;
-  scope: string[];
+  tags: string[];   // renamed from "scope" for broader use (decisions + general notes)
   author: string;
   date: string;
   status: "active" | "superseded" | "retired";
@@ -25,14 +25,14 @@ export interface ParseResult {
  * 
  * ```yaml
  * pushback: 7
- * scope: [naming, cli]
+ * tags: [naming, cli]
  * author: human
  * date: 2026-05-25
  * status: active
  * ```
  * 
  * Free form rationale text here.
- * Can be multiple paragraphs.
+ * Can be multiple paragraphs. (Tags are used for both decisions with pushback and general useful notes.)
  */
 export function parseJournalEntries(raw: string): JournalEntry[] {
   const { entries } = parseJournalEntriesWithWarnings(raw);
@@ -88,7 +88,10 @@ export function parseJournalEntriesWithWarnings(raw: string): ParseResult {
     const rationale = sectionBody.slice(yamlBlockEnd).trim();
 
     const pushback = Number(meta.pushback);
-    const scope = Array.isArray(meta.scope) ? (meta.scope as string[]) : [];
+    // Support both "tags" (new) and "scope" (legacy) for backward compat with existing journals
+    const tags = Array.isArray(meta.tags) ? (meta.tags as string[])
+               : Array.isArray(meta.scope) ? (meta.scope as string[])
+               : [];
     const author = typeof meta.author === "string" ? meta.author : "human";
     const date = typeof meta.date === "string" ? meta.date : "";
     const status = (meta.status as JournalEntry["status"]) || "active";
@@ -98,7 +101,7 @@ export function parseJournalEntriesWithWarnings(raw: string): ParseResult {
     entries.push({
       title,
       pushback: isNaN(pushback) ? 0 : pushback,
-      scope,
+      tags,
       author,
       date,
       status,

@@ -7,35 +7,63 @@ sidebar:
 
 Stage a new journal entry locally. It will live in `~/.doraval/pending/<project>/` until you run `sync`.
 
-```bash
-doraval journal add "Title of the decision"
-```
-
-## Required options
-
-| Flag             | Description                                      |
-|------------------|--------------------------------------------------|
-| `--pushback <1-10>` | How strongly to argue if this principle is violated |
-| `--scope <tags>`    | Comma-separated canonical scopes (e.g. `cli,naming`) |
-
-## Optional options
-
-| Flag            | Default     | Description |
-|-----------------|-------------|-------------|
-| `--author`      | `human`     | `human` or `agent:<name>` (e.g. `agent:grok`) |
-| `--status`      | `active`    | `active`, `superseded`, or `retired` |
-| `--rationale`   | (opens $EDITOR) | Inline rationale text. If omitted, an editor is opened with a template. |
-
-## Example
+The absolute lowest-effort form (the happy path for humans and for agents calling dora) is just the title:
 
 ```bash
-doraval journal add "Use 'update' not 'refresh' for cache pulls" \
-  --pushback 6 \
-  --scope cli,docs \
-  --rationale "Keeps the mental model consistent with 'sync' being the publisher."
+doraval journal add "We decided to always use 'update' for cache refreshes"
 ```
 
-The entry is written as a single Markdown file with a `## Title` heading, a fenced YAML block, and the rationale body.
+`pushback`, `tags`, and `rationale` are now optional. When omitted, `journal add` supplies sensible defaults (pushback=5, tags=[], rationale seeded from the title). A warning is printed for the relaxed fields so you know.
+
+## Three ways to add (pick the one that matches your situation)
+
+1. **Minimal / magic (recommended for quick capture)** — just the title. If you ran `dora init` and configured a coding agent, dora will use that agent on the fly (via its native prompt tool + a documented scaffold) to produce rich pushback/tags/rationale. Otherwise it uses the defaults above.
+
+   ```bash
+   doraval journal add "Task that just happened"
+   ```
+
+2. **Agent / structured (the 90% agent use case)** — give dora a JSON blob (or pipe it). This is what the "on the fly" internal call ultimately does, and what you use when you have an outer agent produce the entry via its own `claude -p ... --output-format json` + the prompt scaffold.
+
+   ```bash
+   doraval journal add --json '{
+     "title": "Use update not refresh for cache",
+     "pushback": 6,
+     "tags": ["cli", "docs"],
+     "rationale": "Keeps the mental model consistent with sync being the publisher.",
+     "author": "agent:claude-code"
+   }'
+   ```
+
+   Or via stdin / pipe:
+
+   ```bash
+   echo '{"title":"...","pushback":5,"tags":["ux"],"rationale":"..."}' | doraval journal add --json -
+   ```
+
+3. **Explicit / power-user** — full flags (still fully supported, no magic, no agent call).
+
+   ```bash
+   doraval journal add "Use 'update' not 'refresh' for cache pulls" \
+     --pushback 6 \
+     --tags cli,docs \
+     --rationale "Keeps the mental model consistent with 'sync' being the publisher."
+   ```
+
+## Options (all optional except in the explicit style)
+
+| Flag            | Description |
+|-----------------|-------------|
+| `TITLE` (positional) | The decision in one sentence. The only thing most callers need to type. |
+| `-b, --pushback` | 1–10. Optional (default 5 when using the relaxed path). |
+| `-t, --tags`     | Comma-separated tags (renamed from --scope). Optional (default [] in relaxed path). Useful for both decisions and general notes. Valid: naming, cli, architecture, testing, ux, api, docs. (Legacy --scope still accepted for CLI compat.) |
+| `-a, --author`   | Default "human" (agents should use "agent:yourname"). |
+| `--status`       | active (default) | superseded | retired |
+| `-r, --rationale` | If you want to supply a one-line rationale on the CLI. The old automatic editor for multi-line rationale is no longer triggered by default (edit the pending file before sync, or use --json for rich content). |
+| `-p, --project`  | Project name (defaults to directory mapping from config). |
+| `-j, --json`     | Full entry as JSON (or "-" for stdin). Highest precedence. |
+
+The entry is written as a single Markdown file with a `## Title` heading, a fenced YAML block, and the rationale body. The YAML always reflects the final values that were used (defaults, agent output, or explicit flags).
 
 ## What happens next
 

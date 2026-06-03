@@ -92,13 +92,13 @@ export default defineCommand({
     if (!project) {
       console.error(
         `${pc.yellow("⚠")} No project mapping found.\n\n` +
-          `Run ${pc.dim("doraval journal init")} first, or pass ${pc.dim("--project <name>")}.`
+          `Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first, or pass ${pc.dim("--project <name>")}.`
       );
       process.exit(1);
     }
 
     if (!config?.journal.repo) {
-      console.error(`${pc.red("✗")} No journal repo configured. Run ${pc.dim("doraval journal init")} first.`);
+      console.error(`${pc.red("✗")} No journal repo configured. Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first.`);
       process.exit(1);
     }
 
@@ -107,7 +107,7 @@ export default defineCommand({
     const journalRepo = config.journal.repo;
     const pendingDir = getPendingProjectDir(project);
 
-    console.error(`\n  ${pc.bold("doraval journal sync")} — ${project}\n`);
+    console.error(`\n  ${pc.bold("dora journal sync")} — ${project}\n`);
     console.error(`  Journal repo: ${pc.dim(journalRepo)}`);
 
     // ── Always pull latest into local cache first ──────────────────
@@ -218,5 +218,7 @@ export default defineCommand({
     console.error(
       `\n  ${pc.green("Done!")} ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} published.\n`
     );
+
+    process.exit(0);
   },
 });

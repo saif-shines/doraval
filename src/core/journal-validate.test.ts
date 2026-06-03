@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { validateEntry, CANONICAL_SCOPES, VALID_STATUSES } from "./journal-validate.js";
+import { validateEntry, CANONICAL_TAGS, VALID_STATUSES } from "./journal-validate.js";
 
 describe("validateEntry", () => {
   test("accepts a fully valid entry", () => {
     const result = validateEntry({
       title: "Test decision",
       pushback: 7,
-      scope: ["naming", "cli"],
+      tags: ["naming", "cli"],
       author: "human",
       date: "2026-05-25",
       status: "active",
@@ -16,28 +16,31 @@ describe("validateEntry", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  test("reports missing required fields", () => {
+  test("reports missing required fields (relaxed for pushback/tags to support low-friction add)", () => {
     const result = validateEntry({});
 
+    // pushback and tags are now relaxed (warnings instead of hard errors) to allow quick `journal add "title"`
+    expect(result.warnings.some(w => w.includes("pushback not supplied"))).toBe(true);
+    expect(result.warnings.some(w => w.includes("tags not supplied"))).toBe(true);
+
+    // other core fields still hard errors
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("pushback is required");
-    expect(result.errors).toContain("scope is required and must be a non-empty array");
     expect(result.errors).toContain("author is required");
     expect(result.errors).toContain("date is required");
     expect(result.errors).toContain("status must be one of: active, superseded, retired");
   });
 
   test("validates pushback range and type", () => {
-    expect(validateEntry({ pushback: 0, scope: ["cli"], author: "human", date: "2026-05-25", status: "active" }).errors).toContain("pushback must be an integer between 1 and 10");
-    expect(validateEntry({ pushback: 11, scope: ["cli"], author: "human", date: "2026-05-25", status: "active" }).errors).toContain("pushback must be an integer between 1 and 10");
-    expect(validateEntry({ pushback: 3.5, scope: ["cli"], author: "human", date: "2026-05-25", status: "active" }).errors).toContain("pushback must be an integer between 1 and 10");
+    expect(validateEntry({ pushback: 0, tags: ["cli"], author: "human", date: "2026-05-25", status: "active" }).errors).toContain("pushback must be an integer between 1 and 10");
+    expect(validateEntry({ pushback: 11, tags: ["cli"], author: "human", date: "2026-05-25", status: "active" }).errors).toContain("pushback must be an integer between 1 and 10");
+    expect(validateEntry({ pushback: 3.5, tags: ["cli"], author: "human", date: "2026-05-25", status: "active" }).errors).toContain("pushback must be an integer between 1 and 10");
   });
 
-  test("warns on non-canonical scopes but still accepts", () => {
+  test("warns on non-canonical tags but still accepts", () => {
     const result = validateEntry({
-      title: "Test with custom scope",
+      title: "Test with custom tag",
       pushback: 5,
-      scope: ["custom-tag", "naming"],
+      tags: ["custom-tag", "naming"],
       author: "human",
       date: "2026-05-25",
       status: "active",
@@ -51,7 +54,7 @@ describe("validateEntry", () => {
   test("warns on non-standard author format", () => {
     const result = validateEntry({
       pushback: 4,
-      scope: ["cli"],
+      tags: ["cli"],
       author: "saif",
       date: "2026-05-25",
       status: "active",
@@ -61,7 +64,7 @@ describe("validateEntry", () => {
   });
 
   test("exports constants", () => {
-    expect(CANONICAL_SCOPES).toContain("naming");
+    expect(CANONICAL_TAGS).toContain("naming");
     expect(VALID_STATUSES).toContain("active");
   });
 });

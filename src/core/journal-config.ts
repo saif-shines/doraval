@@ -15,6 +15,10 @@ export interface JournalConfig {
     repo: string;
     projects: Record<string, ProjectMapping>;
   };
+  agent?: {
+    command: string;
+    prompt_template?: string;
+  };
 }
 
 // ── Paths ──────────────────────────────────────────────────────────
@@ -66,13 +70,8 @@ export async function writeConfig(config: JournalConfig): Promise<void> {
 }
 
 function serializeConfig(config: JournalConfig): string {
-  let out = `journal:\n  repo: ${config.journal.repo}\n  projects:\n`;
-  for (const [name, mapping] of Object.entries(config.journal.projects)) {
-    out += `    ${name}:\n`;
-    out += `      remote_path: ${mapping.remote_path}\n`;
-    out += `      local_path: ${mapping.local_path}\n`;
-  }
-  return out;
+  // Use proper YAML roundtrip so extra top-level keys (agent, future extensions) are preserved losslessly.
+  return YAML.stringify(config);
 }
 
 // ── Helpers ────────────────────────────────────────────────────────

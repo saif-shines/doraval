@@ -13,6 +13,158 @@ import {
 import { validateEntry } from "../../../core/journal-validate.js";
 import type { JournalEntry } from "../../../core/journal-parse.js";
 
+/**
+ * Pure helper: turn a template string containing {{prompt}} and a (possibly multiline) prompt
+ * into a proper argv array for spawn, keeping the prompt text as a *single* argument.
+ *
+ * Example template: '-p "{{prompt}}" --output-format json'
+ * The quotes in the template are only for shell users; we strip them here.
+ */
+export function buildAgentArgv(template: string, promptText: string): string[] {
+  const marker = '__DORA_PROMPT__';
+  const substituted = template.replace('{{prompt}}', marker);
+  const rawParts = substituted.split(/\s+/).filter(Boolean);
+
+  return rawParts.map(part => {
+    // First strip any shell-style quotes that were around the {{prompt}} in the template
+    let cleaned = part;
+    if (cleaned.startsWith('"') && cleaned.endsWith('"')) cleaned = cleaned.slice(1, -1);
+    if (cleaned.startsWith("'") && cleaned.endsWith("'")) cleaned = cleaned.slice(1, -1);
+
+    if (cleaned === marker) {
+      return promptText; // emit the full (multiline) prompt as a single argv element
+    }
+    return cleaned;
+  });
+}
+
+/**
+ * Invoke the pre-configured coding agent (from `dora init`) with a scaffold prompt
+ * and return the parsed JSON (or null on any failure).
+ * This is the "on the fly" enrichment for minimal `journal add "title"`.
+ * Tags (not scope) are used for categorization of both decisions and general notes.
+ */
+async function invokeConfiguredAgentForEntry(decisionText: string, agentCfg: any): Promise<Partial<JournalEntry> | null> {
+  if (!agentCfg || !agentCfg.command) return null;
+
+  const scaffold = `Raw user capture (a decision, observation, or useful note that just happened): "${decisionText}"
+
+Turn this into a clean journal entry. Infer the core decision or note even if the input is phrased as a todo or reminder. Be professional and concise.
+
+**CRITICAL INSTRUCTIONS (follow exactly):**
+- Output *ONLY* a single valid JSON object. Nothing before it, nothing after it, no markdown fences, no explanations, no extra text.
+- The JSON must have exactly these keys (use the suggested values as starting point but improve them):
+{
+  "title": "Short, scannable, professional title (past tense or present perfect, max ~80 chars)",
+  "pushback": 4,
+  "tags": ["cli", "ux"],
+  "rationale": "2-5 sentences explaining context and implications (or the note content).",
+  "author": "agent:claude-code"
+}
+
+If you cannot produce exactly this, output the JSON with the best you can and set "author" to "agent:claude-code" anyway.`;
+
+  // Template example stored by dora init: '-p "{{prompt}}" --output-format json'
+  const template = agentCfg.prompt_template || '-p "{{prompt}}" --output-format json';
+  const extraArgs = buildAgentArgv(template, scaffold);
+
+  // Print a short version of what we are about to run (the full prompt is huge)
+  const shortTemplate = (agentCfg.prompt_template || '-p "{{prompt}}" --output-format json').slice(0, 80);
+  console.error(`  ${pc.dim(`→ ${agentCfg.command} ${shortTemplate}...`)}`);
+
+  try {
+    const result = spawnSync([agentCfg.command, ...extraArgs], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const stdout = result.stdout.toString().trim();
+    const stderr = result.stderr.toString().trim();
+
+    if (result.exitCode !== 0) {
+      console.error(`${pc.yellow("⚠")} Configured agent (${agentCfg.command}) exited with code ${result.exitCode}. Falling back to defaults.`);
+      if (stderr) console.error(`  ${pc.dim("stderr from agent:")}\n${stderr.slice(0, 800)}`);
+      if (stdout) console.error(`  ${pc.dim("stdout from agent:")}\n${stdout.slice(0, 400)}`);
+      return null;
+    }
+
+    // Smart extraction:
+    // - Some "claude" binaries (full agent runners) wrap everything in a metadata object:
+    //   { type: "result", result: "{\"title\":..., \"rationale\":...}", ... }
+    // - The model itself may also return extra text. We look for the JSON that actually
+    //   contains our expected fields.
+    let candidates: any[] = [];
+
+    // Try the whole stdout first
+    let jsonMatch = stdout.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        candidates.push(JSON.parse(jsonMatch[0]));
+      } catch {}
+    }
+
+    // Also try every top-level JSON-looking blob (in case there are multiple)
+    const allMatches = stdout.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) || [];
+    for (const m of allMatches) {
+      try {
+        const p = JSON.parse(m);
+        candidates.push(p);
+      } catch {}
+    }
+
+    let parsed: any = null;
+
+    // Prefer any object that looks like our entry (has title or rationale at top level)
+    for (const c of candidates) {
+      if (c && typeof c === "object" && (c.title || c.rationale)) {
+        parsed = c;
+        break;
+      }
+    }
+
+    // Special case for common agent-runner wrapper: { ..., result: "JSON string or object" }
+    if (!parsed) {
+      for (const c of candidates) {
+        if (c && typeof c === "object" && c.result) {
+          let inner = c.result;
+          if (typeof inner === "string") {
+            try { inner = JSON.parse(inner); } catch {}
+          }
+          if (inner && typeof inner === "object" && (inner.title || inner.rationale)) {
+            parsed = inner;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!parsed) {
+      // Fallback to the first parsed blob if nothing better was found
+      parsed = candidates[0] || null;
+    }
+
+    if (!parsed || typeof parsed !== "object") {
+      console.error(`${pc.yellow("⚠")} Agent produced output but no usable JSON object was found. Falling back.`);
+      console.error(`  ${pc.dim("stdout (first 700 chars):")}\n${stdout.slice(0, 700)}`);
+      if (stderr) console.error(`  ${pc.dim("stderr:")}\n${stderr.slice(0, 500)}`);
+      return null;
+    }
+
+    // Final shape check
+    if (!parsed.title && !parsed.rationale) {
+      console.error(`${pc.yellow("⚠")} Agent returned JSON, but it did not contain expected fields (title/rationale). Using defaults.`);
+      console.error(`  ${pc.dim("parsed top-level keys:")} ${Object.keys(parsed).join(", ")}`);
+      console.error(`  ${pc.dim("raw stdout (truncated):")}\n${stdout.slice(0, 600)}`);
+      return null;
+    }
+
+    return parsed;
+  } catch (e) {
+    console.error(`${pc.yellow("⚠")} Failed to invoke configured agent (${agentCfg.command}): ${(e as Error).message}. Using defaults.`);
+    return null;
+  }
+}
+
 function slugify(title: string): string {
   return title
     .toLowerCase()
@@ -21,55 +173,34 @@ function slugify(title: string): string {
     .slice(0, 60) || "untitled";
 }
 
-async function openEditor(initialContent: string): Promise<string> {
-  const editor = process.env.EDITOR || process.env.VISUAL || "vi";
-  const tmpDir = process.env.TMPDIR || "/tmp";
-  const tmpFile = join(tmpDir, `doraval-journal-${Date.now()}.md`);
-
-  // Write initial content (the YAML skeleton + title)
-  await Bun.write(tmpFile, initialContent);
-
-  const result = spawnSync([editor, tmpFile], {
-    stdio: ["inherit", "inherit", "inherit"],
-  });
-
-  if (result.exitCode !== 0) {
-    console.error(pc.red("Editor exited with error. Aborting."));
-    process.exit(1);
-  }
-
-  const content = await Bun.file(tmpFile).text();
-
-  // Best effort cleanup
-  try {
-    await Bun.file(tmpFile).unlink();
-  } catch {}
-
-  return content;
-}
-
 export default defineCommand({
   meta: {
     name: "add",
-    description: "Propose a new decision / principle for the journal",
+    description: "Propose a new decision, note or principle (pushback & tags optional; agent can enrich on the fly)",
   },
   args: {
     title: {
       type: "positional",
-      description: "Title of the decision or principle",
-      required: true,
+      description: "Title of the decision or principle (the only argument needed for the low-friction path; other fields use defaults or the configured agent)",
+      required: false,
     },
     pushback: {
       type: "number",
       alias: "b",
-      description: "Pushback intensity (1-10)",
-      required: true,
+      description: "Pushback intensity (1-10). Optional — defaults are applied (or supplied by --json / on-the-fly agent).",
+      required: false,
     },
+    tags: {
+      type: "string",
+      alias: "t",
+      description: "Comma-separated tags (e.g. naming,cli,architecture). Optional — defaults are applied (or supplied by --json / on-the-fly agent). Renamed from --scope for broader use with notes too.",
+      required: false,
+    },
+    // legacy alias for --tags (still parsed for backward compat in scripts)
     scope: {
       type: "string",
-      alias: "s",
-      description: "Comma-separated scope tags (e.g. naming,cli,architecture)",
-      required: true,
+      description: "(deprecated) Use --tags instead",
+      required: false,
     },
     author: {
       type: "string",
@@ -85,12 +216,17 @@ export default defineCommand({
     rationale: {
       type: "string",
       alias: "r",
-      description: "Rationale / explanation. If omitted, opens $EDITOR.",
+      description: "Rationale / explanation (one line). For rich/multi-line content prefer the --json path or edit the pending file. The old auto-editor is no longer triggered on the main low-effort path.",
     },
     project: {
       type: "string",
       alias: "p",
       description: "Project name (defaults to directory mapping)",
+    },
+    json: {
+      type: "string",
+      alias: "j",
+      description: 'Full entry as JSON (title, pushback, tags, rationale, ...). Use "-" to read from stdin. Highest precedence; bypasses other input methods. (JSON may still use "scope" for legacy compat.)',
     },
   },
 
@@ -109,30 +245,116 @@ export default defineCommand({
     if (!project) {
       console.error(
         `${pc.yellow("⚠")} No project mapping found.\n\n` +
-          `Run ${pc.dim("doraval journal init")} first, or pass ${pc.dim("--project <name>")}.`
+          `Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first, or pass ${pc.dim("--project <name>")}.`
       );
       process.exit(1);
     }
 
-    const title = (args.title as string).trim();
-    const pushback = Number(args.pushback);
-    const scope = (args.scope as string)
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const author = args.author as string;
-    const status = args.status as JournalEntry["status"];
+    // ── 1. Highest precedence: --json (for agents / scripts / the internal on-the-fly path)
+    let title: string | undefined;
+    let pushback: number | undefined;
+    let tags: string[] = [];
+    let author = args.author as string || "human";
+    let status = (args.status as JournalEntry["status"]) || "active";
+    let rationale: string | undefined;
+    let date = new Date().toISOString().split("T")[0];
+
+    const jsonInput = args.json as string | undefined;
+    if (jsonInput) {
+      let rawJson = jsonInput;
+      if (jsonInput === "-" || jsonInput === "") {
+        // read from stdin
+        const stdinText = await new Response(Bun.stdin.stream()).text();
+        rawJson = stdinText.trim();
+      }
+      try {
+        const parsed = JSON.parse(rawJson);
+        title = parsed.title ? String(parsed.title).trim() : undefined;
+        pushback = typeof parsed.pushback === "number" ? parsed.pushback : (parsed.pushback ? Number(parsed.pushback) : undefined);
+        // Support both "tags" (preferred) and legacy "scope" in JSON input
+        if (Array.isArray(parsed.tags)) {
+          tags = parsed.tags.map((s: any) => String(s).trim()).filter(Boolean);
+        } else if (typeof parsed.tags === "string") {
+          tags = parsed.tags.split(",").map((s: string) => s.trim()).filter(Boolean);
+        } else if (Array.isArray(parsed.scope)) {
+          tags = parsed.scope.map((s: any) => String(s).trim()).filter(Boolean);
+        } else if (typeof parsed.scope === "string") {
+          tags = parsed.scope.split(",").map((s: string) => s.trim()).filter(Boolean);
+        }
+        rationale = parsed.rationale ? String(parsed.rationale).trim() : undefined;
+        if (parsed.author) author = String(parsed.author);
+        if (parsed.status) status = parsed.status as JournalEntry["status"];
+        if (parsed.date) date = String(parsed.date);
+      } catch (e) {
+        console.error(`${pc.red("✗")} Failed to parse --json input: ${(e as Error).message}`);
+        process.exit(1);
+      }
+    }
+
+    // ── 2. Fall back to CLI args + relaxed defaults (the new low-effort human path)
+    if (!title) {
+      title = (args.title as string | undefined)?.trim() || "Untitled decision";
+    }
+    if (pushback === undefined) {
+      const cliPb = args.pushback as number | undefined;
+      pushback = (cliPb !== undefined) ? Number(cliPb) : 5; // relaxed default
+    }
+    if (tags.length === 0) {
+      // support legacy --scope flag name for CLI backward compat
+      let cliTagsStr = (args.tags as any) || (args.scope as any);
+      if (cliTagsStr != null) {
+        if (typeof cliTagsStr !== 'string') cliTagsStr = String(cliTagsStr);
+        tags = cliTagsStr.split(",").map((s: string) => s.trim()).filter(Boolean);
+      }
+      // else leave as [] (relaxed default)
+    }
+    if (!rationale) {
+      const cliRat = (args.rationale as string | undefined)?.trim();
+      rationale = cliRat || title; // relaxed default: seed from title
+    }
+
+    // On-the-fly agent enrichment (the magic the user asked for) -- do this BEFORE validation
+    // so that "not supplied" warnings don't fire when the agent will provide rich values,
+    // and so agent output gets validated.
+    const cameFromExplicitJson = !!jsonInput;
+    const isThinInput = !args.pushback && !args.tags && !args.scope && !args.rationale; // support legacy --scope in check
+
+    let agentCfg: any = null;
+    let attemptedAgent = false;
+    if (!cameFromExplicitJson && isThinInput) {
+      const fullConfigForAgent = await readConfig();
+      agentCfg = (fullConfigForAgent as any)?.agent;
+      if (agentCfg) {
+        attemptedAgent = true;
+        console.error(`  ${pc.dim("(querying your configured coding agent...)")}`);
+        const agentResult = await invokeConfiguredAgentForEntry(title, agentCfg);
+        if (agentResult) {
+          if (agentResult.title) title = String(agentResult.title).trim();
+          if (typeof agentResult.pushback === "number") pushback = agentResult.pushback;
+          if (Array.isArray(agentResult.tags)) {
+            tags = agentResult.tags.map((s: any) => String(s).trim()).filter(Boolean);
+          } else if (Array.isArray(agentResult.scope)) { // legacy support in agent JSON
+            tags = agentResult.scope.map((s: any) => String(s).trim()).filter(Boolean);
+          }
+          if (agentResult.rationale) rationale = String(agentResult.rationale).trim();
+          if (agentResult.author) author = String(agentResult.author);
+          if (agentResult.status) status = agentResult.status as JournalEntry["status"];
+          if (agentResult.date) date = String(agentResult.date);
+          // The success summary below will prominently show the agent author + "(enriched...)" note.
+        }
+      }
+    }
 
     const entry: Partial<JournalEntry> = {
       title,
       pushback,
-      scope,
+      tags,
       author,
-      date: new Date().toISOString().split("T")[0],
+      date,
       status,
     };
 
-    // Validate early (before asking for rationale)
+    // Validate (now relaxed — pushback/tags missing or empty only produce warnings)
     const validation = validateEntry(entry);
     if (!validation.valid) {
       console.error(`${pc.red("✗")} Invalid entry:\n`);
@@ -142,68 +364,46 @@ export default defineCommand({
       process.exit(1);
     }
     for (const warn of validation.warnings) {
-      console.error(`${pc.yellow("⚠")} ${warn}`);
-    }
-
-    // Get rationale
-    let rationale = (args.rationale as string | undefined)?.trim();
-
-    if (!rationale) {
-      const skeleton = `# ${title}
-
-\`\`\`yaml
-pushback: ${pushback}
-scope: [${scope.join(", ")}]
-author: ${author}
-date: ${entry.date}
-status: ${status}
-\`\`\`
-
-# Write your rationale / explanation below this line.
-# You can use multiple paragraphs, lists, code blocks, etc.
-`;
-
-      if (process.stdout.isTTY) {
-        console.error(`\n  Opening editor for rationale... (save & exit when done)\n`);
-        const full = await openEditor(skeleton);
-        // Strip the skeleton we provided and take only the user's additions
-        rationale = full.replace(skeleton, "").trim();
+      if ((warn.includes("not supplied") || warn.includes("empty")) && attemptedAgent) {
+        // We tried the agent; if it didn't supply the fields it's on the model, not the user. Keep quiet.
+      } else if (warn.includes("not supplied") || warn.includes("empty")) {
+        // Soft note for the intentional low-friction/minimal path (not alarming)
+        console.error(`${pc.dim("·")} ${warn}`);
       } else {
-        console.error(
-          `${pc.red("✗")} --rationale is required when not running interactively.\n` +
-            `You can also pipe rationale via stdin in a future version.`
-        );
-        process.exit(1);
+        console.error(`${pc.yellow("⚠")} ${warn}`);
       }
     }
 
+    // Rationale is already resolved above (no auto editor on the plain `add "title"` path).
+    // If the caller wants a multi-paragraph rationale without putting it on the CLI,
+    // they can still use --rationale (one line) or edit the pending file before sync,
+    // or we can add an explicit --edit flag in the future.
     if (!rationale) {
-      console.error(`${pc.red("✗")} Rationale cannot be empty.`);
-      process.exit(1);
+      // Should not happen because of the default above, but be defensive
+      rationale = title;
     }
 
-    // Build final file content
+    // Build final file content (always clean, using the values we decided on)
     const content = `## ${title}
 
 \`\`\`yaml
 pushback: ${pushback}
-scope: [${scope.join(", ")}]
+tags: [${tags.join(", ")}]
 author: ${author}
-date: ${entry.date}
+date: ${date}
 status: ${status}
 \`\`\`
 
 ${rationale}
 `;
 
-    // Write to pending
+    // Write to pending (uses the `content` built above with the final values)
     ensureDoravalDirs();
     const pendingDir = getPendingProjectDir(project);
     if (!existsSync(pendingDir)) {
-      Bun.write(join(pendingDir, ".gitkeep"), ""); // ensure dir exists
+      await Bun.write(join(pendingDir, ".gitkeep"), ""); // ensure dir exists
     }
 
-    const date = entry.date!;
     const slug = slugify(title);
     const filename = `${date}-${slug}.md`;
     const filePath = join(pendingDir, filename);
@@ -214,10 +414,32 @@ ${rationale}
     console.error(`  Project:  ${pc.bold(project)}`);
     console.error(`  Title:    ${pc.bold(title)}`);
     console.error(`  Pushback: ${pushback}`);
-    console.error(`  Scope:    ${scope.join(", ")}`);
+    console.error(`  Tags:     ${tags.join(", ") || pc.dim("(none)")}`);
+    const authorDisplay = author.startsWith("agent:") ? pc.cyan(author) : author;
+    console.error(`  Author:   ${authorDisplay}`);
+    if (author.startsWith("agent:")) {
+      console.error(`            ${pc.dim("(enriched on the fly by your configured coding agent)")}`);
+    }
     console.error(`  File:     ${pc.dim(filePath)}\n`);
+
+    if (isThinInput && !author.startsWith("agent:")) {
+      if (attemptedAgent) {
+        console.error(
+          `  ${pc.dim("Note:")} Your configured agent was called but did not return a usable enrichment this time (see warning above).\n` +
+          `        The raw title + defaults were used. Edit the pending file or tweak the agent template with dora init.\n`
+        );
+      } else {
+        console.error(
+          `  ${pc.dim("Tip:")} run ${pc.dim("dora init")} to configure a coding agent (Claude, Cursor, etc.)\n` +
+          `        so minimal adds like this get rich titles, tags, and rationales automatically.\n`
+        );
+      }
+    }
+
     console.error(
-      `  Run ${pc.dim("doraval journal sync")} to publish it to your journal repo.\n`
+      `  Run ${pc.dim("dora journal sync")} (or ${pc.dim("doraval journal sync")}) to publish it to your journal repo.\n`
     );
+
+    process.exit(0);
   },
 });

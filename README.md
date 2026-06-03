@@ -127,11 +127,11 @@ Record, view, and sync project principles and decisions so that future you (and 
 The journal lives in a private GitHub repo you control (by convention `yourname/yourname.md`). All config and cache lives under `~/.doraval/`.
 
 ```bash
-doraval journal init          # One-time link of this project to your journal repo
-doraval journal list          # View active principles
-doraval journal update        # Pull latest from the remote into local cache
-doraval journal add "..."     # Propose a new decision (staged locally)
-doraval journal sync          # Publish pending entries + refresh cache
+dora init                     # Recommended: set up journal + the coding agent dora will use on the fly for rich `add`
+dora journal list             # View active principles
+dora journal update           # Pull latest from the remote into local cache
+dora journal add "..."        # Propose a decision or note (staged locally; uses configured agent + tags when input is minimal)
+dora journal sync             # Publish pending entries + refresh cache
 ```
 
 `update` is the recommended way to keep your local mirror fresh (e.g. at the start of a session or before `skill drift`).

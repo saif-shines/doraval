@@ -22,7 +22,7 @@ const skill = defineCommand({
 const journal = defineCommand({
   meta: {
     name: "journal",
-    description: "Decision memory with pushback — record, view, and sync project principles",
+    description: "Decision & note memory (with optional pushback/tags) — record, view, and sync project principles and useful notes",
   },
   subCommands: {
     init: () =>
@@ -63,6 +63,7 @@ const main = defineCommand({
       "Validate, score, and test skills and plugins for AI coding agents",
   },
   subCommands: {
+    init: () => import("./commands/init.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
   },

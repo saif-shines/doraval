@@ -50,21 +50,23 @@ Even a pushback of 10 is still an *argument*, not a hard gate. The journal's job
 
 ## How It Feels in Practice
 
-You make a meaningful decision while working (naming, architecture, testing approach, CLI behavior, etc.). Later you run:
+You make a meaningful decision while working (naming, architecture, testing approach, CLI behavior, etc.). Later the lowest-effort way is simply:
 
 ```bash
-doraval journal add "Use 'drift' not 'score' for rubric deviation" \
-  --pushback 7 \
-  --scope naming,cli
+dora journal add "Use 'update' not 'refresh' for cache refreshes"
 ```
 
-You write the rationale in your editor. The entry is staged locally.
+(If you ran `dora init` and configured your coding agent, dora will use that agent on the fly via its own prompt tool + a scaffold to produce good pushback/tags/rationale.)
+
+For full control or when driving from another agent, use the `--json` path with the documented prompt scaffold (see the journal-add command page).
+
+The entry is staged locally.
 
 When you're ready (or at the end of a session), you run `doraval journal sync`. The new principle is now part of your permanent record and will be seen by future agents (and by you when you come back to the project months later).
 
 To pull in the latest decisions from others (or from another machine), run `doraval journal update` at the start of your session. `sync` also refreshes the local cache before publishing.
 
-When an agent or a future `doraval skill drift` run touches something in the `naming` or `cli` scope, the journal can surface the relevant principles with their pushback strength.
+When an agent or a future `doraval skill drift` run touches something in the `naming` or `cli` tags, the journal can surface the relevant principles with their pushback strength.
 
 ## Why This Shape?
 

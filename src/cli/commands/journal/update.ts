@@ -38,7 +38,7 @@ export default defineCommand({
     const config = await readConfig();
     if (!config?.journal.repo) {
       console.error(
-        `${pc.red("✗")} No journal repo configured. Run ${pc.dim("doraval journal init")} first.`
+        `${pc.red("✗")} No journal repo configured. Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first.`
       );
       process.exit(1);
     }
@@ -48,7 +48,7 @@ export default defineCommand({
     ensureDoravalDirs();
     const journalsDir = getJournalsDir();
 
-    console.error(`\n  ${pc.bold("doraval journal update")} — ${pc.dim(journalRepo)}\n`);
+    console.error(`\n  ${pc.bold("dora journal update")} — ${pc.dim(journalRepo)}\n`);
 
     // Determine which projects to refresh
     const projectsToUpdate: string[] = [];
@@ -90,7 +90,7 @@ export default defineCommand({
       } else {
         console.error(
           `\n  ${pc.yellow("⚠")} No project mapping found.\n` +
-            `  Run ${pc.dim("doraval journal init")} or pass ${pc.dim("--project <name>")} / ${pc.dim("--all")}.\n`
+            `  Run ${pc.dim("dora init")} or pass ${pc.dim("--project <name>")} / ${pc.dim("--all")}.\n`
         );
       }
       return;

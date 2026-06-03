@@ -126,3 +126,38 @@ export function getRemoteJournalFileMeta(
     process.exit(1);
   }
 }
+
+/**
+ * Helpers shared by top-level init and journal/init for smart repo/project detection.
+ * (Extracted to avoid duplication.)
+ */
+export function getGitRemoteOwner(): string | null {
+  const result = spawnSync(["git", "config", "--get", "remote.origin.url"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (result.exitCode !== 0) return null;
+
+  const url = result.stdout.toString().trim();
+  if (!url) return null;
+
+  const match = url.match(/[:/]([^/]+)\/([^/.]+)(\.git)?$/);
+  return match ? match[1] : null;
+}
+
+export function ghUser(): string | null {
+  const result = spawnSync(["gh", "api", "user", "--jq", ".login"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (result.exitCode !== 0) return null;
+  return result.stdout.toString().trim() || null;
+}
+
+export function repoExists(repo: string): boolean {
+  const result = spawnSync(
+    ["gh", "api", `repos/${repo}`, "--jq", ".full_name"],
+    { stdout: "pipe", stderr: "pipe" }
+  );
+  return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
+}

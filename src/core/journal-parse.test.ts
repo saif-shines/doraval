@@ -10,7 +10,7 @@ describe("parseJournalEntries", () => {
 
 \`\`\`yaml
 pushback: 7
-scope: [naming, cli]
+tags: [naming, cli]
 author: human
 date: 2026-05-25
 status: active
@@ -23,7 +23,7 @@ We renamed score to drift because "score" implies a generic quality rating.
     expect(entries).toHaveLength(1);
     expect(entries[0].title).toBe('Use "drift" not "score"');
     expect(entries[0].pushback).toBe(7);
-    expect(entries[0].scope).toEqual(["naming", "cli"]);
+    expect(entries[0].tags).toEqual(["naming", "cli"]);
     expect(entries[0].status).toBe("active");
     expect(entries[0].rationale).toContain("We renamed score to drift");
   });
@@ -34,7 +34,7 @@ We renamed score to drift because "score" implies a generic quality rating.
 
 \`\`\`yaml
 pushback: 5
-scope: [architecture]
+tags: [architecture]
 author: human
 date: 2026-05-20
 status: active
@@ -46,7 +46,7 @@ Rationale for first.
 
 \`\`\`yaml
 pushback: 9
-scope: [testing, cli]
+tags: [testing, cli]
 author: agent:grok
 date: 2026-05-22
 status: superseded
@@ -70,7 +70,7 @@ Rationale for second.
 
 \`\`\`yaml
 pushback: 4
-scope: [docs]
+tags: [docs]
 author: human
 date: 2026-05-25
 status: active
@@ -86,7 +86,7 @@ Some text without proper metadata.
 
 \`\`\`yaml
 pushback: 2
-scope: [ux]
+tags: [ux]
 author: human
 date: 2026-05-26
 status: active
@@ -107,7 +107,7 @@ Second good rationale.
 
 \`\`\`yaml
 pushback: 3
-scope: [naming]
+tags: [naming]
 author: agent:claude
 date: 2026-05-27
 status: active
@@ -131,7 +131,7 @@ Minimal rationale.
 
 \`\`\`yaml
 pushback: 6
-scope: [cli]
+tags: [cli]
 author: human
 date: 2026-05-28
 status: active

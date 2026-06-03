@@ -14,55 +14,11 @@ import {
 import {
   ensureGhCliOrExit,
   refreshLocalJournalFile,
+  getGitRemoteOwner,
+  ghUser,
+  repoExists,
 } from "../../../core/journal-remote.js";
-
-// ── Helpers ────────────────────────────────────────────────────────
-
-function ghUser(): string | null {
-  const result = spawnSync(["gh", "api", "user", "--jq", ".login"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  if (result.exitCode !== 0) return null;
-  return result.stdout.toString().trim() || null;
-}
-
-/**
- * Try to extract the owner from the current git repo's origin remote.
- * Supports both https and ssh URL formats.
- */
-export function getGitRemoteOwner(): string | null {
-  const result = spawnSync(["git", "config", "--get", "remote.origin.url"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  if (result.exitCode !== 0) return null;
-
-  const url = result.stdout.toString().trim();
-  if (!url) return null;
-
-  // https://github.com/owner/repo.git
-  // git@github.com:owner/repo.git
-  const match = url.match(/[:/]([^/]+)\/([^/.]+)(\.git)?$/);
-  return match ? match[1] : null;
-}
-
-function repoExists(repo: string): boolean {
-  const result = spawnSync(
-    ["gh", "api", `repos/${repo}`, "--jq", ".full_name"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-  return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
-}
-
-function prompt(label: string, fallback: string): string {
-  // label should include leading spacing if desired, e.g. "  >"
-  process.stderr.write(`${label} ${pc.dim(`(${fallback})`)} `);
-  const buf = new Uint8Array(1024);
-  const n = require("fs").readSync(0, buf);
-  const input = new TextDecoder().decode(buf.subarray(0, n)).trim();
-  return input || fallback;
-}
+import { prompt } from "../../prompt.js";
 
 // ── Command ────────────────────────────────────────────────────────
 
@@ -91,7 +47,7 @@ export default defineCommand({
 
   async run({ args }) {
     console.error(
-      `\n  ${pc.bold("doraval journal init")} — Set up your journal\n`
+      `\n  ${pc.bold("dora journal init")} (or top-level ${pc.dim("dora init")}) — Set up your journal\n`
     );
 
     // ── 0. Check gh CLI is available ───────────────────────────────
@@ -159,7 +115,7 @@ export default defineCommand({
         `    ${pc.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}\n`
       );
       console.error(
-        `  The repo should be private. doraval will populate it on first ${pc.dim("doraval journal sync")}.\n`
+        `  The repo should be private. doraval will populate it on first ${pc.dim("dora journal sync")}.\n`
       );
       process.exit(1);
     }
@@ -180,7 +136,7 @@ export default defineCommand({
         `  Remote: ${existing.journal.projects[project].remote_path}\n`
       );
       console.error(
-        `  To refresh local files, run: ${pc.dim(`doraval journal update`)}\n` +
+        `  To refresh local files, run: ${pc.dim(`dora journal update`)}\n` +
           `  (init --refresh still works for compatibility.)\n` +
           `  Or remove the project from ${pc.dim("~/.doraval/config.yml")} to fully re-initialize.\n`
       );
@@ -238,7 +194,7 @@ export default defineCommand({
     console.error(`  Journals: ${pc.dim("~/.doraval/journals/")}`);
     console.error(`  Pending:  ${pc.dim("~/.doraval/pending/")}\n`);
     console.error(
-      `  Use ${pc.dim("doraval journal add")} to propose decisions and ${pc.dim("doraval journal list")} to view them.\n`
+      `  Use ${pc.dim("dora journal add")} to propose decisions and ${pc.dim("dora journal list")} to view them.\n`
     );
 
     process.exit(0);
