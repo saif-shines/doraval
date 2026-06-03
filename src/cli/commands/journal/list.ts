@@ -49,8 +49,8 @@ export default defineCommand({
 
     if (!project) {
       console.error(
-        `${pc.yellow("⚠")} No project mapping found.\n\n` +
-          `Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first, or pass ${pc.dim("--project <name>")}.`
+        `${pc.yellow("⚠")} ${pc.yellow("No project mapping found.")}\n\n` +
+          `Run ${pc.dim(pc.gray("dora init"))} (or ${pc.dim(pc.gray("doraval journal init"))}) first, or pass ${pc.dim(pc.gray("--project <name>"))}.`
       );
       process.exit(1);
     }
@@ -103,7 +103,7 @@ export default defineCommand({
     }
 
     // Table output (human friendly) goes to stderr, like other doraval commands
-    console.error(`\n  ${pc.bold("dora journal list")} — ${project}  ${pc.dim(`(from ${journalRepo})`)}\n`);
+    console.error(`\n  ${pc.bold(pc.white("dora journal list"))} — ${pc.white(project)}  ${pc.dim(pc.gray(`(from ${journalRepo})`))}\n`);
 
     const hasStaged = staged.length > 0;
     const hasCommitted = allEntries.length > 0;
@@ -117,20 +117,20 @@ export default defineCommand({
     }
     if (dups.length > 0) {
       const uniqueDups = [...new Set(dups)];
-      console.error(`  ${pc.yellow("⚠")} Duplicate titles in this view (clean in your journal repo + update): ${uniqueDups.map(t => `"${t}"`).join(', ')}\n`);
+      console.error(`  ${pc.yellow("⚠")} ${pc.yellow("Duplicate titles in this view (clean in your journal repo + update):")} ${uniqueDups.map(t => pc.yellow(`"${t}"`)).join(', ')}\n`);
     }
 
     if (!hasStaged && !hasCommitted) {
-      console.error(`  ${pc.dim("No active entries found for")} ${pc.bold(project)}.\n`);
-      console.error(`  Journal repo: ${pc.dim(journalRepo)}`);
-      console.error(`  Local file:   ${pc.dim(projectFile)}\n`);
+      console.error(`  ${pc.dim(pc.gray("No active entries found for"))} ${pc.bold(pc.white(project))}.\n`);
+      console.error(`  Journal repo: ${pc.dim(pc.gray(journalRepo))}`);
+      console.error(`  Local file:   ${pc.dim(pc.gray(projectFile))}\n`);
       console.error(
-        `  ${pc.dim("This is normal for a freshly initialized project.")}\n` +
-          `  Use ${pc.dim("dora journal add")} to propose decisions.\n` +
-          `  They will be staged locally until you run ${pc.dim("dora journal sync")}.\n`
+        `  ${pc.dim(pc.gray("This is normal for a freshly initialized project."))}\n` +
+          `  Use ${pc.dim(pc.gray("dora journal add"))} to propose decisions.\n` +
+          `  They will be staged locally until you run ${pc.dim(pc.gray("dora journal sync"))}.\n`
       );
       console.error(
-        `  If you expect content, try: ${pc.dim(`dora journal update`)}\n`
+        `  If you expect content, try: ${pc.dim(pc.gray(`dora journal update`))}\n`
       );
       return;
     }
@@ -139,6 +139,9 @@ export default defineCommand({
     function printEntry(entry: JournalEntry & { _staged?: boolean }) {
       const pb = entry.pushback ?? 0;
       let pbColor = pc.green;
+      // Color the pushback score to draw attention to entries that received heavy agent critique.
+      // Red is reserved for high-severity (lots of pushback); yellow medium; green low. This is one of the few
+      // intentional uses of red outside of hard errors (✗) in the CLI.
       if (pb >= 7) pbColor = pc.red;
       else if (pb >= 4) pbColor = pc.yellow;
 
@@ -148,24 +151,24 @@ export default defineCommand({
       const stagedNote = entry._staged ? pc.dim(" (staged)") : "";
 
       console.error(
-        `  ${pbColor(String(pb).padStart(2))}  ${pc.bold(entry.title)}${statusNote}${stagedNote}`
+        `  ${pbColor(String(pb).padStart(2))}  ${pc.bold(pc.white(entry.title))}${statusNote}${stagedNote}`
       );
-      console.error(`      ${pc.dim("tags:")} ${tagsStr}`);
+      console.error(`      ${pc.dim(pc.gray("tags:"))} ${pc.gray(tagsStr)}`);
 
       const by = entry.author?.startsWith("agent:") ? pc.cyan(entry.author) : entry.author || "human";
-      console.error(`      ${pc.dim("by:")} ${by}  ${pc.dim("on")} ${entry.date}`);
+      console.error(`      ${pc.dim(pc.gray("by:"))} ${pc.gray(by)}  ${pc.dim(pc.gray("on"))} ${pc.gray(entry.date)}`);
 
       // Show a compact rationale/note preview so you can see the phrasing (and whether the agent improved it) directly in list
       const rat = (entry.rationale || '').replace(/\s+/g, ' ').trim();
       if (rat) {
-        const preview = rat.length > 88 ? rat.slice(0, 85) + pc.dim('…') : rat;
-        console.error(`      ${pc.dim(preview)}`);
+        const preview = rat.length > 88 ? rat.slice(0, 85) + pc.dim(pc.gray('…')) : rat;
+        console.error(`      ${pc.dim(pc.gray(preview))}`);
       }
       console.error(''); // vertical space between entries
     }
 
     if (hasStaged) {
-      console.error(`  ${pc.yellow("●")} Staged / pending (not yet in remote; run ${pc.dim("dora journal sync")} to publish):\n`);
+      console.error(`  ${pc.yellow("●")} ${pc.bold(pc.white("Staged / pending"))} (not yet in remote; run ${pc.dim(pc.gray("dora journal sync"))} to publish):\n`);
       for (const entry of staged) {
         printEntry(entry);
       }
@@ -174,7 +177,7 @@ export default defineCommand({
 
     if (hasCommitted) {
       if (hasStaged) {
-        console.error(`  ${pc.dim("Committed (from local cache):")}\n`);
+        console.error(`  ${pc.dim(pc.gray("Committed (from local cache):"))}\n`);
       }
       for (const entry of allEntries) {
         printEntry(entry);
@@ -182,7 +185,7 @@ export default defineCommand({
     }
 
     const totalShown = staged.length + allEntries.length;
-    console.error(`  ${pc.dim(`${totalShown} entries shown from ${journalRepo}.`)}\n`);
+    console.error(`  ${pc.dim(pc.gray(`${totalShown} entries shown from ${journalRepo}.`))}\n`);
 
     process.exit(0);
   },

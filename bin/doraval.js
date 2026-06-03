@@ -1495,9 +1495,9 @@ var init_list = __esm(() => {
         project = sanitizeProjectName(project);
       }
       if (!project) {
-        console.error(`${import_picocolors7.default.yellow("\u26A0")} No project mapping found.
+        console.error(`${import_picocolors7.default.yellow("\u26A0")} ${import_picocolors7.default.yellow("No project mapping found.")}
 
-` + `Run ${import_picocolors7.default.dim("dora init")} (or ${import_picocolors7.default.dim("doraval journal init")}) first, or pass ${import_picocolors7.default.dim("--project <name>")}.`);
+` + `Run ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora init"))} (or ${import_picocolors7.default.dim(import_picocolors7.default.gray("doraval journal init"))}) first, or pass ${import_picocolors7.default.dim(import_picocolors7.default.gray("--project <name>"))}.`);
         process.exit(1);
       }
       const journalRepo = config?.journal.repo ?? "(unknown)";
@@ -1534,7 +1534,7 @@ var init_list = __esm(() => {
         return;
       }
       console.error(`
-  ${import_picocolors7.default.bold("dora journal list")} \u2014 ${project}  ${import_picocolors7.default.dim(`(from ${journalRepo})`)}
+  ${import_picocolors7.default.bold(import_picocolors7.default.white("dora journal list"))} \u2014 ${import_picocolors7.default.white(project)}  ${import_picocolors7.default.dim(import_picocolors7.default.gray(`(from ${journalRepo})`))}
 `);
       const hasStaged = staged.length > 0;
       const hasCommitted = allEntries.length > 0;
@@ -1548,20 +1548,20 @@ var init_list = __esm(() => {
       }
       if (dups.length > 0) {
         const uniqueDups = [...new Set(dups)];
-        console.error(`  ${import_picocolors7.default.yellow("\u26A0")} Duplicate titles in this view (clean in your journal repo + update): ${uniqueDups.map((t) => `"${t}"`).join(", ")}
+        console.error(`  ${import_picocolors7.default.yellow("\u26A0")} ${import_picocolors7.default.yellow("Duplicate titles in this view (clean in your journal repo + update):")} ${uniqueDups.map((t) => import_picocolors7.default.yellow(`"${t}"`)).join(", ")}
 `);
       }
       if (!hasStaged && !hasCommitted) {
-        console.error(`  ${import_picocolors7.default.dim("No active entries found for")} ${import_picocolors7.default.bold(project)}.
+        console.error(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray("No active entries found for"))} ${import_picocolors7.default.bold(import_picocolors7.default.white(project))}.
 `);
-        console.error(`  Journal repo: ${import_picocolors7.default.dim(journalRepo)}`);
-        console.error(`  Local file:   ${import_picocolors7.default.dim(projectFile)}
+        console.error(`  Journal repo: ${import_picocolors7.default.dim(import_picocolors7.default.gray(journalRepo))}`);
+        console.error(`  Local file:   ${import_picocolors7.default.dim(import_picocolors7.default.gray(projectFile))}
 `);
-        console.error(`  ${import_picocolors7.default.dim("This is normal for a freshly initialized project.")}
-` + `  Use ${import_picocolors7.default.dim("dora journal add")} to propose decisions.
-` + `  They will be staged locally until you run ${import_picocolors7.default.dim("dora journal sync")}.
+        console.error(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray("This is normal for a freshly initialized project."))}
+` + `  Use ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal add"))} to propose decisions.
+` + `  They will be staged locally until you run ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal sync"))}.
 `);
-        console.error(`  If you expect content, try: ${import_picocolors7.default.dim(`dora journal update`)}
+        console.error(`  If you expect content, try: ${import_picocolors7.default.dim(import_picocolors7.default.gray(`dora journal update`))}
 `);
         return;
       }
@@ -1575,19 +1575,19 @@ var init_list = __esm(() => {
         const tagsStr = (entry.tags || []).join(", ") || import_picocolors7.default.dim("(none)");
         const statusNote = entry.status !== "active" ? import_picocolors7.default.dim(` [${entry.status}]`) : "";
         const stagedNote = entry._staged ? import_picocolors7.default.dim(" (staged)") : "";
-        console.error(`  ${pbColor(String(pb).padStart(2))}  ${import_picocolors7.default.bold(entry.title)}${statusNote}${stagedNote}`);
-        console.error(`      ${import_picocolors7.default.dim("tags:")} ${tagsStr}`);
+        console.error(`  ${pbColor(String(pb).padStart(2))}  ${import_picocolors7.default.bold(import_picocolors7.default.white(entry.title))}${statusNote}${stagedNote}`);
+        console.error(`      ${import_picocolors7.default.dim(import_picocolors7.default.gray("tags:"))} ${import_picocolors7.default.gray(tagsStr)}`);
         const by = entry.author?.startsWith("agent:") ? import_picocolors7.default.cyan(entry.author) : entry.author || "human";
-        console.error(`      ${import_picocolors7.default.dim("by:")} ${by}  ${import_picocolors7.default.dim("on")} ${entry.date}`);
+        console.error(`      ${import_picocolors7.default.dim(import_picocolors7.default.gray("by:"))} ${import_picocolors7.default.gray(by)}  ${import_picocolors7.default.dim(import_picocolors7.default.gray("on"))} ${import_picocolors7.default.gray(entry.date)}`);
         const rat = (entry.rationale || "").replace(/\s+/g, " ").trim();
         if (rat) {
-          const preview = rat.length > 88 ? rat.slice(0, 85) + import_picocolors7.default.dim("\u2026") : rat;
-          console.error(`      ${import_picocolors7.default.dim(preview)}`);
+          const preview = rat.length > 88 ? rat.slice(0, 85) + import_picocolors7.default.dim(import_picocolors7.default.gray("\u2026")) : rat;
+          console.error(`      ${import_picocolors7.default.dim(import_picocolors7.default.gray(preview))}`);
         }
         console.error("");
       }
       if (hasStaged) {
-        console.error(`  ${import_picocolors7.default.yellow("\u25CF")} Staged / pending (not yet in remote; run ${import_picocolors7.default.dim("dora journal sync")} to publish):
+        console.error(`  ${import_picocolors7.default.yellow("\u25CF")} ${import_picocolors7.default.bold(import_picocolors7.default.white("Staged / pending"))} (not yet in remote; run ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal sync"))} to publish):
 `);
         for (const entry of staged) {
           printEntry(entry);
@@ -1597,7 +1597,7 @@ var init_list = __esm(() => {
       }
       if (hasCommitted) {
         if (hasStaged) {
-          console.error(`  ${import_picocolors7.default.dim("Committed (from local cache):")}
+          console.error(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray("Committed (from local cache):"))}
 `);
         }
         for (const entry of allEntries) {
@@ -1605,7 +1605,7 @@ var init_list = __esm(() => {
         }
       }
       const totalShown = staged.length + allEntries.length;
-      console.error(`  ${import_picocolors7.default.dim(`${totalShown} entries shown from ${journalRepo}.`)}
+      console.error(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray(`${totalShown} entries shown from ${journalRepo}.`))}
 `);
       process.exit(0);
     }
@@ -2581,7 +2581,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.2.1",
+  version: "0.2.2",
   author: "Saif",
   repository: {
     type: "git",
