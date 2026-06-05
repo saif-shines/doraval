@@ -750,10 +750,9 @@ var init_validate = __esm(() => {
         description: "Path to skill directory or plugin root",
         required: true
       },
-      agent: {
+      for: {
         type: "string",
-        alias: "a",
-        description: "Force a specific agent adapter"
+        description: 'Target a provider ("claude") or specific validator ("claude:skill")'
       },
       format: {
         type: "string",
@@ -792,7 +791,7 @@ Searched for:
 
 Try:
   \u2022 Check the path points to a skill or plugin directory
-  \u2022 Use --agent to force a specific adapter`);
+  \u2022 Use --for to target a specific validator`);
         process.exit(1);
       }
       const raw = await Bun.file(skillMd).text();
@@ -908,10 +907,9 @@ var init_drift = __esm(() => {
         description: "Path to skill directory or plugin root",
         required: true
       },
-      agent: {
+      for: {
         type: "string",
-        alias: "a",
-        description: "Force a specific agent adapter"
+        description: 'Target a provider ("claude") or specific validator ("claude:skill")'
       },
       format: {
         type: "string",
@@ -1003,10 +1001,9 @@ var init_judge = __esm(() => {
         description: "Path to skill directory",
         required: true
       },
-      agent: {
+      for: {
         type: "string",
-        alias: "a",
-        description: "Force a specific agent adapter"
+        description: 'Target a provider ("claude") or specific validator ("claude:skill")'
       },
       format: {
         type: "string",
@@ -2361,20 +2358,772 @@ var init_sync = __esm(() => {
   });
 });
 
+// src/validators/claude/skill.ts
+import { existsSync as existsSync8 } from "fs";
+import { resolve as resolve3 } from "path";
+var OPTIONAL_DIRS3, claudeSkillValidator;
+var init_skill = __esm(() => {
+  init_frontmatter();
+  init_skill_validate();
+  OPTIONAL_DIRS3 = ["references", "scripts", "assets"];
+  claudeSkillValidator = {
+    id: "claude:skill",
+    provider: "claude",
+    name: "Claude Skill",
+    description: "Validates SKILL.md structure: frontmatter, required fields, body, directories",
+    detect(dir) {
+      return existsSync8(resolve3(dir, "SKILL.md"));
+    },
+    async validate(dir, _opts) {
+      const skillMd = resolve3(dir, "SKILL.md");
+      const raw = await Bun.file(skillMd).text();
+      let parsed;
+      try {
+        parsed = parseFrontmatter(raw);
+      } catch {
+        return {
+          errors: ["Failed to parse YAML frontmatter in SKILL.md"],
+          warnings: [],
+          passes: []
+        };
+      }
+      const existingDirs = OPTIONAL_DIRS3.filter((d) => existsSync8(resolve3(dir, d)));
+      return validateSkillModel(parsed, { existingDirs: [...existingDirs] });
+    }
+  };
+});
+
+// src/validators/claude/plugin.ts
+import { existsSync as existsSync9, readdirSync as readdirSync3 } from "fs";
+import { resolve as resolve4, join as join7 } from "path";
+var NAME_REGEX2, RELATIVE_PATH_REGEX, claudePluginValidator;
+var init_plugin = __esm(() => {
+  NAME_REGEX2 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+  RELATIVE_PATH_REGEX = /^\.\//;
+  claudePluginValidator = {
+    id: "claude:plugin",
+    provider: "claude",
+    name: "Claude Plugin",
+    description: "Validates .claude-plugin/plugin.json manifest, component directories, and structure",
+    detect(dir) {
+      return existsSync9(resolve4(dir, ".claude-plugin", "plugin.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const manifestPath = resolve4(dir, ".claude-plugin", "plugin.json");
+      let manifest;
+      try {
+        const raw = await Bun.file(manifestPath).text();
+        manifest = JSON.parse(raw);
+        passes.push(".claude-plugin/plugin.json is valid JSON");
+      } catch {
+        errors.push(".claude-plugin/plugin.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (!manifest.name) {
+        errors.push('Missing required field: "name"');
+      } else {
+        const name = String(manifest.name);
+        if (!NAME_REGEX2.test(name)) {
+          errors.push(`Invalid name format: "${name}" \u2014 must be kebab-case (a-z, 0-9, hyphens)`);
+        } else {
+          passes.push(`name: "${name}"`);
+        }
+      }
+      if (manifest.version !== undefined) {
+        const v = String(manifest.version);
+        if (!/^\d+\.\d+\.\d+/.test(v)) {
+          errors.push(`Invalid version format: "${v}" \u2014 must be semver (MAJOR.MINOR.PATCH)`);
+        } else {
+          passes.push(`version: "${v}"`);
+        }
+      }
+      if (manifest.description !== undefined) {
+        const desc = String(manifest.description);
+        if (desc.length < 10) {
+          warnings.push(`Description is very short (${desc.length} chars) \u2014 50-200 chars recommended`);
+        } else {
+          passes.push("description field present");
+        }
+      }
+      const checkPaths = (field, value) => {
+        const paths = Array.isArray(value) ? value : [value];
+        for (const p of paths) {
+          const s = String(p);
+          if (!RELATIVE_PATH_REGEX.test(s)) {
+            errors.push(`${field}: path "${s}" must start with "./" (relative)`);
+          } else if (s.includes("..")) {
+            errors.push(`${field}: path "${s}" must not use ".." (no parent traversal)`);
+          } else if (existsSync9(resolve4(dir, s))) {
+            passes.push(`${field}: path "${s}" exists`);
+          } else {
+            warnings.push(`${field}: path "${s}" does not exist on disk`);
+          }
+        }
+      };
+      for (const field of ["commands", "agents", "hooks", "mcpServers"]) {
+        if (manifest[field] !== undefined) {
+          checkPaths(field, manifest[field]);
+        }
+      }
+      const skillsDir = resolve4(dir, "skills");
+      if (existsSync9(skillsDir)) {
+        const skillEntries = readdirSync3(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        for (const skill of skillEntries) {
+          const skillMd = join7(skillsDir, skill.name, "SKILL.md");
+          if (existsSync9(skillMd)) {
+            passes.push(`skills/${skill.name}/SKILL.md exists`);
+          } else {
+            errors.push(`skills/${skill.name}/ missing SKILL.md`);
+          }
+        }
+      }
+      const commandsDir = resolve4(dir, "commands");
+      if (existsSync9(commandsDir)) {
+        const mdFiles = readdirSync3(commandsDir).filter((f) => f.endsWith(".md"));
+        if (mdFiles.length > 0) {
+          passes.push(`commands/ has ${mdFiles.length} .md file(s)`);
+        } else {
+          warnings.push("commands/ directory exists but has no .md files");
+        }
+      }
+      const agentsDir = resolve4(dir, "agents");
+      if (existsSync9(agentsDir)) {
+        const mdFiles = readdirSync3(agentsDir).filter((f) => f.endsWith(".md"));
+        if (mdFiles.length > 0) {
+          passes.push(`agents/ has ${mdFiles.length} .md file(s)`);
+        } else {
+          warnings.push("agents/ directory exists but has no .md files");
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/marketplace.ts
+import { existsSync as existsSync10, readdirSync as readdirSync4 } from "fs";
+import { resolve as resolve5, join as join8 } from "path";
+var claudeMarketplaceValidator;
+var init_marketplace = __esm(() => {
+  claudeMarketplaceValidator = {
+    id: "claude:marketplace",
+    provider: "claude",
+    name: "Claude Plugin Marketplace",
+    description: "Validates marketplace structure: plugins/ directory with valid plugin subdirectories",
+    detect(dir) {
+      const pluginsDir = resolve5(dir, "plugins");
+      if (!existsSync10(pluginsDir))
+        return false;
+      try {
+        const entries = readdirSync4(pluginsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (!entry.isDirectory())
+            continue;
+          const hasSkills = existsSync10(join8(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync10(join8(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
+          if (hasSkills || hasManifest)
+            return true;
+        }
+      } catch {}
+      return false;
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const pluginsDir = resolve5(dir, "plugins");
+      if (!existsSync10(pluginsDir)) {
+        errors.push("Missing plugins/ directory");
+        return { errors, warnings, passes };
+      }
+      passes.push("plugins/ directory exists");
+      const pluginEntries = readdirSync4(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      if (pluginEntries.length === 0) {
+        errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
+        return { errors, warnings, passes };
+      }
+      passes.push(`${pluginEntries.length} plugin(s) found`);
+      if (existsSync10(resolve5(dir, "README.md"))) {
+        passes.push("README.md exists at marketplace root");
+      } else {
+        warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
+      }
+      if (existsSync10(resolve5(dir, "LICENSE"))) {
+        passes.push("LICENSE exists at marketplace root");
+      } else {
+        warnings.push("No LICENSE at marketplace root \u2014 recommended");
+      }
+      for (const plugin of pluginEntries) {
+        const pluginPath = join8(pluginsDir, plugin.name);
+        const hasSkills = existsSync10(join8(pluginPath, "skills"));
+        const hasManifest = existsSync10(join8(pluginPath, ".claude-plugin", "plugin.json"));
+        const hasReadme = existsSync10(join8(pluginPath, "README.md"));
+        if (hasManifest || hasSkills) {
+          passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
+        } else {
+          warnings.push(`Plugin "${plugin.name}" has neither .claude-plugin/plugin.json nor skills/`);
+        }
+        if (!hasReadme) {
+          warnings.push(`Plugin "${plugin.name}" has no README.md`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/hooks.ts
+import { existsSync as existsSync11 } from "fs";
+import { resolve as resolve6 } from "path";
+var KNOWN_EVENTS, claudeHooksValidator;
+var init_hooks = __esm(() => {
+  KNOWN_EVENTS = [
+    "PreToolUse",
+    "PostToolUse",
+    "Stop",
+    "SubagentStop",
+    "SessionStart",
+    "SessionEnd",
+    "UserPromptSubmit",
+    "PreCompact",
+    "Notification",
+    "PermissionRequest"
+  ];
+  claudeHooksValidator = {
+    id: "claude:hooks",
+    provider: "claude",
+    name: "Claude Hooks",
+    description: "Validates hooks/hooks.json: event names, matcher structure, hook types",
+    detect(dir) {
+      return existsSync11(resolve6(dir, "hooks", "hooks.json")) || existsSync11(resolve6(dir, "hooks.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const hooksPath = existsSync11(resolve6(dir, "hooks", "hooks.json")) ? resolve6(dir, "hooks", "hooks.json") : resolve6(dir, "hooks.json");
+      let config;
+      try {
+        const raw = await Bun.file(hooksPath).text();
+        config = JSON.parse(raw);
+        passes.push("hooks.json is valid JSON");
+      } catch {
+        errors.push("hooks.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      const eventNames = Object.keys(config);
+      for (const name of eventNames) {
+        if (KNOWN_EVENTS.includes(name)) {
+          passes.push(`Event "${name}" is a known lifecycle event`);
+        } else {
+          warnings.push(`Unknown event name: "${name}" \u2014 expected one of: ${KNOWN_EVENTS.join(", ")}`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/mcp.ts
+import { existsSync as existsSync12 } from "fs";
+import { resolve as resolve7 } from "path";
+var claudeMcpValidator;
+var init_mcp = __esm(() => {
+  claudeMcpValidator = {
+    id: "claude:mcp",
+    provider: "claude",
+    name: "Claude MCP Config",
+    description: "Validates .mcp.json: server definitions, required fields, path portability",
+    detect(dir) {
+      return existsSync12(resolve7(dir, ".mcp.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const mcpPath = resolve7(dir, ".mcp.json");
+      let config;
+      try {
+        const raw = await Bun.file(mcpPath).text();
+        config = JSON.parse(raw);
+        passes.push(".mcp.json is valid JSON");
+      } catch {
+        errors.push(".mcp.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (typeof config !== "object" || Array.isArray(config)) {
+        errors.push(".mcp.json must be a JSON object with server name keys");
+        return { errors, warnings, passes };
+      }
+      const serverNames = Object.keys(config);
+      if (serverNames.length === 0) {
+        warnings.push(".mcp.json is empty \u2014 no servers defined");
+        return { errors, warnings, passes };
+      }
+      passes.push(`${serverNames.length} server(s) defined`);
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/subagent.ts
+import { existsSync as existsSync13, readdirSync as readdirSync5 } from "fs";
+import { resolve as resolve8, join as join9 } from "path";
+var claudeSubagentValidator;
+var init_subagent = __esm(() => {
+  init_frontmatter();
+  claudeSubagentValidator = {
+    id: "claude:subagent",
+    provider: "claude",
+    name: "Claude Subagents",
+    description: "Validates agents/ directory: .md files with frontmatter and description",
+    detect(dir) {
+      const agentsDir = resolve8(dir, "agents");
+      if (!existsSync13(agentsDir))
+        return false;
+      try {
+        return readdirSync5(agentsDir).some((f) => f.endsWith(".md"));
+      } catch {
+        return false;
+      }
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const agentsDir = resolve8(dir, "agents");
+      const mdFiles = readdirSync5(agentsDir).filter((f) => f.endsWith(".md"));
+      if (mdFiles.length === 0) {
+        errors.push("agents/ directory has no .md files");
+        return { errors, warnings, passes };
+      }
+      passes.push(`${mdFiles.length} agent definition(s) found`);
+      for (const file of mdFiles) {
+        const filePath = join9(agentsDir, file);
+        const raw = await Bun.file(filePath).text();
+        try {
+          const parsed = parseFrontmatter(raw);
+          if (Object.keys(parsed.data).length === 0) {
+            warnings.push(`${file}: no YAML frontmatter`);
+          } else if (!parsed.data.description) {
+            warnings.push(`${file}: missing "description" in frontmatter`);
+          } else {
+            passes.push(`${file}: has frontmatter with description`);
+          }
+          if (!parsed.content.trim()) {
+            errors.push(`${file}: body is empty`);
+          }
+        } catch {
+          errors.push(`${file}: failed to parse`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/command.ts
+import { existsSync as existsSync14, readdirSync as readdirSync6 } from "fs";
+import { resolve as resolve9, join as join10 } from "path";
+var claudeCommandValidator;
+var init_command = __esm(() => {
+  init_frontmatter();
+  claudeCommandValidator = {
+    id: "claude:command",
+    provider: "claude",
+    name: "Claude Commands",
+    description: "Validates commands/ directory: .md files with frontmatter and description",
+    detect(dir) {
+      const commandsDir = resolve9(dir, "commands");
+      if (!existsSync14(commandsDir))
+        return false;
+      try {
+        return readdirSync6(commandsDir).some((f) => f.endsWith(".md"));
+      } catch {
+        return false;
+      }
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const commandsDir = resolve9(dir, "commands");
+      const mdFiles = readdirSync6(commandsDir).filter((f) => f.endsWith(".md"));
+      if (mdFiles.length === 0) {
+        errors.push("commands/ directory has no .md files");
+        return { errors, warnings, passes };
+      }
+      passes.push(`${mdFiles.length} command definition(s) found`);
+      for (const file of mdFiles) {
+        const filePath = join10(commandsDir, file);
+        const raw = await Bun.file(filePath).text();
+        try {
+          const parsed = parseFrontmatter(raw);
+          if (Object.keys(parsed.data).length === 0) {
+            warnings.push(`${file}: no YAML frontmatter`);
+          } else if (!parsed.data.description) {
+            warnings.push(`${file}: missing "description" in frontmatter`);
+          } else {
+            passes.push(`${file}: has frontmatter with description`);
+          }
+          if (!parsed.content.trim()) {
+            errors.push(`${file}: body is empty`);
+          }
+        } catch {
+          errors.push(`${file}: failed to parse`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/memory.ts
+import { existsSync as existsSync15 } from "fs";
+import { resolve as resolve10 } from "path";
+var claudeMemoryValidator;
+var init_memory = __esm(() => {
+  claudeMemoryValidator = {
+    id: "claude:memory",
+    provider: "claude",
+    name: "Claude CLAUDE.md",
+    description: "Validates CLAUDE.md: non-empty, length recommendations, @path imports",
+    detect(dir) {
+      return existsSync15(resolve10(dir, "CLAUDE.md"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const filePath = resolve10(dir, "CLAUDE.md");
+      const raw = await Bun.file(filePath).text();
+      if (!raw.trim()) {
+        errors.push("CLAUDE.md is empty");
+        return { errors, warnings, passes };
+      }
+      passes.push("CLAUDE.md is non-empty");
+      const lines = raw.split(`
+`);
+      if (lines.length > 200) {
+        warnings.push(`CLAUDE.md is ${lines.length} lines \u2014 official recommendation is under 200. Move reference content to skills.`);
+      } else {
+        passes.push(`CLAUDE.md is ${lines.length} lines (under 200 recommended limit)`);
+      }
+      const importRegex = /^@([^\s]+)\s*$/gm;
+      let match;
+      while ((match = importRegex.exec(raw)) !== null) {
+        const importPath = match[1];
+        const resolvedImport = resolve10(dir, importPath);
+        if (existsSync15(resolvedImport)) {
+          passes.push(`@import "${importPath}" exists`);
+        } else {
+          warnings.push(`@import "${importPath}" \u2014 file not found at ${resolvedImport}`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/index.ts
+function resolveFor(forFlag, allValidators = validators) {
+  if (!forFlag) {
+    return { matched: allValidators };
+  }
+  if (forFlag.includes(":")) {
+    const exact = allValidators.filter((v) => v.id === forFlag);
+    if (exact.length === 0) {
+      const available = allValidators.map((v) => v.id).join(", ");
+      return { matched: [], error: `Unknown validator: "${forFlag}"
+
+Available: ${available}` };
+    }
+    return { matched: exact };
+  }
+  const byProvider = allValidators.filter((v) => v.provider === forFlag);
+  if (byProvider.length === 0) {
+    const providers = [...new Set(allValidators.map((v) => v.provider))];
+    return { matched: [], error: `Unknown provider: "${forFlag}"
+
+Available providers: ${providers.join(", ")}` };
+  }
+  return { matched: byProvider };
+}
+var validators;
+var init_validators = __esm(() => {
+  init_skill();
+  init_plugin();
+  init_marketplace();
+  init_hooks();
+  init_mcp();
+  init_subagent();
+  init_command();
+  init_memory();
+  validators = [
+    claudeSkillValidator,
+    claudePluginValidator,
+    claudeMarketplaceValidator,
+    claudeHooksValidator,
+    claudeMcpValidator,
+    claudeSubagentValidator,
+    claudeCommandValidator,
+    claudeMemoryValidator
+  ];
+});
+
+// src/core/remote.ts
+import { spawnSync as spawnSync4 } from "child_process";
+import { mkdtempSync, rmSync } from "fs";
+import { join as join11 } from "path";
+import { tmpdir } from "os";
+function parseRemoteUrl(input) {
+  if (input.startsWith(".") || input.startsWith("/") || input.startsWith("~")) {
+    return null;
+  }
+  const ghMatch = input.match(GITHUB_RE);
+  if (ghMatch) {
+    const [, ownerRepo, ref, subpath] = ghMatch;
+    return {
+      original: input,
+      ghRepo: ownerRepo,
+      gitUrl: `https://github.com/${ownerRepo}.git`,
+      ref,
+      subpath
+    };
+  }
+  if (GENERIC_GIT_RE.test(input)) {
+    const gitUrl = input.endsWith(".git") ? input : `${input}.git`;
+    return {
+      original: input,
+      gitUrl
+    };
+  }
+  return null;
+}
+function isGhAvailable() {
+  if (ghAvailable !== null)
+    return ghAvailable;
+  const result = spawnSync4("gh", ["auth", "status"], {
+    stdio: "pipe",
+    timeout: 5000
+  });
+  ghAvailable = result.status === 0;
+  return ghAvailable;
+}
+async function cloneToTemp(parsed) {
+  const tmpDir = mkdtempSync(join11(tmpdir(), "dora-"));
+  const cleanup = () => {
+    try {
+      rmSync(tmpDir, { recursive: true, force: true });
+    } catch {}
+  };
+  const exitHandler = () => cleanup();
+  process.on("exit", exitHandler);
+  const removeExitHandler = () => {
+    process.removeListener("exit", exitHandler);
+  };
+  const wrappedCleanup = () => {
+    removeExitHandler();
+    cleanup();
+  };
+  if (parsed.ghRepo && isGhAvailable()) {
+    const ghArgs = ["repo", "clone", parsed.ghRepo, tmpDir, "--"];
+    ghArgs.push("--depth", "1");
+    if (parsed.ref)
+      ghArgs.push("--branch", parsed.ref);
+    const gh = spawnSync4("gh", ghArgs, { stdio: "pipe", timeout: 60000 });
+    if (gh.status === 0) {
+      return { dir: tmpDir, cleanup: wrappedCleanup };
+    }
+  }
+  const gitArgs = ["clone", "--depth", "1"];
+  if (parsed.ref)
+    gitArgs.push("--branch", parsed.ref);
+  gitArgs.push(parsed.gitUrl, tmpDir);
+  const git = spawnSync4("git", gitArgs, { stdio: "pipe", timeout: 60000 });
+  if (git.status !== 0) {
+    wrappedCleanup();
+    const stderr = git.stderr?.toString().trim() || "unknown error";
+    throw new Error(`Failed to clone ${parsed.original}: ${stderr}`);
+  }
+  return { dir: tmpDir, cleanup: wrappedCleanup };
+}
+var GITHUB_RE, GENERIC_GIT_RE, ghAvailable = null;
+var init_remote = __esm(() => {
+  GITHUB_RE = /^(?:https?:\/\/)?github\.com\/([^/]+\/[^/]+?)(?:\.git)?(?:\/(?:tree|blob)\/([^/]+)(?:\/(.+))?)?$/;
+  GENERIC_GIT_RE = /^https?:\/\/[^/]+\/[^/]+\/[^/]+/;
+});
+
+// src/cli/commands/validate-top.ts
+var exports_validate_top = {};
+__export(exports_validate_top, {
+  default: () => validate_top_default
+});
+import { existsSync as existsSync17 } from "fs";
+import { resolve as resolve11 } from "path";
+var import_picocolors11, validate_top_default;
+var init_validate_top = __esm(() => {
+  init_dist();
+  init_validators();
+  init_remote();
+  import_picocolors11 = __toESM(require_picocolors(), 1);
+  validate_top_default = defineCommand({
+    meta: {
+      name: "validate",
+      description: "Auto-detect project type and run matching validators. Accepts a local path or a Git URL (e.g. https://github.com/owner/repo)"
+    },
+    args: {
+      path: {
+        type: "positional",
+        description: "Path or Git URL to validate",
+        required: true
+      },
+      for: {
+        type: "string",
+        description: 'Target a provider ("claude") or specific validator ("claude:plugin")'
+      },
+      format: {
+        type: "string",
+        alias: "f",
+        description: "Output format (json or table)",
+        default: "table"
+      },
+      verbose: {
+        type: "boolean",
+        alias: "v",
+        description: "Show detailed diagnostics",
+        default: false
+      },
+      ci: {
+        type: "boolean",
+        description: "Machine-friendly output, non-zero exit on issues",
+        default: false
+      }
+    },
+    async run({ args }) {
+      const remote = parseRemoteUrl(args.path);
+      let fullPath;
+      let cleanup;
+      if (remote) {
+        console.error(`
+  Cloning ${import_picocolors11.default.dim(args.path)}...`);
+        try {
+          const result = await cloneToTemp(remote);
+          fullPath = remote.subpath ? resolve11(result.dir, remote.subpath) : result.dir;
+          cleanup = result.cleanup;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`${import_picocolors11.default.red("\u2717")} ${msg}`);
+          process.exit(1);
+        }
+        if (!existsSync17(fullPath)) {
+          cleanup();
+          console.error(`${import_picocolors11.default.red("\u2717")} Subdirectory not found in repo: ${remote.subpath}`);
+          process.exit(1);
+        }
+      } else {
+        fullPath = resolve11(args.path);
+        if (!existsSync17(fullPath)) {
+          console.error(`${import_picocolors11.default.red("\u2717")} Path not found: ${args.path}
+
+Check that the path is correct and the directory exists.`);
+          process.exit(1);
+        }
+      }
+      try {
+        const opts = {
+          format: args.format ?? "table",
+          verbose: !!args.verbose,
+          ci: !!args.ci
+        };
+        const { matched: candidates, error } = resolveFor(args.for);
+        if (error) {
+          console.error(`${import_picocolors11.default.red("\u2717")} ${error}`);
+          process.exit(1);
+        }
+        let matched;
+        if (args.for && args.for.includes(":")) {
+          matched = candidates;
+        } else {
+          matched = candidates.filter((v) => v.detect(fullPath));
+        }
+        if (matched.length === 0) {
+          const providers = [...new Set(validators.map((v) => v.provider))];
+          console.error(`${import_picocolors11.default.red("\u2717")} No validator matched this directory: ${args.path}
+
+` + `Available providers:
+` + providers.map((p) => {
+            const pvs = validators.filter((v) => v.provider === p);
+            return `  ${import_picocolors11.default.bold(p)}
+` + pvs.map((v) => `    \u2022 ${import_picocolors11.default.dim(v.id)} \u2014 ${v.description}`).join(`
+`);
+          }).join(`
+`) + `
+
+Use ${import_picocolors11.default.dim("--for <provider>")} or ${import_picocolors11.default.dim("--for <provider:type>")} to target explicitly.`);
+          process.exit(1);
+        }
+        const allResults = [];
+        let totalErrors = 0;
+        for (const v of matched) {
+          const result = await v.validate(fullPath, opts);
+          allResults.push({ id: v.id, name: v.name, result });
+          totalErrors += result.errors.length;
+        }
+        if (opts.format === "json") {
+          const output = allResults.map((r) => ({
+            validator: r.id,
+            name: r.name,
+            path: args.path,
+            ...r.result
+          }));
+          console.log(JSON.stringify(output, null, 2));
+        } else {
+          for (const { id, name, result } of allResults) {
+            console.error(`
+  ${import_picocolors11.default.bold("dora validate")} \u2014 ${name} ${import_picocolors11.default.dim(`(${id})`)}
+`);
+            console.error(`  Path:  ${args.path}
+`);
+            for (const p of result.passes) {
+              console.error(`  ${import_picocolors11.default.green("\u2713")} ${p}`);
+            }
+            for (const w of result.warnings) {
+              console.error(`  ${import_picocolors11.default.yellow("\u26A0")} ${w}`);
+            }
+            for (const e of result.errors) {
+              console.error(`  ${import_picocolors11.default.red("\u2717")} ${e}`);
+            }
+            console.error(`
+  Result: ${result.errors.length} error(s), ${result.warnings.length} warning(s)
+`);
+          }
+        }
+        process.exit(totalErrors > 0 ? 1 : 0);
+      } finally {
+        cleanup?.();
+      }
+    }
+  });
+});
+
 // src/cli/commands/init.ts
 var exports_init2 = {};
 __export(exports_init2, {
   default: () => init_default2
 });
-import { basename as basename2, join as join7 } from "path";
-var {spawnSync: spawnSync4 } = globalThis.Bun;
-var import_picocolors11, init_default2;
+import { basename as basename2, join as join12 } from "path";
+var {spawnSync: spawnSync5 } = globalThis.Bun;
+var import_picocolors12, init_default2;
 var init_init2 = __esm(() => {
   init_dist();
   init_journal_config();
   init_journal_remote();
   init_prompt();
-  import_picocolors11 = __toESM(require_picocolors(), 1);
+  import_picocolors12 = __toESM(require_picocolors(), 1);
   init_default2 = defineCommand({
     meta: {
       name: "init",
@@ -2399,7 +3148,7 @@ var init_init2 = __esm(() => {
     },
     async run({ args }) {
       console.error(`
-  ${import_picocolors11.default.bold("dora init")} \u2014 Set up doraval, your journal, and the coding agent dora should use on the fly
+  ${import_picocolors12.default.bold("dora init")} \u2014 Set up doraval, your journal, and the coding agent dora should use on the fly
 `);
       ensureGhCliOrExit();
       let repo = args.repo || process.env.DORAVAL_JOURNAL_REPO;
@@ -2411,28 +3160,28 @@ var init_init2 = __esm(() => {
         if (gitOwner) {
           defaultRepo = `${gitOwner}/${gitOwner}.md`;
           if (ghLogin && ghLogin !== gitOwner) {
-            sourceNote = `  ${import_picocolors11.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
+            sourceNote = `  ${import_picocolors12.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
 `;
           } else {
-            sourceNote = `  ${import_picocolors11.default.dim("(from git remote)")}
+            sourceNote = `  ${import_picocolors12.default.dim("(from git remote)")}
 `;
           }
         } else if (ghLogin) {
           defaultRepo = `${ghLogin}/${ghLogin}.md`;
-          sourceNote = `  ${import_picocolors11.default.dim("(from your active gh account)")}
+          sourceNote = `  ${import_picocolors12.default.dim("(from your active gh account)")}
 `;
         } else {
-          console.error(`  ${import_picocolors11.default.yellow("\u26A0")} Not logged in to GitHub. Run ${import_picocolors11.default.dim("gh auth login")} first.
+          console.error(`  ${import_picocolors12.default.yellow("\u26A0")} Not logged in to GitHub. Run ${import_picocolors12.default.dim("gh auth login")} first.
 `);
           process.exit(1);
         }
         const existingConfig = await readConfig();
         if (existingConfig?.journal.repo) {
           defaultRepo = existingConfig.journal.repo;
-          sourceNote = `  ${import_picocolors11.default.dim("(from your previous journal setup)")}
+          sourceNote = `  ${import_picocolors12.default.dim("(from your previous journal setup)")}
 `;
         }
-        console.error(`  Journal repo ${import_picocolors11.default.dim("(owner/name)")}`);
+        console.error(`  Journal repo ${import_picocolors12.default.dim("(owner/name)")}`);
         if (sourceNote)
           console.error(sourceNote);
         repo = prompt("  >", defaultRepo);
@@ -2444,11 +3193,11 @@ var init_init2 = __esm(() => {
       }
       project = sanitizeProjectName(project);
       if (!repoExists(repo)) {
-        console.error(`  ${import_picocolors11.default.red("\u2717")} Repository ${import_picocolors11.default.bold(repo)} not found on GitHub.
+        console.error(`  ${import_picocolors12.default.red("\u2717")} Repository ${import_picocolors12.default.bold(repo)} not found on GitHub.
 `);
         console.error(`  Create it first:
 `);
-        console.error(`    ${import_picocolors11.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
+        console.error(`    ${import_picocolors12.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
 `);
         process.exit(1);
       }
@@ -2456,16 +3205,16 @@ var init_init2 = __esm(() => {
       const alreadyRegistered = existing?.journal.projects[project];
       const isRefresh = alreadyRegistered && args.refresh;
       if (alreadyRegistered && !isRefresh) {
-        console.error(`  ${import_picocolors11.default.yellow("\u26A0")} Project ${import_picocolors11.default.bold(project)} is already registered.
+        console.error(`  ${import_picocolors12.default.yellow("\u26A0")} Project ${import_picocolors12.default.bold(project)} is already registered.
 `);
         console.error(`  Repo:   ${existing.journal.repo}
 `);
-        console.error(`  To refresh journal files, use ${import_picocolors11.default.dim("dora journal update")} (or ${import_picocolors11.default.dim("dora init --refresh")}).
+        console.error(`  To refresh journal files, use ${import_picocolors12.default.dim("dora journal update")} (or ${import_picocolors12.default.dim("dora init --refresh")}).
 `);
       }
       const journalsDir = getJournalsDir();
       const remotePath = `projects/${project}.md`;
-      const localPath = join7(journalsDir, `${project}.md`);
+      const localPath = join12(journalsDir, `${project}.md`);
       const effectiveRepo = isRefresh && !args.repo ? existing.journal.repo : repo;
       const config = existing ?? {
         journal: { repo: effectiveRepo, projects: {} }
@@ -2476,14 +3225,14 @@ var init_init2 = __esm(() => {
         local_path: localPath
       };
       ensureDoravalDirs();
-      console.error(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Fetching journal files from"))} ${import_picocolors11.default.gray(effectiveRepo)}${import_picocolors11.default.dim(import_picocolors11.default.gray("..."))}
+      console.error(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("Fetching journal files from"))} ${import_picocolors12.default.gray(effectiveRepo)}${import_picocolors12.default.dim(import_picocolors12.default.gray("..."))}
 `);
-      const globalDest = join7(journalsDir, "global.md");
+      const globalDest = join12(journalsDir, "global.md");
       const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       if (wroteGlobal) {
-        console.error(`  ${import_picocolors11.default.green("\u2713")} global.md`);
+        console.error(`  ${import_picocolors12.default.green("\u2713")} global.md`);
       } else {
-        console.error(`  ${import_picocolors11.default.dim("\xB7")} global.md ${import_picocolors11.default.dim("(not found \u2014 will be created on first sync)")}`);
+        console.error(`  ${import_picocolors12.default.dim("\xB7")} global.md ${import_picocolors12.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(globalDest, `# Global Journal
 
 Cross-project principles.
@@ -2491,9 +3240,9 @@ Cross-project principles.
       }
       const wroteProject = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
       if (wroteProject) {
-        console.error(`  ${import_picocolors11.default.green("\u2713")} ${remotePath}`);
+        console.error(`  ${import_picocolors12.default.green("\u2713")} ${remotePath}`);
       } else {
-        console.error(`  ${import_picocolors11.default.dim("\xB7")} ${remotePath} ${import_picocolors11.default.dim("(not found \u2014 will be created on first sync)")}`);
+        console.error(`  ${import_picocolors12.default.dim("\xB7")} ${remotePath} ${import_picocolors12.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(localPath, `# ${project} Journal
 
 Project-specific decisions.
@@ -2501,34 +3250,34 @@ Project-specific decisions.
       }
       await writeConfig(config);
       console.error(`
-  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("Journal ready for project")} ${import_picocolors11.default.bold(import_picocolors11.default.white(project))}.
+  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Journal ready for project")} ${import_picocolors12.default.bold(import_picocolors12.default.white(project))}.
 `);
       const existingAgent = (await readConfig())?.agent;
       if (existingAgent?.command) {
-        console.error(`  ${import_picocolors11.default.bold(import_picocolors11.default.white("Coding agent (already configured)"))}
+        console.error(`  ${import_picocolors12.default.bold(import_picocolors12.default.white("Coding agent (already configured)"))}
 `);
-        console.error(`    Current: ${import_picocolors11.default.dim(import_picocolors11.default.gray(existingAgent.command))}  template: ${import_picocolors11.default.dim(import_picocolors11.default.gray(existingAgent.prompt_template || "(default)"))}
+        console.error(`    Current: ${import_picocolors12.default.dim(import_picocolors12.default.gray(existingAgent.command))}  template: ${import_picocolors12.default.dim(import_picocolors12.default.gray(existingAgent.prompt_template || "(default)"))}
 `);
         const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
         if (!/^y/i.test(String(change))) {
-          console.error(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Keeping existing agent config. You can re-run dora init later to change it."))}
+          console.error(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("Keeping existing agent config. You can re-run dora init later to change it."))}
 `);
           const cfg = await readConfig() || { journal: { repo: effectiveRepo, projects: {} } };
           if (existingAgent)
             cfg.agent = existingAgent;
           await writeConfig(cfg);
-          console.error(`  ${import_picocolors11.default.green("All set!")} ${import_picocolors11.default.white("Try:")} ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "short decision"'))} ${import_picocolors11.default.white("(it will use the agent when input is minimal).")}
+          console.error(`  ${import_picocolors12.default.green("All set!")} ${import_picocolors12.default.white("Try:")} ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add "short decision"'))} ${import_picocolors12.default.white("(it will use the agent when input is minimal).")}
 `);
           process.exit(0);
           return;
         }
         console.error("");
       } else {
-        console.error(`  ${import_picocolors11.default.bold(import_picocolors11.default.white("Coding agent for on-the-fly use in journal add"))}
+        console.error(`  ${import_picocolors12.default.bold(import_picocolors12.default.white("Coding agent for on-the-fly use in journal add"))}
 `);
         console.error(`  dora can use your existing coding agent (Claude Code, Cursor, etc.) behind the scenes
 `);
-        console.error(`  when you run ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "short decision"'))} so you get rich pushback/tags/rationale (tags for decisions or notes)
+        console.error(`  when you run ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add "short decision"'))} so you get rich pushback/tags/rationale (tags for decisions or notes)
 `);
         console.error(`  with almost no extra typing.
 `);
@@ -2539,9 +3288,9 @@ Project-specific decisions.
       ];
       let detected = "";
       for (const c of common) {
-        let probe = spawnSync4(["command", "-v", c.name], { stdout: "pipe", stderr: "pipe" });
+        let probe = spawnSync5(["command", "-v", c.name], { stdout: "pipe", stderr: "pipe" });
         if (probe.exitCode !== 0) {
-          probe = spawnSync4(["which", c.name], { stdout: "pipe", stderr: "pipe" });
+          probe = spawnSync5(["which", c.name], { stdout: "pipe", stderr: "pipe" });
         }
         if (probe.exitCode === 0) {
           detected = c.name;
@@ -2549,7 +3298,7 @@ Project-specific decisions.
         }
       }
       let agentCmd = detected || "claude";
-      console.error(`  Detected / default agent command: ${import_picocolors11.default.dim(import_picocolors11.default.gray(agentCmd))}`);
+      console.error(`  Detected / default agent command: ${import_picocolors12.default.dim(import_picocolors12.default.gray(agentCmd))}`);
       agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
       let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}" --output-format json' : '-p "{{prompt}}" --output-format json';
       console.error(`  Prompt template (use {{prompt}} placeholder):`);
@@ -2561,15 +3310,15 @@ Project-specific decisions.
       };
       await writeConfig(finalConfig);
       console.error(`
-  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("Agent configured. Future")} ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "..."'))} ${import_picocolors11.default.white("calls will try to use it on the fly (when input is minimal).")}
+  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Agent configured. Future")} ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add "..."'))} ${import_picocolors12.default.white("calls will try to use it on the fly (when input is minimal).")}
 `);
-      console.error(`  You can re-run ${import_picocolors11.default.dim(import_picocolors11.default.gray("dora init"))} anytime to change the agent.
+      console.error(`  You can re-run ${import_picocolors12.default.dim(import_picocolors12.default.gray("dora init"))} anytime to change the agent.
 `);
       console.error(`  Example one-liner that will now feel magical:
 `);
-      console.error(`    ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "We decided to use the new cache command name"'))}
+      console.error(`    ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add "We decided to use the new cache command name"'))}
 `);
-      console.error(`  ${import_picocolors11.default.green("All set!")} ${import_picocolors11.default.white("Next steps:")} ${import_picocolors11.default.dim(import_picocolors11.default.gray("dora journal list"))}, ${import_picocolors11.default.dim(import_picocolors11.default.gray('dora journal add "..."'))}, or ${import_picocolors11.default.dim(import_picocolors11.default.gray("dora journal update"))}.
+      console.error(`  ${import_picocolors12.default.green("All set!")} ${import_picocolors12.default.white("Next steps:")} ${import_picocolors12.default.dim(import_picocolors12.default.gray("dora journal list"))}, ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add "..."'))}, or ${import_picocolors12.default.dim(import_picocolors12.default.gray("dora journal update"))}.
 `);
       process.exit(0);
     }
@@ -2639,7 +3388,7 @@ var package_default = {
 };
 
 // src/cli/index.ts
-var import_picocolors12 = __toESM(require_picocolors(), 1);
+var import_picocolors13 = __toESM(require_picocolors(), 1);
 var skill = defineCommand({
   meta: {
     name: "skill",
@@ -2689,13 +3438,14 @@ var main = defineCommand({
     description: "Validate, score, and test skills and plugins for AI coding agents"
   },
   subCommands: {
+    validate: () => Promise.resolve().then(() => (init_validate_top(), exports_validate_top)).then((m) => m.default),
     init: () => Promise.resolve().then(() => (init_init2(), exports_init2)).then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal)
   },
   run() {
     console.log(`
-` + import_picocolors12.default.blue(doraemonArt) + `
+` + import_picocolors13.default.blue(doraemonArt) + `
 `);
     showUsage(main);
   }

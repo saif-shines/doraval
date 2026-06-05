@@ -16,10 +16,9 @@ export default defineCommand({
       description: "Path to skill directory or plugin root",
       required: true,
     },
-    agent: {
+    for: {
       type: "string",
-      alias: "a",
-      description: "Force a specific agent adapter",
+      description: 'Target a provider ("claude") or specific validator ("claude:skill")',
     },
     format: {
       type: "string",

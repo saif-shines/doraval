@@ -18,10 +18,9 @@ export default defineCommand({
       description: "Path to skill directory or plugin root",
       required: true,
     },
-    agent: {
+    for: {
       type: "string",
-      alias: "a",
-      description: "Force a specific agent adapter",
+      description: 'Target a provider ("claude") or specific validator ("claude:skill")',
     },
     format: {
       type: "string",
@@ -56,7 +55,7 @@ export default defineCommand({
     const skillMd = resolve(fullPath, "SKILL.md");
     if (!existsSync(skillMd)) {
       console.error(
-        `${pc.red("✗")} No skill or plugin found at ${targetPath}\n\nSearched for:\n  • SKILL.md (Agent Skills spec)\n  • .claude-plugin/plugin.json (Claude Code plugin)\n\nTry:\n  • Check the path points to a skill or plugin directory\n  • Use --agent to force a specific adapter`
+        `${pc.red("✗")} No skill or plugin found at ${targetPath}\n\nSearched for:\n  • SKILL.md (Agent Skills spec)\n  • .claude-plugin/plugin.json (Claude Code plugin)\n\nTry:\n  • Check the path points to a skill or plugin directory\n  • Use --for to target a specific validator`
       );
       process.exit(1);
     }

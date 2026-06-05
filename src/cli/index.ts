@@ -63,6 +63,8 @@ const main = defineCommand({
       "Validate, score, and test skills and plugins for AI coding agents",
   },
   subCommands: {
+    validate: () =>
+      import("./commands/validate-top.js").then((m) => m.default),
     init: () => import("./commands/init.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
