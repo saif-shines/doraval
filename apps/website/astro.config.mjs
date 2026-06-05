@@ -20,7 +20,7 @@ export default defineConfig({
       },
       title: "doraval",
       description:
-        "Lint and measure drift for AI agent skills and plugins",
+        "The context engineering toolkit for coding agents",
       customCss: ["./src/styles/custom.css"],
       social: [
         {

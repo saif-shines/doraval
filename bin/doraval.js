@@ -3330,7 +3330,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.2.4",
+  version: "0.2.5",
   author: "Saif",
   repository: {
     type: "git",
@@ -3343,7 +3343,7 @@ var package_default = {
     doraval: "./bin/doraval.js",
     dora: "./bin/doraval.js"
   },
-  description: "Validate, score, and test skills and plugins for AI coding agents",
+  description: "The context engineering toolkit for coding agents",
   engines: {
     bun: ">=1.2.0"
   },
@@ -3435,7 +3435,7 @@ var main = defineCommand({
   meta: {
     name: "doraval",
     version: package_default.version,
-    description: "Validate, score, and test skills and plugins for AI coding agents"
+    description: "The context engineering toolkit for coding agents"
   },
   subCommands: {
     validate: () => Promise.resolve().then(() => (init_validate_top(), exports_validate_top)).then((m) => m.default),

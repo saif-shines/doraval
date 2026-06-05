@@ -1,50 +1,54 @@
 ---
 title: What is doraval?
-description: Lint and measure drift for AI agent skills and plugins.
+description: The context engineering toolkit for coding agents.
 sidebar:
   order: 1
 ---
 
-**doraval** is a CLI that validates structure and measures rubric drift for AI agent skills.
+**doraval** is a context engineering toolkit for coding agents. It validates the files that shape how your agents behave — skills, plugins, hooks, MCP configs, memory files, and more.
 
-It works with any agent following the [Agent Skills spec](https://agentskills.io/specification) — Grok, Claude Code, Cursor, Windsurf, and others.
+Works with Claude Code today. Cursor, Codex, and Windsurf support is coming.
 
 ## Why
 
-AI agent skills are Markdown files with YAML frontmatter, structured steps, code examples, and guardrails. They look simple but are hard to keep consistent:
+The context you give coding agents — SKILL.md files, CLAUDE.md, plugin manifests, hooks, MCP configs — is what determines whether they're useful or chaotic. These files are easy to write but hard to keep correct:
 
 - A missing `name` field means the agent can't discover the skill
+- A malformed `plugin.json` silently breaks the entire plugin
+- An `@import` pointing at a deleted file creates a silent hole in memory
+- Unknown hook event names are silently ignored
 - Vague phrasing like "you might want to" confuses agents that need direct instructions
-- No code examples leaves agents guessing at syntax
-- No `MUST` / `MUST NOT` constraints means unpredictable behavior
 
-Manual review doesn't scale. doraval automates these checks.
+Manual review doesn't scale. doraval automates these checks across every artifact type your agent consumes.
 
-## Three commands
+## Commands
 
 | Command | What it does | Speed |
 |---------|-------------|-------|
-| `skill validate` | Structural correctness — frontmatter, required fields, file layout | Instant |
+| `validate` | Auto-detect and validate all agent config in a directory | Instant |
+| `skill validate` | Structural correctness for a single skill | Instant |
 | `skill drift` | Rubric deviation — 6 categories of quality drift | Instant |
 | `skill judge` | AI-driven qualitative assessment via LLM | *(coming soon)* |
 
-`validate` and `drift` are deterministic and run locally with zero network calls. `judge` will require an LLM API key.
+`validate` is the primary command. It auto-detects which validators apply (skill, plugin, marketplace, hooks, MCP, subagent, command, memory) and runs them all. It also accepts Git URLs — point it at a GitHub repo and it clones, validates, and cleans up.
 
 ## Quick start
 
 ```bash
 bun install -g doraval
 
-doraval skill validate ./my-skill/
-doraval skill drift ./my-skill/
+dora validate .                                     # local directory
+dora validate https://github.com/obra/superpowers   # remote repo
+dora validate . --for claude:plugin                 # specific validator
+dora skill drift ./my-skill/                        # rubric drift
 ```
 
 Or run without installing:
 
 ```bash
-bunx doraval skill validate ./my-skill/
+bunx doraval validate .
 ```
 
-## Beyond skills
+## Beyond validation
 
 `doraval journal` provides a separate system for recording project decisions and principles with pushback (see [Agent Journal](/concepts/agent-journal)). It is completely optional and lives outside your project directories.

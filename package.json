@@ -1,6 +1,6 @@
 {
   "name": "doraval",
-  "version": "0.2.4",
+  "version": "0.2.6",
   "author": "Saif",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "doraval": "./bin/doraval.js",
     "dora": "./bin/doraval.js"
   },
-  "description": "Validate, score, and test skills and plugins for AI coding agents",
+  "description": "The context engineering toolkit for coding agents",
   "engines": {
     "bun": ">=1.2.0"
   },

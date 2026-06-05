@@ -60,7 +60,7 @@ const main = defineCommand({
     name: "doraval",
     version: pkg.version,
     description:
-      "Validate, score, and test skills and plugins for AI coding agents",
+      "The context engineering toolkit for coding agents",
   },
   subCommands: {
     validate: () =>
