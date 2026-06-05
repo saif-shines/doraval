@@ -3330,7 +3330,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "doraval",
-  version: "0.2.3",
+  version: "0.2.4",
   author: "Saif",
   repository: {
     type: "git",
