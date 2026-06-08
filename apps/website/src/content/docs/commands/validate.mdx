@@ -41,8 +41,8 @@ dora validate . --for claude:plugin   # just the plugin validator
 | `claude:marketplace` | `plugins/` with plugin subdirs | Plugin directories, README, LICENSE |
 | `claude:hooks` | `hooks/hooks.json` | Valid JSON, known event names |
 | `claude:mcp` | `.mcp.json` | Valid JSON, server definitions |
-| `claude:subagent` | `agents/*.md` | Frontmatter with description, non-empty body |
-| `claude:command` | `commands/*.md` | Frontmatter with description, non-empty body |
+| `claude:subagent` | `agents/*.md` | Frontmatter with description, non-empty body (stricter than skills) |
+| `claude:command` | `commands/*.md` | Frontmatter with description, body; supports advanced fields (allowed-tools, context, when_to_use, etc.) |
 | `claude:memory` | `CLAUDE.md` | Non-empty, length limit, @path imports |
 
 ## Remote URLs
@@ -89,6 +89,8 @@ dora skill validate <path> [options]
 
 This validates a single skill directory (must contain `SKILL.md`). The top-level `dora validate` is now the recommended command — it auto-detects and runs all applicable validators including `claude:skill`.
 
+`skill validate` (and `claude:skill`) now treats `name` and `description` as recommended rather than hard requirements (missing values produce warnings). It also detects advanced frontmatter fields (e.g. `allowed-tools`, `context`, `when_to_use`, `disable-model-invocation`), dynamic context injection (`!` `command` `` and ```! blocks), and substitutions (`$ARGUMENTS`, `$0`, `${CLAUDE_SKILL_DIR}`, etc.).
+
 ## Options
 
 | Flag | Short | Description |
@@ -118,11 +120,16 @@ Returns:
       "YAML frontmatter present and parseable",
       "name: \"my-skill\"",
       "description field present",
-      "Markdown body is non-empty"
+      "Markdown body is non-empty",
+      "advanced frontmatter: allowed-tools, context",
+      "uses dynamic context injection (!`...` or ```! blocks)",
+      "uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})"
     ]
   }
 ]
 ```
+
+The output can also include warnings (e.g. when `description` or `name` is omitted, or for unknown frontmatter keys).
 
 ## Exit codes
 

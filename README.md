@@ -58,8 +58,8 @@ dora validate . --for claude:plugin   # just the plugin validator
 | `claude:marketplace` | `plugins/` with plugin subdirs | Plugin directory structure, README, LICENSE |
 | `claude:hooks` | `hooks/hooks.json` or `hooks.json` | Valid JSON, known event names |
 | `claude:mcp` | `.mcp.json` | Valid JSON, server definitions |
-| `claude:subagent` | `agents/*.md` | Frontmatter with description, non-empty body |
-| `claude:command` | `commands/*.md` | Frontmatter with description, non-empty body |
+| `claude:subagent` | `agents/*.md` | Frontmatter with description, non-empty body (stricter than skills) |
+| `claude:command` | `commands/*.md` | Frontmatter with description, body; supports advanced fields (allowed-tools, context, when_to_use, etc.) |
 | `claude:memory` | `CLAUDE.md` | Non-empty, length limit, @path import resolution |
 
 #### Remote URLs
@@ -93,9 +93,13 @@ dora skill validate ./skills/my-skill/
   ✓ description field present
   ✓ Markdown body is non-empty
   ✓ references/ directory exists
+  ✓ advanced frontmatter: allowed-tools, context
+  ✓ uses dynamic context injection (!`...` or ```! blocks)
 
   Result: 0 error(s), 0 warning(s)
 ```
+
+> Note: `name` and `description` are recommended (not hard requirements). Missing them produces warnings rather than errors. The directory name usually provides the invocable `/command`.
 
 ### `skill drift` — Rubric deviation
 
@@ -103,7 +107,7 @@ Measure how far a skill has drifted from known-good rubric standards. Each check
 
 | Category | What it checks |
 |---|---|
-| **Trigger** | Description includes activation phrases (`Use when...`) |
+| **Trigger** | Description or `when_to_use` includes activation phrases (`Use when...`) |
 | **Structure** | Body has numbered steps or checklists |
 | **Voice** | Uses imperative language (`Create`, `Run`, `Ensure`) |
 | **Example** | Contains code blocks |
