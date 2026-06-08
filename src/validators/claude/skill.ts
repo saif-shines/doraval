@@ -10,7 +10,7 @@ export const claudeSkillValidator: Validator = {
   id: "claude:skill",
   provider: "claude",
   name: "Claude Skill",
-  description: "Validates SKILL.md structure: frontmatter, required fields, body, directories",
+  description: "Validates SKILL.md per current Claude Code spec: frontmatter (name/description relaxed to recommended; directory name usually provides the /command), body, supporting files, dynamic injection (!`cmd`), substitutions ($ARGUMENTS, ${CLAUDE_*}), and advanced fields (allowed-tools, context, disable-model-invocation, when_to_use, etc.)",
 
   detect(dir: string): boolean {
     return existsSync(resolve(dir, "SKILL.md"));

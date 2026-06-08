@@ -17,6 +17,8 @@ export interface SkillDriftResult {
 
 export function analyzeDrift(input: SkillDriftInput): SkillDriftResult {
   const drifts: DriftItem[] = [];
+  // Trigger detection now also considers when_to_use (per current Claude Code spec).
+  // The CLI caller concatenates description + when_to_use before passing.
   const desc = input.description;
   const body = input.content;
 

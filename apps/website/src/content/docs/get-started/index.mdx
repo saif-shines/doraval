@@ -13,7 +13,7 @@ Works with Claude Code today. Cursor, Codex, and Windsurf support is coming.
 
 The context you give coding agents — SKILL.md files, CLAUDE.md, plugin manifests, hooks, MCP configs — is what determines whether they're useful or chaotic. These files are easy to write but hard to keep correct:
 
-- A missing `name` field means the agent can't discover the skill
+- A missing `description` (or unhelpful trigger phrases) can prevent Claude from auto-loading a skill when relevant; `name` is recommended for display but the directory name usually provides the `/command`
 - A malformed `plugin.json` silently breaks the entire plugin
 - An `@import` pointing at a deleted file creates a silent hole in memory
 - Unknown hook event names are silently ignored

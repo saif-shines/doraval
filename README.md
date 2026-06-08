@@ -53,7 +53,7 @@ dora validate . --for claude:plugin   # just the plugin validator
 
 | Validator | Detects | What it checks |
 |---|---|---|
-| `claude:skill` | `SKILL.md` | Frontmatter, required fields, body, directories |
+| `claude:skill` | `SKILL.md` | Frontmatter (relaxed name/desc; recommended + directory-derived command), body, supporting files, dynamic injection, substitutions, advanced fields (allowed-tools, context, etc.) |
 | `claude:plugin` | `.claude-plugin/plugin.json` | Manifest fields, component paths, skill/command/agent dirs |
 | `claude:marketplace` | `plugins/` with plugin subdirs | Plugin directory structure, README, LICENSE |
 | `claude:hooks` | `hooks/hooks.json` or `hooks.json` | Valid JSON, known event names |

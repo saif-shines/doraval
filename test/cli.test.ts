@@ -45,7 +45,7 @@ describe("doraval CLI", () => {
       expect(result.passes).toContain('name: "minimal-good"');
     });
 
-    test("exits 1 for missing name", () => {
+    test("reports missing name as warning and exits 0", () => {
       const skillDir = fixturePath("missing-name");
       const { exitCode, stdout } = runDoraval([
         "skill",
@@ -55,9 +55,10 @@ describe("doraval CLI", () => {
         "json",
       ]);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(0);
       const result = JSON.parse(stdout);
-      expect(result.errors).toContain('Missing required field: "name"');
+      expect(result.errors).toEqual([]);
+      expect(result.warnings.some((w: string) => w.includes("name"))).toBe(true);
     });
 
     test("exits 1 for invalid YAML frontmatter", () => {

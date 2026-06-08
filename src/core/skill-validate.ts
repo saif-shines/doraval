@@ -14,7 +14,30 @@ export interface SkillValidateResult {
 }
 
 const NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
-const OPTIONAL_DIRS = ["references", "scripts", "assets"] as const;
+
+// Known frontmatter fields from the current Claude Code skills spec (pasted official docs).
+// We note recognized ones and warn on unknown keys (helps catch typos or future additions).
+const KNOWN_FIELDS = new Set([
+  "name",
+  "description",
+  "when_to_use",
+  "argument-hint",
+  "arguments",
+  "disable-model-invocation",
+  "user-invocable",
+  "allowed-tools",
+  "disallowed-tools",
+  "model",
+  "effort",
+  "context",
+  "agent",
+  "hooks",
+  "paths",
+  "shell",
+]);
+
+// Directories commonly bundled with skills (supporting files, scripts, examples, etc.)
+const SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"] as const;
 
 export function validateSkillModel(
   model: SkillModel,
@@ -24,31 +47,37 @@ export function validateSkillModel(
   const warnings: string[] = [];
   const passes: string[] = [];
 
-  if (Object.keys(model.data).length === 0) {
-    errors.push("YAML frontmatter is empty or missing");
+  const frontmatterKeys = Object.keys(model.data);
+
+  if (frontmatterKeys.length === 0) {
+    warnings.push("YAML frontmatter is empty (description recommended for discoverability)");
   } else {
     passes.push("YAML frontmatter present and parseable");
   }
 
+  // name is optional (directory name provides the invocable command in most cases).
+  // If present we still validate the format because it is used as a display label
+  // and for plugin-root SKILL.md it *does* determine the command name.
   if (!model.data.name) {
-    errors.push('Missing required field: "name"');
+    warnings.push('No "name" in frontmatter — directory name provides the /command (name is optional except for plugin-root skills)');
   } else {
     const name = String(model.data.name);
     if (!NAME_REGEX.test(name)) {
       errors.push(
-        `Invalid name format: "${name}" — must be kebab-case (a-z, 0-9, hyphens)`
+        `Invalid name format: "${name}" — should be kebab-case (a-z, 0-9, hyphens) for best compatibility`
       );
     } else if (name.length < 2 || name.length > 64) {
       errors.push(
-        `Name length out of range: ${name.length} chars (must be 2-64)`
+        `Name length out of range: ${name.length} chars (recommended 2-64)`
       );
     } else {
       passes.push(`name: "${name}"`);
     }
   }
 
+  // description is recommended (not strictly required — falls back to first paragraph)
   if (!model.data.description) {
-    errors.push('Missing required field: "description"');
+    warnings.push('Missing "description" (recommended) — helps Claude decide when to load the skill automatically');
   } else {
     passes.push("description field present");
   }
@@ -59,10 +88,42 @@ export function validateSkillModel(
     passes.push("Markdown body is non-empty");
   }
 
-  for (const dir of OPTIONAL_DIRS) {
+  // Report recognized advanced frontmatter fields (new in current Claude Code spec)
+  const advanced: string[] = [];
+  for (const key of frontmatterKeys) {
+    if (KNOWN_FIELDS.has(key) && key !== "name" && key !== "description") {
+      advanced.push(key);
+    }
+  }
+  if (advanced.length > 0) {
+    passes.push(`advanced frontmatter: ${advanced.join(", ")}`);
+  }
+
+  // Warn on unknown top-level frontmatter keys (helps catch typos)
+  for (const key of frontmatterKeys) {
+    if (!KNOWN_FIELDS.has(key)) {
+      warnings.push(`Unknown frontmatter field: "${key}" (may be a typo or newer spec addition)`);
+    }
+  }
+
+  // Supporting files / directories (expanded list)
+  for (const dir of SUPPORTING_DIRS) {
     if (context.existingDirs.includes(dir)) {
       passes.push(`${dir}/ directory exists`);
     }
+  }
+
+  // Detect dynamic context injection (!`command` or ```! fenced blocks)
+  const hasInlineInjection = /!\s*`[^`]+`/.test(model.content);
+  const hasFencedInjection = /```\s*!/.test(model.content);
+  if (hasInlineInjection || hasFencedInjection) {
+    passes.push("uses dynamic context injection (!`...` or ```! blocks)");
+  }
+
+  // Detect common substitution patterns (helps confirm the skill is using the argument / env system)
+  const hasArgSubst = /\$ARGUMENTS|\$[0-9]|\$\{CLAUDE_/.test(model.content);
+  if (hasArgSubst) {
+    passes.push("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
   }
 
   return { errors, warnings, passes };

@@ -685,25 +685,26 @@ function validateSkillModel(model, context = { existingDirs: [] }) {
   const errors = [];
   const warnings = [];
   const passes = [];
-  if (Object.keys(model.data).length === 0) {
-    errors.push("YAML frontmatter is empty or missing");
+  const frontmatterKeys = Object.keys(model.data);
+  if (frontmatterKeys.length === 0) {
+    warnings.push("YAML frontmatter is empty (description recommended for discoverability)");
   } else {
     passes.push("YAML frontmatter present and parseable");
   }
   if (!model.data.name) {
-    errors.push('Missing required field: "name"');
+    warnings.push('No "name" in frontmatter \u2014 directory name provides the /command (name is optional except for plugin-root skills)');
   } else {
     const name = String(model.data.name);
     if (!NAME_REGEX.test(name)) {
-      errors.push(`Invalid name format: "${name}" \u2014 must be kebab-case (a-z, 0-9, hyphens)`);
+      errors.push(`Invalid name format: "${name}" \u2014 should be kebab-case (a-z, 0-9, hyphens) for best compatibility`);
     } else if (name.length < 2 || name.length > 64) {
-      errors.push(`Name length out of range: ${name.length} chars (must be 2-64)`);
+      errors.push(`Name length out of range: ${name.length} chars (recommended 2-64)`);
     } else {
       passes.push(`name: "${name}"`);
     }
   }
   if (!model.data.description) {
-    errors.push('Missing required field: "description"');
+    warnings.push('Missing "description" (recommended) \u2014 helps Claude decide when to load the skill automatically');
   } else {
     passes.push("description field present");
   }
@@ -712,17 +713,58 @@ function validateSkillModel(model, context = { existingDirs: [] }) {
   } else {
     passes.push("Markdown body is non-empty");
   }
-  for (const dir of OPTIONAL_DIRS) {
+  const advanced = [];
+  for (const key of frontmatterKeys) {
+    if (KNOWN_FIELDS.has(key) && key !== "name" && key !== "description") {
+      advanced.push(key);
+    }
+  }
+  if (advanced.length > 0) {
+    passes.push(`advanced frontmatter: ${advanced.join(", ")}`);
+  }
+  for (const key of frontmatterKeys) {
+    if (!KNOWN_FIELDS.has(key)) {
+      warnings.push(`Unknown frontmatter field: "${key}" (may be a typo or newer spec addition)`);
+    }
+  }
+  for (const dir of SUPPORTING_DIRS) {
     if (context.existingDirs.includes(dir)) {
       passes.push(`${dir}/ directory exists`);
     }
   }
+  const hasInlineInjection = /!\s*`[^`]+`/.test(model.content);
+  const hasFencedInjection = /```\s*!/.test(model.content);
+  if (hasInlineInjection || hasFencedInjection) {
+    passes.push("uses dynamic context injection (!`...` or ```! blocks)");
+  }
+  const hasArgSubst = /\$ARGUMENTS|\$[0-9]|\$\{CLAUDE_/.test(model.content);
+  if (hasArgSubst) {
+    passes.push("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
+  }
   return { errors, warnings, passes };
 }
-var NAME_REGEX, OPTIONAL_DIRS;
+var NAME_REGEX, KNOWN_FIELDS, SUPPORTING_DIRS;
 var init_skill_validate = __esm(() => {
   NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
-  OPTIONAL_DIRS = ["references", "scripts", "assets"];
+  KNOWN_FIELDS = new Set([
+    "name",
+    "description",
+    "when_to_use",
+    "argument-hint",
+    "arguments",
+    "disable-model-invocation",
+    "user-invocable",
+    "allowed-tools",
+    "disallowed-tools",
+    "model",
+    "effort",
+    "context",
+    "agent",
+    "hooks",
+    "paths",
+    "shell"
+  ]);
+  SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"];
 });
 
 // src/cli/commands/validate.ts
@@ -732,13 +774,13 @@ __export(exports_validate, {
 });
 import { existsSync } from "fs";
 import { resolve } from "path";
-var import_picocolors, OPTIONAL_DIRS2, validate_default;
+var import_picocolors, OPTIONAL_DIRS, validate_default;
 var init_validate = __esm(() => {
   init_dist();
   init_frontmatter();
   init_skill_validate();
   import_picocolors = __toESM(require_picocolors(), 1);
-  OPTIONAL_DIRS2 = ["references", "scripts", "assets"];
+  OPTIONAL_DIRS = ["references", "scripts", "assets"];
   validate_default = defineCommand({
     meta: {
       name: "validate",
@@ -804,7 +846,7 @@ Try:
 Fix the YAML syntax and retry.`);
         process.exit(1);
       }
-      const existingDirs = OPTIONAL_DIRS2.filter((dir) => existsSync(resolve(fullPath, dir)));
+      const existingDirs = OPTIONAL_DIRS.filter((dir) => existsSync(resolve(fullPath, dir)));
       const { errors, warnings, passes } = validateSkillModel(parsed, {
         existingDirs: [...existingDirs]
       });
@@ -946,8 +988,9 @@ var init_drift = __esm(() => {
         process.exit(1);
       }
       const desc = String(parsed.data.description || "");
+      const when = String(parsed.data.when_to_use || "");
       const { drifts, driftCount, total } = analyzeDrift({
-        description: desc,
+        description: (desc + " " + when).trim(),
         content: parsed.content
       });
       if (args.format === "json") {
@@ -2361,16 +2404,16 @@ var init_sync = __esm(() => {
 // src/validators/claude/skill.ts
 import { existsSync as existsSync8 } from "fs";
 import { resolve as resolve3 } from "path";
-var OPTIONAL_DIRS3, claudeSkillValidator;
+var OPTIONAL_DIRS2, claudeSkillValidator;
 var init_skill = __esm(() => {
   init_frontmatter();
   init_skill_validate();
-  OPTIONAL_DIRS3 = ["references", "scripts", "assets"];
+  OPTIONAL_DIRS2 = ["references", "scripts", "assets"];
   claudeSkillValidator = {
     id: "claude:skill",
     provider: "claude",
     name: "Claude Skill",
-    description: "Validates SKILL.md structure: frontmatter, required fields, body, directories",
+    description: "Validates SKILL.md per current Claude Code spec: frontmatter (name/description relaxed to recommended; directory name usually provides the /command), body, supporting files, dynamic injection (!`cmd`), substitutions ($ARGUMENTS, ${CLAUDE_*}), and advanced fields (allowed-tools, context, disable-model-invocation, when_to_use, etc.)",
     detect(dir) {
       return existsSync8(resolve3(dir, "SKILL.md"));
     },
@@ -2387,7 +2430,7 @@ var init_skill = __esm(() => {
           passes: []
         };
       }
-      const existingDirs = OPTIONAL_DIRS3.filter((d) => existsSync8(resolve3(dir, d)));
+      const existingDirs = OPTIONAL_DIRS2.filter((d) => existsSync8(resolve3(dir, d)));
       return validateSkillModel(parsed, { existingDirs: [...existingDirs] });
     }
   };
@@ -2735,7 +2778,7 @@ var init_command = __esm(() => {
     id: "claude:command",
     provider: "claude",
     name: "Claude Commands",
-    description: "Validates commands/ directory: .md files with frontmatter and description",
+    description: "Validates commands/ (or legacy .claude/commands/) .md files: frontmatter (including rich skill fields), description, body",
     detect(dir) {
       const commandsDir = resolve9(dir, "commands");
       if (!existsSync14(commandsDir))
@@ -2771,6 +2814,11 @@ var init_command = __esm(() => {
           }
           if (!parsed.content.trim()) {
             errors.push(`${file}: body is empty`);
+          }
+          const advancedKeys = ["allowed-tools", "disallowed-tools", "context", "when_to_use", "disable-model-invocation", "user-invocable", "arguments", "argument-hint", "shell", "paths", "hooks"];
+          const foundAdvanced = advancedKeys.filter((k) => parsed.data[k] !== undefined);
+          if (foundAdvanced.length > 0) {
+            passes.push(`${file}: advanced frontmatter: ${foundAdvanced.join(", ")}`);
           }
         } catch {
           errors.push(`${file}: failed to parse`);
@@ -3375,7 +3423,7 @@ var package_default = {
     test: "bun test",
     prepublish: `node -e "const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}"`,
     bump: "bun run scripts/bump.ts",
-    publish: "bun run build && bunx jsr publish",
+    publish: "bunx jsr publish",
     "site:dev": "cd apps/website && bun run dev",
     "site:build": "cd apps/website && bun run build",
     "site:preview": "cd apps/website && bun run preview"

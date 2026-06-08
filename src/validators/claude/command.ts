@@ -7,7 +7,7 @@ export const claudeCommandValidator: Validator = {
   id: "claude:command",
   provider: "claude",
   name: "Claude Commands",
-  description: "Validates commands/ directory: .md files with frontmatter and description",
+  description: "Validates commands/ (or legacy .claude/commands/) .md files: frontmatter (including rich skill fields), description, body",
 
   detect(dir: string): boolean {
     const commandsDir = resolve(dir, "commands");
@@ -51,12 +51,17 @@ export const claudeCommandValidator: Validator = {
         if (!parsed.content.trim()) {
           errors.push(`${file}: body is empty`);
         }
+
+        // Rich frontmatter fields now supported for legacy commands too (they were merged into the skills model).
+        const advancedKeys = ["allowed-tools", "disallowed-tools", "context", "when_to_use", "disable-model-invocation", "user-invocable", "arguments", "argument-hint", "shell", "paths", "hooks"];
+        const foundAdvanced = advancedKeys.filter((k) => parsed.data[k] !== undefined);
+        if (foundAdvanced.length > 0) {
+          passes.push(`${file}: advanced frontmatter: ${foundAdvanced.join(", ")}`);
+        }
       } catch {
         errors.push(`${file}: failed to parse`);
       }
     }
-
-    // TODO: Validate allowed-tools, argument-hint, etc.
 
     return { errors, warnings, passes };
   },

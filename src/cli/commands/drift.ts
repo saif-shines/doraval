@@ -63,8 +63,10 @@ export default defineCommand({
     }
 
     const desc = String(parsed.data.description || "");
+    const when = String(parsed.data.when_to_use || "");
+    // Concatenate so the Trigger check in analyzeDrift sees activation phrases from either field (current spec).
     const { drifts, driftCount, total } = analyzeDrift({
-      description: desc,
+      description: (desc + " " + when).trim(),
       content: parsed.content,
     });
 
