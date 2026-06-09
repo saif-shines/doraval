@@ -119,92 +119,25 @@ export function checkDynamicInjection(model: SkillModel, _ctx: SkillValidateCont
   return { passes };
 }
 
+const EMPTY: SkillValidateResult = { errors: [], warnings: [], passes: [] };
+
+const checks: Check[] = [
+  checkFrontmatterPresence,
+  checkName,
+  checkDescription,
+  checkBody,
+  checkAdvancedFields,
+  checkUnknownFields,
+  checkSupportingDirs,
+  checkDynamicInjection,
+];
+
 export function validateSkillModel(
   model: SkillModel,
   context: SkillValidateContext = { existingDirs: [] }
 ): SkillValidateResult {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-  const passes: string[] = [];
-
-  const frontmatterKeys = Object.keys(model.data);
-
-  if (frontmatterKeys.length === 0) {
-    warnings.push("YAML frontmatter is empty (description recommended for discoverability)");
-  } else {
-    passes.push("YAML frontmatter present and parseable");
-  }
-
-  // name is optional (directory name provides the invocable command in most cases).
-  // If present we still validate the format because it is used as a display label
-  // and for plugin-root SKILL.md it *does* determine the command name.
-  if (!model.data.name) {
-    warnings.push('No "name" in frontmatter — directory name provides the /command (name is optional except for plugin-root skills)');
-  } else {
-    const name = String(model.data.name);
-    if (!NAME_REGEX.test(name)) {
-      errors.push(
-        `Invalid name format: "${name}" — should be kebab-case (a-z, 0-9, hyphens) for best compatibility`
-      );
-    } else if (name.length < 2 || name.length > 64) {
-      errors.push(
-        `Name length out of range: ${name.length} chars (recommended 2-64)`
-      );
-    } else {
-      passes.push(`name: "${name}"`);
-    }
-  }
-
-  // description is recommended (not strictly required — falls back to first paragraph)
-  if (!model.data.description) {
-    warnings.push('Missing "description" (recommended) — helps Claude decide when to load the skill automatically');
-  } else {
-    passes.push("description field present");
-  }
-
-  if (!model.content.trim()) {
-    errors.push("Markdown body is empty");
-  } else {
-    passes.push("Markdown body is non-empty");
-  }
-
-  // Report recognized advanced frontmatter fields (new in current Claude Code spec)
-  const advanced: string[] = [];
-  for (const key of frontmatterKeys) {
-    if (KNOWN_FIELDS.has(key) && key !== "name" && key !== "description") {
-      advanced.push(key);
-    }
-  }
-  if (advanced.length > 0) {
-    passes.push(`advanced frontmatter: ${advanced.join(", ")}`);
-  }
-
-  // Warn on unknown top-level frontmatter keys (helps catch typos)
-  for (const key of frontmatterKeys) {
-    if (!KNOWN_FIELDS.has(key)) {
-      warnings.push(`Unknown frontmatter field: "${key}" (may be a typo or newer spec addition)`);
-    }
-  }
-
-  // Supporting files / directories (expanded list)
-  for (const dir of SUPPORTING_DIRS) {
-    if (context.existingDirs.includes(dir)) {
-      passes.push(`${dir}/ directory exists`);
-    }
-  }
-
-  // Detect dynamic context injection (!`command` or ```! fenced blocks)
-  const hasInlineInjection = /!\s*`[^`]+`/.test(model.content);
-  const hasFencedInjection = /```\s*!/.test(model.content);
-  if (hasInlineInjection || hasFencedInjection) {
-    passes.push("uses dynamic context injection (!`...` or ```! blocks)");
-  }
-
-  // Detect common substitution patterns (helps confirm the skill is using the argument / env system)
-  const hasArgSubst = /\$ARGUMENTS|\$[0-9]|\$\{CLAUDE_/.test(model.content);
-  if (hasArgSubst) {
-    passes.push("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
-  }
-
-  return { errors, warnings, passes };
+  return checks.reduce<SkillValidateResult>(
+    (acc, check) => merge(acc, check(model, context)),
+    EMPTY
+  );
 }
