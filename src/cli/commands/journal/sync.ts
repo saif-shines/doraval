@@ -155,9 +155,9 @@ export default defineCommand({
     if (currentFile) {
       existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
       currentSha = currentFile.sha;
-      console.error(`  ${pc.dim(pc.gray("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)"))}`);
+      if (args.verbose) console.error(`  ${pc.dim(pc.gray("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)"))}`);
     } else {
-      console.error(`  ${pc.dim(pc.gray("No existing file on remote — will create it"))}`);
+      if (args.verbose) console.error(`  ${pc.dim(pc.gray("No existing file on remote — will create it"))}`);
     }
 
     // 2. Collect all pending content
@@ -185,7 +185,7 @@ export default defineCommand({
       (args.message as string) ||
       `journal: add ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} for ${project}`;
 
-    console.error(`\n  ${pc.dim(pc.gray("Pushing to remote..."))}`);
+    if (args.verbose) console.error(`\n  ${pc.dim(pc.gray("Pushing to remote..."))}`);
 
     try {
       updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
@@ -209,7 +209,7 @@ export default defineCommand({
     try {
       const wrote = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
       if (wrote) {
-        console.error(`  ${pc.green("✓")} ${pc.white("Re-fetched")} ${pc.white(project)}.md ${pc.white("into local cache")}`);
+        if (args.verbose) console.error(`  ${pc.green("✓")} ${pc.white("Re-fetched")} ${pc.white(project)}.md ${pc.white("into local cache")}`);
       }
     } catch {
       console.error(`  ${pc.yellow("⚠")} Could not re-fetch updated file (you can run sync again later)`);
