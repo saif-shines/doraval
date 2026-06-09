@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   validateSkillModel, merge,
   checkFrontmatterPresence, checkName, checkDescription, checkBody,
-  checkAdvancedFields, checkUnknownFields,
+  checkAdvancedFields, checkUnknownFields, checkSupportingDirs, checkDynamicInjection,
 } from "./skill-validate.js";
 
 describe("validateSkillModel", () => {
@@ -234,5 +234,60 @@ describe("checkUnknownFields", () => {
     expect(result.warnings?.length).toBe(2);
     expect(result.warnings?.[0]).toContain("foo");
     expect(result.warnings?.[1]).toContain("baz");
+  });
+});
+
+describe("checkSupportingDirs", () => {
+  test("returns empty passes when no dirs exist", () => {
+    const result = checkSupportingDirs({ data: {}, content: "" }, { existingDirs: [] });
+    expect(result.passes).toEqual([]);
+  });
+
+  test("returns pass for each existing supporting dir", () => {
+    const result = checkSupportingDirs(
+      { data: {}, content: "" },
+      { existingDirs: ["references", "scripts"] }
+    );
+    expect(result.passes).toContain("references/ directory exists");
+    expect(result.passes).toContain("scripts/ directory exists");
+  });
+
+  test("ignores dirs not in SUPPORTING_DIRS", () => {
+    const result = checkSupportingDirs(
+      { data: {}, content: "" },
+      { existingDirs: ["node_modules", "dist"] }
+    );
+    expect(result.passes).toEqual([]);
+  });
+});
+
+describe("checkDynamicInjection", () => {
+  test("returns empty passes when no injection or substitution", () => {
+    const result = checkDynamicInjection({ data: {}, content: "plain text" }, { existingDirs: [] });
+    expect(result.passes).toEqual([]);
+  });
+
+  test("detects inline injection", () => {
+    const result = checkDynamicInjection(
+      { data: {}, content: "State: !`git status`" },
+      { existingDirs: [] }
+    );
+    expect(result.passes).toContain("uses dynamic context injection (!`...` or ```! blocks)");
+  });
+
+  test("detects argument substitutions", () => {
+    const result = checkDynamicInjection(
+      { data: {}, content: "Use $ARGUMENTS here." },
+      { existingDirs: [] }
+    );
+    expect(result.passes).toContain("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
+  });
+
+  test("detects both injection and substitution independently", () => {
+    const result = checkDynamicInjection(
+      { data: {}, content: "!`git status` and $ARGUMENTS" },
+      { existingDirs: [] }
+    );
+    expect(result.passes?.length).toBe(2);
   });
 });

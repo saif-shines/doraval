@@ -101,6 +101,24 @@ export function checkUnknownFields(model: SkillModel, _ctx: SkillValidateContext
   return { warnings };
 }
 
+export function checkSupportingDirs(_model: SkillModel, ctx: SkillValidateContext): CheckResult {
+  const passes = SUPPORTING_DIRS
+    .filter(dir => ctx.existingDirs.includes(dir))
+    .map(dir => `${dir}/ directory exists`);
+  return { passes };
+}
+
+export function checkDynamicInjection(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  const passes: string[] = [];
+  if (/!\s*`[^`]+`/.test(model.content) || /```\s*!/.test(model.content)) {
+    passes.push("uses dynamic context injection (!`...` or ```! blocks)");
+  }
+  if (/\$ARGUMENTS|\$[0-9]|\$\{CLAUDE_/.test(model.content)) {
+    passes.push("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
+  }
+  return { passes };
+}
+
 export function validateSkillModel(
   model: SkillModel,
   context: SkillValidateContext = { existingDirs: [] }
