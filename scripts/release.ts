@@ -41,6 +41,6 @@ run("git", ["add", "package.json", "jsr.json", "apps/website/package.json"]);
 run("git", ["commit", "-m", `chore: bump version to ${version}`]);
 run("git", ["tag", tag]);
 run("git", ["push"]);
-run("git", ["push", "--tags"]);
+run("git", ["push", "origin", tag]);
 
 console.log(`\nReleased ${tag} — CI pipeline triggered.`);
