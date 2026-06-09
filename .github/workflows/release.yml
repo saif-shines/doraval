@@ -64,3 +64,25 @@ jobs:
       - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  update-homebrew:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download macOS binaries from release
+        run: |
+          TAG=${{ needs.build-and-release.outputs.tag }}
+          curl -fsSL "https://github.com/saif-shines/doraval/releases/download/${TAG}/doraval-darwin-arm64" -o doraval-darwin-arm64
+          curl -fsSL "https://github.com/saif-shines/doraval/releases/download/${TAG}/doraval-darwin-x64" -o doraval-darwin-x64
+
+      - name: Compute SHAs and update formula
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          TAG=${{ needs.build-and-release.outputs.tag }}
+          VERSION=${TAG#v}
+          ARM64_SHA=$(sha256sum doraval-darwin-arm64 | awk '{print $1}')
+          X64_SHA=$(sha256sum doraval-darwin-x64 | awk '{print $1}')
+          bash scripts/update-homebrew.sh "$VERSION" "$ARM64_SHA" "$X64_SHA"
