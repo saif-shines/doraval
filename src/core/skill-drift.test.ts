@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { analyzeDrift } from "./skill-drift.js";
+import {
+  analyzeDrift,
+  checkTrigger, checkStructure, checkVoice,
+  checkExample, checkGuardrail, checkClarity,
+} from "./skill-drift.js";
 
 const alignedSkill = {
   description: "Use when running tests.",
@@ -58,5 +62,67 @@ describe("analyzeDrift", () => {
     });
     const guardrail = result.drifts.find((d) => d.category === "Guardrail");
     expect(guardrail?.drifted).toBe(true);
+  });
+});
+
+describe("checkTrigger", () => {
+  test("pass when description has trigger phrase", () => {
+    expect(checkTrigger({ description: "Use when running tests.", content: "" }).drifted).toBe(false);
+  });
+  test("drift when no trigger phrase", () => {
+    expect(checkTrigger({ description: "A general skill.", content: "" }).drifted).toBe(true);
+  });
+});
+
+describe("checkStructure", () => {
+  test("pass with numbered list", () => {
+    expect(checkStructure({ description: "", content: "1. Do this\n2. Do that" }).drifted).toBe(false);
+  });
+  test("pass with bullet list", () => {
+    expect(checkStructure({ description: "", content: "- Do this\n- Do that" }).drifted).toBe(false);
+  });
+  test("drift with plain prose", () => {
+    expect(checkStructure({ description: "", content: "Wall of text." }).drifted).toBe(true);
+  });
+});
+
+describe("checkVoice", () => {
+  test("pass with imperative verb", () => {
+    expect(checkVoice({ description: "", content: "Run the tests." }).drifted).toBe(false);
+  });
+  test("drift with passive prose", () => {
+    expect(checkVoice({ description: "", content: "Tests should be run." }).drifted).toBe(true);
+  });
+});
+
+describe("checkExample", () => {
+  test("pass with code block", () => {
+    expect(checkExample({ description: "", content: "Do this:\n```bash\necho hi\n```" }).drifted).toBe(false);
+  });
+  test("drift without code block", () => {
+    expect(checkExample({ description: "", content: "No examples here." }).drifted).toBe(true);
+  });
+});
+
+describe("checkGuardrail", () => {
+  test("pass with MUST constraint", () => {
+    expect(checkGuardrail({ description: "", content: "You MUST do this." }).drifted).toBe(false);
+  });
+  test("pass with MUST NOT constraint", () => {
+    expect(checkGuardrail({ description: "", content: "You MUST NOT skip." }).drifted).toBe(false);
+  });
+  test("drift without constraints", () => {
+    expect(checkGuardrail({ description: "", content: "Do the thing." }).drifted).toBe(true);
+  });
+});
+
+describe("checkClarity", () => {
+  test("pass with no ambiguous words", () => {
+    expect(checkClarity({ description: "", content: "Run the suite." }).drifted).toBe(false);
+  });
+  test("drift with ambiguous words", () => {
+    const result = checkClarity({ description: "", content: "Maybe consider this." });
+    expect(result.drifted).toBe(true);
+    expect(result.detail).toContain("Maybe");
   });
 });
