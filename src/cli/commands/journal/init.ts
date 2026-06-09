@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import { basename, join } from "path";
 import { spawnSync } from "bun";
 import pc from "picocolors";
+import { ui } from "../../out.js";
 import {
   readConfig,
   writeConfig,
@@ -46,7 +47,7 @@ export default defineCommand({
   },
 
   async run({ args }) {
-    console.error(
+    ui.write(
       `\n  ${pc.bold(pc.white("dora journal init"))} (or top-level ${pc.dim(pc.gray("dora init"))}) — Set up your journal\n`
     );
 
@@ -76,7 +77,7 @@ export default defineCommand({
         defaultRepo = `${ghLogin}/${ghLogin}.md`;
         sourceNote = `  ${pc.dim("(from your active gh account)")}\n`;
       } else {
-        console.error(
+        ui.write(
           `  ${pc.yellow("⚠")} Not logged in to GitHub. Run ${pc.dim("gh auth login")} first.\n`
         );
         process.exit(1);
@@ -89,8 +90,8 @@ export default defineCommand({
         sourceNote = `  ${pc.dim("(from your previous journal setup)")}\n`;
       }
 
-      console.error(`  Journal repo ${pc.dim(pc.gray("(owner/name)"))}`);
-      if (sourceNote) console.error(sourceNote);
+      ui.write(`  Journal repo ${pc.dim(pc.gray("(owner/name)"))}`);
+      if (sourceNote) ui.write(sourceNote);
       repo = prompt("  >", defaultRepo);
     }
 
@@ -107,14 +108,14 @@ export default defineCommand({
 
     // ── 3. Verify repo exists on GitHub ───────────────────────────
     if (!repoExists(repo!)) {
-      console.error(
+      ui.write(
         `  ${pc.red("✗")} Repository ${pc.bold(pc.white(repo!))} not found on GitHub.\n`
       );
-      console.error(`  Create it first:\n`);
-      console.error(
+      ui.write(`  Create it first:\n`);
+      ui.write(
         `    ${pc.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}\n`
       );
-      console.error(
+      ui.write(
         `  The repo should be private. doraval will populate it on first ${pc.dim("dora journal sync")}.\n`
       );
       process.exit(1);
@@ -126,16 +127,16 @@ export default defineCommand({
     const isRefresh = alreadyRegistered && args.refresh;
 
     if (alreadyRegistered && !isRefresh) {
-      console.error(
+      ui.write(
         `  ${pc.yellow("⚠")} Project ${pc.bold(pc.white(project))} is already registered.\n`
       );
-      console.error(
+      ui.write(
         `  Repo:   ${pc.gray(existing.journal.repo)}`
       );
-      console.error(
+      ui.write(
         `  Remote: ${existing.journal.projects[project].remote_path}\n`
       );
-      console.error(
+      ui.write(
         `  To refresh local files, run: ${pc.dim(pc.gray(`dora journal update`))}\n` +
           `  (init --refresh still works for compatibility.)\n` +
           `  Or remove the project from ${pc.dim(pc.gray("~/.doraval/config.yml"))} to fully re-initialize.\n`
@@ -165,35 +166,35 @@ export default defineCommand({
 
     // ── 7. Fetch / ensure journal files ────────────────────────────
     const actionLabel = isRefresh ? "Refreshing" : "Fetching";
-    console.error(`  ${pc.dim(pc.gray(`${actionLabel} journal files from`))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
+    ui.write(`  ${pc.dim(pc.gray(`${actionLabel} journal files from`))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
 
     const globalDest = join(journalsDir, "global.md");
     const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
     if (wroteGlobal) {
-      console.error(`  ${pc.green("✓")} global.md`);
+      ui.write(`  ${pc.green("✓")} global.md`);
     } else {
-      console.error(`  ${pc.dim("·")} global.md ${pc.dim("(not found — will be created on first sync)")}`);
+      ui.write(`  ${pc.dim("·")} global.md ${pc.dim("(not found — will be created on first sync)")}`);
       await Bun.write(globalDest, "# Global Journal\n\nCross-project principles.\n");
     }
 
     const wroteProject = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
     if (wroteProject) {
-      console.error(`  ${pc.green("✓")} ${remotePath}`);
+      ui.write(`  ${pc.green("✓")} ${remotePath}`);
     } else {
-      console.error(`  ${pc.dim("·")} ${remotePath} ${pc.dim("(not found — will be created on first sync)")}`);
+      ui.write(`  ${pc.dim("·")} ${remotePath} ${pc.dim("(not found — will be created on first sync)")}`);
       await Bun.write(localPath, `# ${project} Journal\n\nProject-specific decisions.\n`);
     }
 
     // ── 8. Write config ────────────────────────────────────────────
     await writeConfig(config);
 
-    console.error(
+    ui.write(
       `\n  ${pc.green("✓")} Project ${pc.bold(pc.white(project))} registered to ${pc.bold(pc.white(repo!))}.\n`
     );
-    console.error(`  Config:   ${pc.dim(pc.gray("~/.doraval/config.yml"))}`);
-    console.error(`  Journals: ${pc.dim(pc.gray("~/.doraval/journals/"))}`);
-    console.error(`  Pending:  ${pc.dim(pc.gray("~/.doraval/pending/"))}\n`);
-    console.error(
+    ui.write(`  Config:   ${pc.dim(pc.gray("~/.doraval/config.yml"))}`);
+    ui.write(`  Journals: ${pc.dim(pc.gray("~/.doraval/journals/"))}`);
+    ui.write(`  Pending:  ${pc.dim(pc.gray("~/.doraval/pending/"))}\n`);
+    ui.write(
       `  Use ${pc.dim(pc.gray("dora journal add"))} to propose decisions and ${pc.dim(pc.gray("dora journal list"))} to view them.\n`
     );
 

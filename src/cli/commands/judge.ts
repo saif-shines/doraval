@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import pc from "picocolors";
+import { ui } from "../out.js";
 
 export default defineCommand({
   meta: {
@@ -31,15 +31,10 @@ export default defineCommand({
   },
 
   async run({ args }) {
-    console.error(
-      `\n  ${pc.bold("doraval skill judge")} — AI-driven assessment\n`
-    );
-    console.error(`  Path:  ${args.path}\n`);
-    console.log(
-      `  ${pc.yellow("⚠")} Not yet implemented. This command will send the skill to an LLM`
-    );
-    console.log(
-      `    for qualitative review (clarity, completeness, effectiveness).\n`
+    ui.heading("doraval skill judge — AI-driven assessment");
+    ui.info(`  Path:  ${args.path}\n`);
+    ui.warn(
+      "Not yet implemented. This command will send the skill to an LLM for qualitative review (clarity, completeness, effectiveness).\n"
     );
     process.exit(2);
   },

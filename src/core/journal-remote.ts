@@ -1,14 +1,12 @@
 import { spawnSync } from "bun";
 import pc from "picocolors";
+import { ui } from "../cli/out.js";
 
 export interface RemoteJournalFile {
-  content: string; // decoded UTF-8
+  content: string;
   sha?: string;
 }
 
-/**
- * Check whether the GitHub CLI (`gh`) is available on PATH.
- */
 export function hasGhCli(): boolean {
   const result = spawnSync(["gh", "--version"], {
     stdout: "pipe",
@@ -17,27 +15,19 @@ export function hasGhCli(): boolean {
   return result.exitCode === 0;
 }
 
-/**
- * Exit the process with a helpful message if `gh` is not installed.
- */
 export function ensureGhCliOrExit(): void {
   if (hasGhCli()) return;
 
-  console.error(`  ${pc.red("✗")} The GitHub CLI (${pc.bold("gh")}) is not installed.\n`);
-  console.error(`  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`);
-  console.error(`  Install it:\n`);
-  console.error(`    macOS:   ${pc.dim("brew install gh")}`);
-  console.error(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-  console.error(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
-  console.error(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
+  ui.write(`  ${pc.red("✗")} ${pc.white("The GitHub CLI (")}${pc.bold("gh")}${pc.white(") is not installed.")}\n`);
+  ui.info(`  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`);
+  ui.info(`  Install it:\n`);
+  ui.info(`    macOS:   ${pc.dim("brew install gh")}`);
+  ui.info(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+  ui.info(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
+  ui.info(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
   process.exit(1);
 }
 
-/**
- * Fetch a file's metadata + decoded content from a GitHub repo using `gh api`.
- * Returns null if the file does not exist (404).
- * For other errors (auth, network, etc.) it prints and exits (consistent with existing behavior).
- */
 export function fetchRemoteJournalFile(repo: string, path: string): RemoteJournalFile | null {
   const result = spawnSync(
     ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"],
@@ -49,8 +39,8 @@ export function fetchRemoteJournalFile(repo: string, path: string): RemoteJourna
     if (stderr.includes("404") || stderr.includes("Not Found")) {
       return null;
     }
-    console.error(`Failed to fetch ${path} from ${repo}:`);
-    console.error(stderr);
+    ui.fail(`Failed to fetch ${path} from ${repo}:`);
+    ui.info(stderr);
     process.exit(1);
   }
 
@@ -73,16 +63,11 @@ export function fetchRemoteJournalFile(repo: string, path: string): RemoteJourna
       sha: parsed.sha,
     };
   } catch {
-    console.error(`Unexpected response when fetching ${path} from ${repo}`);
+    ui.fail(`Unexpected response when fetching ${path} from ${repo}`);
     process.exit(1);
   }
 }
 
-/**
- * Fetch + write a remote journal file to the given local path.
- * Returns true if the file existed on remote and was written.
- * Returns false (and does not write) if it was not found (404).
- */
 export async function refreshLocalJournalFile(
   repo: string,
   remotePath: string,
@@ -96,10 +81,6 @@ export async function refreshLocalJournalFile(
   return true;
 }
 
-/**
- * Get the raw GitHub file response (with base64 content + sha) for use
- * in conditional writes (e.g. sync's merge + push).
- */
 export function getRemoteJournalFileMeta(
   repo: string,
   path: string
@@ -114,23 +95,19 @@ export function getRemoteJournalFileMeta(
     if (stderr.includes("404") || stderr.includes("Not Found")) {
       return null;
     }
-    console.error(`Failed to fetch ${path} from ${repo}:`);
-    console.error(stderr);
+    ui.fail(`Failed to fetch ${path} from ${repo}:`);
+    ui.info(stderr);
     process.exit(1);
   }
 
   try {
     return JSON.parse(result.stdout.toString());
   } catch {
-    console.error(`Unexpected response when fetching ${path} from ${repo}`);
+    ui.fail(`Unexpected response when fetching ${path} from ${repo}`);
     process.exit(1);
   }
 }
 
-/**
- * Helpers shared by top-level init and journal/init for smart repo/project detection.
- * (Extracted to avoid duplication.)
- */
 export function getGitRemoteOwner(): string | null {
   const result = spawnSync(["git", "config", "--get", "remote.origin.url"], {
     stdout: "pipe",

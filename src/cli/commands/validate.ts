@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
+import { ui } from "../out.js";
 import { parseFrontmatter } from "../../core/frontmatter.js";
 import { validateSkillModel } from "../../core/skill-validate.js";
 
@@ -46,16 +47,16 @@ export default defineCommand({
     const fullPath = resolve(targetPath);
 
     if (!existsSync(fullPath)) {
-      console.error(
-        `${pc.red("✗")} Path not found: ${targetPath}\n\nCheck that the path is correct and the directory exists.`
+      ui.fail(
+        `Path not found: ${targetPath}\n\nCheck that the path is correct and the directory exists.`
       );
       process.exit(1);
     }
 
     const skillMd = resolve(fullPath, "SKILL.md");
     if (!existsSync(skillMd)) {
-      console.error(
-        `${pc.red("✗")} No skill or plugin found at ${targetPath}\n\nSearched for:\n  • SKILL.md (Agent Skills spec)\n  • .claude-plugin/plugin.json (Claude Code plugin)\n\nTry:\n  • Check the path points to a skill or plugin directory\n  • Use --for to target a specific validator`
+      ui.fail(
+        `No skill or plugin found at ${targetPath}\n\nSearched for:\n  • SKILL.md (Agent Skills spec)\n  • .claude-plugin/plugin.json (Claude Code plugin)\n\nTry:\n  • Check the path points to a skill or plugin directory\n  • Use --for to target a specific validator`
       );
       process.exit(1);
     }
@@ -65,8 +66,8 @@ export default defineCommand({
     try {
       parsed = parseFrontmatter(raw);
     } catch {
-      console.error(
-        `${pc.red("✗")} Failed to parse YAML frontmatter in SKILL.md\n\nFix the YAML syntax and retry.`
+      ui.fail(
+        `Failed to parse YAML frontmatter in SKILL.md\n\nFix the YAML syntax and retry.`
       );
       process.exit(1);
     }
@@ -82,25 +83,23 @@ export default defineCommand({
       const result = { path: targetPath, errors, warnings, passes };
       console.log(JSON.stringify(result, null, 2));
     } else {
-      console.error(
-        `\n  ${pc.bold("dora skill validate")} — Structural validation\n`
-      );
-      console.error(`  Path:  ${targetPath}\n`);
+      ui.heading("dora skill validate — Structural validation");
+      ui.info(`  Path:  ${targetPath}\n`);
 
       for (const p of passes) {
-        console.error(`  ${pc.green("✓")} ${p}`);
+        ui.pass(p);
       }
       for (const w of warnings) {
-        console.error(`  ${pc.yellow("⚠")} ${w}`);
+        ui.warnItem(w);
       }
       for (const e of errors) {
-        console.error(`  ${pc.red("✗")} ${e}`);
+        ui.failItem(e);
       }
 
       if (errors.length === 0 && warnings.length === 0) {
-        console.error(`\n  ${pc.green("✓")} All checks passed.\n`);
+        ui.write(`\n  ${pc.green("✓")} ${pc.white("All checks passed.")}\n`);
       } else {
-        console.error(
+        ui.info(
           `\n  Result: ${errors.length} error(s), ${warnings.length} warning(s)\n`
         );
       }

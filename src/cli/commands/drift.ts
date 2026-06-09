@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
+import { ui } from "../out.js";
 import { parseFrontmatter } from "../../core/frontmatter.js";
 import { analyzeDrift } from "../../core/skill-drift.js";
 
@@ -45,8 +46,8 @@ export default defineCommand({
     const skillMd = resolve(fullPath, "SKILL.md");
 
     if (!existsSync(skillMd)) {
-      console.error(
-        `${pc.red("✗")} No SKILL.md found at ${targetPath}\n\nCheck that the path points to a skill directory containing SKILL.md.`
+      ui.fail(
+        `No SKILL.md found at ${targetPath}\n\nCheck that the path points to a skill directory containing SKILL.md.`
       );
       process.exit(1);
     }
@@ -56,15 +57,12 @@ export default defineCommand({
     try {
       parsed = parseFrontmatter(raw);
     } catch {
-      console.error(
-        `${pc.red("✗")} Failed to parse YAML frontmatter in SKILL.md`
-      );
+      ui.fail("Failed to parse YAML frontmatter in SKILL.md");
       process.exit(1);
     }
 
     const desc = String(parsed.data.description || "");
     const when = String(parsed.data.when_to_use || "");
-    // Concatenate so the Trigger check in analyzeDrift sees activation phrases from either field (current spec).
     const { drifts, driftCount, total } = analyzeDrift({
       description: (desc + " " + when).trim(),
       content: parsed.content,
@@ -75,26 +73,24 @@ export default defineCommand({
         JSON.stringify({ path: targetPath, driftCount, total, drifts }, null, 2)
       );
     } else {
-      console.error(
-        `\n  ${pc.bold("dora skill drift")} — Measuring rubric drift\n`
-      );
-      console.error(`  Path:  ${targetPath}\n`);
+      ui.heading("dora skill drift — Measuring rubric drift");
+      ui.info(`  Path:  ${targetPath}\n`);
 
       for (const d of drifts) {
         const icon = d.drifted ? pc.yellow("↗") : pc.green("·");
         const cat = d.drifted
           ? pc.yellow(d.category.padEnd(10))
           : pc.dim(d.category.padEnd(10));
-        console.error(`  ${icon} ${cat} ${d.detail}`);
+        ui.write(`  ${icon} ${cat} ${pc.white(d.detail)}`);
       }
 
       if (driftCount === 0) {
-        console.error(
-          `\n  ${pc.green("No drift detected.")} Skill aligns with rubric standards.\n`
+        ui.write(
+          `\n  ${pc.green("No drift detected.")} ${pc.white("Skill aligns with rubric standards.")}\n`
         );
       } else {
-        console.error(
-          `\n  ${pc.yellow(`${driftCount}/${total}`)} rubric areas have drifted.\n`
+        ui.write(
+          `\n  ${pc.yellow(`${driftCount}/${total}`)} ${pc.white("rubric areas have drifted.")}\n`
         );
       }
     }

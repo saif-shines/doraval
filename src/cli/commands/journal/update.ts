@@ -1,6 +1,7 @@
 import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import pc from "picocolors";
+import { ui } from "../../out.js";
 import { join } from "path";
 import {
   readConfig,
@@ -37,7 +38,7 @@ export default defineCommand({
 
     const config = await readConfig();
     if (!config?.journal.repo) {
-      console.error(
+      ui.write(
         `${pc.red("✗")} No journal repo configured. Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first.`
       );
       process.exit(1);
@@ -48,7 +49,7 @@ export default defineCommand({
     ensureDoravalDirs();
     const journalsDir = getJournalsDir();
 
-    console.error(`\n  ${pc.bold(pc.white("dora journal update"))} — ${pc.dim(pc.gray(journalRepo))}\n`);
+    ui.write(`\n  ${pc.bold(pc.white("dora journal update"))} — ${pc.dim(pc.gray(journalRepo))}\n`);
 
     // Determine which projects to refresh
     const projectsToUpdate: string[] = [];
@@ -69,7 +70,7 @@ export default defineCommand({
         try {
           projectsToUpdate.push(sanitizeProjectName(project));
         } catch {
-          console.error(`${pc.red("✗")} Invalid project name: ${project}`);
+          ui.write(`${pc.red("✗")} Invalid project name: ${project}`);
           process.exit(1);
         }
       }
@@ -79,16 +80,16 @@ export default defineCommand({
     const globalLocal = join(journalsDir, "global.md");
     const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", globalLocal);
     if (gotGlobal) {
-      console.error(`  ${pc.green("✓")} global.md`);
+      ui.write(`  ${pc.green("✓")} global.md`);
     } else {
-      console.error(`  ${pc.dim("·")} global.md ${pc.dim("(not present on remote)")}`);
+      ui.write(`  ${pc.dim("·")} global.md ${pc.dim("(not present on remote)")}`);
     }
 
     if (projectsToUpdate.length === 0) {
       if (args.all) {
-        console.error(`\n  ${pc.dim(pc.gray("No projects registered."))}\n`);
+        ui.write(`\n  ${pc.dim(pc.gray("No projects registered."))}\n`);
       } else {
-        console.error(
+        ui.write(
           `\n  ${pc.yellow("⚠")} No project mapping found.\n` +
             `  Run ${pc.dim("dora init")} or pass ${pc.dim("--project <name>")} / ${pc.dim("--all")}.\n`
         );
@@ -102,9 +103,9 @@ export default defineCommand({
 
       const got = await refreshLocalJournalFile(journalRepo, remotePath, localPath);
       if (got) {
-        console.error(`  ${pc.green("✓")} ${remotePath}`);
+        ui.write(`  ${pc.green("✓")} ${remotePath}`);
       } else {
-        console.error(
+        ui.write(
           `  ${pc.dim("·")} ${remotePath} ${pc.dim("(not present on remote — will be created on first sync)")}`
         );
         // Ensure a minimal local file exists so that `list` and future `check` don't fail hard.
@@ -121,6 +122,6 @@ export default defineCommand({
         ? projectsToUpdate[0]
         : "journals";
 
-    console.error(`\n  ${pc.dim(pc.gray("Local cache refreshed for"))} ${pc.bold(pc.white(summary))}.\n`);
+    ui.write(`\n  ${pc.dim(pc.gray("Local cache refreshed for"))} ${pc.bold(pc.white(summary))}.\n`);
   },
 });

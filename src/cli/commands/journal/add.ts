@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import { spawnSync } from "bun";
 import pc from "picocolors";
+import { ui } from "../../out.js";
 import {
   readConfig,
   resolveProjectName,
@@ -70,7 +71,7 @@ If you cannot produce exactly this, output the JSON with the best you can and se
 
   // Print a short version of what we are about to run (the full prompt is huge)
   const shortTemplate = (agentCfg.prompt_template || '-p "{{prompt}}" --output-format json').slice(0, 80);
-  console.error(`  ${pc.dim(`→ ${agentCfg.command} ${shortTemplate}...`)}`);
+  ui.write(`  ${pc.dim(`→ ${agentCfg.command} ${shortTemplate}...`)}`);
 
   try {
     const result = spawnSync([agentCfg.command, ...extraArgs], {
@@ -82,9 +83,9 @@ If you cannot produce exactly this, output the JSON with the best you can and se
     const stderr = result.stderr.toString().trim();
 
     if (result.exitCode !== 0) {
-      console.error(`  ${pc.yellow("⚠")} Configured agent (${agentCfg.command}) exited with code ${result.exitCode}. Falling back to defaults.`);
-      if (stderr) console.error(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 800)}`);
-      if (stdout) console.error(`    ${pc.dim("stdout:")}\n${stdout.slice(0, 400)}`);
+      ui.write(`  ${pc.yellow("⚠")} Configured agent (${agentCfg.command}) exited with code ${result.exitCode}. Falling back to defaults.`);
+      if (stderr) ui.write(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 800)}`);
+      if (stdout) ui.write(`    ${pc.dim("stdout:")}\n${stdout.slice(0, 400)}`);
       return null;
     }
 
@@ -144,23 +145,23 @@ If you cannot produce exactly this, output the JSON with the best you can and se
     }
 
     if (!parsed || typeof parsed !== "object") {
-      console.error(`  ${pc.yellow("⚠")} Agent produced output but no usable JSON was found. Falling back.`);
-      console.error(`    ${pc.dim("stdout (first 700 chars):")}\n${stdout.slice(0, 700)}`);
-      if (stderr) console.error(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 500)}`);
+      ui.write(`  ${pc.yellow("⚠")} Agent produced output but no usable JSON was found. Falling back.`);
+      ui.write(`    ${pc.dim("stdout (first 700 chars):")}\n${stdout.slice(0, 700)}`);
+      if (stderr) ui.write(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 500)}`);
       return null;
     }
 
     // Final shape check
     if (!parsed.title && !parsed.rationale) {
-      console.error(`  ${pc.yellow("⚠")} Agent returned JSON without expected fields (title/rationale). Using defaults.`);
-      console.error(`    ${pc.dim("parsed keys:")} ${Object.keys(parsed).join(", ")}`);
-      console.error(`    ${pc.dim("stdout (truncated):")}\n${stdout.slice(0, 600)}`);
+      ui.write(`  ${pc.yellow("⚠")} Agent returned JSON without expected fields (title/rationale). Using defaults.`);
+      ui.write(`    ${pc.dim("parsed keys:")} ${Object.keys(parsed).join(", ")}`);
+      ui.write(`    ${pc.dim("stdout (truncated):")}\n${stdout.slice(0, 600)}`);
       return null;
     }
 
     return parsed;
   } catch (e) {
-    console.error(`  ${pc.yellow("⚠")} Failed to invoke configured agent (${agentCfg.command}): ${(e as Error).message}. Using defaults.`);
+    ui.write(`  ${pc.yellow("⚠")} Failed to invoke configured agent (${agentCfg.command}): ${(e as Error).message}. Using defaults.`);
     return null;
   }
 }
@@ -252,7 +253,7 @@ export default defineCommand({
     }
 
     if (!project) {
-      console.error(
+      ui.write(
         `${pc.yellow("⚠")} No project mapping found.\n\n` +
           `Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first, or pass ${pc.dim("--project <name>")}.`
       );
@@ -295,7 +296,7 @@ export default defineCommand({
         if (parsed.status) status = parsed.status as JournalEntry["status"];
         if (parsed.date) date = String(parsed.date);
       } catch (e) {
-        console.error(`${pc.red("✗")} Failed to parse --json input: ${(e as Error).message}`);
+        ui.write(`${pc.red("✗")} Failed to parse --json input: ${(e as Error).message}`);
         process.exit(1);
       }
     }
@@ -327,7 +328,7 @@ export default defineCommand({
         title = headingMatch[1].trim();
         rawBody = rawBody.replace(/^#+\s+(.+?)(?:\r?\n|$)/m, "").trimStart();
       } else {
-        console.error(`${pc.red("✗")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
+        ui.write(`${pc.red("✗")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
         process.exit(1);
       }
     }
@@ -376,7 +377,7 @@ export default defineCommand({
       agentCfg = (fullConfigForAgent as any)?.agent;
       if (agentCfg) {
         attemptedAgent = true;
-        console.error(`  ${pc.dim(pc.gray("(querying your configured coding agent...)"))}`);
+        ui.write(`  ${pc.dim(pc.gray("(querying your configured coding agent...)"))}`);
         const agentResult = await invokeConfiguredAgentForEntry(title, agentCfg);
         if (agentResult) {
           if (agentResult.title) title = String(agentResult.title).trim();
@@ -407,9 +408,9 @@ export default defineCommand({
     // Validate (now relaxed — pushback/tags missing or empty only produce warnings)
     const validation = validateEntry(entry);
     if (!validation.valid) {
-      console.error(`${pc.red("✗")} Invalid entry:\n`);
+      ui.write(`${pc.red("✗")} Invalid entry:\n`);
       for (const err of validation.errors) {
-        console.error(`  ${pc.red("•")} ${err}`);
+        ui.write(`  ${pc.red("•")} ${err}`);
       }
       process.exit(1);
     }
@@ -418,9 +419,9 @@ export default defineCommand({
         // We tried the agent; if it didn't supply the fields it's on the model, not the user. Keep quiet.
       } else if (warn.includes("not supplied") || warn.includes("empty")) {
         // Soft note for the intentional low-friction/minimal path (not alarming)
-        console.error(`${pc.dim("·")} ${warn}`);
+        ui.write(`${pc.dim("·")} ${warn}`);
       } else {
-        console.error(`${pc.yellow("⚠")} ${warn}`);
+        ui.write(`${pc.yellow("⚠")} ${warn}`);
       }
     }
 
@@ -460,24 +461,24 @@ ${rationale}
 
     await Bun.write(filePath, content);
 
-    console.error(`\n  ${pc.green("✓")} ${pc.bold(pc.white(title))}`);
-    console.error(`  Project: ${pc.white(project)}  · run ${pc.dim(pc.gray("dora journal sync"))} to publish\n`);
+    ui.write(`\n  ${pc.green("✓")} ${pc.bold(pc.white(title))}`);
+    ui.write(`  Project: ${pc.white(project)}  · run ${pc.dim(pc.gray("dora journal sync"))} to publish\n`);
 
     if (args.verbose) {
       const authorDisplay = author.startsWith("agent:") ? pc.cyan(author) : author;
-      console.error(`  Pushback: ${pc.white(String(pushback))}`);
-      console.error(`  Tags:     ${pc.gray(tags.join(", ") || pc.dim("(none)"))}`);
-      console.error(`  Author:   ${authorDisplay}`);
-      console.error(`  File:     ${pc.dim(pc.gray(filePath))}\n`);
+      ui.write(`  Pushback: ${pc.white(String(pushback))}`);
+      ui.write(`  Tags:     ${pc.gray(tags.join(", ") || pc.dim("(none)"))}`);
+      ui.write(`  Author:   ${authorDisplay}`);
+      ui.write(`  File:     ${pc.dim(pc.gray(filePath))}\n`);
     }
 
     if (isThinInput && !author.startsWith("agent:")) {
       if (attemptedAgent) {
-        console.error(
+        ui.write(
           `  ${pc.dim(pc.gray("Note: agent was called but returned no usable enrichment. Edit the pending file or re-run dora init."))}\n`
         );
       } else {
-        console.error(
+        ui.write(
           `  ${pc.dim(pc.gray("Tip: run dora init to configure an agent for auto-enrichment."))}\n`
         );
       }

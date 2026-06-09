@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { basename, join } from "path";
 import { spawnSync } from "bun";
 import pc from "picocolors";
+import { ui } from "../out.js";
 import {
   readConfig,
   writeConfig,
@@ -43,13 +44,10 @@ export default defineCommand({
   },
 
   async run({ args }) {
-    console.error(
-      `\n  ${pc.bold("dora init")} — Set up doraval, your journal, and the coding agent dora should use on the fly\n`
-    );
+    ui.heading("dora init — Set up doraval, your journal, and the coding agent dora should use on the fly");
 
     ensureGhCliOrExit();
 
-    // 1. Journal registration (same smart logic as `journal init`, but friendlier)
     let repo = (args.repo as string | undefined) || process.env.DORAVAL_JOURNAL_REPO;
 
     if (!repo) {
@@ -70,7 +68,7 @@ export default defineCommand({
         defaultRepo = `${ghLogin}/${ghLogin}.md`;
         sourceNote = `  ${pc.dim("(from your active gh account)")}\n`;
       } else {
-        console.error(`  ${pc.yellow("⚠")} Not logged in to GitHub. Run ${pc.dim("gh auth login")} first.\n`);
+        ui.warn(`Not logged in to GitHub. Run ${pc.dim("gh auth login")} first.\n`);
         process.exit(1);
       }
 
@@ -80,8 +78,8 @@ export default defineCommand({
         sourceNote = `  ${pc.dim("(from your previous journal setup)")}\n`;
       }
 
-      console.error(`  Journal repo ${pc.dim("(owner/name)")}`);
-      if (sourceNote) console.error(sourceNote);
+      ui.info(`  Journal repo ${pc.dim("(owner/name)")}`);
+      if (sourceNote) ui.write(sourceNote);
       repo = prompt("  >", defaultRepo);
     }
 
@@ -93,9 +91,9 @@ export default defineCommand({
     project = sanitizeProjectName(project);
 
     if (!repoExists(repo!)) {
-      console.error(`  ${pc.red("✗")} Repository ${pc.bold(repo!)} not found on GitHub.\n`);
-      console.error(`  Create it first:\n`);
-      console.error(`    ${pc.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}\n`);
+      ui.write(`  ${pc.red("✗")} ${pc.white("Repository")} ${pc.bold(repo!)} ${pc.white("not found on GitHub.")}\n`);
+      ui.info(`  Create it first:\n`);
+      ui.info(`    ${pc.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}\n`);
       process.exit(1);
     }
 
@@ -104,13 +102,11 @@ export default defineCommand({
     const isRefresh = alreadyRegistered && args.refresh;
 
     if (alreadyRegistered && !isRefresh) {
-      console.error(`  ${pc.yellow("⚠")} Project ${pc.bold(project)} is already registered.\n`);
-      console.error(`  Repo:   ${existing.journal.repo}\n`);
-      console.error(`  To refresh journal files, use ${pc.dim("dora journal update")} (or ${pc.dim("dora init --refresh")}).\n`);
-      // We still perform the (idempotent) journal fetch below for safety, then always proceed to (re)configure the agent.
+      ui.write(`  ${pc.yellow("⚠")} ${pc.white("Project")} ${pc.bold(project)} ${pc.white("is already registered.")}\n`);
+      ui.info(`  Repo:   ${existing.journal.repo}\n`);
+      ui.info(`  To refresh journal files, use ${pc.dim("dora journal update")} (or ${pc.dim("dora init --refresh")}).\n`);
     }
 
-    // Perform the journal fetch / registration
     const journalsDir = getJournalsDir();
     const remotePath = `projects/${project}.md`;
     const localPath = join(journalsDir, `${project}.md`);
@@ -128,60 +124,56 @@ export default defineCommand({
 
     ensureDoravalDirs();
 
-    console.error(`  ${pc.dim(pc.gray("Fetching journal files from"))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
+    ui.write(`  ${pc.dim(pc.gray("Fetching journal files from"))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
 
     const globalDest = join(journalsDir, "global.md");
     const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
     if (wroteGlobal) {
-      console.error(`  ${pc.green("✓")} global.md`);
+      ui.success("global.md");
     } else {
-      console.error(`  ${pc.dim("·")} global.md ${pc.dim("(not found — will be created on first sync)")}`);
+      ui.write(`  ${pc.dim("·")} global.md ${pc.dim("(not found — will be created on first sync)")}`);
       await Bun.write(globalDest, "# Global Journal\n\nCross-project principles.\n");
     }
 
     const wroteProject = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
     if (wroteProject) {
-      console.error(`  ${pc.green("✓")} ${remotePath}`);
+      ui.success(remotePath);
     } else {
-      console.error(`  ${pc.dim("·")} ${remotePath} ${pc.dim("(not found — will be created on first sync)")}`);
+      ui.write(`  ${pc.dim("·")} ${remotePath} ${pc.dim("(not found — will be created on first sync)")}`);
       await Bun.write(localPath, `# ${project} Journal\n\nProject-specific decisions.\n`);
     }
 
     await writeConfig(config);
 
-    console.error(`\n  ${pc.green("✓")} ${pc.white("Journal ready for project")} ${pc.bold(pc.white(project))}.\n`);
+    ui.write(`\n  ${pc.green("✓")} ${pc.white("Journal ready for project")} ${pc.bold(pc.white(project))}.\n`);
 
-    // 2. Agent configuration (the new part the user asked for)
     const existingAgent = (await readConfig())?.agent;
     if (existingAgent?.command) {
-      console.error(`  ${pc.bold(pc.white("Coding agent (already configured)"))}\n`);
-      console.error(`    Current: ${pc.dim(pc.gray(existingAgent.command))}  template: ${pc.dim(pc.gray(existingAgent.prompt_template || "(default)"))}\n`);
+      ui.write(`  ${pc.bold(pc.white("Coding agent (already configured)"))}\n`);
+      ui.write(`    Current: ${pc.dim(pc.gray(existingAgent.command))}  template: ${pc.dim(pc.gray(existingAgent.prompt_template || "(default)"))}\n`);
       const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
       if (!/^y/i.test(String(change))) {
-        console.error(`  ${pc.dim(pc.gray("Keeping existing agent config. You can re-run dora init later to change it."))}\n`);
-        // Force a write with current serialize to ensure agent is persisted cleanly with latest format
+        ui.dim("  Keeping existing agent config. You can re-run dora init later to change it.\n");
         const cfg = (await readConfig()) || { journal: { repo: effectiveRepo, projects: {} } };
         if (existingAgent) cfg.agent = existingAgent;
         await writeConfig(cfg);
-        console.error(`  ${pc.green("✓")} ${pc.white("Try:")} ${pc.dim(pc.gray("dora journal add \"short decision\""))}\n`);
+        ui.write(`  ${pc.green("✓")} ${pc.white("Try:")} ${pc.dim(pc.gray("dora journal add \"short decision\""))}\n`);
         process.exit(0);
         return;
       }
-      console.error(""); // spacer before the questions
+      ui.blank();
     } else {
-      console.error(`  ${pc.bold(pc.white("Coding agent for journal add"))}\n`);
-      console.error(`  When configured, ${pc.dim(pc.gray("dora journal add \"..\""))} will use your agent to enrich entries with tags and rationale automatically.\n`);
+      ui.write(`  ${pc.bold(pc.white("Coding agent for journal add"))}\n`);
+      ui.info(`  When configured, ${pc.dim(pc.gray("dora journal add \"..\""))} will use your agent to enrich entries with tags and rationale automatically.\n`);
     }
 
-    // Simple detection + prompt for the invocation template
     const common = [
       { name: "claude", template: '-p "{{prompt}}" --output-format json' },
-      { name: "cursor", template: '' }, // users can fill
+      { name: "cursor", template: '' },
     ];
 
     let detected = "";
     for (const c of common) {
-      // Prefer portable `command -v`; fall back to `which`
       let probe = spawnSync(["command", "-v", c.name], { stdout: "pipe", stderr: "pipe" });
       if (probe.exitCode !== 0) {
         probe = spawnSync(["which", c.name], { stdout: "pipe", stderr: "pipe" });
@@ -193,14 +185,13 @@ export default defineCommand({
     }
 
     let agentCmd = detected || "claude";
-    console.error(`  Detected / default agent command: ${pc.dim(pc.gray(agentCmd))}`);
+    ui.write(`  Detected / default agent command: ${pc.dim(pc.gray(agentCmd))}`);
     agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
 
     let template = detected ? (common.find(c => c.name === detected)?.template || '-p "{{prompt}}" --output-format json') : '-p "{{prompt}}" --output-format json';
-    console.error(`  Prompt template (use {{prompt}} placeholder):`);
+    ui.info(`  Prompt template (use {{prompt}} placeholder):`);
     template = prompt("  ", template);
 
-    // Store in config
     const finalConfig: JournalConfig = (await readConfig()) || { journal: { repo: effectiveRepo, projects: {} } };
     finalConfig.agent = {
       command: agentCmd,
@@ -208,9 +199,9 @@ export default defineCommand({
     };
     await writeConfig(finalConfig);
 
-    console.error(`\n  ${pc.green("✓")} ${pc.white("Agent configured.")}\n`);
-    console.error(`  Re-run ${pc.dim(pc.gray("dora init"))} anytime to change it.\n`);
-    console.error(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))}, ${pc.dim(pc.gray("dora journal list"))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);
+    ui.write(`\n  ${pc.green("✓")} ${pc.white("Agent configured.")}\n`);
+    ui.info(`  Re-run ${pc.dim(pc.gray("dora init"))} anytime to change it.\n`);
+    ui.info(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))}, ${pc.dim(pc.gray("dora journal list"))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);
 
     process.exit(0);
   },

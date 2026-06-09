@@ -3,6 +3,7 @@ import { readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { spawnSync } from "bun";
 import pc from "picocolors";
+import { ui } from "../../out.js";
 import {
   readConfig,
   resolveProjectName,
@@ -53,8 +54,8 @@ function updateGitHubFile(
   });
 
   if (result.exitCode !== 0) {
-    console.error(pc.red(`Failed to update ${path} on ${repo}:`));
-    console.error(result.stderr.toString());
+    ui.write(pc.red(`Failed to update ${path} on ${repo}:`));
+    ui.write(result.stderr.toString());
     process.exit(1);
   }
 }
@@ -96,7 +97,7 @@ export default defineCommand({
     }
 
     if (!project) {
-      console.error(
+      ui.write(
         `${pc.yellow("⚠")} No project mapping found.\n\n` +
           `Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first, or pass ${pc.dim("--project <name>")}.`
       );
@@ -104,7 +105,7 @@ export default defineCommand({
     }
 
     if (!config?.journal.repo) {
-      console.error(`${pc.red("✗")} No journal repo configured. Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first.`);
+      ui.write(`${pc.red("✗")} No journal repo configured. Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first.`);
       process.exit(1);
     }
 
@@ -113,8 +114,8 @@ export default defineCommand({
     const journalRepo = config.journal.repo;
     const pendingDir = getPendingProjectDir(project);
 
-    console.error(`\n  ${pc.bold(pc.white("dora journal sync"))} — ${pc.white(project)}\n`);
-    console.error(`  Journal repo: ${pc.dim(pc.gray(journalRepo))}`);
+    ui.write(`\n  ${pc.bold(pc.white("dora journal sync"))} — ${pc.white(project)}\n`);
+    ui.write(`  Journal repo: ${pc.dim(pc.gray(journalRepo))}`);
 
     // ── Always pull latest into local cache first ──────────────────
     // This ensures `list`, future `check`, and principle drift see up-to-date entries,
@@ -124,16 +125,16 @@ export default defineCommand({
     const remoteProjectPath = `projects/${project}.md`;
     const localProjectPath = join(journalsDir, `${project}.md`);
 
-    console.error(`  ${pc.dim(pc.gray("Refreshing local cache from remote..."))}`);
+    ui.write(`  ${pc.dim(pc.gray("Refreshing local cache from remote..."))}`);
 
     const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", join(journalsDir, "global.md"));
     if (gotGlobal) {
-      console.error(`  ${pc.dim(pc.gray("✓ global.md"))}`);
+      ui.write(`  ${pc.dim(pc.gray("✓ global.md"))}`);
     }
 
     const gotProjectCache = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
     if (gotProjectCache) {
-      console.error(`  ${pc.dim(pc.gray(`✓ ${remoteProjectPath}`))}`);
+      ui.write(`  ${pc.dim(pc.gray(`✓ ${remoteProjectPath}`))}`);
     }
 
     const pendingFiles = existsSync(pendingDir)
@@ -143,11 +144,11 @@ export default defineCommand({
       : [];
 
     if (pendingFiles.length === 0) {
-      console.error(`\n  ${pc.yellow("⚠")} No pending entries. Local cache is now up to date.\n`);
+      ui.write(`\n  ${pc.yellow("⚠")} No pending entries. Local cache is now up to date.\n`);
       process.exit(0);
     }
 
-    console.error(`  Found ${pendingFiles.length} pending entr${pendingFiles.length === 1 ? "y" : "ies"}\n`);
+    ui.write(`  Found ${pendingFiles.length} pending entr${pendingFiles.length === 1 ? "y" : "ies"}\n`);
 
     // 1. Read current remote file (or start fresh)
     // Note: we already refreshed the local cache above; this re-reads the authoritative
@@ -161,9 +162,9 @@ export default defineCommand({
     if (currentFile) {
       existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
       currentSha = currentFile.sha;
-      if (args.verbose) console.error(`  ${pc.dim(pc.gray("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)"))}`);
+      if (args.verbose) ui.write(`  ${pc.dim(pc.gray("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)"))}`);
     } else {
-      if (args.verbose) console.error(`  ${pc.dim(pc.gray("No existing file on remote — will create it"))}`);
+      if (args.verbose) ui.write(`  ${pc.dim(pc.gray("No existing file on remote — will create it"))}`);
     }
 
     // 2. Collect all pending content
@@ -191,13 +192,13 @@ export default defineCommand({
       (args.message as string) ||
       `journal: add ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} for ${project}`;
 
-    if (args.verbose) console.error(`\n  ${pc.dim(pc.gray("Pushing to remote..."))}`);
+    if (args.verbose) ui.write(`\n  ${pc.dim(pc.gray("Pushing to remote..."))}`);
 
     try {
       updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
-      console.error(`  ${pc.green("✓")} ${pc.white("Successfully pushed to")} ${pc.white(remotePath)}`);
+      ui.write(`  ${pc.green("✓")} ${pc.white("Successfully pushed to")} ${pc.white(remotePath)}`);
     } catch (err) {
-      console.error(`${pc.red("✗")} ${pc.white("Failed to push to GitHub.")}`);
+      ui.write(`${pc.red("✗")} ${pc.white("Failed to push to GitHub.")}`);
       process.exit(1);
     }
 
@@ -208,20 +209,20 @@ export default defineCommand({
         await Bun.file(fullPath).unlink();
       } catch {}
     }
-    console.error(`  ${pc.green("✓")} ${pc.white("Cleared local pending entries")}`);
+    ui.write(`  ${pc.green("✓")} ${pc.white("Cleared local pending entries")}`);
 
     // 6. Re-fetch the updated file into local journals cache (best effort)
     // We already did a pre-sync refresh; this gets the exact post-push state.
     try {
       const wrote = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
       if (wrote) {
-        if (args.verbose) console.error(`  ${pc.green("✓")} ${pc.white("Re-fetched")} ${pc.white(project)}.md ${pc.white("into local cache")}`);
+        if (args.verbose) ui.write(`  ${pc.green("✓")} ${pc.white("Re-fetched")} ${pc.white(project)}.md ${pc.white("into local cache")}`);
       }
     } catch {
-      console.error(`  ${pc.yellow("⚠")} Could not re-fetch updated file (you can run sync again later)`);
+      ui.write(`  ${pc.yellow("⚠")} Could not re-fetch updated file (you can run sync again later)`);
     }
 
-    console.error(
+    ui.write(
       `\n  ${pc.green("Done!")} ${pc.white(pendingFiles.length + " entr" + (pendingFiles.length === 1 ? "y" : "ies") + " published.")}\n`
     );
 

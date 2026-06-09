@@ -6,7 +6,6 @@ import pc from "picocolors";
  * Returns the input or the fallback if empty.
  */
 export function prompt(label: string, fallback: string): string {
-  // label should include leading spacing if desired, e.g. "  >"
   process.stderr.write(`${label} ${pc.dim(`(${fallback})`)} `);
   const buf = new Uint8Array(1024);
   const n = require("fs").readSync(0, buf);

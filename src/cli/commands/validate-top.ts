@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
+import { ui } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
 import { parseRemoteUrl, cloneToTemp } from "../../core/remote.js";
@@ -42,35 +43,32 @@ export default defineCommand({
   },
 
   async run({ args }) {
-    // Resolve path: remote URL or local directory
     const remote = parseRemoteUrl(args.path);
     let fullPath: string;
     let cleanup: (() => void) | undefined;
 
     if (remote) {
-      console.error(`\n  Cloning ${pc.dim(args.path)}...`);
+      ui.info(`\n  Cloning ${pc.dim(args.path)}...`);
       try {
         const result = await cloneToTemp(remote);
         fullPath = remote.subpath ? resolve(result.dir, remote.subpath) : result.dir;
         cleanup = result.cleanup;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`${pc.red("✗")} ${msg}`);
+        ui.fail(msg);
         process.exit(1);
       }
 
       if (!existsSync(fullPath)) {
         cleanup!();
-        console.error(
-          `${pc.red("✗")} Subdirectory not found in repo: ${remote.subpath}`
-        );
+        ui.fail(`Subdirectory not found in repo: ${remote.subpath}`);
         process.exit(1);
       }
     } else {
       fullPath = resolve(args.path);
       if (!existsSync(fullPath)) {
-        console.error(
-          `${pc.red("✗")} Path not found: ${args.path}\n\nCheck that the path is correct and the directory exists.`
+        ui.fail(
+          `Path not found: ${args.path}\n\nCheck that the path is correct and the directory exists.`
         );
         process.exit(1);
       }
@@ -83,26 +81,23 @@ export default defineCommand({
         ci: !!args.ci,
       };
 
-      // Resolve which validators to run
       const { matched: candidates, error } = resolveFor(args.for as string | undefined);
       if (error) {
-        console.error(`${pc.red("✗")} ${error}`);
+        ui.fail(error);
         process.exit(1);
       }
 
-      // If --for targets a specific id, skip detection — run it directly.
-      // If --for targets a provider (or omitted), run detection on candidates.
       let matched;
       if (args.for && (args.for as string).includes(":")) {
-        matched = candidates; // exact match, no detection needed
+        matched = candidates;
       } else {
         matched = candidates.filter((v) => v.detect(fullPath));
       }
 
       if (matched.length === 0) {
         const providers = [...new Set(validators.map((v) => v.provider))];
-        console.error(
-          `${pc.red("✗")} No validator matched this directory: ${args.path}\n\n` +
+        ui.fail(
+          `No validator matched this directory: ${args.path}\n\n` +
             `Available providers:\n` +
             providers.map((p) => {
               const pvs = validators.filter((v) => v.provider === p);
@@ -113,7 +108,6 @@ export default defineCommand({
         process.exit(1);
       }
 
-      // Run matched validators and collect results
       const allResults: { id: string; name: string; result: ValidateResult }[] = [];
       let totalErrors = 0;
 
@@ -123,7 +117,6 @@ export default defineCommand({
         totalErrors += result.errors.length;
       }
 
-      // Output
       if (opts.format === "json") {
         const output = allResults.map((r) => ({
           validator: r.id,
@@ -134,25 +127,25 @@ export default defineCommand({
         console.log(JSON.stringify(output, null, 2));
       } else {
         for (const { id, name, result } of allResults) {
-          console.error(
-            `\n  ${pc.bold("dora validate")} — ${name} ${pc.dim(`(${id})`)}\n`
+          ui.write(
+            `\n  ${pc.bold("dora validate")} — ${pc.white(name)} ${pc.dim(`(${id})`)}\n`
           );
-          console.error(`  Path:  ${args.path}\n`);
+          ui.info(`  Path:  ${args.path}\n`);
 
           for (const p of result.passes) {
-            console.error(`  ${pc.green("✓")} ${p}`);
+            ui.pass(p);
           }
           for (const w of result.warnings) {
-            console.error(`  ${pc.yellow("⚠")} ${w}`);
+            ui.warnItem(w);
           }
           for (const e of result.errors) {
-            console.error(`  ${pc.red("✗")} ${e}`);
+            ui.failItem(e);
           }
 
           if (result.errors.length === 0 && result.warnings.length === 0) {
-            console.error(`\n  ${pc.green("✓")} All checks passed.\n`);
+            ui.write(`\n  ${pc.green("✓")} ${pc.white("All checks passed.")}\n`);
           } else {
-            console.error(
+            ui.info(
               `\n  Result: ${result.errors.length} error(s), ${result.warnings.length} warning(s)\n`
             );
           }
