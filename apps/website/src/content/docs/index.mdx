@@ -17,6 +17,23 @@ hero:
       icon: external
 ---
 
-import { PackageManagers } from 'starlight-package-managers';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-<PackageManagers type="dlx" pkg="jsr add @hacksmith/doraval" pkgManagers={["npm", "pnpm", "yarn", "bun", "deno"]} />
+<Tabs>
+  <TabItem label="macOS (Homebrew)">
+    ```bash
+    brew install saif-shines/tap/doraval
+    doraval validate .
+    ```
+  </TabItem>
+  <TabItem label="npm / npx">
+    ```bash
+    npx @hacksmith/doraval validate .
+    ```
+  </TabItem>
+  <TabItem label="Bun">
+    ```bash
+    bunx @hacksmith/doraval validate .
+    ```
+  </TabItem>
+</Tabs>
