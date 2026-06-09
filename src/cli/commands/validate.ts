@@ -97,9 +97,13 @@ export default defineCommand({
         console.error(`  ${pc.red("✗")} ${e}`);
       }
 
-      console.error(
-        `\n  Result: ${errors.length} error(s), ${warnings.length} warning(s)\n`
-      );
+      if (errors.length === 0 && warnings.length === 0) {
+        console.error(`\n  ${pc.green("✓")} All checks passed.\n`);
+      } else {
+        console.error(
+          `\n  Result: ${errors.length} error(s), ${warnings.length} warning(s)\n`
+        );
+      }
     }
 
     if (errors.length > 0) {
