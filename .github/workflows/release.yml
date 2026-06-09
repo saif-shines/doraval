@@ -47,6 +47,8 @@ jobs:
   publish-npm:
     needs: build-and-release
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -54,16 +56,16 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install -g npm@latest
 
       - run: bun install --frozen-lockfile
 
       - run: bun run build
 
-      - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --access public --provenance
 
   update-homebrew:
     needs: build-and-release
