@@ -76,7 +76,7 @@ export default defineCommand({
       );
     } else {
       console.error(
-        `\n  ${pc.bold("doraval skill drift")} — Measuring rubric drift\n`
+        `\n  ${pc.bold("dora skill drift")} — Measuring rubric drift\n`
       );
       console.error(`  Path:  ${targetPath}\n`);
 
