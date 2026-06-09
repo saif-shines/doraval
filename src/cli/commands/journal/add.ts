@@ -82,9 +82,9 @@ If you cannot produce exactly this, output the JSON with the best you can and se
     const stderr = result.stderr.toString().trim();
 
     if (result.exitCode !== 0) {
-      console.error(`${pc.yellow("⚠")} Configured agent (${agentCfg.command}) exited with code ${result.exitCode}. Falling back to defaults.`);
-      if (stderr) console.error(`  ${pc.dim("stderr from agent:")}\n${stderr.slice(0, 800)}`);
-      if (stdout) console.error(`  ${pc.dim("stdout from agent:")}\n${stdout.slice(0, 400)}`);
+      console.error(`  ${pc.yellow("⚠")} Configured agent (${agentCfg.command}) exited with code ${result.exitCode}. Falling back to defaults.`);
+      if (stderr) console.error(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 800)}`);
+      if (stdout) console.error(`    ${pc.dim("stdout:")}\n${stdout.slice(0, 400)}`);
       return null;
     }
 
@@ -144,23 +144,23 @@ If you cannot produce exactly this, output the JSON with the best you can and se
     }
 
     if (!parsed || typeof parsed !== "object") {
-      console.error(`${pc.yellow("⚠")} Agent produced output but no usable JSON object was found. Falling back.`);
-      console.error(`  ${pc.dim("stdout (first 700 chars):")}\n${stdout.slice(0, 700)}`);
-      if (stderr) console.error(`  ${pc.dim("stderr:")}\n${stderr.slice(0, 500)}`);
+      console.error(`  ${pc.yellow("⚠")} Agent produced output but no usable JSON was found. Falling back.`);
+      console.error(`    ${pc.dim("stdout (first 700 chars):")}\n${stdout.slice(0, 700)}`);
+      if (stderr) console.error(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 500)}`);
       return null;
     }
 
     // Final shape check
     if (!parsed.title && !parsed.rationale) {
-      console.error(`${pc.yellow("⚠")} Agent returned JSON, but it did not contain expected fields (title/rationale). Using defaults.`);
-      console.error(`  ${pc.dim("parsed top-level keys:")} ${Object.keys(parsed).join(", ")}`);
-      console.error(`  ${pc.dim("raw stdout (truncated):")}\n${stdout.slice(0, 600)}`);
+      console.error(`  ${pc.yellow("⚠")} Agent returned JSON without expected fields (title/rationale). Using defaults.`);
+      console.error(`    ${pc.dim("parsed keys:")} ${Object.keys(parsed).join(", ")}`);
+      console.error(`    ${pc.dim("stdout (truncated):")}\n${stdout.slice(0, 600)}`);
       return null;
     }
 
     return parsed;
   } catch (e) {
-    console.error(`${pc.yellow("⚠")} Failed to invoke configured agent (${agentCfg.command}): ${(e as Error).message}. Using defaults.`);
+    console.error(`  ${pc.yellow("⚠")} Failed to invoke configured agent (${agentCfg.command}): ${(e as Error).message}. Using defaults.`);
     return null;
   }
 }
