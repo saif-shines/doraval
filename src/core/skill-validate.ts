@@ -13,6 +13,15 @@ export interface SkillValidateResult {
   passes: string[];
 }
 
+export type CheckResult = Partial<SkillValidateResult>;
+export type Check = (model: SkillModel, ctx: SkillValidateContext) => CheckResult;
+
+export const merge = (a: SkillValidateResult, b: CheckResult): SkillValidateResult => ({
+  errors: [...a.errors, ...(b.errors ?? [])],
+  warnings: [...a.warnings, ...(b.warnings ?? [])],
+  passes: [...a.passes, ...(b.passes ?? [])],
+});
+
 const NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 // Known frontmatter fields from the current Claude Code skills spec (pasted official docs).

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { validateSkillModel } from "./skill-validate.js";
+import { validateSkillModel, merge } from "./skill-validate.js";
 
 describe("validateSkillModel", () => {
   test("passes a well-formed skill", () => {
@@ -103,5 +103,32 @@ Use $ARGUMENTS or $0 and \${CLAUDE_SKILL_DIR}.
     expect(result.passes).toContain("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
     expect(result.passes).toContain("scripts/ directory exists");
     expect(result.passes).toContain("examples/ directory exists");
+  });
+});
+
+describe("merge", () => {
+  test("combines two empty results", () => {
+    const a = { errors: [], warnings: [], passes: [] };
+    const b = {};
+    expect(merge(a, b)).toEqual({ errors: [], warnings: [], passes: [] });
+  });
+
+  test("concatenates errors from both sides", () => {
+    const a = { errors: ["e1"], warnings: [], passes: [] };
+    const b = { errors: ["e2"] };
+    expect(merge(a, b)).toEqual({ errors: ["e1", "e2"], warnings: [], passes: [] });
+  });
+
+  test("concatenates warnings and passes", () => {
+    const a = { errors: [], warnings: ["w1"], passes: ["p1"] };
+    const b = { warnings: ["w2"], passes: ["p2"] };
+    expect(merge(a, b)).toEqual({ errors: [], warnings: ["w1", "w2"], passes: ["p1", "p2"] });
+  });
+
+  test("does not mutate the accumulator", () => {
+    const a = { errors: [], warnings: [], passes: ["p1"] };
+    const b = { passes: ["p2"] };
+    merge(a, b);
+    expect(a.passes).toEqual(["p1"]);
   });
 });
