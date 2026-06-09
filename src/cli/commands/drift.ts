@@ -46,7 +46,7 @@ export default defineCommand({
 
     if (!existsSync(skillMd)) {
       console.error(
-        `${pc.red("✗")} No SKILL.md found at ${targetPath}`
+        `${pc.red("✗")} No SKILL.md found at ${targetPath}\n\nCheck that the path points to a skill directory containing SKILL.md.`
       );
       process.exit(1);
     }
