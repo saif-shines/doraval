@@ -2,137 +2,83 @@
 
 The context engineering toolkit for coding agents.
 
-Validate skills, plugins, hooks, MCP configs, and memory files across providers — locally or from a Git URL. Works with Claude Code today; Cursor, Codex, and Windsurf coming next.
+If you've ever shipped a Claude Code skill that stopped firing after a refactor, or wondered whether your plugin's structure actually matches what the agent expects — doraval validates that before it becomes a runtime surprise.
 
-> **Quick start:** [Install Bun](https://bun.sh), then run `bunx jsr @hacksmith/doraval validate .`  
-> Node/npm users: `npx jsr @hacksmith/doraval validate .` (Bun still required).
+> **Quick start:**
+> ```bash
+> # macOS
+> brew install saif-shines/tap/doraval
+> doraval validate .
+>
+> # Everyone else
+> npx @hacksmith/doraval validate .
+> ```
 
-## Features
+Point it at any local directory or GitHub URL. It auto-detects what you have and tells you what's broken.
 
-- **Pluggable validators** — Auto-detect and validate skills, plugins, marketplaces, hooks, MCP config, subagents, commands, and memory files
-- **Multi-provider** — Claude Code validators built in; Cursor, Codex, Windsurf planned
-- **Remote validation** — Point at a GitHub URL instead of cloning first
-- **Rubric drift detection** — Measure deviation across trigger phrases, voice, examples, guardrails, and clarity
-- **AI-driven judging** — Qualitative skill assessment via LLM *(coming soon)*
-- **CI-friendly** — JSON output and non-zero exit codes for pipeline integration
+## Install
 
-## Installation
-
-doraval is published on [JSR](https://jsr.io/@hacksmith/doraval) as **`@hacksmith/doraval`**.
-
-It is **not** on the npm registry — `npx doraval` and `bunx doraval` will 404.
-
-### 1. Install Bun (required)
-
-doraval is a **Bun CLI**. Having Node.js installed is not enough.
+### macOS (Homebrew — recommended)
 
 ```bash
-curl -fsSL https://bun.sh/install | bash   # macOS/Linux
-# Windows: https://bun.sh/docs/installation
+brew tap saif-shines/tap
+brew install doraval
 ```
 
-Requires Bun **v1.2+**.
+No runtime required. The binary is self-contained.
 
-### 2. Run doraval
-
-**One-off (recommended)** — no global install:
+### npm / npx
 
 ```bash
-# Bun users
-bunx jsr @hacksmith/doraval validate .
-
-# Node/npm users (still requires Bun — doraval runs on Bun, not Node)
-npx jsr @hacksmith/doraval validate .
+npx @hacksmith/doraval validate .        # run without installing
+npm install -g @hacksmith/doraval        # or install globally
 ```
 
-Both commands download from JSR and invoke the CLI. The `npx` form is fine if you already use npm; you do **not** need to publish to npm.
+Requires Node.js. If Bun is installed, it runs faster — but Node works fine.
 
-**Aliases:** subcommands are `validate`, `skill`, `journal`, etc. (there is no separate `dora` binary on your PATH unless you add one — see below).
-
-### `jsr add` is not a global CLI install
-
-`npx jsr add @hacksmith/doraval` adds doraval as a **project dependency** in `package.json`. It does **not** put `dora` or `doraval` on your shell PATH. JSR’s npm compatibility layer also omits the `bin` field today, so `node_modules/.bin/doraval` is not created.
-
-To **run** the CLI, use `npx jsr @hacksmith/doraval` (no `add`):
+### Bun
 
 ```bash
-npx jsr @hacksmith/doraval validate .
+bunx @hacksmith/doraval validate .       # run without installing
+bun add -g @hacksmith/doraval            # or install globally
 ```
-
-**Optional — shorthand on your PATH** (from the project where you ran `jsr add`, or anywhere):
-
-```bash
-# shell alias (add to ~/.zshrc)
-alias dora='npx jsr @hacksmith/doraval'
-alias doraval='npx jsr @hacksmith/doraval'
-
-# or an npm script in package.json
-# "doraval": "jsr @hacksmith/doraval"
-```
-
-### What does *not* work
-
-| Command | Why |
-|---------|-----|
-| `npx doraval …` | Package is not on npmjs.org |
-| `bunx doraval …` | Same — looks up npm, not JSR |
-| `npx jsr add @hacksmith/doraval` then `dora` | `add` installs a library dep, not a global binary |
-| `node …` / Deno only | CLI uses Bun APIs (`Bun.file`, etc.) |
-
-> [!NOTE]
-> **Node users:** use `npx jsr @hacksmith/doraval` to *fetch* the tool, but install **Bun** first to *run* it. There is no Node-native build today.
 
 ## Usage
 
 ### `validate` — Auto-detect and validate
 
-The main command. Point it at a local directory or a Git URL, and it auto-detects what validators apply.
+Point it at a directory or GitHub URL. It finds what's there and checks it.
 
 ```bash
-dora validate .                                    # local directory
-dora validate https://github.com/obra/superpowers  # remote repo
-dora validate https://github.com/obra/superpowers/tree/main/skills/brainstorming  # subdirectory
+doraval validate .                                          # local directory
+doraval validate https://github.com/obra/superpowers        # remote repo
+doraval validate https://github.com/obra/superpowers/tree/main/skills/brainstorming
 ```
 
-Filter by provider or specific validator with `--for`:
+Filter by provider or validator:
 
 ```bash
-dora validate . --for claude          # all Claude validators that match
-dora validate . --for claude:plugin   # just the plugin validator
+doraval validate . --for claude           # all Claude validators
+doraval validate . --for claude:plugin    # just the plugin validator
 ```
 
-#### Available validators (Claude)
+#### Validators (Claude)
 
-| Validator | Detects | What it checks |
+| Validator | Detects | Checks |
 |---|---|---|
-| `claude:skill` | `SKILL.md` | Frontmatter (relaxed name/desc; recommended + directory-derived command), body, supporting files, dynamic injection, substitutions, advanced fields (allowed-tools, context, etc.) |
-| `claude:plugin` | `.claude-plugin/plugin.json` | Manifest fields, component paths, skill/command/agent dirs |
-| `claude:marketplace` | `plugins/` with plugin subdirs | Plugin directory structure, README, LICENSE |
-| `claude:hooks` | `hooks/hooks.json` or `hooks.json` | Valid JSON, known event names |
+| `claude:skill` | `SKILL.md` | Frontmatter, body, supporting files, dynamic injection, advanced fields |
+| `claude:plugin` | `.claude-plugin/plugin.json` | Manifest fields, component paths |
+| `claude:marketplace` | `plugins/` | Plugin directory structure, README, LICENSE |
+| `claude:hooks` | `hooks/hooks.json` | Valid JSON, known event names |
 | `claude:mcp` | `.mcp.json` | Valid JSON, server definitions |
-| `claude:subagent` | `agents/*.md` | Frontmatter with description, non-empty body (stricter than skills) |
-| `claude:command` | `commands/*.md` | Frontmatter with description, body; supports advanced fields (allowed-tools, context, when_to_use, etc.) |
+| `claude:subagent` | `agents/*.md` | Frontmatter with description, non-empty body |
+| `claude:command` | `commands/*.md` | Frontmatter, body, advanced fields |
 | `claude:memory` | `CLAUDE.md` | Non-empty, length limit, @path import resolution |
 
-#### Remote URLs
-
-`dora validate` accepts GitHub URLs (and any Git URL). It clones the repo to a temp directory, validates, and cleans up. For GitHub repos, it tries `gh` first (handles private repos via your existing auth), then falls back to `git clone`.
-
-Supported URL forms:
+### `skill validate` — Single skill structural check
 
 ```bash
-dora validate https://github.com/owner/repo
-dora validate https://github.com/owner/repo/tree/branch
-dora validate https://github.com/owner/repo/tree/main/sub/dir
-dora validate github.com/owner/repo                          # shorthand
-```
-
-### `skill validate` — Structural checks (single skill)
-
-Validate a single skill directory. This is the original command and continues to work unchanged.
-
-```bash
-dora skill validate ./skills/my-skill/
+doraval skill validate ./skills/my-skill/
 ```
 
 ```
@@ -146,91 +92,81 @@ dora skill validate ./skills/my-skill/
   ✓ Markdown body is non-empty
   ✓ references/ directory exists
   ✓ advanced frontmatter: allowed-tools, context
-  ✓ uses dynamic context injection (!`...` or ```! blocks)
+  ✓ uses dynamic context injection
 
   Result: 0 error(s), 0 warning(s)
 ```
 
-> Note: `name` and `description` are recommended (not hard requirements). Missing them produces warnings rather than errors. The directory name usually provides the invocable `/command`.
-
 ### `skill drift` — Rubric deviation
 
-Measure how far a skill has drifted from known-good rubric standards. Each check maps to a drift category:
+Measure how far a skill has drifted from known-good rubric standards.
 
-| Category | What it checks |
+```bash
+doraval skill drift ./skills/my-skill/
+```
+
+```
+  doraval skill drift — Measuring rubric drift
+
+  · Trigger    Description includes activation phrases
+  · Structure  Has step-by-step instructions
+  · Voice      Uses imperative voice
+  ↗ Example    No code blocks found
+  ↗ Guardrail  No explicit constraints
+  · Clarity    No ambiguous language found
+
+  2/6 rubric areas have drifted.
+```
+
+| Category | Checks |
 |---|---|
-| **Trigger** | Description or `when_to_use` includes activation phrases (`Use when...`) |
+| **Trigger** | Description includes activation phrases (`Use when...`) |
 | **Structure** | Body has numbered steps or checklists |
 | **Voice** | Uses imperative language (`Create`, `Run`, `Ensure`) |
 | **Example** | Contains code blocks |
 | **Guardrail** | Has explicit `MUST` / `MUST NOT` constraints |
 | **Clarity** | Free of ambiguous words (`maybe`, `perhaps`, `consider`) |
 
-```bash
-dora skill drift ./skills/my-skill/
-```
+### `journal` — Decision memory
 
-```
-  doraval skill drift — Measuring rubric drift
-
-  Path:  ./skills/my-skill/
-
-  · Trigger    Description includes activation phrases
-  · Structure  Has step-by-step instructions
-  · Voice      Uses imperative voice ("Do X" not "You might X")
-  ↗ Example    No code blocks found — add examples if the skill involves code
-  ↗ Guardrail  No explicit constraints — add MUST / MUST NOT guardrails
-  · Clarity    No ambiguous language found
-
-  2/6 rubric areas have drifted.
-```
-
-### `skill judge` — AI-driven assessment
-
-> [!WARNING]
-> Not yet implemented. This command will send the skill to an LLM for qualitative review of clarity, completeness, and effectiveness.
+Record and sync project principles so future you (and agents) don't accidentally contradict past choices.
 
 ```bash
-dora skill judge ./skills/my-skill/
+doraval init                  # set up journal + configure agent
+doraval journal list          # view active principles
+doraval journal add "..."     # propose a decision
+doraval journal sync          # publish pending entries
+doraval journal update        # pull latest from remote
 ```
+
+Requires the GitHub CLI (`gh`). Journal lives in a private GitHub repo you control.
 
 ## Options
 
 | Flag | Short | Description |
 |---|---|---|
-| `--format <type>` | `-f` | Output format: `table` (default) or `json` |
-| `--for <spec>` | | Target a provider (`claude`) or specific validator (`claude:plugin`) |
+| `--format <type>` | `-f` | `table` (default) or `json` |
+| `--for <spec>` | | Target a provider or specific validator |
 | `--verbose` | `-v` | Show detailed diagnostics |
 | `--ci` | | Machine-friendly output, non-zero exit on issues |
 
-### CI/CD integration
-
-Use `--format json` and `--ci` for pipeline-friendly output:
+### CI/CD
 
 ```bash
-dora validate . --for claude --format json --ci
-dora skill validate ./my-skill/ --format json --ci
-dora skill drift ./my-skill/ --format json --ci
+doraval validate . --for claude --format json --ci
+doraval skill validate ./my-skill/ --format json --ci
+doraval skill drift ./my-skill/ --format json --ci
 ```
 
-`validate` exits with code `1` when errors are found. Commands write structured JSON to stdout when `--format json` is set — pipe it to `jq` or consume it programmatically.
+Exits with code `1` when errors are found. Pipe `--format json` output to `jq` or consume programmatically.
 
-## `journal` — Decision memory with pushback
+## Providers
 
-Record, view, and sync project principles and decisions so that future you (and agents) don't accidentally contradict past choices.
+Claude Code validators built in. Cursor, Codex, and Windsurf coming next.
 
-The journal lives in a private GitHub repo you control (by convention `yourname/yourname.md`). All config and cache lives under `~/.doraval/`.
+## Links
 
-```bash
-dora init                     # Recommended: set up journal + the coding agent dora will use on the fly for rich `add`
-dora journal list             # View active principles
-dora journal update           # Pull latest from the remote into local cache
-dora journal add "..."        # Propose a decision/note (or long rich markdown via --raw-markdown); staged locally; uses configured agent when input is minimal
-dora journal sync             # Publish pending entries + refresh cache
-```
-
-`update` is the recommended way to keep your local mirror fresh (e.g. at the start of a session or before `skill drift`).
-
-Requires the GitHub CLI (`gh`) for talking to the remote journal repo.
-
-See the docs site for full details and rationale.
+- [Docs](https://thehacksmith.dev)
+- [JSR package](https://jsr.io/@hacksmith/doraval)
+- [npm package](https://www.npmjs.com/package/@hacksmith/doraval)
+- [GitHub Releases](https://github.com/saif-shines/doraval/releases)

@@ -34,25 +34,21 @@ Manual review doesn't scale. doraval automates these checks across every artifac
 
 ## Quick start
 
-[Install Bun](https://bun.sh) first (v1.2+). doraval is on [JSR](https://jsr.io/@hacksmith/doraval), not npm.
-
 ```bash
-# Bun users
-bunx jsr @hacksmith/doraval validate .
+# macOS (no runtime required)
+brew install saif-shines/tap/doraval
 
-# Node/npm users (Bun still required to run)
-npx jsr @hacksmith/doraval validate .
+# Everyone else
+npx @hacksmith/doraval validate .
 ```
 
-More examples once invoked:
+More examples:
 
 ```bash
-bunx jsr @hacksmith/doraval validate https://github.com/obra/superpowers   # remote repo
-bunx jsr @hacksmith/doraval validate . --for claude:plugin                   # specific validator
-bunx jsr @hacksmith/doraval skill drift ./my-skill/                          # rubric drift
+npx @hacksmith/doraval validate https://github.com/obra/superpowers   # remote repo
+npx @hacksmith/doraval validate . --for claude:plugin                  # specific validator
+npx @hacksmith/doraval skill drift ./my-skill/                         # rubric drift
 ```
-
-`npx doraval` and `bunx doraval` will 404 — use the `jsr @hacksmith/doraval` form above.
 
 ## Beyond validation
 

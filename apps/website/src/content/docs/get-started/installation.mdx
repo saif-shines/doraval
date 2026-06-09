@@ -5,65 +5,71 @@ sidebar:
   order: 2
 ---
 
-doraval is published on [JSR](https://jsr.io/@hacksmith/doraval) as **`@hacksmith/doraval`**.
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-It is **not** on the npm registry — `npx doraval` and `bunx doraval` will 404.
+Choose the method that matches your setup.
 
-## 1. Install Bun (required)
+## macOS (Homebrew)
 
-doraval is a **Bun CLI**. Having Node.js installed is not enough.
-
-```bash
-curl -fsSL https://bun.sh/install | bash   # macOS/Linux
-```
-
-See [bun.sh/docs/installation](https://bun.sh/docs/installation) for Windows and other platforms. Requires Bun **v1.2+**.
-
-## 2. Run doraval
-
-**One-off (recommended)** — no global install:
+Fastest path on macOS — no Node or Bun runtime required:
 
 ```bash
-# Bun users
-bunx jsr @hacksmith/doraval validate .
-
-# Node/npm users (still requires Bun — doraval runs on Bun, not Node)
-npx jsr @hacksmith/doraval validate .
+brew tap saif-shines/tap
+brew install doraval
 ```
 
-Both commands download from JSR and invoke the CLI.
-
-## `jsr add` is not a global CLI install
-
-`npx jsr add @hacksmith/doraval` adds doraval as a **project dependency**. It does **not** put `dora` or `doraval` on your shell PATH.
-
-To run the CLI, use `npx jsr @hacksmith/doraval` (no `add`):
+Verify:
 
 ```bash
-npx jsr @hacksmith/doraval validate .
+doraval --help
 ```
 
-Optional shorthand — add to `~/.zshrc`:
+## npm / npx
+
+Works anywhere Node.js is installed. No separate Bun install needed.
 
 ```bash
-alias dora='npx jsr @hacksmith/doraval'
+npx @hacksmith/doraval validate .
 ```
 
-## What does not work
+Or install globally once:
 
-| Command | Why |
-|---------|-----|
-| `npx doraval …` | Package is not on npmjs.org |
-| `bunx doraval …` | Same — looks up npm, not JSR |
-| `npx jsr add …` then `dora` | `add` installs a library dep, not a global binary |
-| `node …` / Deno only | CLI uses Bun APIs (`Bun.file`, etc.) |
+```bash
+npm install -g @hacksmith/doraval
+doraval validate .
+```
 
-**Node users:** use `npx jsr @hacksmith/doraval` to fetch the tool, but install **Bun** first to run it. There is no Node-native build today.
+The wrapper detects whether Bun is available and uses it automatically. If Bun is not installed, it will prompt you to install it.
+
+## Bun
+
+If you already have Bun installed:
+
+```bash
+bunx @hacksmith/doraval validate .
+```
+
+Or install globally:
+
+```bash
+bun add -g @hacksmith/doraval
+doraval validate .
+```
 
 ## Verify
 
 ```bash
-bunx jsr @hacksmith/doraval --help
+doraval --help
 ```
 
 Expected output shows the top-level help with `validate`, `skill`, and `journal` subcommands.
+
+## JSR (library use only)
+
+doraval is also published on [JSR](https://jsr.io/@hacksmith/doraval) for importing as a module in Bun projects:
+
+```bash
+bunx jsr add @hacksmith/doraval
+```
+
+Note: `jsr add` installs a **project dependency**, not a global binary. It does not put `doraval` on your PATH. Use the npm or Homebrew paths above for CLI use.
