@@ -56,6 +56,20 @@ export function checkFrontmatterPresence(model: SkillModel, _ctx: SkillValidateC
   return { passes: ["YAML frontmatter present and parseable"] };
 }
 
+export function checkName(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  if (!model.data.name) {
+    return { warnings: ['No "name" in frontmatter — directory name provides the /command (name is optional except for plugin-root skills)'] };
+  }
+  const name = String(model.data.name);
+  if (!NAME_REGEX.test(name)) {
+    return { errors: [`Invalid name format: "${name}" — should be kebab-case (a-z, 0-9, hyphens) for best compatibility`] };
+  }
+  if (name.length < 2 || name.length > 64) {
+    return { errors: [`Name length out of range: ${name.length} chars (recommended 2-64)`] };
+  }
+  return { passes: [`name: "${name}"`] };
+}
+
 export function validateSkillModel(
   model: SkillModel,
   context: SkillValidateContext = { existingDirs: [] }

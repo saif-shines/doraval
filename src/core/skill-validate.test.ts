@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { validateSkillModel, merge, checkFrontmatterPresence } from "./skill-validate.js";
+import { validateSkillModel, merge, checkFrontmatterPresence, checkName } from "./skill-validate.js";
 
 describe("validateSkillModel", () => {
   test("passes a well-formed skill", () => {
@@ -144,5 +144,27 @@ describe("checkFrontmatterPresence", () => {
     const result = checkFrontmatterPresence({ data: { name: "x" }, content: "body" }, { existingDirs: [] });
     expect(result.passes).toContain("YAML frontmatter present and parseable");
     expect(result.warnings).toBeUndefined();
+  });
+});
+
+describe("checkName", () => {
+  test("returns warning when name is absent", () => {
+    const result = checkName({ data: {}, content: "" }, { existingDirs: [] });
+    expect(result.warnings?.[0]).toContain("No \"name\" in frontmatter");
+  });
+
+  test("returns error for invalid kebab-case", () => {
+    const result = checkName({ data: { name: "Bad_Name" }, content: "" }, { existingDirs: [] });
+    expect(result.errors?.[0]).toContain("Invalid name format");
+  });
+
+  test("returns error for name too short", () => {
+    const result = checkName({ data: { name: "a" }, content: "" }, { existingDirs: [] });
+    expect(result.errors?.[0]).toContain("Name length out of range");
+  });
+
+  test("returns pass for valid name", () => {
+    const result = checkName({ data: { name: "my-skill" }, content: "" }, { existingDirs: [] });
+    expect(result.passes).toContain('name: "my-skill"');
   });
 });
