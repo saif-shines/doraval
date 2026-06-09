@@ -48,6 +48,14 @@ const KNOWN_FIELDS = new Set([
 // Directories commonly bundled with skills (supporting files, scripts, examples, etc.)
 const SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"] as const;
 
+export function checkFrontmatterPresence(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  const keys = Object.keys(model.data);
+  if (keys.length === 0) {
+    return { warnings: ["YAML frontmatter is empty (description recommended for discoverability)"] };
+  }
+  return { passes: ["YAML frontmatter present and parseable"] };
+}
+
 export function validateSkillModel(
   model: SkillModel,
   context: SkillValidateContext = { existingDirs: [] }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { validateSkillModel, merge } from "./skill-validate.js";
+import { validateSkillModel, merge, checkFrontmatterPresence } from "./skill-validate.js";
 
 describe("validateSkillModel", () => {
   test("passes a well-formed skill", () => {
@@ -130,5 +130,19 @@ describe("merge", () => {
     const b = { passes: ["p2"] };
     merge(a, b);
     expect(a.passes).toEqual(["p1"]);
+  });
+});
+
+describe("checkFrontmatterPresence", () => {
+  test("returns warning when frontmatter is empty", () => {
+    const result = checkFrontmatterPresence({ data: {}, content: "body" }, { existingDirs: [] });
+    expect(result.warnings).toContain("YAML frontmatter is empty (description recommended for discoverability)");
+    expect(result.passes).toBeUndefined();
+  });
+
+  test("returns pass when frontmatter has keys", () => {
+    const result = checkFrontmatterPresence({ data: { name: "x" }, content: "body" }, { existingDirs: [] });
+    expect(result.passes).toContain("YAML frontmatter present and parseable");
+    expect(result.warnings).toBeUndefined();
   });
 });
