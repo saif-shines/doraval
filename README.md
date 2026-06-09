@@ -31,6 +31,7 @@ No runtime required. The binary is self-contained.
 
 ```bash
 npx @hacksmith/doraval validate .        # run without installing
+# if Bun is not installed: npm i -g bun
 npm install -g @hacksmith/doraval        # or install globally
 ```
 
