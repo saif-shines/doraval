@@ -75,6 +75,12 @@ export default defineCommand({
       alias: "m",
       description: "Custom commit message for the sync",
     },
+    verbose: {
+      type: "boolean",
+      alias: "v",
+      description: "Show detailed diagnostics",
+      default: false,
+    },
   },
 
   async run({ args }) {
