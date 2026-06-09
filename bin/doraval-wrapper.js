@@ -20,12 +20,9 @@ try {
 
 const cli = join(__dirname, 'doraval.js')
 
-let result
-try {
-  result = spawnSync('bun', [cli, ...process.argv.slice(2)], { stdio: 'inherit' })
-} catch (err) {
-  console.error('Failed to execute Bun:', err.message)
+const result = spawnSync('bun', [cli, ...process.argv.slice(2)], { stdio: 'inherit' })
+if (result.error) {
+  console.error('Failed to execute Bun:', result.error.message)
   process.exit(1)
 }
-
 process.exit(result.status ?? (result.signal ? 128 : 1))

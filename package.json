@@ -16,7 +16,7 @@
   "description": "The context engineering toolkit for coding agents",
   "engines": {
     "bun": ">=1.2.0",
-    "node": ">=14.0.0"
+    "node": ">=14.18.0"
   },
   "files": [
     "bin/",
