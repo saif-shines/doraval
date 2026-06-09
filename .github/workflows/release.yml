@@ -27,6 +27,12 @@ jobs:
       - name: Build Bun CLI bundle
         run: bun run build
 
+      - name: Upload bin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin
+          path: bin/
+
       - name: Build compiled binaries
         run: |
           bun build ./src/cli/index.ts --compile --target bun-darwin-arm64 --outfile doraval-darwin-arm64
@@ -59,13 +65,27 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - run: npm install -g npm@latest
-
       - run: bun install --frozen-lockfile
 
-      - run: bun run build
+      - name: Download bin artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bin
+          path: bin/
 
       - run: npm publish --access public --provenance
+
+  publish-jsr:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx jsr publish
 
   update-homebrew:
     needs: build-and-release
