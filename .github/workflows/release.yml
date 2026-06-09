@@ -73,7 +73,13 @@ jobs:
           name: bin
           path: bin/
 
-      - run: npm publish --access public --provenance
+      - name: Publish to npm (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: npm publish --access public --provenance
 
   publish-jsr:
     needs: build-and-release
