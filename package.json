@@ -46,6 +46,7 @@
     "test": "bun test",
     "prepublishOnly": "bun run build && node -e \"const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}\"",
     "bump": "bun run scripts/bump.ts",
+    "release": "bun run scripts/release.ts",
     "jsr:publish": "bunx jsr publish",
     "site:dev": "cd apps/website && bun run dev",
     "site:build": "cd apps/website && bun run build",
