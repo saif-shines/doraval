@@ -232,6 +232,11 @@ export default defineCommand({
       alias: "j",
       description: 'Full entry as JSON (title, pushback, tags, rationale, ...). Use "-" to read from stdin. Highest precedence; bypasses other input methods. (JSON may still use "scope" for legacy compat.)',
     },
+    verbose: {
+      type: "boolean",
+      description: "Show full entry details (pushback, tags, author, file) in the success output",
+      required: false,
+    },
   },
 
   async run({ args }) {
@@ -455,35 +460,28 @@ ${rationale}
 
     await Bun.write(filePath, content);
 
-    console.error(`\n  ${pc.green("✓")} ${pc.white("Entry staged successfully.")}\n`);
-    console.error(`  Project:  ${pc.bold(pc.white(project))}`);
-    console.error(`  Title:    ${pc.bold(pc.white(title))}`);
-    console.error(`  Pushback: ${pc.white(String(pushback))}`);
-    console.error(`  Tags:     ${pc.gray(tags.join(", ") || pc.dim("(none)"))}`);
-    const authorDisplay = author.startsWith("agent:") ? pc.cyan(author) : author;
-    console.error(`  Author:   ${authorDisplay}`);
-    if (author.startsWith("agent:")) {
-      console.error(`            ${pc.dim(pc.gray("(enriched on the fly by your configured coding agent)"))}`);
+    console.error(`\n  ${pc.green("✓")} ${pc.bold(pc.white(title))}`);
+    console.error(`  Project: ${pc.white(project)}  · run ${pc.dim(pc.gray("dora journal sync"))} to publish\n`);
+
+    if (args.verbose) {
+      const authorDisplay = author.startsWith("agent:") ? pc.cyan(author) : author;
+      console.error(`  Pushback: ${pc.white(String(pushback))}`);
+      console.error(`  Tags:     ${pc.gray(tags.join(", ") || pc.dim("(none)"))}`);
+      console.error(`  Author:   ${authorDisplay}`);
+      console.error(`  File:     ${pc.dim(pc.gray(filePath))}\n`);
     }
-    console.error(`  File:     ${pc.dim(pc.gray(filePath))}\n`);
 
     if (isThinInput && !author.startsWith("agent:")) {
       if (attemptedAgent) {
         console.error(
-          `  ${pc.dim(pc.gray("Note:"))} Your configured agent was called but did not return a usable enrichment this time (see warning above).\n` +
-          `        The raw title + defaults were used. Edit the pending file or tweak the agent template with dora init.\n`
+          `  ${pc.dim(pc.gray("Note: agent was called but returned no usable enrichment. Edit the pending file or re-run dora init."))}\n`
         );
       } else {
         console.error(
-          `  ${pc.dim(pc.gray("Tip:"))} run ${pc.dim(pc.gray("dora init"))} to configure a coding agent (Claude, Cursor, etc.)\n` +
-          `        so minimal adds like this get rich titles, tags, and rationales automatically.\n`
+          `  ${pc.dim(pc.gray("Tip: run dora init to configure an agent for auto-enrichment."))}\n`
         );
       }
     }
-
-    console.error(
-      `  Run ${pc.dim(pc.gray("dora journal sync"))} (or ${pc.dim(pc.gray("doraval journal sync"))}) to publish it to your journal repo.\n`
-    );
 
     process.exit(0);
   },
