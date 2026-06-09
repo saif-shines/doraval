@@ -84,6 +84,23 @@ export function checkBody(model: SkillModel, _ctx: SkillValidateContext): CheckR
   return { passes: ["Markdown body is non-empty"] };
 }
 
+export function checkAdvancedFields(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  const advanced = Object.keys(model.data).filter(
+    k => KNOWN_FIELDS.has(k) && k !== "name" && k !== "description"
+  );
+  if (advanced.length > 0) {
+    return { passes: [`advanced frontmatter: ${advanced.join(", ")}`] };
+  }
+  return {};
+}
+
+export function checkUnknownFields(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  const warnings = Object.keys(model.data)
+    .filter(k => !KNOWN_FIELDS.has(k))
+    .map(k => `Unknown frontmatter field: "${k}" (may be a typo or newer spec addition)`);
+  return { warnings };
+}
+
 export function validateSkillModel(
   model: SkillModel,
   context: SkillValidateContext = { existingDirs: [] }

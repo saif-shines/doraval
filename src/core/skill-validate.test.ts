@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { validateSkillModel, merge, checkFrontmatterPresence, checkName, checkDescription, checkBody } from "./skill-validate.js";
+import {
+  validateSkillModel, merge,
+  checkFrontmatterPresence, checkName, checkDescription, checkBody,
+  checkAdvancedFields, checkUnknownFields,
+} from "./skill-validate.js";
 
 describe("validateSkillModel", () => {
   test("passes a well-formed skill", () => {
@@ -190,5 +194,45 @@ describe("checkBody", () => {
   test("returns pass when content is non-empty", () => {
     const result = checkBody({ data: {}, content: "# Steps" }, { existingDirs: [] });
     expect(result.passes).toContain("Markdown body is non-empty");
+  });
+});
+
+describe("checkAdvancedFields", () => {
+  test("returns nothing when only name/description present", () => {
+    const result = checkAdvancedFields(
+      { data: { name: "x", description: "d" }, content: "" },
+      { existingDirs: [] }
+    );
+    expect(result.passes).toBeUndefined();
+  });
+
+  test("returns pass listing recognized advanced keys", () => {
+    const result = checkAdvancedFields(
+      { data: { name: "x", description: "d", "allowed-tools": "Read", context: "fork" }, content: "" },
+      { existingDirs: [] }
+    );
+    expect(result.passes?.[0]).toContain("advanced frontmatter");
+    expect(result.passes?.[0]).toContain("allowed-tools");
+    expect(result.passes?.[0]).toContain("context");
+  });
+});
+
+describe("checkUnknownFields", () => {
+  test("returns no warnings when all fields are known", () => {
+    const result = checkUnknownFields(
+      { data: { name: "x", description: "d" }, content: "" },
+      { existingDirs: [] }
+    );
+    expect(result.warnings).toEqual([]);
+  });
+
+  test("returns warning for each unknown field", () => {
+    const result = checkUnknownFields(
+      { data: { name: "x", foo: "bar", baz: "qux" }, content: "" },
+      { existingDirs: [] }
+    );
+    expect(result.warnings?.length).toBe(2);
+    expect(result.warnings?.[0]).toContain("foo");
+    expect(result.warnings?.[1]).toContain("baz");
   });
 });
