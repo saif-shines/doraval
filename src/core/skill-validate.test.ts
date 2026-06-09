@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { validateSkillModel, merge, checkFrontmatterPresence, checkName } from "./skill-validate.js";
+import { validateSkillModel, merge, checkFrontmatterPresence, checkName, checkDescription, checkBody } from "./skill-validate.js";
 
 describe("validateSkillModel", () => {
   test("passes a well-formed skill", () => {
@@ -166,5 +166,29 @@ describe("checkName", () => {
   test("returns pass for valid name", () => {
     const result = checkName({ data: { name: "my-skill" }, content: "" }, { existingDirs: [] });
     expect(result.passes).toContain('name: "my-skill"');
+  });
+});
+
+describe("checkDescription", () => {
+  test("returns warning when description absent", () => {
+    const result = checkDescription({ data: {}, content: "" }, { existingDirs: [] });
+    expect(result.warnings?.[0]).toContain("Missing \"description\"");
+  });
+
+  test("returns pass when description present", () => {
+    const result = checkDescription({ data: { description: "Use when testing." }, content: "" }, { existingDirs: [] });
+    expect(result.passes).toContain("description field present");
+  });
+});
+
+describe("checkBody", () => {
+  test("returns error when content is blank", () => {
+    const result = checkBody({ data: {}, content: "   \n  " }, { existingDirs: [] });
+    expect(result.errors).toContain("Markdown body is empty");
+  });
+
+  test("returns pass when content is non-empty", () => {
+    const result = checkBody({ data: {}, content: "# Steps" }, { existingDirs: [] });
+    expect(result.passes).toContain("Markdown body is non-empty");
   });
 });

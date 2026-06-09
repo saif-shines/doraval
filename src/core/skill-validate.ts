@@ -70,6 +70,20 @@ export function checkName(model: SkillModel, _ctx: SkillValidateContext): CheckR
   return { passes: [`name: "${name}"`] };
 }
 
+export function checkDescription(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  if (!model.data.description) {
+    return { warnings: ['Missing "description" (recommended) — helps Claude decide when to load the skill automatically'] };
+  }
+  return { passes: ["description field present"] };
+}
+
+export function checkBody(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  if (!model.content.trim()) {
+    return { errors: ["Markdown body is empty"] };
+  }
+  return { passes: ["Markdown body is non-empty"] };
+}
+
 export function validateSkillModel(
   model: SkillModel,
   context: SkillValidateContext = { existingDirs: [] }
