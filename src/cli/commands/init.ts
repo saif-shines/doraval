@@ -163,16 +163,14 @@ export default defineCommand({
         const cfg = (await readConfig()) || { journal: { repo: effectiveRepo, projects: {} } };
         if (existingAgent) cfg.agent = existingAgent;
         await writeConfig(cfg);
-        console.error(`  ${pc.green("All set!")} ${pc.white("Try:")} ${pc.dim(pc.gray("dora journal add \"short decision\""))} ${pc.white("(it will use the agent when input is minimal).")}\n`);
+        console.error(`  ${pc.green("✓")} ${pc.white("Try:")} ${pc.dim(pc.gray("dora journal add \"short decision\""))}\n`);
         process.exit(0);
         return;
       }
       console.error(""); // spacer before the questions
     } else {
-      console.error(`  ${pc.bold(pc.white("Coding agent for on-the-fly use in journal add"))}\n`);
-      console.error(`  dora can use your existing coding agent (Claude Code, Cursor, etc.) behind the scenes\n`);
-      console.error(`  when you run ${pc.dim(pc.gray("dora journal add \"short decision\""))} so you get rich pushback/tags/rationale (tags for decisions or notes)\n`);
-      console.error(`  with almost no extra typing.\n`);
+      console.error(`  ${pc.bold(pc.white("Coding agent for journal add"))}\n`);
+      console.error(`  When configured, ${pc.dim(pc.gray("dora journal add \"..\""))} will use your agent to enrich entries with tags and rationale automatically.\n`);
     }
 
     // Simple detection + prompt for the invocation template
@@ -210,12 +208,9 @@ export default defineCommand({
     };
     await writeConfig(finalConfig);
 
-    console.error(`\n  ${pc.green("✓")} ${pc.white("Agent configured. Future")} ${pc.dim(pc.gray("dora journal add \"...\""))} ${pc.white("calls will try to use it on the fly (when input is minimal).")}\n`);
-    console.error(`  You can re-run ${pc.dim(pc.gray("dora init"))} anytime to change the agent.\n`);
-    console.error(`  Example one-liner that will now feel magical:\n`);
-    console.error(`    ${pc.dim(pc.gray("dora journal add \"We decided to use the new cache command name\""))}\n`);
-
-    console.error(`  ${pc.green("All set!")} ${pc.white("Next steps:")} ${pc.dim(pc.gray("dora journal list"))}, ${pc.dim(pc.gray("dora journal add \"...\""))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);
+    console.error(`\n  ${pc.green("✓")} ${pc.white("Agent configured.")}\n`);
+    console.error(`  Re-run ${pc.dim(pc.gray("dora init"))} anytime to change it.\n`);
+    console.error(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))}, ${pc.dim(pc.gray("dora journal list"))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);
 
     process.exit(0);
   },
