@@ -4,6 +4,9 @@ The context engineering toolkit for coding agents.
 
 Validate skills, plugins, hooks, MCP configs, and memory files across providers — locally or from a Git URL. Works with Claude Code today; Cursor, Codex, and Windsurf coming next.
 
+> **Quick start:** [Install Bun](https://bun.sh), then run `bunx jsr @hacksmith/doraval validate .`  
+> Node/npm users: `npx jsr @hacksmith/doraval validate .` (Bun still required).
+
 ## Features
 
 - **Pluggable validators** — Auto-detect and validate skills, plugins, marketplaces, hooks, MCP config, subagents, commands, and memory files
@@ -15,20 +18,69 @@ Validate skills, plugins, hooks, MCP configs, and memory files across providers 
 
 ## Installation
 
-Requires [Bun](https://bun.sh) v1.2+.
+doraval is published on [JSR](https://jsr.io/@hacksmith/doraval) as **`@hacksmith/doraval`**.
+
+It is **not** on the npm registry — `npx doraval` and `bunx doraval` will 404.
+
+### 1. Install Bun (required)
+
+doraval is a **Bun CLI**. Having Node.js installed is not enough.
 
 ```bash
-bun install -g doraval
+curl -fsSL https://bun.sh/install | bash   # macOS/Linux
+# Windows: https://bun.sh/docs/installation
 ```
 
-Or run directly:
+Requires Bun **v1.2+**.
+
+### 2. Run doraval
+
+**One-off (recommended)** — no global install:
 
 ```bash
-bunx doraval validate .
+# Bun users
+bunx jsr @hacksmith/doraval validate .
+
+# Node/npm users (still requires Bun — doraval runs on Bun, not Node)
+npx jsr @hacksmith/doraval validate .
 ```
+
+Both commands download from JSR and invoke the CLI. The `npx` form is fine if you already use npm; you do **not** need to publish to npm.
+
+**Aliases:** subcommands are `validate`, `skill`, `journal`, etc. (there is no separate `dora` binary on your PATH unless you add one — see below).
+
+### `jsr add` is not a global CLI install
+
+`npx jsr add @hacksmith/doraval` adds doraval as a **project dependency** in `package.json`. It does **not** put `dora` or `doraval` on your shell PATH. JSR’s npm compatibility layer also omits the `bin` field today, so `node_modules/.bin/doraval` is not created.
+
+To **run** the CLI, use `npx jsr @hacksmith/doraval` (no `add`):
+
+```bash
+npx jsr @hacksmith/doraval validate .
+```
+
+**Optional — shorthand on your PATH** (from the project where you ran `jsr add`, or anywhere):
+
+```bash
+# shell alias (add to ~/.zshrc)
+alias dora='npx jsr @hacksmith/doraval'
+alias doraval='npx jsr @hacksmith/doraval'
+
+# or an npm script in package.json
+# "doraval": "jsr @hacksmith/doraval"
+```
+
+### What does *not* work
+
+| Command | Why |
+|---------|-----|
+| `npx doraval …` | Package is not on npmjs.org |
+| `bunx doraval …` | Same — looks up npm, not JSR |
+| `npx jsr add @hacksmith/doraval` then `dora` | `add` installs a library dep, not a global binary |
+| `node …` / Deno only | CLI uses Bun APIs (`Bun.file`, etc.) |
 
 > [!NOTE]
-> doraval is also published on [JSR](https://jsr.io/@hacksmith/doraval) as `@hacksmith/doraval`.
+> **Node users:** use `npx jsr @hacksmith/doraval` to *fetch* the tool, but install **Bun** first to *run* it. There is no Node-native build today.
 
 ## Usage
 

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "bun": {
+      "source": "bun.sh",
+      "sourceType": "well-known",
+      "computedHash": "959aa11169f7532aa08da08ab16d4409f5785bd08b125164dfba3e92d336cd76"
+    }
+  }
+}

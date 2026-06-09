@@ -707,69 +707,71 @@ var init_frontmatter = __esm(() => {
 });
 
 // src/core/skill-validate.ts
-function validateSkillModel(model, context = { existingDirs: [] }) {
-  const errors = [];
-  const warnings = [];
-  const passes = [];
-  const frontmatterKeys = Object.keys(model.data);
-  if (frontmatterKeys.length === 0) {
-    warnings.push("YAML frontmatter is empty (description recommended for discoverability)");
-  } else {
-    passes.push("YAML frontmatter present and parseable");
+function checkFrontmatterPresence(model, _ctx) {
+  const keys = Object.keys(model.data);
+  if (keys.length === 0) {
+    return { warnings: ["YAML frontmatter is empty (description recommended for discoverability)"] };
   }
+  return { passes: ["YAML frontmatter present and parseable"] };
+}
+function checkName(model, _ctx) {
   if (!model.data.name) {
-    warnings.push('No "name" in frontmatter \u2014 directory name provides the /command (name is optional except for plugin-root skills)');
-  } else {
-    const name = String(model.data.name);
-    if (!NAME_REGEX.test(name)) {
-      errors.push(`Invalid name format: "${name}" \u2014 should be kebab-case (a-z, 0-9, hyphens) for best compatibility`);
-    } else if (name.length < 2 || name.length > 64) {
-      errors.push(`Name length out of range: ${name.length} chars (recommended 2-64)`);
-    } else {
-      passes.push(`name: "${name}"`);
-    }
+    return { warnings: ['No "name" in frontmatter \u2014 directory name provides the /command (name is optional except for plugin-root skills)'] };
   }
+  const name = String(model.data.name);
+  if (!NAME_REGEX.test(name)) {
+    return { errors: [`Invalid name format: "${name}" \u2014 should be kebab-case (a-z, 0-9, hyphens) for best compatibility`] };
+  }
+  if (name.length < 2 || name.length > 64) {
+    return { errors: [`Name length out of range: ${name.length} chars (recommended 2-64)`] };
+  }
+  return { passes: [`name: "${name}"`] };
+}
+function checkDescription(model, _ctx) {
   if (!model.data.description) {
-    warnings.push('Missing "description" (recommended) \u2014 helps Claude decide when to load the skill automatically');
-  } else {
-    passes.push("description field present");
+    return { warnings: ['Missing "description" (recommended) \u2014 helps Claude decide when to load the skill automatically'] };
   }
+  return { passes: ["description field present"] };
+}
+function checkBody(model, _ctx) {
   if (!model.content.trim()) {
-    errors.push("Markdown body is empty");
-  } else {
-    passes.push("Markdown body is non-empty");
+    return { errors: ["Markdown body is empty"] };
   }
-  const advanced = [];
-  for (const key of frontmatterKeys) {
-    if (KNOWN_FIELDS.has(key) && key !== "name" && key !== "description") {
-      advanced.push(key);
-    }
-  }
+  return { passes: ["Markdown body is non-empty"] };
+}
+function checkAdvancedFields(model, _ctx) {
+  const advanced = Object.keys(model.data).filter((k) => KNOWN_FIELDS.has(k) && k !== "name" && k !== "description");
   if (advanced.length > 0) {
-    passes.push(`advanced frontmatter: ${advanced.join(", ")}`);
+    return { passes: [`advanced frontmatter: ${advanced.join(", ")}`] };
   }
-  for (const key of frontmatterKeys) {
-    if (!KNOWN_FIELDS.has(key)) {
-      warnings.push(`Unknown frontmatter field: "${key}" (may be a typo or newer spec addition)`);
-    }
-  }
-  for (const dir of SUPPORTING_DIRS) {
-    if (context.existingDirs.includes(dir)) {
-      passes.push(`${dir}/ directory exists`);
-    }
-  }
-  const hasInlineInjection = /!\s*`[^`]+`/.test(model.content);
-  const hasFencedInjection = /```\s*!/.test(model.content);
-  if (hasInlineInjection || hasFencedInjection) {
+  return {};
+}
+function checkUnknownFields(model, _ctx) {
+  const warnings = Object.keys(model.data).filter((k) => !KNOWN_FIELDS.has(k)).map((k) => `Unknown frontmatter field: "${k}" (may be a typo or newer spec addition)`);
+  return { warnings };
+}
+function checkSupportingDirs(_model, ctx) {
+  const passes = SUPPORTING_DIRS.filter((dir) => ctx.existingDirs.includes(dir)).map((dir) => `${dir}/ directory exists`);
+  return { passes };
+}
+function checkDynamicInjection(model, _ctx) {
+  const passes = [];
+  if (/!\s*`[^`]+`/.test(model.content) || /```\s*!/.test(model.content)) {
     passes.push("uses dynamic context injection (!`...` or ```! blocks)");
   }
-  const hasArgSubst = /\$ARGUMENTS|\$[0-9]|\$\{CLAUDE_/.test(model.content);
-  if (hasArgSubst) {
+  if (/\$ARGUMENTS|\$[0-9]|\$\{CLAUDE_/.test(model.content)) {
     passes.push("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
   }
-  return { errors, warnings, passes };
+  return { passes };
 }
-var NAME_REGEX, KNOWN_FIELDS, SUPPORTING_DIRS;
+function validateSkillModel(model, context = { existingDirs: [] }) {
+  return checks.reduce((acc, check) => merge(acc, check(model, context)), EMPTY);
+}
+var merge = (a, b) => ({
+  errors: [...a.errors, ...b.errors ?? []],
+  warnings: [...a.warnings, ...b.warnings ?? []],
+  passes: [...a.passes, ...b.passes ?? []]
+}), NAME_REGEX, KNOWN_FIELDS, SUPPORTING_DIRS, EMPTY, checks;
 var init_skill_validate = __esm(() => {
   NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
   KNOWN_FIELDS = new Set([
@@ -791,6 +793,17 @@ var init_skill_validate = __esm(() => {
     "shell"
   ]);
   SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"];
+  EMPTY = { errors: [], warnings: [], passes: [] };
+  checks = [
+    checkFrontmatterPresence,
+    checkName,
+    checkDescription,
+    checkBody,
+    checkAdvancedFields,
+    checkUnknownFields,
+    checkSupportingDirs,
+    checkDynamicInjection
+  ];
 });
 
 // src/cli/commands/validate.ts
@@ -912,50 +925,70 @@ Fix the YAML syntax and retry.`);
 });
 
 // src/core/skill-drift.ts
-function analyzeDrift(input) {
-  const drifts = [];
-  const desc = input.description;
-  const body = input.content;
-  const hasTriggers = desc.includes("use when") || desc.includes("Use when") || desc.includes("trigger") || desc.includes("invoke");
-  drifts.push({
+function checkTrigger(input) {
+  const hasTriggers = input.description.includes("use when") || input.description.includes("Use when") || input.description.includes("trigger") || input.description.includes("invoke");
+  return {
     drifted: !hasTriggers,
     category: "Trigger",
     detail: hasTriggers ? "Description includes activation phrases" : 'No trigger phrases found \u2014 add "Use when..." to description'
-  });
-  const hasSteps = /^\s*\d+\.\s/m.test(body) || /^\s*[-*]\s/m.test(body);
-  drifts.push({
+  };
+}
+function checkStructure(input) {
+  const hasSteps = /^\s*\d+\.\s/m.test(input.content) || /^\s*[-*]\s/m.test(input.content);
+  return {
     drifted: !hasSteps,
     category: "Structure",
     detail: hasSteps ? "Has step-by-step instructions" : "No ordered steps or checklists \u2014 agent needs a clear sequence to follow"
-  });
-  const hasImperative = /\b(Create|Add|Run|Install|Configure|Set|Build|Use|Check|Verify|Ensure)\b/.test(body);
-  drifts.push({
+  };
+}
+function checkVoice(input) {
+  const hasImperative = /\b(Create|Add|Run|Install|Configure|Set|Build|Use|Check|Verify|Ensure)\b/.test(input.content);
+  return {
     drifted: !hasImperative,
     category: "Voice",
     detail: hasImperative ? 'Uses imperative voice ("Do X" not "You might X")' : "Passive or suggestive phrasing \u2014 use direct imperatives"
-  });
-  const hasCode = body.includes("```");
-  drifts.push({
+  };
+}
+function checkExample(input) {
+  const hasCode = input.content.includes("```");
+  return {
     drifted: !hasCode,
     category: "Example",
     detail: hasCode ? "Has code examples" : "No code blocks found \u2014 add examples if the skill involves code"
-  });
-  const hasConstraints = /\bMUST\b/.test(body) || /\bMUST NOT\b/.test(body);
-  drifts.push({
+  };
+}
+function checkGuardrail(input) {
+  const hasConstraints = /\bMUST\b/.test(input.content) || /\bMUST NOT\b/.test(input.content);
+  return {
     drifted: !hasConstraints,
     category: "Guardrail",
     detail: hasConstraints ? "Has MUST/MUST NOT constraints" : "No explicit constraints \u2014 add MUST / MUST NOT guardrails"
-  });
-  const ambiguous = body.match(/\b(maybe|possibly|consider|you might want to|perhaps)\b/gi);
-  const hasDriftedClarity = ambiguous && ambiguous.length > 0;
-  drifts.push({
-    drifted: !!hasDriftedClarity,
-    category: "Clarity",
-    detail: hasDriftedClarity ? `Ambiguous phrasing detected: ${ambiguous.slice(0, 3).join(", ")}` : "No ambiguous language found"
-  });
-  const driftCount = drifts.filter((d) => d.drifted).length;
-  return { drifts, driftCount, total: drifts.length };
+  };
 }
+function checkClarity(input) {
+  const ambiguous = input.content.match(/\b(maybe|possibly|consider|you might want to|perhaps)\b/gi);
+  const drifted = !!ambiguous && ambiguous.length > 0;
+  return {
+    drifted,
+    category: "Clarity",
+    detail: drifted ? `Ambiguous phrasing detected: ${ambiguous.slice(0, 3).join(", ")}` : "No ambiguous language found"
+  };
+}
+function analyzeDrift(input) {
+  const drifts = checks2.map((check) => check(input));
+  return { drifts, driftCount: drifts.filter((d) => d.drifted).length, total: drifts.length };
+}
+var checks2;
+var init_skill_drift = __esm(() => {
+  checks2 = [
+    checkTrigger,
+    checkStructure,
+    checkVoice,
+    checkExample,
+    checkGuardrail,
+    checkClarity
+  ];
+});
 
 // src/cli/commands/drift.ts
 var exports_drift = {};
@@ -969,6 +1002,7 @@ var init_drift = __esm(() => {
   init_dist();
   init_out();
   init_frontmatter();
+  init_skill_drift();
   import_picocolors3 = __toESM(require_picocolors(), 1);
   drift_default = defineCommand({
     meta: {
@@ -3419,23 +3453,24 @@ Project-specific decisions.
 init_dist();
 // package.json
 var package_default = {
-  name: "doraval",
-  version: "0.2.8",
+  name: "@hacksmith/doraval",
+  version: "0.2.11",
   author: "Saif",
   repository: {
     type: "git",
-    url: "https://github.com/saif-shines/doraval.git"
+    url: "git+https://github.com/saif-shines/doraval.git"
   },
   devDependencies: {
     "@types/bun": "latest"
   },
   bin: {
-    doraval: "./bin/doraval.js",
-    dora: "./bin/doraval.js"
+    doraval: "bin/doraval-wrapper.js",
+    dora: "bin/doraval-wrapper.js"
   },
   description: "The context engineering toolkit for coding agents",
   engines: {
-    bun: ">=1.2.0"
+    bun: ">=1.2.0",
+    node: ">=14.18.0"
   },
   files: [
     "bin/",
@@ -3463,7 +3498,7 @@ var package_default = {
     build: "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun",
     dev: "bun run ./src/cli/index.ts",
     test: "bun test",
-    prepublish: `node -e "const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}"`,
+    prepublishOnly: `bun run build && node -e "const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}"`,
     bump: "bun run scripts/bump.ts",
     publish: "bunx jsr publish",
     "site:dev": "cd apps/website && bun run dev",

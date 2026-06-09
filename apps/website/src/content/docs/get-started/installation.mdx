@@ -5,38 +5,65 @@ sidebar:
   order: 2
 ---
 
-doraval requires [Bun](https://bun.sh) v1.2 or later.
+doraval is published on [JSR](https://jsr.io/@hacksmith/doraval) as **`@hacksmith/doraval`**.
 
-## Global install
+It is **not** on the npm registry — `npx doraval` and `bunx doraval` will 404.
 
-```bash
-bun install -g doraval
-```
+## 1. Install Bun (required)
 
-Then run from anywhere:
+doraval is a **Bun CLI**. Having Node.js installed is not enough.
 
 ```bash
-doraval skill validate ./path/to/skill/
+curl -fsSL https://bun.sh/install | bash   # macOS/Linux
 ```
 
-## Run without installing
+See [bun.sh/docs/installation](https://bun.sh/docs/installation) for Windows and other platforms. Requires Bun **v1.2+**.
+
+## 2. Run doraval
+
+**One-off (recommended)** — no global install:
 
 ```bash
-bunx doraval skill validate ./path/to/skill/
+# Bun users
+bunx jsr @hacksmith/doraval validate .
+
+# Node/npm users (still requires Bun — doraval runs on Bun, not Node)
+npx jsr @hacksmith/doraval validate .
 ```
 
-## JSR
+Both commands download from JSR and invoke the CLI.
 
-doraval is published on [JSR](https://jsr.io/@hacksmith/doraval) as `@hacksmith/doraval`:
+## `jsr add` is not a global CLI install
+
+`npx jsr add @hacksmith/doraval` adds doraval as a **project dependency**. It does **not** put `dora` or `doraval` on your shell PATH.
+
+To run the CLI, use `npx jsr @hacksmith/doraval` (no `add`):
 
 ```bash
-bunx jsr add @hacksmith/doraval
+npx jsr @hacksmith/doraval validate .
 ```
+
+Optional shorthand — add to `~/.zshrc`:
+
+```bash
+alias dora='npx jsr @hacksmith/doraval'
+```
+
+## What does not work
+
+| Command | Why |
+|---------|-----|
+| `npx doraval …` | Package is not on npmjs.org |
+| `bunx doraval …` | Same — looks up npm, not JSR |
+| `npx jsr add …` then `dora` | `add` installs a library dep, not a global binary |
+| `node …` / Deno only | CLI uses Bun APIs (`Bun.file`, etc.) |
+
+**Node users:** use `npx jsr @hacksmith/doraval` to fetch the tool, but install **Bun** first to run it. There is no Node-native build today.
 
 ## Verify
 
 ```bash
-doraval --help
+bunx jsr @hacksmith/doraval --help
 ```
 
-Expected output shows the top-level help with the `skill` subcommand.
+Expected output shows the top-level help with `validate`, `skill`, and `journal` subcommands.
