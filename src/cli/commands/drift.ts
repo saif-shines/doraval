@@ -1,9 +1,8 @@
 import { defineCommand } from "citty";
-import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
 import { ui } from "../out.js";
-import { parseFrontmatter } from "../../core/frontmatter.js";
+import { loadSkillFromDir } from "../../core/skill-validate.js";
 import { analyzeDrift } from "../../core/skill-drift.js";
 
 export default defineCommand({
@@ -43,23 +42,20 @@ export default defineCommand({
   async run({ args }) {
     const targetPath = args.path;
     const fullPath = resolve(targetPath);
-    const skillMd = resolve(fullPath, "SKILL.md");
 
-    if (!existsSync(skillMd)) {
-      ui.fail(
-        `No SKILL.md found at ${targetPath}\n\nCheck that the path points to a skill directory containing SKILL.md.`
-      );
+    const loaded = await loadSkillFromDir(fullPath);
+    if (!loaded.ok) {
+      if (loaded.error === "No SKILL.md found") {
+        ui.fail(
+          `No SKILL.md found at ${targetPath}\n\nCheck that the path points to a skill directory containing SKILL.md.`
+        );
+      } else {
+        ui.fail("Failed to parse YAML frontmatter in SKILL.md");
+      }
       process.exit(1);
     }
 
-    const raw = await Bun.file(skillMd).text();
-    let parsed;
-    try {
-      parsed = parseFrontmatter(raw);
-    } catch {
-      ui.fail("Failed to parse YAML frontmatter in SKILL.md");
-      process.exit(1);
-    }
+    const { model: parsed } = loaded;
 
     const desc = String(parsed.data.description || "");
     const when = String(parsed.data.when_to_use || "");

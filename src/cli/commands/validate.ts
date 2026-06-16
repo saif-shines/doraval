@@ -3,10 +3,7 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
 import { ui } from "../out.js";
-import { parseFrontmatter } from "../../core/frontmatter.js";
-import { validateSkillModel } from "../../core/skill-validate.js";
-
-const OPTIONAL_DIRS = ["references", "scripts", "assets"] as const;
+import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
 
 export default defineCommand({
   meta: {
@@ -53,28 +50,21 @@ export default defineCommand({
       process.exit(1);
     }
 
-    const skillMd = resolve(fullPath, "SKILL.md");
-    if (!existsSync(skillMd)) {
-      ui.fail(
-        `No skill or plugin found at ${targetPath}\n\nSearched for:\n  • SKILL.md (Agent Skills spec)\n  • .claude-plugin/plugin.json (Claude Code plugin)\n\nTry:\n  • Check the path points to a skill or plugin directory\n  • Use --for to target a specific validator`
-      );
+    const loaded = await loadSkillFromDir(fullPath);
+    if (!loaded.ok) {
+      if (loaded.error === "No SKILL.md found") {
+        ui.fail(
+          `No skill or plugin found at ${targetPath}\n\nSearched for:\n  • SKILL.md (Agent Skills spec)\n  • .claude-plugin/plugin.json (Claude Code plugin)\n\nTry:\n  • Check the path points to a skill or plugin directory\n  • Use --for to target a specific validator`
+        );
+      } else {
+        ui.fail(
+          `Failed to parse YAML frontmatter in SKILL.md\n\nFix the YAML syntax and retry.`
+        );
+      }
       process.exit(1);
     }
 
-    const raw = await Bun.file(skillMd).text();
-    let parsed;
-    try {
-      parsed = parseFrontmatter(raw);
-    } catch {
-      ui.fail(
-        `Failed to parse YAML frontmatter in SKILL.md\n\nFix the YAML syntax and retry.`
-      );
-      process.exit(1);
-    }
-
-    const existingDirs = OPTIONAL_DIRS.filter((dir) =>
-      existsSync(resolve(fullPath, dir))
-    );
+    const { model: parsed, existingDirs } = loaded;
     const { errors, warnings, passes } = validateSkillModel(parsed, {
       existingDirs: [...existingDirs],
     });
