@@ -11,9 +11,13 @@ export interface DoravalRunResult {
   stderr: string;
 }
 
-export function runDoraval(args: string[]): DoravalRunResult {
+export interface RunOptions {
+  cwd?: string;
+}
+
+export function runDoraval(args: string[], options: RunOptions = {}): DoravalRunResult {
   const result = spawnSync(["bun", "run", cliEntry, "--", ...args], {
-    cwd: repoRoot,
+    cwd: options.cwd ?? repoRoot,
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, NO_COLOR: "1" },

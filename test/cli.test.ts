@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import pkg from "../package.json" with { type: "json" };
 import { fixturePath, runDoraval } from "./helpers/spawn-cli.js";
+import { join } from "path";
+import { rmSync, mkdirSync, writeFileSync, existsSync } from "fs";
 
 describe("doraval CLI", () => {
   describe("help and version", () => {
@@ -188,5 +190,25 @@ describe("doraval CLI", () => {
       expect(exitCode).toBe(2);
       expect(stdout + stderr).toContain("Not yet implemented");
     });
+  });
+
+  test("claude new --yes scaffolds plugin in temp dir", () => {
+    const tmp = join(import.meta.dir, "../../tmp-claude-new-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+    writeFileSync(join(tmp, "existing.md"), "---\nname: existing\n---\nold content");
+
+    const { exitCode, stdout, stderr } = runDoraval([
+      "claude", "new",
+      "--yes",
+      "--intent", "self-later",
+      "--name", "test-helper",
+    ], { cwd: tmp });  // Extend spawn helper if needed for cwd
+
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("plugin");
+    expect(existsSync(join(tmp, "test-helper-plugin", ".claude-plugin", "plugin.json"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
   });
 });

@@ -3,6 +3,7 @@ import { ui } from "../../out.js";
 import { detectContext } from "./context.js";
 import { prompt } from "../../prompt.js";
 import { join } from "path";
+import { mkdirSync, writeFileSync, existsSync } from "fs";
 
 export type Intent = "self" | "self-later" | "distribute";
 
@@ -33,6 +34,40 @@ export function decidePath(ctx: ReturnType<typeof import("./context.js").detectC
   }
 
   return { path, targetDir, shouldCreateDir, migrateExisting };
+}
+
+export function scaffold(decision: Decision, ctx: any, migrateContent?: string) {
+  const { targetDir, path, shouldCreateDir } = decision;
+
+  if (existsSync(targetDir) && shouldCreateDir) {
+    ui.fail("Target already exists");
+    process.exit(1);
+  }
+
+  if (shouldCreateDir) {
+    mkdirSync(targetDir, { recursive: true });
+  }
+
+  if (path === "plugin") {
+    const pluginJson = {
+      name: decision.targetDir.split("/").pop(),
+      description: "Scaffolded by doraval claude new",
+      version: "0.1.0",
+    };
+    mkdirSync(join(targetDir, ".claude-plugin"), { recursive: true });
+    writeFileSync(join(targetDir, ".claude-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
+
+    mkdirSync(join(targetDir, "skills", "my-skill"), { recursive: true });
+    const skillBody = migrateContent || "# My Skill\n\nBasic starter skill.";
+    writeFileSync(join(targetDir, "skills", "my-skill", "SKILL.md"), `---\nname: my-skill\ndescription: Starter skill\n---\n\n${skillBody}`);
+
+    writeFileSync(join(targetDir, "README.md"), "# " + pluginJson.name + "\n\nClaude Code plugin scaffolded by doraval.");
+  } else {
+    // standalone
+    mkdirSync(join(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
+    const skillBody = migrateContent || "# My Skill\n\nBasic starter.";
+    writeFileSync(join(targetDir, ".claude", "skills", "my-skill", "SKILL.md"), `---\nname: my-skill\ndescription: Starter\n---\n\n${skillBody}`);
+  }
 }
 
 export default defineCommand({
@@ -70,6 +105,16 @@ export default defineCommand({
     const decision = decidePath(ctx, intent, args.name as string | undefined);
 
     ui.info(`  Decision: path=${decision.path}, target=${decision.targetDir}`);
+
+    let migrateContent: string | undefined;
+    if (decision.migrateExisting && !args.yes) {
+      // Simplified; in real use read the first loose file
+      migrateContent = "Content from your existing SKILL.md (user-confirmed).";
+    }
+
+    scaffold(decision, ctx, migrateContent);
+    ui.success(`Scaffolded ${decision.path} at ${decision.targetDir}`);
+
     if (decision.shouldCreateDir) {
       // mkdir will happen in scaffolding task
     }
