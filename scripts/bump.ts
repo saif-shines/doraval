@@ -17,7 +17,10 @@ const files = [
 function bumpVersion(current: string, type: string): string {
   if (/^\d+\.\d+\.\d+$/.test(type)) return type;
 
-  const [major, minor, patch] = current.split(".").map(Number);
+  const parts = current.split(".").map(Number);
+  const major = parts[0] ?? 0;
+  const minor = parts[1] ?? 0;
+  const patch = parts[2] ?? 0;
   switch (type) {
     case "patch": return `${major}.${minor}.${patch + 1}`;
     case "minor": return `${major}.${minor + 1}.0`;
