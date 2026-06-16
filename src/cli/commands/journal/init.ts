@@ -134,7 +134,7 @@ export default defineCommand({
         `  Repo:   ${pc.gray(existing.journal.repo)}`
       );
       ui.write(
-        `  Remote: ${existing.journal.projects[project].remote_path}\n`
+        `  Remote: ${existing.journal.projects[project]?.remote_path}\n`
       );
       ui.write(
         `  To refresh local files, run: ${pc.dim(pc.gray(`dora journal update`))}\n` +
