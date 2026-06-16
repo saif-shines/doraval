@@ -17,8 +17,13 @@ export function detectContext(cwd: string = process.cwd()): Context {
   let looseSkillFiles: string[] = [];
   try {
     const files = readdirSync(cwd);
-    looseSkillFiles = files.filter((f) => f.endsWith(".md") && !f.startsWith("."));
-    // More precise: read and check for frontmatter "name" or just treat .md as potential in this scope
+    looseSkillFiles = files.filter((f) => {
+      if (!f.endsWith(".md") || f.startsWith(".")) return false;
+      const lower = f.toLowerCase();
+      // Only treat as loose skill file if it looks like a skill (not README, changelog, etc.)
+      if (lower === "readme.md" || lower === "changelog.md" || lower === "license.md" || lower.includes("contributing")) return false;
+      return lower.includes("skill") || lower === "skill.md";
+    });
   } catch {}
 
   const isEmpty = !hasClaudeDir && !hasPluginManifest && looseSkillFiles.length === 0;

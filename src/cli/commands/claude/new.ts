@@ -16,22 +16,43 @@ export interface Decision {
 }
 
 export function decidePath(ctx: ReturnType<typeof import("./context.js").detectContext>, intent: Intent | undefined, providedName?: string): Decision {
-  const name = providedName || "my-skill";
+  const rawName = providedName || "";
   let path: "standalone" | "plugin" = "standalone";
   let targetDir = ctx.cwd;
   let shouldCreateDir = false;
   let migrateExisting = false;
 
+  const useCurrentDirAsRoot = rawName === "." || rawName === path.basename(ctx.cwd) || !rawName;
+
   if (intent === "distribute" || (intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasClaudeDir)) {
     path = "plugin";
-    targetDir = join(ctx.cwd, `${name}-plugin`);
-    shouldCreateDir = true;
+    if (useCurrentDirAsRoot) {
+      // User is already in the target dir (or passed .), scaffold plugin structure directly here
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
     migrateExisting = ctx.looseSkillFiles.length > 0;
   } else if (intent === "self-later" && !ctx.hasClaudeDir) {
-    // Could default to standalone with note, but per spec use plugin sibling for loose case
     path = "plugin";
-    targetDir = join(ctx.cwd, `${name}-plugin`);
-    shouldCreateDir = true;
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+  } else if (path === "standalone") {
+    // For standalone, support in-place too if . or no name
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
   }
 
   return { path, targetDir, shouldCreateDir, migrateExisting };
@@ -94,7 +115,7 @@ export default defineCommand({
     },
   },
   run({ args }) {
-    ui.heading("doraval claude new — Context-aware scaffolding (stub)");
+    ui.heading("doraval claude new — Context-aware scaffolding");
     const ctx = detectContext();
     let intent: Intent = (args.intent as Intent) || "self-later";
     if (!args.yes) {
