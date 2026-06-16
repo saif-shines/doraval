@@ -21,11 +21,11 @@ We renamed score to drift because "score" implies a generic quality rating.
 
     const entries = parseJournalEntries(raw);
     expect(entries).toHaveLength(1);
-    expect(entries[0].title).toBe('Use "drift" not "score"');
-    expect(entries[0].pushback).toBe(7);
-    expect(entries[0].tags).toEqual(["naming", "cli"]);
-    expect(entries[0].status).toBe("active");
-    expect(entries[0].rationale).toContain("We renamed score to drift");
+    expect(entries[0]!.title).toBe('Use "drift" not "score"');
+    expect(entries[0]!.pushback).toBe(7);
+    expect(entries[0]!.tags).toEqual(["naming", "cli"]);
+    expect(entries[0]!.status).toBe("active");
+    expect(entries[0]!.rationale).toContain("We renamed score to drift");
   });
 
   test("parses multiple entries", () => {
@@ -58,10 +58,10 @@ Rationale for second.
 
     const entries = parseJournalEntries(raw);
     expect(entries).toHaveLength(2);
-    expect(entries[0].title).toBe("First decision");
-    expect(entries[1].title).toBe("Second decision");
-    expect(entries[1].status).toBe("superseded");
-    expect(entries[1].superseded_by).toBe("Use better testing approach");
+    expect(entries[0]!.title).toBe("First decision");
+    expect(entries[1]!.title).toBe("Second decision");
+    expect(entries[1]!.status).toBe("superseded");
+    expect(entries[1]!.superseded_by).toBe("Use better testing approach");
   });
 
   test("is lenient with malformed entries (skips them but continues)", () => {
@@ -117,7 +117,7 @@ Minimal rationale.
 `;
 
     const entries = parseJournalEntries(raw);
-    expect(entries[0].superseded_by).toBeUndefined();
+    expect(entries[0]!.superseded_by).toBeUndefined();
   });
 
   test("returns empty array for empty or header-only content", () => {
@@ -145,7 +145,7 @@ It can have multiple paragraphs.
 `;
 
     const entries = parseJournalEntries(raw);
-    expect(entries[0].rationale).toContain("This is the rationale.");
-    expect(entries[0].rationale).toContain("And lists");
+    expect(entries[0]!.rationale).toContain("This is the rationale.");
+    expect(entries[0]!.rationale).toContain("And lists");
   });
 });

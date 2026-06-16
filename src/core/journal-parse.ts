@@ -57,10 +57,10 @@ export function parseJournalEntriesWithWarnings(raw: string): ParseResult {
   }
 
   for (let i = 0; i < matches.length; i++) {
-    const match = matches[i];
-    const title = match[1].trim();
+    const match = matches[i]!;
+    const title = match[1]!.trim();
     const start = match.index! + match[0].length;
-    const end = i + 1 < matches.length ? matches[i + 1].index! : raw.length;
+    const end = i + 1 < matches.length ? matches[i + 1]!.index! : raw.length;
 
     const sectionBody = raw.slice(start, end).trim();
 
@@ -71,7 +71,7 @@ export function parseJournalEntriesWithWarnings(raw: string): ParseResult {
       continue;
     }
 
-    const yamlContent = yamlFenceMatch[1];
+    const yamlContent = yamlFenceMatch[1]!;
     let meta: Record<string, unknown> = {};
     try {
       const parsed = YAML.parse(yamlContent);
@@ -84,7 +84,7 @@ export function parseJournalEntriesWithWarnings(raw: string): ParseResult {
     }
 
     // Extract rationale: everything after the closing ``` of the YAML block
-    const yamlBlockEnd = sectionBody.indexOf(yamlFenceMatch[0]) + yamlFenceMatch[0].length;
+    const yamlBlockEnd = sectionBody.indexOf(yamlFenceMatch[0]!) + yamlFenceMatch[0]!.length;
     const rationale = sectionBody.slice(yamlBlockEnd).trim();
 
     const pushback = Number(meta.pushback);
@@ -93,8 +93,8 @@ export function parseJournalEntriesWithWarnings(raw: string): ParseResult {
                : Array.isArray(meta.scope) ? (meta.scope as string[])
                : [];
     const author = typeof meta.author === "string" ? meta.author : "human";
-    const date = typeof meta.date === "string" ? meta.date : "";
-    const status = (meta.status as JournalEntry["status"]) || "active";
+    const date = (typeof meta.date === "string" ? meta.date : "") ?? "";
+    const status = ((meta.status as JournalEntry["status"]) || "active") ?? "active";
     const superseded_by =
       typeof meta.superseded_by === "string" ? meta.superseded_by : undefined;
 
