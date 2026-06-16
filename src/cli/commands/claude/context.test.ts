@@ -1,5 +1,6 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 import { detectContext } from "./context.js";
+import { decidePath } from "./new.js";
 import { mkdirSync, writeFileSync, rmSync } from "fs";
 import { join } from "path";
 
@@ -34,5 +35,13 @@ describe("claude context detection", () => {
     expect(ctx.looseSkillFiles.length).toBe(1);
     expect(ctx.hasClaudeDir).toBe(false);
     expect(ctx.hasPluginManifest).toBe(false);
+  });
+
+  test("decides plugin sibling for loose SKILL + self-later", () => {
+    const ctx = { cwd: "/tmp", hasClaudeDir: false, hasPluginManifest: false, looseSkillFiles: ["/tmp/foo.md"], isEmpty: false };
+    const d = decidePath(ctx as any, "self-later", "my-helper");
+    expect(d.path).toBe("plugin");
+    expect(d.targetDir).toContain("my-helper-plugin");
+    expect(d.migrateExisting).toBe(true);
   });
 });
