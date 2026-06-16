@@ -2624,17 +2624,17 @@ __export(exports_new, {
   default: () => new_default,
   decidePath: () => decidePath
 });
-import { join as join8 } from "path";
+import { join as join8, basename as basename2 } from "path";
 import { mkdirSync as mkdirSync2, writeFileSync, existsSync as existsSync9 } from "fs";
 function decidePath(ctx, intent, providedName) {
   const rawName = providedName || "";
-  let path = "standalone";
+  let decisionPath = "standalone";
   let targetDir = ctx.cwd;
   let shouldCreateDir = false;
   let migrateExisting = false;
-  const useCurrentDirAsRoot = rawName === "." || rawName === path.basename(ctx.cwd) || !rawName;
+  const useCurrentDirAsRoot = rawName === "." || rawName === basename2(ctx.cwd) || !rawName;
   if (intent === "distribute" || intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasClaudeDir) {
-    path = "plugin";
+    decisionPath = "plugin";
     if (useCurrentDirAsRoot) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
@@ -2644,7 +2644,7 @@ function decidePath(ctx, intent, providedName) {
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
   } else if (intent === "self-later" && !ctx.hasClaudeDir) {
-    path = "plugin";
+    decisionPath = "plugin";
     if (useCurrentDirAsRoot) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
@@ -2652,7 +2652,7 @@ function decidePath(ctx, intent, providedName) {
       targetDir = join8(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
-  } else if (path === "standalone") {
+  } else if (decisionPath === "standalone") {
     if (useCurrentDirAsRoot) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
@@ -2661,7 +2661,7 @@ function decidePath(ctx, intent, providedName) {
       shouldCreateDir = true;
     }
   }
-  return { path, targetDir, shouldCreateDir, migrateExisting };
+  return { path: decisionPath, targetDir, shouldCreateDir, migrateExisting };
 }
 function scaffold(decision, ctx, migrateContent) {
   const { targetDir, path, shouldCreateDir } = decision;
@@ -2673,13 +2673,25 @@ function scaffold(decision, ctx, migrateContent) {
     mkdirSync2(targetDir, { recursive: true });
   }
   if (path === "plugin") {
+    const pluginName = basename2(targetDir);
     const pluginJson = {
-      name: decision.targetDir.split("/").pop(),
+      name: pluginName,
       description: "Scaffolded by doraval claude new",
       version: "0.1.0"
     };
     mkdirSync2(join8(targetDir, ".claude-plugin"), { recursive: true });
     writeFileSync(join8(targetDir, ".claude-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
+    const marketplaceJson = {
+      name: pluginName,
+      version: "0.1.0",
+      description: "Scaffolded by doraval claude new",
+      author: { name: "" },
+      homepage: "",
+      repository: "",
+      license: "MIT",
+      keywords: ["claude-code", "skills", "plugin"]
+    };
+    writeFileSync(join8(targetDir, "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
     mkdirSync2(join8(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
@@ -2706,9 +2718,12 @@ When you need to check a skill or plugin:
 Always run \`doraval validate\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
     }
     writeFileSync(join8(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    writeFileSync(join8(targetDir, "README.md"), "# " + pluginJson.name + `
+    const readmePath = join8(targetDir, "README.md");
+    if (!existsSync9(readmePath)) {
+      writeFileSync(readmePath, "# " + pluginName + `
 
 Claude Code plugin scaffolded by doraval.`);
+    }
   } else {
     mkdirSync2(join8(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
@@ -2768,7 +2783,12 @@ var init_new = __esm(() => {
       scaffold(decision, ctx, migrateContent);
       ui.write(`
   ${import_picocolors10.default.green("\u2713")} Created ${decision.path} at ${import_picocolors10.default.bold(decision.targetDir)}`);
-      ui.info(`  Command: ${decision.path === "plugin" ? `/${decision.targetDir.split("/").pop()}:doraval` : "/my-skill"}`);
+      const cmdName = decision.path === "plugin" ? `/${basename2(decision.targetDir)}:doraval` : "/my-skill";
+      ui.info(`  Command: ${cmdName}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Claude: .claude-plugin/plugin.json`);
+        ui.info(`  Marketplace: marketplace.json (unified / cross-provider listings)`);
+      }
       ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
       ui.info(`  Validate: doraval validate ${decision.targetDir}`);
       if (decision.path === "plugin" && decision.migrateExisting) {
@@ -2779,9 +2799,445 @@ var init_new = __esm(() => {
   });
 });
 
+// src/cli/commands/bump.ts
+var exports_bump = {};
+__export(exports_bump, {
+  default: () => bump_default
+});
+import { resolve as resolve3, join as join9, dirname, relative } from "path";
+import { existsSync as existsSync10, readFileSync, writeFileSync as writeFileSync2, readdirSync as readdirSync4, statSync } from "fs";
+function bumpVersion(current, type) {
+  if (/^\d+\.\d+\.\d+$/.test(type))
+    return type;
+  const curr = current || "0.0.0";
+  const parts = curr.split(".").map((n) => parseInt(n, 10) || 0);
+  const [major = 0, minor = 0, patch = 0] = parts;
+  switch (type) {
+    case "patch":
+      return `${major}.${minor}.${patch + 1}`;
+    case "minor":
+      return `${major}.${minor + 1}.0`;
+    case "major":
+      return `${major + 1}.0.0`;
+    default:
+      throw new Error(`Invalid bump type "${type}". Use patch, minor, major, or an exact version like 1.2.3`);
+  }
+}
+function readJson(p) {
+  try {
+    const content = readFileSync(p, "utf8");
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+function writeJson(p, data) {
+  writeFileSync2(p, JSON.stringify(data, null, 2) + `
+`, "utf8");
+}
+function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
+  const results = [];
+  if (currentDepth > maxDepth)
+    return results;
+  let entries;
+  try {
+    entries = readdirSync4(dir);
+  } catch {
+    return results;
+  }
+  for (const entry of entries) {
+    const full = join9(dir, entry);
+    let st;
+    try {
+      st = statSync(full);
+    } catch {
+      continue;
+    }
+    if (st.isDirectory()) {
+      const sub = walkForTargets(full, maxDepth, currentDepth + 1);
+      results.push(...sub);
+    } else if (st.isFile()) {
+      if (entry === "plugin.json") {
+        const parentDir = dirname(full);
+        const parentName = parentDir.split(/[/\\]/).pop();
+        if (parentName === ".claude-plugin" || parentName === ".codex-plugin") {
+          results.push({
+            file: full,
+            kind: "plugin",
+            label: `plugin manifest (${parentName.replace(".", "")})`
+          });
+        }
+      } else if (entry === "marketplace.json") {
+        const json = readJson(full);
+        if (json && typeof json.version === "string") {
+          results.push({
+            file: full,
+            kind: "marketplace",
+            label: "marketplace.json"
+          });
+        }
+      }
+    }
+  }
+  return results;
+}
+var import_picocolors11, bump_default;
+var init_bump = __esm(() => {
+  init_dist();
+  init_out();
+  import_picocolors11 = __toESM(require_picocolors(), 1);
+  bump_default = defineCommand({
+    meta: {
+      name: "bump",
+      description: "Bump semver versions in plugin.json (manifests) and marketplace.json files for Claude/Codex plugins"
+    },
+    args: {
+      type: {
+        type: "positional",
+        description: "patch | minor | major | x.y.z (exact version)",
+        required: false
+      },
+      path: {
+        type: "positional",
+        description: "Directory to scan from (defaults to current dir). Supports single plugin or marketplace root with many plugins/",
+        required: false
+      },
+      only: {
+        type: "string",
+        description: 'Scope to "all" (default), "plugin" (only plugin.json manifests), or "marketplace" (only marketplace.json files that carry a top-level version)',
+        default: "all"
+      }
+    },
+    run({ args }) {
+      let rawType = args.type || "patch";
+      let targetPath = args.path || ".";
+      const scopeInput = (args.only || "all").toLowerCase();
+      const scope = scopeInput === "plugin" || scopeInput === "marketplace" ? scopeInput : "all";
+      if (!["all", "plugin", "marketplace"].includes(scopeInput)) {
+        ui.fail(`Invalid --only "${args.only}". Allowed: all, plugin, marketplace.`);
+        process.exit(1);
+      }
+      const isKnownType = ["patch", "minor", "major"].includes(rawType) || /^\d+\.\d+\.\d+$/.test(rawType);
+      const maybePath = resolve3(rawType);
+      const looksLikeDir = existsSync10(maybePath) || rawType === "." || rawType.startsWith("./") || rawType.startsWith("../");
+      if (!isKnownType && looksLikeDir) {
+        targetPath = rawType;
+        rawType = "patch";
+      } else if (!isKnownType) {
+        ui.fail(`Unknown bump type "${rawType}". Use patch | minor | major | 1.2.3`);
+        process.exit(1);
+      }
+      const root = resolve3(targetPath);
+      if (!existsSync10(root)) {
+        ui.fail(`Path does not exist: ${root}`);
+        process.exit(1);
+      }
+      ui.heading("doraval bump");
+      ui.info(`  scanning: ${root}`);
+      ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow)`);
+      const discovered = walkForTargets(root);
+      let targets = discovered;
+      if (scope === "plugin") {
+        targets = discovered.filter((t) => t.kind === "plugin");
+      } else if (scope === "marketplace") {
+        targets = discovered.filter((t) => t.kind === "marketplace");
+      }
+      if (targets.length === 0) {
+        ui.fail("No matching files found under the scope.");
+        ui.info("");
+        ui.info("  Looked for (recursively):");
+        ui.info("    \u2022 **/.claude-plugin/plugin.json");
+        ui.info("    \u2022 **/.codex-plugin/plugin.json");
+        ui.info('    \u2022 **/marketplace.json (only those with a top-level "version" string)');
+        ui.info("");
+        ui.info("  Tip: run from inside a plugin directory, or pass a path that contains plugins/.");
+        ui.info("  Examples:");
+        ui.info("    dora bump minor");
+        ui.info("    dora bump minor ./my-claude-plugin");
+        ui.info("    dora bump --only plugin .          # only the manifests");
+        ui.info("    dora bump --only marketplace ./marketplaces-root");
+        process.exit(1);
+      }
+      ui.info(`  matched ${targets.length} file(s)`);
+      let bumpedCount = 0;
+      for (const t of targets) {
+        const json = readJson(t.file);
+        if (!json || typeof json !== "object") {
+          ui.warnItem(`skipped (invalid JSON): ${relative(root, t.file)}`);
+          continue;
+        }
+        const current = typeof json.version === "string" ? json.version : undefined;
+        let next;
+        try {
+          next = bumpVersion(current, rawType);
+        } catch (err) {
+          ui.fail(err.message || String(err));
+          process.exit(1);
+        }
+        const relPath = relative(root, t.file);
+        if (current === next) {
+          ui.dim(`  \u2022 ${t.label}  ${current || "(no version)"}  (no change)  [${relPath}]`);
+          continue;
+        }
+        json.version = next;
+        writeJson(t.file, json);
+        ui.success(`${t.label}: ${import_picocolors11.default.dim(current || "(none)")} \u2192 ${import_picocolors11.default.green(next)}`);
+        ui.info(`    ${relPath}`);
+        bumpedCount++;
+      }
+      ui.blank();
+      if (bumpedCount === 0) {
+        ui.info("All matched files were already at the target version.");
+      } else {
+        ui.info(`Done. Bumped ${bumpedCount} file(s).`);
+        ui.dim("  Next: doraval validate " + (targetPath === "." ? "." : targetPath));
+      }
+      process.exit(0);
+    }
+  });
+});
+
+// src/cli/commands/codex/context.ts
+import { existsSync as existsSync11, readdirSync as readdirSync5 } from "fs";
+import { join as join10 } from "path";
+function detectContext2(cwd = process.cwd()) {
+  const hasCodexDir = existsSync11(join10(cwd, ".codex"));
+  const hasPluginManifest = existsSync11(join10(cwd, ".codex-plugin", "plugin.json"));
+  const hasMarketplace = existsSync11(join10(cwd, ".agents", "plugins", "marketplace.json")) || existsSync11(join10(cwd, ".codex-plugin", "marketplace.json"));
+  let looseSkillFiles = [];
+  try {
+    const files = readdirSync5(cwd);
+    looseSkillFiles = files.filter((f) => {
+      if (!f.endsWith(".md") || f.startsWith("."))
+        return false;
+      const lower = f.toLowerCase();
+      if (lower === "readme.md" || lower === "changelog.md" || lower === "license.md" || lower.includes("contributing"))
+        return false;
+      return lower.includes("skill") || lower === "skill.md";
+    });
+  } catch {}
+  const isEmpty = !hasPluginManifest && looseSkillFiles.length === 0;
+  return {
+    cwd,
+    hasCodexDir,
+    hasPluginManifest,
+    hasMarketplace,
+    looseSkillFiles,
+    isEmpty
+  };
+}
+var init_context2 = () => {};
+
+// src/cli/commands/codex/new.ts
+var exports_new2 = {};
+__export(exports_new2, {
+  scaffold: () => scaffold2,
+  default: () => new_default2,
+  decidePath: () => decidePath2
+});
+import { join as join11, basename as basename3 } from "path";
+import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync3, existsSync as existsSync12 } from "fs";
+function decidePath2(ctx, intent, providedName) {
+  const rawName = providedName || "";
+  let decisionPath = "standalone";
+  let targetDir = ctx.cwd;
+  let shouldCreateDir = false;
+  let migrateExisting = false;
+  const useCurrentDirAsRoot = rawName === "." || rawName === basename3(ctx.cwd) || !rawName;
+  if (intent === "distribute" || intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasPluginManifest) {
+    decisionPath = "plugin";
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join11(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+    migrateExisting = ctx.looseSkillFiles.length > 0;
+  } else if (intent === "self-later" && !ctx.hasPluginManifest) {
+    decisionPath = "plugin";
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join11(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+  } else if (decisionPath === "standalone") {
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join11(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+  }
+  return { path: decisionPath, targetDir, shouldCreateDir, migrateExisting };
+}
+function scaffold2(decision, ctx, migrateContent) {
+  const { targetDir, path, shouldCreateDir } = decision;
+  if (existsSync12(targetDir) && shouldCreateDir) {
+    ui.fail("Target already exists");
+    process.exit(1);
+  }
+  if (shouldCreateDir) {
+    mkdirSync3(targetDir, { recursive: true });
+  }
+  if (path === "plugin") {
+    const pluginName = basename3(targetDir);
+    const pluginJson = {
+      name: pluginName,
+      version: "0.1.0",
+      description: "Scaffolded by doraval codex new",
+      skills: "./skills/",
+      interface: {
+        displayName: pluginName,
+        shortDescription: "Scaffolded starter plugin",
+        category: "Productivity"
+      }
+    };
+    mkdirSync3(join11(targetDir, ".codex-plugin"), { recursive: true });
+    writeFileSync3(join11(targetDir, ".codex-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
+    mkdirSync3(join11(targetDir, ".agents", "plugins"), { recursive: true });
+    const marketplaceJson = {
+      name: "local",
+      interface: {
+        displayName: "Local (doraval scaffold)"
+      },
+      plugins: [
+        {
+          name: pluginName,
+          source: {
+            source: "local",
+            path: "../.."
+          },
+          policy: {
+            installation: "AVAILABLE",
+            authentication: "ON_INSTALL"
+          },
+          category: "Productivity"
+        }
+      ]
+    };
+    writeFileSync3(join11(targetDir, ".agents", "plugins", "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
+    const demoSkillName = "doraval";
+    mkdirSync3(join11(targetDir, "skills", demoSkillName), { recursive: true });
+    let skillContent;
+    if (migrateContent) {
+      skillContent = migrateContent;
+    } else {
+      skillContent = `---
+name: ${demoSkillName}
+description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents (works for Codex too).
+---
+
+# Use Doraval (Codex edition)
+
+Doraval is the context engineering toolkit.
+
+When you need to check a skill or Codex plugin:
+
+- Validate the current directory: \`doraval validate .\`
+- Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
+- Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
+- Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
+
+Always run \`doraval validate\` before sharing or publishing a plugin.
+
+This skill demonstrates a complete, self-referential example of using doraval inside a generated Codex plugin.
+
+To test in Codex:
+1. Make sure this plugin is listed in a marketplace (we created .agents/plugins/marketplace.json for you).
+2. Restart Codex.
+3. Open the plugin directory, select your local marketplace, and enable the plugin.
+4. Invoke the demo with /${pluginName}:doraval`;
+    }
+    writeFileSync3(join11(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join11(targetDir, "README.md");
+    if (!existsSync12(readmePath)) {
+      writeFileSync3(readmePath, "# " + pluginName + `
+
+Codex plugin scaffolded by doraval.`);
+    }
+  } else {
+    mkdirSync3(join11(targetDir, "skills", "doraval"), { recursive: true });
+    const skillBody = migrateContent || `# My Skill
+
+Basic starter for Codex.`;
+    writeFileSync3(join11(targetDir, "skills", "doraval", "SKILL.md"), `---
+name: doraval
+description: Starter (local skill)
+---
+
+${skillBody}`);
+  }
+}
+var import_picocolors12, new_default2;
+var init_new2 = __esm(() => {
+  init_dist();
+  init_out();
+  init_context2();
+  init_prompt();
+  import_picocolors12 = __toESM(require_picocolors(), 1);
+  new_default2 = defineCommand({
+    meta: {
+      name: "new",
+      description: "Create a new skill or plugin following Codex packaging rules"
+    },
+    args: {
+      name: {
+        type: "positional",
+        description: "Optional name for the skill or plugin",
+        required: false
+      },
+      yes: {
+        type: "boolean",
+        description: "Skip interactive prompts (use defaults and flags)",
+        default: false
+      },
+      intent: {
+        type: "string",
+        description: 'Intent: "self" | "self-later" | "distribute"',
+        required: false
+      }
+    },
+    run({ args }) {
+      ui.heading("doraval codex new \u2014 Context-aware scaffolding");
+      const ctx = detectContext2();
+      let intent = args.intent || "self-later";
+      if (!args.yes) {
+        const ans = prompt("  Intent (self | self-later | distribute)", intent);
+        intent = ans || intent;
+      }
+      const decision = decidePath2(ctx, intent, args.name);
+      ui.info(`  Decision: path=${decision.path}, target=${decision.targetDir}`);
+      let migrateContent;
+      if (decision.migrateExisting && !args.yes) {
+        migrateContent = "Content from your existing SKILL.md (user-confirmed).";
+      }
+      scaffold2(decision, ctx, migrateContent);
+      ui.write(`
+  ${import_picocolors12.default.green("\u2713")} Created ${decision.path} at ${import_picocolors12.default.bold(decision.targetDir)}`);
+      const cmdName = decision.path === "plugin" ? `/${basename3(decision.targetDir)}:doraval` : "/doraval (local skill)";
+      ui.info(`  Command: ${cmdName}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Codex manifest: .codex-plugin/plugin.json`);
+        ui.info(`  Marketplace catalog: .agents/plugins/marketplace.json (starter for local testing)`);
+        ui.info(`  (Move/expand the marketplace.json to $REPO_ROOT/.agents/plugins/ or ~/.agents/plugins/ as needed)`);
+      }
+      ui.info(`  Test (local): restart Codex, select your marketplace in the plugin directory`);
+      ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+      if (decision.path === "plugin" && decision.migrateExisting) {
+        ui.info("  (Existing content migrated where confirmed.)");
+      }
+      process.exit(0);
+    }
+  });
+});
+
 // src/validators/claude/skill.ts
-import { existsSync as existsSync10 } from "fs";
-import { resolve as resolve3 } from "path";
+import { existsSync as existsSync13 } from "fs";
+import { resolve as resolve4 } from "path";
 var OPTIONAL_DIRS2, claudeSkillValidator;
 var init_skill = __esm(() => {
   init_frontmatter();
@@ -2793,10 +3249,10 @@ var init_skill = __esm(() => {
     name: "Claude Skill",
     description: "Validates SKILL.md per current Claude Code spec: frontmatter (name/description relaxed to recommended; directory name usually provides the /command), body, supporting files, dynamic injection (!`cmd`), substitutions ($ARGUMENTS, ${CLAUDE_*}), and advanced fields (allowed-tools, context, disable-model-invocation, when_to_use, etc.)",
     detect(dir) {
-      return existsSync10(resolve3(dir, "SKILL.md"));
+      return existsSync13(resolve4(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
-      const skillMd = resolve3(dir, "SKILL.md");
+      const skillMd = resolve4(dir, "SKILL.md");
       const raw = await Bun.file(skillMd).text();
       let parsed;
       try {
@@ -2808,32 +3264,108 @@ var init_skill = __esm(() => {
           passes: []
         };
       }
-      const existingDirs = OPTIONAL_DIRS2.filter((d) => existsSync10(resolve3(dir, d)));
+      const existingDirs = OPTIONAL_DIRS2.filter((d) => existsSync13(resolve4(dir, d)));
       return validateSkillModel(parsed, { existingDirs: [...existingDirs] });
     }
   };
 });
 
 // src/validators/claude/plugin.ts
-import { existsSync as existsSync11, readdirSync as readdirSync4 } from "fs";
-import { resolve as resolve4, join as join9 } from "path";
-var NAME_REGEX2, RELATIVE_PATH_REGEX, claudePluginValidator;
+import { existsSync as existsSync14, readdirSync as readdirSync6 } from "fs";
+import { resolve as resolve5, join as join12 } from "path";
+function levenshtein(a, b) {
+  if (a === b)
+    return 0;
+  const m = a.length, n = b.length;
+  if (m === 0)
+    return n;
+  if (n === 0)
+    return m;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0;i <= m; i++)
+    dp[i][0] = i;
+  for (let j = 0;j <= n; j++)
+    dp[0][j] = j;
+  for (let i = 1;i <= m; i++) {
+    for (let j = 1;j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[m][n];
+}
+function suggestField(unknown) {
+  const lower = unknown.toLowerCase();
+  for (const k of KNOWN_FIELDS2) {
+    if (k.toLowerCase() === lower)
+      return k;
+    if (levenshtein(k.toLowerCase(), lower) <= 1)
+      return k;
+    if (k.toLowerCase().startsWith(lower.slice(0, 3)) && lower.length > 3)
+      return k;
+  }
+  if (lower === "licence")
+    return "license";
+  if (lower === "dependancies" || lower === "deps")
+    return "dependencies";
+  if (lower === "mcp" || lower === "mcpservers")
+    return "mcpServers";
+  if (lower === "lsp")
+    return "lspServers";
+  if (lower === "outputstyles" || lower === "styles")
+    return "outputStyles";
+  if (lower === "userconfig")
+    return "userConfig";
+  return null;
+}
+function isRelativePathLike(v) {
+  if (typeof v !== "string")
+    return false;
+  return RELATIVE_PATH_REGEX.test(v) && !v.includes("..");
+}
+var NAME_REGEX2, RELATIVE_PATH_REGEX, KNOWN_FIELDS2, REPLACES_DEFAULT, claudePluginValidator;
 var init_plugin = __esm(() => {
   NAME_REGEX2 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
   RELATIVE_PATH_REGEX = /^\.\//;
+  KNOWN_FIELDS2 = new Set([
+    "$schema",
+    "name",
+    "displayName",
+    "version",
+    "description",
+    "author",
+    "homepage",
+    "repository",
+    "license",
+    "keywords",
+    "defaultEnabled",
+    "skills",
+    "commands",
+    "agents",
+    "hooks",
+    "mcpServers",
+    "outputStyles",
+    "lspServers",
+    "experimental",
+    "userConfig",
+    "channels",
+    "dependencies"
+  ]);
+  REPLACES_DEFAULT = new Set(["commands", "agents", "outputStyles", "lspServers"]);
   claudePluginValidator = {
     id: "claude:plugin",
     provider: "claude",
     name: "Claude Plugin",
-    description: "Validates .claude-plugin/plugin.json manifest, component directories, and structure",
+    description: "Validates .claude-plugin/plugin.json manifest (complete schema per Plugins reference), component path rules (replace vs augment), .claude-plugin/ purity, default dirs, single-root-skill layout, unrecognized fields + suggestions, and structure",
     detect(dir) {
-      return existsSync11(resolve4(dir, ".claude-plugin", "plugin.json"));
+      return existsSync14(resolve5(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const manifestPath = resolve4(dir, ".claude-plugin", "plugin.json");
+      const manifestPath = resolve5(dir, ".claude-plugin", "plugin.json");
+      const dotClaudePluginDir = resolve5(dir, ".claude-plugin");
       let manifest;
       try {
         const raw = await Bun.file(manifestPath).text();
@@ -2843,6 +3375,17 @@ var init_plugin = __esm(() => {
         errors.push(".claude-plugin/plugin.json is missing or invalid JSON");
         return { errors, warnings, passes };
       }
+      try {
+        const entries = readdirSync6(dotClaudePluginDir);
+        const unexpected = entries.filter((e) => e !== "plugin.json");
+        if (unexpected.length > 0) {
+          for (const e of unexpected) {
+            warnings.push(`Unexpected item "${e}" inside .claude-plugin/ \u2014 only plugin.json belongs here. Move component directories and files (skills/, commands/, agents/, hooks/, .mcp.json etc.) to the plugin root.`);
+          }
+        } else if (entries.length === 1) {
+          passes.push(".claude-plugin/ contains only plugin.json (correct layout)");
+        }
+      } catch {}
       if (!manifest.name) {
         errors.push('Missing required field: "name"');
       } else {
@@ -2856,10 +3399,12 @@ var init_plugin = __esm(() => {
       if (manifest.version !== undefined) {
         const v = String(manifest.version);
         if (!/^\d+\.\d+\.\d+/.test(v)) {
-          errors.push(`Invalid version format: "${v}" \u2014 must be semver (MAJOR.MINOR.PATCH)`);
+          errors.push(`Invalid version format: "${v}" \u2014 must look like semver (MAJOR.MINOR.PATCH) when using explicit versioning`);
         } else {
-          passes.push(`version: "${v}"`);
+          passes.push(`version: "${v}" (explicit \u2014 bump on every release to publish updates)`);
         }
+      } else {
+        passes.push("version omitted (git commit SHA used as version key \u2014 every commit becomes an available update)");
       }
       if (manifest.description !== undefined) {
         const desc = String(manifest.description);
@@ -2868,56 +3413,163 @@ var init_plugin = __esm(() => {
         } else {
           passes.push("description field present");
         }
+      } else {
+        warnings.push('Missing "description" (recommended for UI, marketplace listings, and auto-discovery)');
       }
-      const checkPaths = (field, value) => {
-        const paths = Array.isArray(value) ? value : [value];
-        for (const p of paths) {
-          const s = String(p);
-          if (!RELATIVE_PATH_REGEX.test(s)) {
-            errors.push(`${field}: path "${s}" must start with "./" (relative)`);
-          } else if (s.includes("..")) {
-            errors.push(`${field}: path "${s}" must not use ".." (no parent traversal)`);
-          } else if (existsSync11(resolve4(dir, s))) {
-            passes.push(`${field}: path "${s}" exists`);
-          } else {
-            warnings.push(`${field}: path "${s}" does not exist on disk`);
+      if (manifest.displayName !== undefined) {
+        passes.push(`displayName: "${manifest.displayName}" (human UI label; falls back to name)`);
+      }
+      if (manifest.author !== undefined) {
+        const a = manifest.author;
+        if (a && typeof a === "object" && a.name) {
+          passes.push("author present");
+        } else {
+          warnings.push('author should be an object like {"name": "...", "email?": "..."}');
+        }
+      }
+      if (manifest.license !== undefined) {
+        passes.push(`license: "${manifest.license}"`);
+      }
+      if (manifest.keywords !== undefined) {
+        if (Array.isArray(manifest.keywords)) {
+          passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+        } else {
+          errors.push("keywords must be an array of strings");
+        }
+      }
+      if (manifest.defaultEnabled !== undefined) {
+        passes.push(`defaultEnabled: ${manifest.defaultEnabled}`);
+      }
+      if (manifest.homepage)
+        passes.push("homepage present");
+      if (manifest.repository)
+        passes.push("repository present");
+      const unknown = Object.keys(manifest).filter((k) => !KNOWN_FIELDS2.has(k));
+      for (const k of unknown) {
+        const sug = suggestField(k);
+        const hint = sug ? ` (did you mean "${sug}"?)` : "";
+        warnings.push(`Unrecognized top-level field "${k}"${hint} \u2014 will be ignored at runtime (allowed for cross-tool manifest compatibility).`);
+      }
+      const handleField = (field, val) => {
+        if (val === undefined || val === null)
+          return;
+        if (isRelativePathLike(val) || Array.isArray(val) && val.every(isRelativePathLike)) {
+          const arr = Array.isArray(val) ? val : [val];
+          for (const p of arr) {
+            const s = String(p);
+            if (!RELATIVE_PATH_REGEX.test(s)) {
+              errors.push(`${field}: path "${s}" must start with "./"`);
+            } else if (s.includes("..")) {
+              errors.push(`${field}: path "${s}" must not use ".." (paths are confined to the plugin tree after cache copy)`);
+            } else if (existsSync14(resolve5(dir, s))) {
+              passes.push(`${field}: path "${s}" exists`);
+            } else {
+              warnings.push(`${field}: path "${s}" does not exist on disk`);
+            }
           }
+          if (field === "skills") {
+            passes.push(`${field}: augments the default skills/ (both are scanned)`);
+          } else if (REPLACES_DEFAULT.has(field)) {
+            passes.push(`${field}: custom path replaces default ${field}/ scan`);
+          } else {
+            passes.push(`${field}: custom path or config (merge rules apply)`);
+          }
+        } else if (typeof val === "object") {
+          passes.push(`${field}: inline ${field} config present`);
         }
       };
-      for (const field of ["commands", "agents", "hooks", "mcpServers"]) {
-        if (manifest[field] !== undefined) {
-          checkPaths(field, manifest[field]);
-        }
+      ["skills", "commands", "agents", "hooks", "mcpServers", "outputStyles", "lspServers"].forEach((f) => {
+        if (manifest[f] !== undefined)
+          handleField(f, manifest[f]);
+      });
+      if (manifest.experimental && typeof manifest.experimental === "object") {
+        const exp = manifest.experimental;
+        if (exp.themes !== undefined)
+          handleField("experimental.themes", exp.themes);
+        if (exp.monitors !== undefined)
+          handleField("experimental.monitors", exp.monitors);
+        passes.push("experimental section present (themes and monitors are experimental components)");
       }
-      const skillsDir = resolve4(dir, "skills");
-      if (existsSync11(skillsDir)) {
-        const skillEntries = readdirSync4(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
-        for (const skill of skillEntries) {
-          const skillMd = join9(skillsDir, skill.name, "SKILL.md");
-          if (existsSync11(skillMd)) {
-            passes.push(`skills/${skill.name}/SKILL.md exists`);
-          } else {
-            errors.push(`skills/${skill.name}/ missing SKILL.md`);
+      if (manifest.userConfig && typeof manifest.userConfig === "object") {
+        const keys = Object.keys(manifest.userConfig);
+        passes.push(`userConfig: ${keys.length} user-configurable value(s) declared`);
+        for (const k of keys) {
+          const opt = manifest.userConfig[k];
+          if (!opt || !opt.type || !opt.title) {
+            warnings.push(`userConfig.${k} is missing required "type" and/or "title"`);
           }
         }
       }
-      const commandsDir = resolve4(dir, "commands");
-      if (existsSync11(commandsDir)) {
-        const mdFiles = readdirSync4(commandsDir).filter((f) => f.endsWith(".md"));
-        if (mdFiles.length > 0) {
-          passes.push(`commands/ has ${mdFiles.length} .md file(s)`);
-        } else {
-          warnings.push("commands/ directory exists but has no .md files");
+      if (Array.isArray(manifest.channels)) {
+        passes.push(`channels: ${manifest.channels.length} channel(s) (each binds to an mcpServer)`);
+        manifest.channels.forEach((ch, i) => {
+          if (!ch?.server)
+            warnings.push(`channels[${i}]: "server" is required and must match an mcpServers key`);
+        });
+      }
+      if (Array.isArray(manifest.dependencies)) {
+        passes.push(`dependencies: declares ${manifest.dependencies.length} plugin dependency/ies`);
+      }
+      const skillsDir = resolve5(dir, "skills");
+      if (existsSync14(skillsDir)) {
+        const entries = readdirSync6(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        for (const e of entries) {
+          const md = join12(skillsDir, e.name, "SKILL.md");
+          if (existsSync14(md)) {
+            passes.push(`skills/${e.name}/SKILL.md exists`);
+          } else {
+            errors.push(`skills/${e.name}/ is missing SKILL.md`);
+          }
+        }
+        if (manifest.skills !== undefined) {
+          warnings.push('Default skills/ dir co-exists with manifest "skills" \u2014 manifest path is authoritative; default folder ignored for loading');
         }
       }
-      const agentsDir = resolve4(dir, "agents");
-      if (existsSync11(agentsDir)) {
-        const mdFiles = readdirSync4(agentsDir).filter((f) => f.endsWith(".md"));
-        if (mdFiles.length > 0) {
-          passes.push(`agents/ has ${mdFiles.length} .md file(s)`);
-        } else {
-          warnings.push("agents/ directory exists but has no .md files");
+      const commandsDir = resolve5(dir, "commands");
+      if (existsSync14(commandsDir)) {
+        const mds = readdirSync6(commandsDir).filter((f) => f.endsWith(".md"));
+        if (mds.length) {
+          passes.push(`commands/ has ${mds.length} .md file(s)`);
         }
+        if (manifest.commands !== undefined) {
+          warnings.push('commands/ co-exists with manifest "commands" \u2014 manifest replaces default (dir ignored)');
+        }
+      }
+      const agentsDir = resolve5(dir, "agents");
+      if (existsSync14(agentsDir)) {
+        const mds = readdirSync6(agentsDir).filter((f) => f.endsWith(".md"));
+        if (mds.length) {
+          passes.push(`agents/ has ${mds.length} .md file(s)`);
+        }
+        if (manifest.agents !== undefined) {
+          warnings.push('agents/ co-exists with manifest "agents" \u2014 manifest replaces default (dir ignored)');
+        }
+      }
+      if (existsSync14(resolve5(dir, "output-styles"))) {
+        passes.push("output-styles/ directory present");
+        if (manifest.outputStyles)
+          warnings.push("output-styles/ co-exists with manifest outputStyles \u2014 manifest wins");
+      }
+      if (existsSync14(resolve5(dir, "themes")))
+        passes.push("themes/ present (experimental)");
+      if (existsSync14(resolve5(dir, "monitors")) || manifest.experimental?.monitors) {
+        passes.push("monitors config present (experimental)");
+      }
+      if (existsSync14(resolve5(dir, "bin")))
+        passes.push("bin/ present (adds executables to Bash tool $PATH)");
+      if (existsSync14(resolve5(dir, "settings.json")))
+        passes.push("settings.json present (plugin defaults for agent/statusline)");
+      if (existsSync14(resolve5(dir, "README.md")))
+        passes.push("README.md present");
+      if (existsSync14(resolve5(dir, ".mcp.json")))
+        passes.push(".mcp.json present (validated by claude:mcp)");
+      if (existsSync14(resolve5(dir, ".lsp.json")))
+        passes.push(".lsp.json present (validated by claude:lsp when registered)");
+      if (existsSync14(resolve5(dir, "hooks/hooks.json")) || existsSync14(resolve5(dir, "hooks.json"))) {
+        passes.push("hooks config present (validated by claude:hooks)");
+      }
+      if (existsSync14(resolve5(dir, "SKILL.md")) && !existsSync14(skillsDir) && manifest.skills === undefined) {
+        passes.push('Root SKILL.md detected \u2014 plugin will be treated as a single-skill plugin (prefer frontmatter "name" for stable /command)');
       }
       return { errors, warnings, passes };
     }
@@ -2925,8 +3577,8 @@ var init_plugin = __esm(() => {
 });
 
 // src/validators/claude/marketplace.ts
-import { existsSync as existsSync12, readdirSync as readdirSync5 } from "fs";
-import { resolve as resolve5, join as join10 } from "path";
+import { existsSync as existsSync15, readdirSync as readdirSync7 } from "fs";
+import { resolve as resolve6, join as join13 } from "path";
 var claudeMarketplaceValidator;
 var init_marketplace = __esm(() => {
   claudeMarketplaceValidator = {
@@ -2935,16 +3587,16 @@ var init_marketplace = __esm(() => {
     name: "Claude Plugin Marketplace",
     description: "Validates marketplace structure: plugins/ directory with valid plugin subdirectories",
     detect(dir) {
-      const pluginsDir = resolve5(dir, "plugins");
-      if (!existsSync12(pluginsDir))
+      const pluginsDir = resolve6(dir, "plugins");
+      if (!existsSync15(pluginsDir))
         return false;
       try {
-        const entries = readdirSync5(pluginsDir, { withFileTypes: true });
+        const entries = readdirSync7(pluginsDir, { withFileTypes: true });
         for (const entry of entries) {
           if (!entry.isDirectory())
             continue;
-          const hasSkills = existsSync12(join10(pluginsDir, entry.name, "skills"));
-          const hasManifest = existsSync12(join10(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
+          const hasSkills = existsSync15(join13(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync15(join13(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
           if (hasSkills || hasManifest)
             return true;
         }
@@ -2955,33 +3607,33 @@ var init_marketplace = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const pluginsDir = resolve5(dir, "plugins");
-      if (!existsSync12(pluginsDir)) {
+      const pluginsDir = resolve6(dir, "plugins");
+      if (!existsSync15(pluginsDir)) {
         errors.push("Missing plugins/ directory");
         return { errors, warnings, passes };
       }
       passes.push("plugins/ directory exists");
-      const pluginEntries = readdirSync5(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      const pluginEntries = readdirSync7(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
       if (pluginEntries.length === 0) {
         errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
         return { errors, warnings, passes };
       }
       passes.push(`${pluginEntries.length} plugin(s) found`);
-      if (existsSync12(resolve5(dir, "README.md"))) {
+      if (existsSync15(resolve6(dir, "README.md"))) {
         passes.push("README.md exists at marketplace root");
       } else {
         warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
       }
-      if (existsSync12(resolve5(dir, "LICENSE"))) {
+      if (existsSync15(resolve6(dir, "LICENSE"))) {
         passes.push("LICENSE exists at marketplace root");
       } else {
         warnings.push("No LICENSE at marketplace root \u2014 recommended");
       }
       for (const plugin of pluginEntries) {
-        const pluginPath = join10(pluginsDir, plugin.name);
-        const hasSkills = existsSync12(join10(pluginPath, "skills"));
-        const hasManifest = existsSync12(join10(pluginPath, ".claude-plugin", "plugin.json"));
-        const hasReadme = existsSync12(join10(pluginPath, "README.md"));
+        const pluginPath = join13(pluginsDir, plugin.name);
+        const hasSkills = existsSync15(join13(pluginPath, "skills"));
+        const hasManifest = existsSync15(join13(pluginPath, ".claude-plugin", "plugin.json"));
+        const hasReadme = existsSync15(join13(pluginPath, "README.md"));
         if (hasManifest || hasSkills) {
           passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
         } else {
@@ -2997,35 +3649,55 @@ var init_marketplace = __esm(() => {
 });
 
 // src/validators/claude/hooks.ts
-import { existsSync as existsSync13 } from "fs";
-import { resolve as resolve6 } from "path";
+import { existsSync as existsSync16 } from "fs";
+import { resolve as resolve7 } from "path";
 var KNOWN_EVENTS, claudeHooksValidator;
 var init_hooks = __esm(() => {
   KNOWN_EVENTS = [
-    "PreToolUse",
-    "PostToolUse",
-    "Stop",
-    "SubagentStop",
     "SessionStart",
-    "SessionEnd",
+    "Setup",
     "UserPromptSubmit",
-    "PreCompact",
+    "UserPromptExpansion",
+    "PreToolUse",
+    "PermissionRequest",
+    "PermissionDenied",
+    "PostToolUse",
+    "PostToolUseFailure",
+    "PostToolBatch",
     "Notification",
-    "PermissionRequest"
+    "MessageDisplay",
+    "SubagentStart",
+    "SubagentStop",
+    "TaskCreated",
+    "TaskCompleted",
+    "Stop",
+    "StopFailure",
+    "TeammateIdle",
+    "InstructionsLoaded",
+    "ConfigChange",
+    "CwdChanged",
+    "FileChanged",
+    "WorktreeCreate",
+    "WorktreeRemove",
+    "PreCompact",
+    "PostCompact",
+    "Elicitation",
+    "ElicitationResult",
+    "SessionEnd"
   ];
   claudeHooksValidator = {
     id: "claude:hooks",
     provider: "claude",
     name: "Claude Hooks",
-    description: "Validates hooks/hooks.json: event names, matcher structure, hook types",
+    description: "Validates hooks/hooks.json (or root hooks.json): all lifecycle events per Plugins reference, hook group structure (matcher + hooks[]), supported hook types (command, http, mcp_tool, prompt, agent)",
     detect(dir) {
-      return existsSync13(resolve6(dir, "hooks", "hooks.json")) || existsSync13(resolve6(dir, "hooks.json"));
+      return existsSync16(resolve7(dir, "hooks", "hooks.json")) || existsSync16(resolve7(dir, "hooks.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const hooksPath = existsSync13(resolve6(dir, "hooks", "hooks.json")) ? resolve6(dir, "hooks", "hooks.json") : resolve6(dir, "hooks.json");
+      const hooksPath = existsSync16(resolve7(dir, "hooks", "hooks.json")) ? resolve7(dir, "hooks", "hooks.json") : resolve7(dir, "hooks.json");
       let config;
       try {
         const raw = await Bun.file(hooksPath).text();
@@ -3040,8 +3712,50 @@ var init_hooks = __esm(() => {
         if (KNOWN_EVENTS.includes(name)) {
           passes.push(`Event "${name}" is a known lifecycle event`);
         } else {
-          warnings.push(`Unknown event name: "${name}" \u2014 expected one of: ${KNOWN_EVENTS.join(", ")}`);
+          warnings.push(`Unknown event name: "${name}" \u2014 see full list in Plugins reference (SessionStart, PreToolUse, PostToolUse, Stop, ...)`);
         }
+      }
+      for (const [event, groups] of Object.entries(config)) {
+        if (!Array.isArray(groups)) {
+          errors.push(`Event "${event}": value must be an array of hook groups`);
+          continue;
+        }
+        groups.forEach((group, gi) => {
+          if (!group || typeof group !== "object") {
+            errors.push(`${event}[${gi}]: hook group must be an object`);
+            return;
+          }
+          if (group.matcher !== undefined && typeof group.matcher !== "string") {
+            warnings.push(`${event}[${gi}]: "matcher" should be a string (e.g. "Write|Edit" or glob)`);
+          }
+          const hooksArr = group.hooks;
+          if (!Array.isArray(hooksArr)) {
+            errors.push(`${event}[${gi}]: missing or invalid "hooks" array`);
+            return;
+          }
+          hooksArr.forEach((h, hi) => {
+            if (!h || typeof h !== "object" || !h.type) {
+              errors.push(`${event}[${gi}].hooks[${hi}]: must have "type"`);
+              return;
+            }
+            const t = String(h.type);
+            if (!["command", "http", "mcp_tool", "prompt", "agent"].includes(t)) {
+              warnings.push(`${event}[${gi}].hooks[${hi}]: unknown type "${t}" (valid: command, http, mcp_tool, prompt, agent)`);
+            }
+            if (t === "command" && !h.command) {
+              errors.push(`${event}[${gi}].hooks[${hi}]: type=command requires "command"`);
+            }
+            if (t === "http" && !h.url) {
+              errors.push(`${event}[${gi}].hooks[${hi}]: type=http requires "url"`);
+            }
+            if (h.command && typeof h.command === "string" && /\$\{CLAUDE_/.test(h.command)) {
+              passes.push(`${event}[${gi}].hooks[${hi}]: uses plugin env substitution`);
+            }
+          });
+          if (hooksArr.length > 0) {
+            passes.push(`Event "${event}" has ${hooksArr.length} hook action(s)`);
+          }
+        });
       }
       return { errors, warnings, passes };
     }
@@ -3049,23 +3763,23 @@ var init_hooks = __esm(() => {
 });
 
 // src/validators/claude/mcp.ts
-import { existsSync as existsSync14 } from "fs";
-import { resolve as resolve7 } from "path";
+import { existsSync as existsSync17 } from "fs";
+import { resolve as resolve8 } from "path";
 var claudeMcpValidator;
 var init_mcp = __esm(() => {
   claudeMcpValidator = {
     id: "claude:mcp",
     provider: "claude",
     name: "Claude MCP Config",
-    description: "Validates .mcp.json: server definitions, required fields, path portability",
+    description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, ${CLAUDE_PLUGIN_ROOT} etc. substitutions per Plugins reference",
     detect(dir) {
-      return existsSync14(resolve7(dir, ".mcp.json"));
+      return existsSync17(resolve8(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const mcpPath = resolve7(dir, ".mcp.json");
+      const mcpPath = resolve8(dir, ".mcp.json");
       let config;
       try {
         const raw = await Bun.file(mcpPath).text();
@@ -3085,14 +3799,42 @@ var init_mcp = __esm(() => {
         return { errors, warnings, passes };
       }
       passes.push(`${serverNames.length} server(s) defined`);
+      for (const [name, entry] of Object.entries(config)) {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          errors.push(`mcp server "${name}": definition must be an object`);
+          continue;
+        }
+        const e = entry;
+        const hasCommand = typeof e.command === "string";
+        const hasUrl = typeof e.url === "string";
+        if (!hasCommand && !hasUrl) {
+          errors.push(`mcp server "${name}": must have either "command" (for stdio) or "url" (for SSE/HTTP)`);
+        }
+        if (hasCommand && !Array.isArray(e.args)) {
+          warnings.push(`mcp server "${name}": "command" present but no "args" array (ok for some servers)`);
+        }
+        if (hasUrl && hasCommand) {
+          warnings.push(`mcp server "${name}": both "command" and "url" present \u2014 usually one or the other`);
+        }
+        if (e.env && typeof e.env === "object") {
+          passes.push(`mcp server "${name}": has env`);
+        }
+        if (typeof e.cwd === "string") {
+          passes.push(`mcp server "${name}": has cwd`);
+        }
+        const hasSubs = JSON.stringify(e).match(/\$\{CLAUDE_PLUGIN_(ROOT|DATA)|CLAUDE_PROJECT_DIR|user_config\.|ENV_VAR\}/);
+        if (hasSubs) {
+          passes.push(`mcp server "${name}": uses \${CLAUDE_PLUGIN_*} / user_config / env substitution`);
+        }
+      }
       return { errors, warnings, passes };
     }
   };
 });
 
 // src/validators/claude/subagent.ts
-import { existsSync as existsSync15, readdirSync as readdirSync6 } from "fs";
-import { resolve as resolve8, join as join11 } from "path";
+import { existsSync as existsSync18, readdirSync as readdirSync8 } from "fs";
+import { resolve as resolve9, join as join14 } from "path";
 var claudeSubagentValidator;
 var init_subagent = __esm(() => {
   init_frontmatter();
@@ -3100,13 +3842,13 @@ var init_subagent = __esm(() => {
     id: "claude:subagent",
     provider: "claude",
     name: "Claude Subagents",
-    description: "Validates agents/ directory: .md files with frontmatter and description",
+    description: "Validates agents/*.md (plugin subagents): frontmatter per spec (name, description, model, effort, maxTurns, tools, disallowedTools, skills, memory, background, isolation=worktree), body; warns on disallowed fields (hooks, mcpServers, permissionMode) for security",
     detect(dir) {
-      const agentsDir = resolve8(dir, "agents");
-      if (!existsSync15(agentsDir))
+      const agentsDir = resolve9(dir, "agents");
+      if (!existsSync18(agentsDir))
         return false;
       try {
-        return readdirSync6(agentsDir).some((f) => f.endsWith(".md"));
+        return readdirSync8(agentsDir).some((f) => f.endsWith(".md"));
       } catch {
         return false;
       }
@@ -3115,27 +3857,63 @@ var init_subagent = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const agentsDir = resolve8(dir, "agents");
-      const mdFiles = readdirSync6(agentsDir).filter((f) => f.endsWith(".md"));
+      const agentsDir = resolve9(dir, "agents");
+      const mdFiles = readdirSync8(agentsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("agents/ directory has no .md files");
         return { errors, warnings, passes };
       }
       passes.push(`${mdFiles.length} agent definition(s) found`);
+      const SUPPORTED = new Set([
+        "name",
+        "description",
+        "model",
+        "effort",
+        "maxTurns",
+        "tools",
+        "disallowedTools",
+        "skills",
+        "memory",
+        "background",
+        "isolation"
+      ]);
+      const DISALLOWED = new Set(["hooks", "mcpServers", "permissionMode"]);
       for (const file of mdFiles) {
-        const filePath = join11(agentsDir, file);
+        const filePath = join14(agentsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
-          if (Object.keys(parsed.data).length === 0) {
-            warnings.push(`${file}: no YAML frontmatter`);
-          } else if (!parsed.data.description) {
-            warnings.push(`${file}: missing "description" in frontmatter`);
+          const fm = parsed.data;
+          if (Object.keys(fm).length === 0) {
+            warnings.push(`${file}: no YAML frontmatter (description recommended so Claude knows when to invoke)`);
           } else {
-            passes.push(`${file}: has frontmatter with description`);
+            if (fm.description) {
+              passes.push(`${file}: has frontmatter with description`);
+            } else {
+              warnings.push(`${file}: missing "description" in frontmatter`);
+            }
+            const usedSupported = [];
+            Object.keys(fm).forEach((k) => {
+              if (SUPPORTED.has(k))
+                usedSupported.push(k);
+              if (DISALLOWED.has(k)) {
+                errors.push(`${file}: frontmatter "${k}" is not supported for plugin-shipped agents (security restriction)`);
+              }
+            });
+            if (usedSupported.length) {
+              passes.push(`${file}: frontmatter fields: ${usedSupported.join(", ")}`);
+            }
+            if (fm.isolation !== undefined && fm.isolation !== "worktree") {
+              errors.push(`${file}: "isolation" must be "worktree" if present (only supported value for plugin agents)`);
+            }
+            if (fm.name && typeof fm.name === "string") {
+              passes.push(`${file}: name: "${fm.name}"`);
+            }
           }
           if (!parsed.content.trim()) {
             errors.push(`${file}: body is empty`);
+          } else {
+            passes.push(`${file}: has agent system prompt body`);
           }
         } catch {
           errors.push(`${file}: failed to parse`);
@@ -3147,8 +3925,8 @@ var init_subagent = __esm(() => {
 });
 
 // src/validators/claude/command.ts
-import { existsSync as existsSync16, readdirSync as readdirSync7 } from "fs";
-import { resolve as resolve9, join as join12 } from "path";
+import { existsSync as existsSync19, readdirSync as readdirSync9 } from "fs";
+import { resolve as resolve10, join as join15 } from "path";
 var claudeCommandValidator;
 var init_command = __esm(() => {
   init_frontmatter();
@@ -3158,11 +3936,11 @@ var init_command = __esm(() => {
     name: "Claude Commands",
     description: "Validates commands/ (or legacy .claude/commands/) .md files: frontmatter (including rich skill fields), description, body",
     detect(dir) {
-      const commandsDir = resolve9(dir, "commands");
-      if (!existsSync16(commandsDir))
+      const commandsDir = resolve10(dir, "commands");
+      if (!existsSync19(commandsDir))
         return false;
       try {
-        return readdirSync7(commandsDir).some((f) => f.endsWith(".md"));
+        return readdirSync9(commandsDir).some((f) => f.endsWith(".md"));
       } catch {
         return false;
       }
@@ -3171,15 +3949,15 @@ var init_command = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const commandsDir = resolve9(dir, "commands");
-      const mdFiles = readdirSync7(commandsDir).filter((f) => f.endsWith(".md"));
+      const commandsDir = resolve10(dir, "commands");
+      const mdFiles = readdirSync9(commandsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("commands/ directory has no .md files");
         return { errors, warnings, passes };
       }
       passes.push(`${mdFiles.length} command definition(s) found`);
       for (const file of mdFiles) {
-        const filePath = join12(commandsDir, file);
+        const filePath = join15(commandsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
@@ -3208,8 +3986,8 @@ var init_command = __esm(() => {
 });
 
 // src/validators/claude/memory.ts
-import { existsSync as existsSync17 } from "fs";
-import { resolve as resolve10 } from "path";
+import { existsSync as existsSync20 } from "fs";
+import { resolve as resolve11 } from "path";
 var claudeMemoryValidator;
 var init_memory = __esm(() => {
   claudeMemoryValidator = {
@@ -3218,13 +3996,13 @@ var init_memory = __esm(() => {
     name: "Claude CLAUDE.md",
     description: "Validates CLAUDE.md: non-empty, length recommendations, @path imports",
     detect(dir) {
-      return existsSync17(resolve10(dir, "CLAUDE.md"));
+      return existsSync20(resolve11(dir, "CLAUDE.md"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const filePath = resolve10(dir, "CLAUDE.md");
+      const filePath = resolve11(dir, "CLAUDE.md");
       const raw = await Bun.file(filePath).text();
       if (!raw.trim()) {
         errors.push("CLAUDE.md is empty");
@@ -3242,13 +4020,172 @@ var init_memory = __esm(() => {
       let match;
       while ((match = importRegex.exec(raw)) !== null) {
         const importPath = match[1];
-        const resolvedImport = resolve10(dir, importPath);
-        if (existsSync17(resolvedImport)) {
+        const resolvedImport = resolve11(dir, importPath);
+        if (existsSync20(resolvedImport)) {
           passes.push(`@import "${importPath}" exists`);
         } else {
           warnings.push(`@import "${importPath}" \u2014 file not found at ${resolvedImport}`);
         }
       }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/lsp.ts
+import { existsSync as existsSync21 } from "fs";
+import { resolve as resolve12 } from "path";
+var claudeLspValidator;
+var init_lsp = __esm(() => {
+  claudeLspValidator = {
+    id: "claude:lsp",
+    provider: "claude",
+    name: "Claude LSP Servers",
+    description: "Validates .lsp.json (or plugin.json lspServers): language server configs with required command + extensionToLanguage; optional transport, env, settings, diagnostics etc. (binaries installed separately)",
+    detect(dir) {
+      return existsSync21(resolve12(dir, ".lsp.json")) || existsSync21(resolve12(dir, ".claude-plugin", "plugin.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      let cfg = null;
+      const lspPath = resolve12(dir, ".lsp.json");
+      if (existsSync21(lspPath)) {
+        try {
+          cfg = JSON.parse(await Bun.file(lspPath).text());
+          passes.push(".lsp.json is valid JSON");
+        } catch {
+          errors.push(".lsp.json is invalid JSON");
+          return { errors, warnings, passes };
+        }
+      } else {
+        const manifestPath = resolve12(dir, ".claude-plugin", "plugin.json");
+        if (existsSync21(manifestPath)) {
+          try {
+            const m = JSON.parse(await Bun.file(manifestPath).text());
+            if (m && m.lspServers && typeof m.lspServers === "object") {
+              cfg = m.lspServers;
+              passes.push("lspServers present inline in plugin.json");
+            }
+          } catch {}
+        }
+      }
+      if (!cfg) {
+        if (!existsSync21(lspPath)) {
+          return { errors, warnings, passes };
+        }
+      }
+      if (cfg && typeof cfg === "object") {
+        const langs = Object.keys(cfg);
+        passes.push(`${langs.length} language server(s) configured`);
+        for (const lang of langs) {
+          const entry = cfg[lang];
+          if (!entry || !entry.command) {
+            errors.push(`lsp "${lang}": "command" (the LSP binary) is required`);
+          }
+          if (!entry.extensionToLanguage || typeof entry.extensionToLanguage !== "object") {
+            errors.push(`lsp "${lang}": "extensionToLanguage" map is required (e.g. { ".ts": "typescript" })`);
+          } else {
+            passes.push(`lsp "${lang}": has extensionToLanguage mapping`);
+          }
+          if (entry.diagnostics === false) {
+            passes.push(`lsp "${lang}": diagnostics disabled (navigation only)`);
+          }
+        }
+      }
+      warnings.push('Reminder: the actual language server binary (gopls, pyright, etc.) must be installed separately on PATH. See /plugin errors tab if "Executable not found".');
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/claude/monitors.ts
+import { existsSync as existsSync22 } from "fs";
+import { resolve as resolve13 } from "path";
+var claudeMonitorsValidator;
+var init_monitors = __esm(() => {
+  claudeMonitorsValidator = {
+    id: "claude:monitors",
+    provider: "claude",
+    name: "Claude Monitors (experimental)",
+    description: "Validates monitors/monitors.json (or experimental.monitors): array of {name, command, description, when?}; commands support ${CLAUDE_PLUGIN_*} subs. Monitors run only in interactive CLI sessions.",
+    detect(dir) {
+      return existsSync22(resolve13(dir, "monitors", "monitors.json")) || existsSync22(resolve13(dir, "monitors.json")) || existsSync22(resolve13(dir, ".claude-plugin", "plugin.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      let arr = null;
+      const candidates = [
+        resolve13(dir, "monitors", "monitors.json"),
+        resolve13(dir, "monitors.json")
+      ];
+      for (const p of candidates) {
+        if (existsSync22(p)) {
+          try {
+            const parsed = JSON.parse(await Bun.file(p).text());
+            if (Array.isArray(parsed)) {
+              arr = parsed;
+              passes.push("monitors config is valid JSON array");
+            }
+            break;
+          } catch {
+            errors.push("monitors config is invalid JSON");
+            return { errors, warnings, passes };
+          }
+        }
+      }
+      if (!arr) {
+        const mp = resolve13(dir, ".claude-plugin", "plugin.json");
+        if (existsSync22(mp)) {
+          try {
+            const m = JSON.parse(await Bun.file(mp).text());
+            const exp = m?.experimental;
+            const inline = typeof exp === "string" ? null : exp?.monitors;
+            if (Array.isArray(inline))
+              arr = inline;
+            else if (typeof inline === "string") {
+              passes.push("experimental.monitors declared as path in manifest (content not validated here)");
+            }
+          } catch {}
+        }
+      }
+      if (!arr) {
+        return { errors, warnings, passes };
+      }
+      if (!Array.isArray(arr)) {
+        errors.push("monitors config must be a JSON array");
+        return { errors, warnings, passes };
+      }
+      const seen = new Set;
+      arr.forEach((mon, i) => {
+        if (!mon || typeof mon !== "object") {
+          errors.push(`monitors[${i}]: entry must be an object`);
+          return;
+        }
+        if (!mon.name || typeof mon.name !== "string") {
+          errors.push(`monitors[${i}]: "name" (unique id) is required`);
+        } else {
+          if (seen.has(mon.name))
+            errors.push(`monitors: duplicate name "${mon.name}"`);
+          seen.add(mon.name);
+        }
+        if (!mon.command || typeof mon.command !== "string") {
+          errors.push(`monitors[${i}]: "command" (shell command) is required`);
+        } else if (/\$\{CLAUDE_/.test(mon.command)) {
+          passes.push(`monitors[${i}] "${mon.name || i}": uses CLAUDE_PLUGIN_* substitution`);
+        }
+        if (!mon.description) {
+          warnings.push(`monitors[${i}]: "description" recommended (shown in task panel)`);
+        }
+        if (mon.when && !/^always$|^on-skill-invoke:/.test(String(mon.when))) {
+          warnings.push(`monitors[${i}]: "when" should be "always" (default) or "on-skill-invoke:<skill>"`);
+        }
+      });
+      passes.push(`${arr.length} monitor(s) declared`);
+      warnings.push("Note: monitors are experimental, run only for interactive CLI sessions, and are skipped on some hosts. They do not stop automatically if the plugin is disabled mid-session.");
       return { errors, warnings, passes };
     }
   };
@@ -3288,6 +4225,8 @@ var init_validators = __esm(() => {
   init_subagent();
   init_command();
   init_memory();
+  init_lsp();
+  init_monitors();
   validators = [
     claudeSkillValidator,
     claudePluginValidator,
@@ -3296,14 +4235,16 @@ var init_validators = __esm(() => {
     claudeMcpValidator,
     claudeSubagentValidator,
     claudeCommandValidator,
-    claudeMemoryValidator
+    claudeMemoryValidator,
+    claudeLspValidator,
+    claudeMonitorsValidator
   ];
 });
 
 // src/core/remote.ts
 import { spawnSync as spawnSync4 } from "child_process";
 import { mkdtempSync, rmSync } from "fs";
-import { join as join13 } from "path";
+import { join as join16 } from "path";
 import { tmpdir } from "os";
 function parseRemoteUrl(input) {
   if (input.startsWith(".") || input.startsWith("/") || input.startsWith("~")) {
@@ -3340,7 +4281,7 @@ function isGhAvailable() {
   return ghAvailable;
 }
 async function cloneToTemp(parsed) {
-  const tmpDir = mkdtempSync(join13(tmpdir(), "dora-"));
+  const tmpDir = mkdtempSync(join16(tmpdir(), "dora-"));
   const cleanup = () => {
     try {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -3388,15 +4329,15 @@ var exports_validate_top = {};
 __export(exports_validate_top, {
   default: () => validate_top_default
 });
-import { existsSync as existsSync19 } from "fs";
-import { resolve as resolve11 } from "path";
-var import_picocolors11, validate_top_default;
+import { existsSync as existsSync24 } from "fs";
+import { resolve as resolve14 } from "path";
+var import_picocolors13, validate_top_default;
 var init_validate_top = __esm(() => {
   init_dist();
   init_out();
   init_validators();
   init_remote();
-  import_picocolors11 = __toESM(require_picocolors(), 1);
+  import_picocolors13 = __toESM(require_picocolors(), 1);
   validate_top_default = defineCommand({
     meta: {
       name: "validate",
@@ -3436,24 +4377,24 @@ var init_validate_top = __esm(() => {
       let cleanup;
       if (remote) {
         ui.info(`
-  Cloning ${import_picocolors11.default.dim(args.path)}...`);
+  Cloning ${import_picocolors13.default.dim(args.path)}...`);
         try {
           const result = await cloneToTemp(remote);
-          fullPath = remote.subpath ? resolve11(result.dir, remote.subpath) : result.dir;
+          fullPath = remote.subpath ? resolve14(result.dir, remote.subpath) : result.dir;
           cleanup = result.cleanup;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           ui.fail(msg);
           process.exit(1);
         }
-        if (!existsSync19(fullPath)) {
+        if (!existsSync24(fullPath)) {
           cleanup();
           ui.fail(`Subdirectory not found in repo: ${remote.subpath}`);
           process.exit(1);
         }
       } else {
-        fullPath = resolve11(args.path);
-        if (!existsSync19(fullPath)) {
+        fullPath = resolve14(args.path);
+        if (!existsSync24(fullPath)) {
           ui.fail(`Path not found: ${args.path}
 
 Check that the path is correct and the directory exists.`);
@@ -3484,13 +4425,13 @@ Check that the path is correct and the directory exists.`);
 ` + `Available providers:
 ` + providers.map((p) => {
             const pvs = validators.filter((v) => v.provider === p);
-            return `  ${import_picocolors11.default.bold(p)}
-` + pvs.map((v) => `    \u2022 ${import_picocolors11.default.dim(v.id)} \u2014 ${v.description}`).join(`
+            return `  ${import_picocolors13.default.bold(p)}
+` + pvs.map((v) => `    \u2022 ${import_picocolors13.default.dim(v.id)} \u2014 ${v.description}`).join(`
 `);
           }).join(`
 `) + `
 
-Use ${import_picocolors11.default.dim("--for <provider>")} or ${import_picocolors11.default.dim("--for <provider:type>")} to target explicitly.`);
+Use ${import_picocolors13.default.dim("--for <provider>")} or ${import_picocolors13.default.dim("--for <provider:type>")} to target explicitly.`);
           process.exit(1);
         }
         const allResults = [];
@@ -3511,7 +4452,7 @@ Use ${import_picocolors11.default.dim("--for <provider>")} or ${import_picocolor
         } else {
           for (const { id, name, result } of allResults) {
             ui.write(`
-  ${import_picocolors11.default.bold("dora validate")} \u2014 ${import_picocolors11.default.white(name)} ${import_picocolors11.default.dim(`(${id})`)}
+  ${import_picocolors13.default.bold("dora validate")} \u2014 ${import_picocolors13.default.white(name)} ${import_picocolors13.default.dim(`(${id})`)}
 `);
             ui.info(`  Path:  ${args.path}
 `);
@@ -3526,7 +4467,7 @@ Use ${import_picocolors11.default.dim("--for <provider>")} or ${import_picocolor
             }
             if (result.errors.length === 0 && result.warnings.length === 0) {
               ui.write(`
-  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("All checks passed.")}
+  ${import_picocolors13.default.green("\u2713")} ${import_picocolors13.default.white("All checks passed.")}
 `);
             } else {
               ui.info(`
@@ -3548,16 +4489,16 @@ var exports_init2 = {};
 __export(exports_init2, {
   default: () => init_default2
 });
-import { basename as basename2, join as join14 } from "path";
+import { basename as basename4, join as join17 } from "path";
 var {spawnSync: spawnSync5 } = globalThis.Bun;
-var import_picocolors12, init_default2;
+var import_picocolors14, init_default2;
 var init_init2 = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_remote();
   init_prompt();
-  import_picocolors12 = __toESM(require_picocolors(), 1);
+  import_picocolors14 = __toESM(require_picocolors(), 1);
   init_default2 = defineCommand({
     meta: {
       name: "init",
@@ -3584,17 +4525,17 @@ var init_init2 = __esm(() => {
       ui.heading("dora init \u2014 Set up doraval, your journal, and the coding agent dora should use on the fly");
       const ghCheck = ensureGhCli();
       if (!ghCheck.ok) {
-        ui.write(`  ${import_picocolors12.default.red("\u2717")} ${import_picocolors12.default.white("The GitHub CLI (")}${import_picocolors12.default.bold("gh")}${import_picocolors12.default.white(") is not installed.")}
+        ui.write(`  ${import_picocolors14.default.red("\u2717")} ${import_picocolors14.default.white("The GitHub CLI (")}${import_picocolors14.default.bold("gh")}${import_picocolors14.default.white(") is not installed.")}
 `);
-        ui.info(`  doraval uses ${import_picocolors12.default.bold("gh")} to fetch and sync journal files with GitHub.
+        ui.info(`  doraval uses ${import_picocolors14.default.bold("gh")} to fetch and sync journal files with GitHub.
 `);
         ui.info(`  Install it:
 `);
-        ui.info(`    macOS:   ${import_picocolors12.default.dim("brew install gh")}`);
-        ui.info(`    Linux:   ${import_picocolors12.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-        ui.info(`    Windows: ${import_picocolors12.default.dim("winget install --id GitHub.cli")}
+        ui.info(`    macOS:   ${import_picocolors14.default.dim("brew install gh")}`);
+        ui.info(`    Linux:   ${import_picocolors14.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+        ui.info(`    Windows: ${import_picocolors14.default.dim("winget install --id GitHub.cli")}
 `);
-        ui.info(`  Then authenticate: ${import_picocolors12.default.dim("gh auth login")}
+        ui.info(`  Then authenticate: ${import_picocolors14.default.dim("gh auth login")}
 `);
         process.exit(1);
       }
@@ -3607,44 +4548,44 @@ var init_init2 = __esm(() => {
         if (gitOwner) {
           defaultRepo = `${gitOwner}/${gitOwner}.md`;
           if (ghLogin && ghLogin !== gitOwner) {
-            sourceNote = `  ${import_picocolors12.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
+            sourceNote = `  ${import_picocolors14.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
 `;
           } else {
-            sourceNote = `  ${import_picocolors12.default.dim("(from git remote)")}
+            sourceNote = `  ${import_picocolors14.default.dim("(from git remote)")}
 `;
           }
         } else if (ghLogin) {
           defaultRepo = `${ghLogin}/${ghLogin}.md`;
-          sourceNote = `  ${import_picocolors12.default.dim("(from your active gh account)")}
+          sourceNote = `  ${import_picocolors14.default.dim("(from your active gh account)")}
 `;
         } else {
-          ui.warn(`Not logged in to GitHub. Run ${import_picocolors12.default.dim("gh auth login")} first.
+          ui.warn(`Not logged in to GitHub. Run ${import_picocolors14.default.dim("gh auth login")} first.
 `);
           process.exit(1);
         }
         const existingConfig = await readConfig();
         if (existingConfig?.journal.repo) {
           defaultRepo = existingConfig.journal.repo;
-          sourceNote = `  ${import_picocolors12.default.dim("(from your previous journal setup)")}
+          sourceNote = `  ${import_picocolors14.default.dim("(from your previous journal setup)")}
 `;
         }
-        ui.info(`  Journal repo ${import_picocolors12.default.dim("(owner/name)")}`);
+        ui.info(`  Journal repo ${import_picocolors14.default.dim("(owner/name)")}`);
         if (sourceNote)
           ui.write(sourceNote);
         repo = prompt("  >", defaultRepo);
       }
       let project = args.project || process.env.DORAVAL_PROJECT;
       if (!project) {
-        const defaultProject = basename2(process.cwd());
+        const defaultProject = basename4(process.cwd());
         project = prompt("  Project name", defaultProject);
       }
       project = sanitizeProjectName(project);
       if (!repoExists(repo)) {
-        ui.write(`  ${import_picocolors12.default.red("\u2717")} ${import_picocolors12.default.white("Repository")} ${import_picocolors12.default.bold(repo)} ${import_picocolors12.default.white("not found on GitHub.")}
+        ui.write(`  ${import_picocolors14.default.red("\u2717")} ${import_picocolors14.default.white("Repository")} ${import_picocolors14.default.bold(repo)} ${import_picocolors14.default.white("not found on GitHub.")}
 `);
         ui.info(`  Create it first:
 `);
-        ui.info(`    ${import_picocolors12.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
+        ui.info(`    ${import_picocolors14.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
 `);
         process.exit(1);
       }
@@ -3652,16 +4593,16 @@ var init_init2 = __esm(() => {
       const alreadyRegistered = existing?.journal.projects[project];
       const isRefresh = alreadyRegistered && args.refresh;
       if (alreadyRegistered && !isRefresh) {
-        ui.write(`  ${import_picocolors12.default.yellow("\u26A0")} ${import_picocolors12.default.white("Project")} ${import_picocolors12.default.bold(project)} ${import_picocolors12.default.white("is already registered.")}
+        ui.write(`  ${import_picocolors14.default.yellow("\u26A0")} ${import_picocolors14.default.white("Project")} ${import_picocolors14.default.bold(project)} ${import_picocolors14.default.white("is already registered.")}
 `);
         ui.info(`  Repo:   ${existing.journal.repo}
 `);
-        ui.info(`  To refresh journal files, use ${import_picocolors12.default.dim("dora journal update")} (or ${import_picocolors12.default.dim("dora init --refresh")}).
+        ui.info(`  To refresh journal files, use ${import_picocolors14.default.dim("dora journal update")} (or ${import_picocolors14.default.dim("dora init --refresh")}).
 `);
       }
       const journalsDir = getJournalsDir();
       const remotePath = `projects/${project}.md`;
-      const localPath = join14(journalsDir, `${project}.md`);
+      const localPath = join17(journalsDir, `${project}.md`);
       const effectiveRepo = isRefresh && !args.repo ? existing.journal.repo : repo;
       const config = existing ?? {
         journal: { repo: effectiveRepo, projects: {} }
@@ -3672,9 +4613,9 @@ var init_init2 = __esm(() => {
         local_path: localPath
       };
       ensureDoravalDirs();
-      ui.write(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("Fetching journal files from"))} ${import_picocolors12.default.gray(effectiveRepo)}${import_picocolors12.default.dim(import_picocolors12.default.gray("..."))}
+      ui.write(`  ${import_picocolors14.default.dim(import_picocolors14.default.gray("Fetching journal files from"))} ${import_picocolors14.default.gray(effectiveRepo)}${import_picocolors14.default.dim(import_picocolors14.default.gray("..."))}
 `);
-      const globalDest = join14(journalsDir, "global.md");
+      const globalDest = join17(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       let wroteGlobal;
       if (!refreshGlobalRes.ok) {
@@ -3691,7 +4632,7 @@ var init_init2 = __esm(() => {
       if (wroteGlobal) {
         ui.success("global.md");
       } else {
-        ui.write(`  ${import_picocolors12.default.dim("\xB7")} global.md ${import_picocolors12.default.dim("(not found \u2014 will be created on first sync)")}`);
+        ui.write(`  ${import_picocolors14.default.dim("\xB7")} global.md ${import_picocolors14.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(globalDest, `# Global Journal
 
 Cross-project principles.
@@ -3713,7 +4654,7 @@ Cross-project principles.
       if (wroteProject) {
         ui.success(remotePath);
       } else {
-        ui.write(`  ${import_picocolors12.default.dim("\xB7")} ${remotePath} ${import_picocolors12.default.dim("(not found \u2014 will be created on first sync)")}`);
+        ui.write(`  ${import_picocolors14.default.dim("\xB7")} ${remotePath} ${import_picocolors14.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(localPath, `# ${project} Journal
 
 Project-specific decisions.
@@ -3721,13 +4662,13 @@ Project-specific decisions.
       }
       await writeConfig(config);
       ui.write(`
-  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Journal ready for project")} ${import_picocolors12.default.bold(import_picocolors12.default.white(project))}.
+  ${import_picocolors14.default.green("\u2713")} ${import_picocolors14.default.white("Journal ready for project")} ${import_picocolors14.default.bold(import_picocolors14.default.white(project))}.
 `);
       const existingAgent = (await readConfig())?.agent;
       if (existingAgent?.command) {
-        ui.write(`  ${import_picocolors12.default.bold(import_picocolors12.default.white("Coding agent (already configured)"))}
+        ui.write(`  ${import_picocolors14.default.bold(import_picocolors14.default.white("Coding agent (already configured)"))}
 `);
-        ui.write(`    Current: ${import_picocolors12.default.dim(import_picocolors12.default.gray(existingAgent.command))}  template: ${import_picocolors12.default.dim(import_picocolors12.default.gray(existingAgent.prompt_template || "(default)"))}
+        ui.write(`    Current: ${import_picocolors14.default.dim(import_picocolors14.default.gray(existingAgent.command))}  template: ${import_picocolors14.default.dim(import_picocolors14.default.gray(existingAgent.prompt_template || "(default)"))}
 `);
         const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
         if (!/^y/i.test(String(change))) {
@@ -3737,16 +4678,16 @@ Project-specific decisions.
           if (existingAgent)
             cfg.agent = existingAgent;
           await writeConfig(cfg);
-          ui.write(`  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Try:")} ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add "short decision"'))}
+          ui.write(`  ${import_picocolors14.default.green("\u2713")} ${import_picocolors14.default.white("Try:")} ${import_picocolors14.default.dim(import_picocolors14.default.gray('dora journal add "short decision"'))}
 `);
           process.exit(0);
           return;
         }
         ui.blank();
       } else {
-        ui.write(`  ${import_picocolors12.default.bold(import_picocolors12.default.white("Coding agent for journal add"))}
+        ui.write(`  ${import_picocolors14.default.bold(import_picocolors14.default.white("Coding agent for journal add"))}
 `);
-        ui.info(`  When configured, ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add ".."'))} will use your agent to enrich entries with tags and rationale automatically.
+        ui.info(`  When configured, ${import_picocolors14.default.dim(import_picocolors14.default.gray('dora journal add ".."'))} will use your agent to enrich entries with tags and rationale automatically.
 `);
       }
       const common = [
@@ -3765,7 +4706,7 @@ Project-specific decisions.
         }
       }
       let agentCmd = detected || "claude";
-      ui.write(`  Detected / default agent command: ${import_picocolors12.default.dim(import_picocolors12.default.gray(agentCmd))}`);
+      ui.write(`  Detected / default agent command: ${import_picocolors14.default.dim(import_picocolors14.default.gray(agentCmd))}`);
       agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
       let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}" --output-format json' : '-p "{{prompt}}" --output-format json';
       ui.info(`  Prompt template (use {{prompt}} placeholder):`);
@@ -3777,11 +4718,11 @@ Project-specific decisions.
       };
       await writeConfig(finalConfig);
       ui.write(`
-  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Agent configured.")}
+  ${import_picocolors14.default.green("\u2713")} ${import_picocolors14.default.white("Agent configured.")}
 `);
-      ui.info(`  Re-run ${import_picocolors12.default.dim(import_picocolors12.default.gray("dora init"))} anytime to change it.
+      ui.info(`  Re-run ${import_picocolors14.default.dim(import_picocolors14.default.gray("dora init"))} anytime to change it.
 `);
-      ui.info(`  Next: ${import_picocolors12.default.dim(import_picocolors12.default.gray('dora journal add ".."'))}, ${import_picocolors12.default.dim(import_picocolors12.default.gray("dora journal list"))}, or ${import_picocolors12.default.dim(import_picocolors12.default.gray("dora journal update"))}.
+      ui.info(`  Next: ${import_picocolors14.default.dim(import_picocolors14.default.gray('dora journal add ".."'))}, ${import_picocolors14.default.dim(import_picocolors14.default.gray("dora journal list"))}, or ${import_picocolors14.default.dim(import_picocolors14.default.gray("dora journal update"))}.
 `);
       process.exit(0);
     }
@@ -3854,7 +4795,7 @@ var package_default = {
 };
 
 // src/cli/index.ts
-var import_picocolors13 = __toESM(require_picocolors(), 1);
+var import_picocolors15 = __toESM(require_picocolors(), 1);
 var skill = defineCommand({
   meta: {
     name: "skill",
@@ -3891,10 +4832,24 @@ var claude = defineCommand({
     description: "Claude Code-specific commands (packaging, scaffolding, distribution)"
   },
   subCommands: {
-    new: () => Promise.resolve().then(() => (init_new(), exports_new)).then((m) => m.default)
+    new: () => Promise.resolve().then(() => (init_new(), exports_new)).then((m) => m.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
   },
   run() {
     showUsage(claude);
+  }
+});
+var codex = defineCommand({
+  meta: {
+    name: "codex",
+    description: "Codex (OpenAI)-specific commands (packaging, scaffolding, distribution)"
+  },
+  subCommands: {
+    new: () => Promise.resolve().then(() => (init_new2(), exports_new2)).then((m) => m.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
+  },
+  run() {
+    showUsage(codex);
   }
 });
 var doraemonArt = `
@@ -3918,13 +4873,15 @@ var main = defineCommand({
   subCommands: {
     validate: () => Promise.resolve().then(() => (init_validate_top(), exports_validate_top)).then((m) => m.default),
     init: () => Promise.resolve().then(() => (init_init2(), exports_init2)).then((m) => m.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
-    claude: () => Promise.resolve(claude)
+    claude: () => Promise.resolve(claude),
+    codex: () => Promise.resolve(codex)
   },
   run() {
     console.log(`
-` + import_picocolors13.default.blue(doraemonArt) + `
+` + import_picocolors15.default.blue(doraemonArt) + `
 `);
     showUsage(main);
   }

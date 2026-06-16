@@ -24,10 +24,9 @@ export function decidePath(ctx: ReturnType<typeof import("./context.js").detectC
 
   const useCurrentDirAsRoot = rawName === "." || rawName === basename(ctx.cwd) || !rawName;
 
-  if (intent === "distribute" || (intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasClaudeDir)) {
+  if (intent === "distribute" || (intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasPluginManifest)) {
     decisionPath = "plugin";
     if (useCurrentDirAsRoot) {
-      // User is already in the target dir (or passed .), scaffold plugin structure directly here
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
@@ -35,7 +34,7 @@ export function decidePath(ctx: ReturnType<typeof import("./context.js").detectC
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
-  } else if (intent === "self-later" && !ctx.hasClaudeDir) {
+  } else if (intent === "self-later" && !ctx.hasPluginManifest) {
     decisionPath = "plugin";
     if (useCurrentDirAsRoot) {
       targetDir = ctx.cwd;
@@ -45,7 +44,6 @@ export function decidePath(ctx: ReturnType<typeof import("./context.js").detectC
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
-    // For standalone, support in-place too if . or no name
     if (useCurrentDirAsRoot) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
@@ -72,27 +70,53 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
 
   if (path === "plugin") {
     const pluginName = basename(targetDir);
+
+    // .codex-plugin/plugin.json per Codex Build plugins docs
     const pluginJson = {
       name: pluginName,
-      description: "Scaffolded by doraval claude new",
       version: "0.1.0",
+      description: "Scaffolded by doraval codex new",
+      skills: "./skills/",
+      interface: {
+        displayName: pluginName,
+        shortDescription: "Scaffolded starter plugin",
+        category: "Productivity",
+      },
     };
-    mkdirSync(join(targetDir, ".claude-plugin"), { recursive: true });
-    writeFileSync(join(targetDir, ".claude-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
+    mkdirSync(join(targetDir, ".codex-plugin"), { recursive: true });
+    writeFileSync(join(targetDir, ".codex-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
 
-    // marketplace.json for cross-provider / Build-with-AI marketplace distribution
-    // (pairs with .claude-plugin/plugin.json; used for unified marketplace metadata, install commands, categories etc.)
+    // Starter local marketplace catalog (Codex convention: .agents/plugins/marketplace.json)
+    // One entry for this plugin. `path` is relative to the marketplace file.
+    // When the marketplace lives at <plugin>/.agents/plugins/marketplace.json,
+    // "../.." points back at the plugin root (where .codex-plugin lives).
+    // For repo-wide use, move this marketplace.json to your $REPO_ROOT/.agents/plugins/
+    // and update the path accordingly (e.g. "./plugins/this-plugin").
+    mkdirSync(join(targetDir, ".agents", "plugins"), { recursive: true });
     const marketplaceJson = {
-      name: pluginName,
-      version: "0.1.0",
-      description: "Scaffolded by doraval claude new",
-      author: { name: "" },
-      homepage: "",
-      repository: "",
-      license: "MIT",
-      keywords: ["claude-code", "skills", "plugin"],
+      name: "local",
+      interface: {
+        displayName: "Local (doraval scaffold)",
+      },
+      plugins: [
+        {
+          name: pluginName,
+          source: {
+            source: "local",
+            path: "../..",
+          },
+          policy: {
+            installation: "AVAILABLE",
+            authentication: "ON_INSTALL",
+          },
+          category: "Productivity",
+        },
+      ],
     };
-    writeFileSync(join(targetDir, "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync(
+      join(targetDir, ".agents", "plugins", "marketplace.json"),
+      JSON.stringify(marketplaceJson, null, 2)
+    );
 
     // The first skill in a generated plugin is a self-referential demo of using doraval itself.
     const demoSkillName = "doraval";
@@ -104,42 +128,49 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
     } else {
       skillContent = `---
 name: ${demoSkillName}
-description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents.
+description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents (works for Codex too).
 ---
 
-# Use Doraval
+# Use Doraval (Codex edition)
 
 Doraval is the context engineering toolkit.
 
-When you need to check a skill or plugin:
+When you need to check a skill or Codex plugin:
 
 - Validate the current directory: \`doraval validate .\`
-- Validate a specific plugin: \`doraval validate .\ --for claude:plugin\`
 - Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
 - Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
 - Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
 
-Always run \`doraval validate\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
+Always run \`doraval validate\` before sharing or publishing a plugin.
+
+This skill demonstrates a complete, self-referential example of using doraval inside a generated Codex plugin.
+
+To test in Codex:
+1. Make sure this plugin is listed in a marketplace (we created .agents/plugins/marketplace.json for you).
+2. Restart Codex.
+3. Open the plugin directory, select your local marketplace, and enable the plugin.
+4. Invoke the demo with /${pluginName}:doraval`;
     }
 
     writeFileSync(join(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
 
     const readmePath = join(targetDir, "README.md");
     if (!existsSync(readmePath)) {
-      writeFileSync(readmePath, "# " + pluginName + "\n\nClaude Code plugin scaffolded by doraval.");
+      writeFileSync(readmePath, "# " + pluginName + "\n\nCodex plugin scaffolded by doraval.");
     }
   } else {
-    // standalone
-    mkdirSync(join(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
-    const skillBody = migrateContent || "# My Skill\n\nBasic starter.";
-    writeFileSync(join(targetDir, ".claude", "skills", "my-skill", "SKILL.md"), `---\nname: my-skill\ndescription: Starter\n---\n\n${skillBody}`);
+    // "standalone" / local skill start for Codex (per "start with a local skill")
+    mkdirSync(join(targetDir, "skills", "doraval"), { recursive: true });
+    const skillBody = migrateContent || "# My Skill\n\nBasic starter for Codex.";
+    writeFileSync(join(targetDir, "skills", "doraval", "SKILL.md"), `---\nname: doraval\ndescription: Starter (local skill)\n---\n\n${skillBody}`);
   }
 }
 
 export default defineCommand({
   meta: {
     name: "new",
-    description: "Create a new skill or plugin following Claude Code packaging rules",
+    description: "Create a new skill or plugin following Codex packaging rules",
   },
   args: {
     name: {
@@ -159,11 +190,10 @@ export default defineCommand({
     },
   },
   run({ args }) {
-    ui.heading("doraval claude new — Context-aware scaffolding");
+    ui.heading("doraval codex new — Context-aware scaffolding");
     const ctx = detectContext();
     let intent: Intent = (args.intent as Intent) || "self-later";
     if (!args.yes) {
-      // Simplified prompt for now; full questions later
       const ans = prompt("  Intent (self | self-later | distribute)", intent);
       intent = (ans as Intent) || intent;
     }
@@ -174,19 +204,19 @@ export default defineCommand({
 
     let migrateContent: string | undefined;
     if (decision.migrateExisting && !args.yes) {
-      // Simplified; in real use read the first loose file
       migrateContent = "Content from your existing SKILL.md (user-confirmed).";
     }
 
     scaffold(decision, ctx, migrateContent);
     ui.write(`\n  ${pc.green("✓")} Created ${decision.path} at ${pc.bold(decision.targetDir)}`);
-    const cmdName = decision.path === "plugin" ? `/${basename(decision.targetDir)}:doraval` : "/my-skill";
+    const cmdName = decision.path === "plugin" ? `/${basename(decision.targetDir)}:doraval` : "/doraval (local skill)";
     ui.info(`  Command: ${cmdName}`);
     if (decision.path === "plugin") {
-      ui.info(`  Claude: .claude-plugin/plugin.json`);
-      ui.info(`  Marketplace: marketplace.json (unified / cross-provider listings)`);
+      ui.info(`  Codex manifest: .codex-plugin/plugin.json`);
+      ui.info(`  Marketplace catalog: .agents/plugins/marketplace.json (starter for local testing)`);
+      ui.info(`  (Move/expand the marketplace.json to $REPO_ROOT/.agents/plugins/ or ~/.agents/plugins/ as needed)`);
     }
-    ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
+    ui.info(`  Test (local): restart Codex, select your marketplace in the plugin directory`);
     ui.info(`  Validate: doraval validate ${decision.targetDir}`);
     if (decision.path === "plugin" && decision.migrateExisting) {
       ui.info("  (Existing content migrated where confirmed.)");

@@ -48,9 +48,24 @@ const claude = defineCommand({
   },
   subCommands: {
     new: () => import("./commands/claude/new.js").then((m) => m.default),
+    bump: () => import("./commands/bump.js").then((m) => m.default),
   },
   run() {
     showUsage(claude);
+  },
+});
+
+const codex = defineCommand({
+  meta: {
+    name: "codex",
+    description: "Codex (OpenAI)-specific commands (packaging, scaffolding, distribution)",
+  },
+  subCommands: {
+    new: () => import("./commands/codex/new.js").then((m) => m.default),
+    bump: () => import("./commands/bump.js").then((m) => m.default),
+  },
+  run() {
+    showUsage(codex);
   },
 });
 
@@ -79,9 +94,11 @@ const main = defineCommand({
     validate: () =>
       import("./commands/validate-top.js").then((m) => m.default),
     init: () => import("./commands/init.js").then((m) => m.default),
+    bump: () => import("./commands/bump.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     claude: () => Promise.resolve(claude),
+    codex: () => Promise.resolve(codex),
   },
   run() {
     // Show Doraemon banner before the normal usage instructions

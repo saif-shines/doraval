@@ -207,7 +207,7 @@ describe("doraval CLI", () => {
 
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toContain("plugin");
-    expect(existsSync(join(tmp, "test-helper-plugin", ".claude-plugin", "plugin.json"))).toBe(true);
+    expect(existsSync(join(tmp, "test-helper", ".claude-plugin", "plugin.json"))).toBe(true);
 
     rmSync(tmp, { recursive: true, force: true });
   });
@@ -221,12 +221,50 @@ describe("doraval CLI", () => {
       "claude", "new",
       "--yes",
       "--intent", "self",
-      "--name", "my-skill",
     ], { cwd: tmp });
 
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toContain("standalone");
     expect(existsSync(join(tmp, ".claude", "skills", "my-skill", "SKILL.md"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("codex new --yes scaffolds plugin in temp dir", () => {
+    const tmp = join(import.meta.dir, "../../tmp-codex-new-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+
+    const { exitCode, stdout, stderr } = runDoraval([
+      "codex", "new",
+      "--yes",
+      "--intent", "distribute",
+      "--name", "test-codex-plugin",
+    ], { cwd: tmp });
+
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("plugin");
+    expect(existsSync(join(tmp, "test-codex-plugin", ".codex-plugin", "plugin.json"))).toBe(true);
+    expect(existsSync(join(tmp, "test-codex-plugin", ".agents", "plugins", "marketplace.json"))).toBe(true);
+    expect(existsSync(join(tmp, "test-codex-plugin", "skills", "doraval", "SKILL.md"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("codex new --yes scaffolds local skill (standalone) in temp dir", () => {
+    const tmp = join(import.meta.dir, "../../tmp-codex-new-standalone-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+
+    const { exitCode, stdout, stderr } = runDoraval([
+      "codex", "new",
+      "--yes",
+      "--intent", "self",
+    ], { cwd: tmp });
+
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("standalone");
+    expect(existsSync(join(tmp, "skills", "doraval", "SKILL.md"))).toBe(true);
 
     rmSync(tmp, { recursive: true, force: true });
   });
