@@ -1,11 +1,13 @@
 import { spawnSync } from "bun";
-import pc from "picocolors";
-import { ui } from "../cli/out.js";
 
 export interface RemoteJournalFile {
   content: string;
   sha?: string;
 }
+
+export type RemoteResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: string; isNotFound?: boolean };
 
 export function hasGhCli(): boolean {
   const result = spawnSync(["gh", "--version"], {
@@ -15,20 +17,13 @@ export function hasGhCli(): boolean {
   return result.exitCode === 0;
 }
 
-export function ensureGhCliOrExit(): void {
-  if (hasGhCli()) return;
+export function ensureGhCli(): RemoteResult<true> {
+  if (hasGhCli()) return { ok: true, value: true };
 
-  ui.write(`  ${pc.red("✗")} ${pc.white("The GitHub CLI (")}${pc.bold("gh")}${pc.white(") is not installed.")}\n`);
-  ui.info(`  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`);
-  ui.info(`  Install it:\n`);
-  ui.info(`    macOS:   ${pc.dim("brew install gh")}`);
-  ui.info(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-  ui.info(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
-  ui.info(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
-  process.exit(1);
+  return { ok: false, error: "GH_CLI_MISSING" };
 }
 
-export function fetchRemoteJournalFile(repo: string, path: string): RemoteJournalFile | null {
+export function fetchRemoteJournalFile(repo: string, path: string): RemoteResult<RemoteJournalFile> {
   const result = spawnSync(
     ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"],
     { stdout: "pipe", stderr: "pipe" }
@@ -37,11 +32,9 @@ export function fetchRemoteJournalFile(repo: string, path: string): RemoteJourna
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();
     if (stderr.includes("404") || stderr.includes("Not Found")) {
-      return null;
+      return { ok: false, error: "not found", isNotFound: true };
     }
-    ui.fail(`Failed to fetch ${path} from ${repo}:`);
-    ui.info(stderr);
-    process.exit(1);
+    return { ok: false, error: stderr };
   }
 
   try {
@@ -59,12 +52,14 @@ export function fetchRemoteJournalFile(repo: string, path: string): RemoteJourna
     }
 
     return {
-      content: decoded,
-      sha: parsed.sha,
+      ok: true,
+      value: {
+        content: decoded,
+        sha: parsed.sha,
+      },
     };
   } catch {
-    ui.fail(`Unexpected response when fetching ${path} from ${repo}`);
-    process.exit(1);
+    return { ok: false, error: `Unexpected response when fetching ${path} from ${repo}` };
   }
 }
 
@@ -72,19 +67,23 @@ export async function refreshLocalJournalFile(
   repo: string,
   remotePath: string,
   localPath: string
-): Promise<boolean> {
-  const remote = fetchRemoteJournalFile(repo, remotePath);
-  if (!remote) {
-    return false;
+): Promise<RemoteResult<boolean>> {
+  const res = fetchRemoteJournalFile(repo, remotePath);
+  if (!res.ok) {
+    if (res.isNotFound) {
+      return { ok: true, value: false };
+    }
+    return { ok: false, error: res.error };
   }
+  const remote = res.value;
   await Bun.write(localPath, remote.content);
-  return true;
+  return { ok: true, value: true };
 }
 
 export function getRemoteJournalFileMeta(
   repo: string,
   path: string
-): { sha?: string; content: string; encoding?: string } | null {
+): RemoteResult<{ sha?: string; content: string; encoding?: string }> {
   const result = spawnSync(
     ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"],
     { stdout: "pipe", stderr: "pipe" }
@@ -93,18 +92,16 @@ export function getRemoteJournalFileMeta(
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();
     if (stderr.includes("404") || stderr.includes("Not Found")) {
-      return null;
+      return { ok: false, error: "not found", isNotFound: true };
     }
-    ui.fail(`Failed to fetch ${path} from ${repo}:`);
-    ui.info(stderr);
-    process.exit(1);
+    return { ok: false, error: stderr };
   }
 
   try {
-    return JSON.parse(result.stdout.toString());
+    const parsed = JSON.parse(result.stdout.toString()) as { sha?: string; content: string; encoding?: string };
+    return { ok: true, value: parsed };
   } catch {
-    ui.fail(`Unexpected response when fetching ${path} from ${repo}`);
-    process.exit(1);
+    return { ok: false, error: `Unexpected response when fetching ${path} from ${repo}` };
   }
 }
 

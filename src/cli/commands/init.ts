@@ -12,7 +12,7 @@ import {
   type JournalConfig,
 } from "../../core/journal-config.js";
 import {
-  ensureGhCliOrExit,
+  ensureGhCli,
   refreshLocalJournalFile,
   getGitRemoteOwner,
   ghUser,
@@ -46,7 +46,17 @@ export default defineCommand({
   async run({ args }) {
     ui.heading("dora init — Set up doraval, your journal, and the coding agent dora should use on the fly");
 
-    ensureGhCliOrExit();
+    const ghCheck = ensureGhCli();
+    if (!ghCheck.ok) {
+      ui.write(`  ${pc.red("✗")} ${pc.white("The GitHub CLI (")}${pc.bold("gh")}${pc.white(") is not installed.")}\n`);
+      ui.info(`  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`);
+      ui.info(`  Install it:\n`);
+      ui.info(`    macOS:   ${pc.dim("brew install gh")}`);
+      ui.info(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+      ui.info(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
+      ui.info(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
+      process.exit(1);
+    }
 
     let repo = (args.repo as string | undefined) || process.env.DORAVAL_JOURNAL_REPO;
 
@@ -127,7 +137,19 @@ export default defineCommand({
     ui.write(`  ${pc.dim(pc.gray("Fetching journal files from"))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
 
     const globalDest = join(journalsDir, "global.md");
-    const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
+    const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
+    let wroteGlobal: boolean;
+    if (!refreshGlobalRes.ok) {
+      if (refreshGlobalRes.isNotFound) {
+        wroteGlobal = false;
+      } else {
+        ui.fail(`Failed to fetch global.md from ${effectiveRepo}:`);
+        ui.info(refreshGlobalRes.error);
+        process.exit(1);
+      }
+    } else {
+      wroteGlobal = refreshGlobalRes.value;
+    }
     if (wroteGlobal) {
       ui.success("global.md");
     } else {
@@ -135,7 +157,19 @@ export default defineCommand({
       await Bun.write(globalDest, "# Global Journal\n\nCross-project principles.\n");
     }
 
-    const wroteProject = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
+    const refreshProjectRes = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
+    let wroteProject: boolean;
+    if (!refreshProjectRes.ok) {
+      if (refreshProjectRes.isNotFound) {
+        wroteProject = false;
+      } else {
+        ui.fail(`Failed to fetch ${remotePath} from ${effectiveRepo}:`);
+        ui.info(refreshProjectRes.error);
+        process.exit(1);
+      }
+    } else {
+      wroteProject = refreshProjectRes.value;
+    }
     if (wroteProject) {
       ui.success(remotePath);
     } else {

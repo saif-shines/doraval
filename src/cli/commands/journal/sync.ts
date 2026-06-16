@@ -13,7 +13,7 @@ import {
   sanitizeProjectName,
 } from "../../../core/journal-config.js";
 import {
-  ensureGhCliOrExit,
+  ensureGhCli,
   getRemoteJournalFileMeta,
   refreshLocalJournalFile,
 } from "../../../core/journal-remote.js";
@@ -109,7 +109,17 @@ export default defineCommand({
       process.exit(1);
     }
 
-    ensureGhCliOrExit();
+    const ghCheck = ensureGhCli();
+    if (!ghCheck.ok) {
+      ui.write(`  ${pc.red("✗")} ${pc.white("The GitHub CLI (")}${pc.bold("gh")}${pc.white(") is not installed.")}\n`);
+      ui.write(`  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`);
+      ui.write(`  Install it:\n`);
+      ui.write(`    macOS:   ${pc.dim("brew install gh")}`);
+      ui.write(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+      ui.write(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
+      ui.write(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
+      process.exit(1);
+    }
 
     const journalRepo = config.journal.repo;
     const pendingDir = getPendingProjectDir(project);
@@ -127,12 +137,29 @@ export default defineCommand({
 
     ui.write(`  ${pc.dim(pc.gray("Refreshing local cache from remote..."))}`);
 
-    const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", join(journalsDir, "global.md"));
+    const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", join(journalsDir, "global.md"));
+    if (!refreshGlobalRes.ok) {
+      if (!refreshGlobalRes.isNotFound) {
+        ui.write(pc.red(`Failed to fetch global.md from ${journalRepo}:`));
+        ui.write(refreshGlobalRes.error);
+        process.exit(1);
+      }
+      // isNotFound: treat as not got, no output (matches prior behavior for absent global)
+    }
+    const gotGlobal = refreshGlobalRes.ok && refreshGlobalRes.value;
     if (gotGlobal) {
       ui.write(`  ${pc.dim(pc.gray("✓ global.md"))}`);
     }
 
-    const gotProjectCache = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
+    const refreshProjectCacheRes = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
+    if (!refreshProjectCacheRes.ok) {
+      if (!refreshProjectCacheRes.isNotFound) {
+        ui.write(pc.red(`Failed to fetch ${remoteProjectPath} from ${journalRepo}:`));
+        ui.write(refreshProjectCacheRes.error);
+        process.exit(1);
+      }
+    }
+    const gotProjectCache = refreshProjectCacheRes.ok && refreshProjectCacheRes.value;
     if (gotProjectCache) {
       ui.write(`  ${pc.dim(pc.gray(`✓ ${remoteProjectPath}`))}`);
     }
@@ -154,10 +181,22 @@ export default defineCommand({
     // Note: we already refreshed the local cache above; this re-reads the authoritative
     // remote (with sha) so the append + conditional PUT is safe.
     const remotePath = `projects/${project}.md`;
-    const currentFile = getRemoteJournalFileMeta(journalRepo, remotePath);
+    const metaRes = getRemoteJournalFileMeta(journalRepo, remotePath);
 
     let existingContent = "";
     let currentSha: string | undefined;
+
+    let currentFile: { sha?: string; content: string; encoding?: string } | null = null;
+    if (!metaRes.ok) {
+      if (!metaRes.isNotFound) {
+        ui.write(pc.red(`Failed to fetch ${remotePath} from ${journalRepo}:`));
+        ui.write(metaRes.error);
+        process.exit(1);
+      }
+      // not found: currentFile stays null
+    } else {
+      currentFile = metaRes.value;
+    }
 
     if (currentFile) {
       existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
@@ -214,8 +253,13 @@ export default defineCommand({
     // 6. Re-fetch the updated file into local journals cache (best effort)
     // We already did a pre-sync refresh; this gets the exact post-push state.
     try {
-      const wrote = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
-      if (wrote) {
+      const refreshRes = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
+      if (!refreshRes.ok) {
+        if (!refreshRes.isNotFound) {
+          ui.write(`  ${pc.yellow("⚠")} Could not re-fetch updated file (you can run sync again later)`);
+        }
+        // notfound or error: best effort, no crash
+      } else if (refreshRes.value) {
         if (args.verbose) ui.write(`  ${pc.green("✓")} ${pc.white("Re-fetched")} ${pc.white(project)}.md ${pc.white("into local cache")}`);
       }
     } catch {
