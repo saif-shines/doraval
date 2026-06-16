@@ -186,7 +186,7 @@ export default defineCommand({
       required: false,
     },
     pushback: {
-      type: "number",
+      type: "string",
       alias: "b",
       description: "Pushback intensity (1-10). Optional — defaults are applied (or supplied by --json / on-the-fly agent).",
       required: false,
@@ -264,7 +264,7 @@ export default defineCommand({
     let title: string | undefined;
     let pushback: number | undefined;
     let tags: string[] = [];
-    let author = args.author as string || "human";
+    let author = String(args.author || "human");
     let status = (args.status as JournalEntry["status"]) || "active";
     let rationale: string | undefined;
     let date = new Date().toISOString().split("T")[0];
@@ -325,7 +325,7 @@ export default defineCommand({
     if (!title && rawBody) {
       const headingMatch = rawBody.match(/^#+\s+(.+?)(?:\r?\n|$)/m);
       if (headingMatch) {
-        title = headingMatch[1].trim();
+        title = (headingMatch[1] ?? "").trim();
         rawBody = rawBody.replace(/^#+\s+(.+?)(?:\r?\n|$)/m, "").trimStart();
       } else {
         ui.write(`${pc.red("✗")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
@@ -384,8 +384,8 @@ export default defineCommand({
           if (typeof agentResult.pushback === "number") pushback = agentResult.pushback;
           if (Array.isArray(agentResult.tags)) {
             tags = agentResult.tags.map((s: any) => String(s).trim()).filter(Boolean);
-          } else if (Array.isArray(agentResult.scope)) { // legacy support in agent JSON
-            tags = agentResult.scope.map((s: any) => String(s).trim()).filter(Boolean);
+          } else if (Array.isArray((agentResult as any).scope)) { // legacy support in agent JSON
+            tags = (agentResult as any).scope.map((s: any) => String(s).trim()).filter(Boolean);
           }
           if (agentResult.rationale) rationale = String(agentResult.rationale).trim();
           if (agentResult.author) author = String(agentResult.author);

@@ -12,6 +12,6 @@ export function parseFrontmatter(raw: string): ParsedSkill {
   if (!match) {
     return { data: {}, content: raw };
   }
-  const data = YAML.parse(match[1]) as Record<string, unknown>;
-  return { data: data ?? {}, content: match[2] };
+  const data = (YAML.parse(match[1]!) ?? {}) as Record<string, unknown>;
+  return { data, content: match[2] ?? "" };
 }

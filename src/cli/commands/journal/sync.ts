@@ -162,7 +162,7 @@ export default defineCommand({
     if (currentFile) {
       existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
       currentSha = currentFile.sha;
-      if (args.verbose) ui.write(`  ${pc.dim(pc.gray("Found existing remote file (sha: " + currentSha.slice(0, 7) + "...)"))}`);
+      if (args.verbose) ui.write(`  ${pc.dim(pc.gray("Found existing remote file (sha: " + (currentSha?.slice(0, 7) ?? "") + "...)"))}`);
     } else {
       if (args.verbose) ui.write(`  ${pc.dim(pc.gray("No existing file on remote — will create it"))}`);
     }

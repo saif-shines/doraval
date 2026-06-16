@@ -119,7 +119,7 @@ export function getGitRemoteOwner(): string | null {
   if (!url) return null;
 
   const match = url.match(/[:/]([^/]+)\/([^/.]+)(\.git)?$/);
-  return match ? match[1] : null;
+  return match ? match[1]! : null;
 }
 
 export function ghUser(): string | null {

@@ -50,7 +50,7 @@ describe("resolveFor", () => {
   test("exact match by id", () => {
     const { matched } = resolveFor("claude:plugin");
     expect(matched.length).toBe(1);
-    expect(matched[0].id).toBe("claude:plugin");
+    expect(matched[0]!.id).toBe("claude:plugin");
   });
 
   test("errors on unknown provider", () => {
