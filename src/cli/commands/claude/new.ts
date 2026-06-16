@@ -79,9 +79,35 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
     mkdirSync(join(targetDir, ".claude-plugin"), { recursive: true });
     writeFileSync(join(targetDir, ".claude-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
 
-    mkdirSync(join(targetDir, "skills", "my-skill"), { recursive: true });
-    const skillBody = migrateContent || "# My Skill\n\nBasic starter skill.";
-    writeFileSync(join(targetDir, "skills", "my-skill", "SKILL.md"), `---\nname: my-skill\ndescription: Starter skill\n---\n\n${skillBody}`);
+    // The first skill in a generated plugin is a self-referential demo of using doraval itself.
+    const demoSkillName = "doraval";
+    mkdirSync(join(targetDir, "skills", demoSkillName), { recursive: true });
+
+    let skillContent: string;
+    if (migrateContent) {
+      skillContent = migrateContent;
+    } else {
+      skillContent = `---
+name: ${demoSkillName}
+description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents.
+---
+
+# Use Doraval
+
+Doraval is the context engineering toolkit.
+
+When you need to check a skill or plugin:
+
+- Validate the current directory: \`doraval validate .\`
+- Validate a specific plugin: \`doraval validate .\ --for claude:plugin\`
+- Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
+- Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
+- Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
+
+Always run \`doraval validate\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
+    }
+
+    writeFileSync(join(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
 
     writeFileSync(join(targetDir, "README.md"), "# " + pluginJson.name + "\n\nClaude Code plugin scaffolded by doraval.");
   } else {
@@ -136,7 +162,7 @@ export default defineCommand({
 
     scaffold(decision, ctx, migrateContent);
     ui.write(`\n  ${pc.green("✓")} Created ${decision.path} at ${pc.bold(decision.targetDir)}`);
-    ui.info(`  Command: ${decision.path === "plugin" ? `/${decision.targetDir.split("/").pop()}:my-skill` : "/my-skill"}`);
+    ui.info(`  Command: ${decision.path === "plugin" ? `/${decision.targetDir.split("/").pop()}:doraval` : "/my-skill"}`);
     ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
     ui.info(`  Validate: doraval validate ${decision.targetDir}`);
     if (decision.path === "plugin" && decision.migrateExisting) {

@@ -2680,16 +2680,32 @@ function scaffold(decision, ctx, migrateContent) {
     };
     mkdirSync2(join8(targetDir, ".claude-plugin"), { recursive: true });
     writeFileSync(join8(targetDir, ".claude-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
-    mkdirSync2(join8(targetDir, "skills", "my-skill"), { recursive: true });
-    const skillBody = migrateContent || `# My Skill
-
-Basic starter skill.`;
-    writeFileSync(join8(targetDir, "skills", "my-skill", "SKILL.md"), `---
-name: my-skill
-description: Starter skill
+    const demoSkillName = "doraval";
+    mkdirSync2(join8(targetDir, "skills", demoSkillName), { recursive: true });
+    let skillContent;
+    if (migrateContent) {
+      skillContent = migrateContent;
+    } else {
+      skillContent = `---
+name: ${demoSkillName}
+description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents.
 ---
 
-${skillBody}`);
+# Use Doraval
+
+Doraval is the context engineering toolkit.
+
+When you need to check a skill or plugin:
+
+- Validate the current directory: \`doraval validate .\`
+- Validate a specific plugin: \`doraval validate . --for claude:plugin\`
+- Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
+- Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
+- Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
+
+Always run \`doraval validate\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
+    }
+    writeFileSync(join8(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
     writeFileSync(join8(targetDir, "README.md"), "# " + pluginJson.name + `
 
 Claude Code plugin scaffolded by doraval.`);
@@ -2752,7 +2768,7 @@ var init_new = __esm(() => {
       scaffold(decision, ctx, migrateContent);
       ui.write(`
   ${import_picocolors10.default.green("\u2713")} Created ${decision.path} at ${import_picocolors10.default.bold(decision.targetDir)}`);
-      ui.info(`  Command: ${decision.path === "plugin" ? `/${decision.targetDir.split("/").pop()}:my-skill` : "/my-skill"}`);
+      ui.info(`  Command: ${decision.path === "plugin" ? `/${decision.targetDir.split("/").pop()}:doraval` : "/my-skill"}`);
       ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
       ui.info(`  Validate: doraval validate ${decision.targetDir}`);
       if (decision.path === "plugin" && decision.migrateExisting) {
@@ -3777,7 +3793,7 @@ init_dist();
 // package.json
 var package_default = {
   name: "@hacksmith/doraval",
-  version: "0.2.20",
+  version: "0.2.21",
   author: "Saif",
   repository: {
     type: "git",
