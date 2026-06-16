@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { ui } from "../../out.js";
 import { detectContext } from "./context.js";
 import { prompt } from "../../prompt.js";
+import pc from "picocolors";
 import { join } from "path";
 import { mkdirSync, writeFileSync, existsSync } from "fs";
 
@@ -113,10 +114,12 @@ export default defineCommand({
     }
 
     scaffold(decision, ctx, migrateContent);
-    ui.success(`Scaffolded ${decision.path} at ${decision.targetDir}`);
-
-    if (decision.shouldCreateDir) {
-      // mkdir will happen in scaffolding task
+    ui.write(`\n  ${pc.green("✓")} Created ${decision.path} at ${pc.bold(decision.targetDir)}`);
+    ui.info(`  Command: ${decision.path === "plugin" ? `/${decision.targetDir.split("/").pop()}:my-skill` : "/my-skill"}`);
+    ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
+    ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+    if (decision.path === "plugin" && decision.migrateExisting) {
+      ui.info("  (Existing content migrated where confirmed.)");
     }
     process.exit(0);
   },

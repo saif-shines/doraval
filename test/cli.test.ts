@@ -211,4 +211,23 @@ describe("doraval CLI", () => {
 
     rmSync(tmp, { recursive: true, force: true });
   });
+
+  test("claude new --yes scaffolds standalone in temp dir", () => {
+    const tmp = join(import.meta.dir, "../../tmp-claude-new-standalone-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+
+    const { exitCode, stdout, stderr } = runDoraval([
+      "claude", "new",
+      "--yes",
+      "--intent", "self",
+      "--name", "my-skill",
+    ], { cwd: tmp });
+
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("standalone");
+    expect(existsSync(join(tmp, ".claude", "skills", "my-skill", "SKILL.md"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
 });
