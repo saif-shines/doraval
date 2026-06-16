@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { ui } from "../../out.js";
+import { detectContext } from "./context.js";
 
 export default defineCommand({
   meta: {
@@ -29,6 +30,8 @@ export default defineCommand({
     if (args.yes) {
       ui.info("  Non-interactive mode requested.");
     }
+    const ctx = detectContext();
+    ui.info(`  Context: empty=${ctx.isEmpty}, looseSkills=${ctx.looseSkillFiles.length}`);
     process.exit(0);
   },
 });
