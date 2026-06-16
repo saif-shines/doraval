@@ -142,6 +142,8 @@ doraval journal update        # pull latest from remote
 
 Requires the GitHub CLI (`gh`). Journal lives in a private GitHub repo you control.
 
+doraval claude new          # interactive wizard for skills/plugins (follows official table)
+
 ## Options
 
 | Flag | Short | Description |
