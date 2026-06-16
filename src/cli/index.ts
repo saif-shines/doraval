@@ -41,6 +41,19 @@ const journal = defineCommand({
   },
 });
 
+const claude = defineCommand({
+  meta: {
+    name: "claude",
+    description: "Claude Code-specific commands (packaging, scaffolding, distribution)",
+  },
+  subCommands: {
+    new: () => import("./commands/claude/new.js").then((m) => m.default),
+  },
+  run() {
+    showUsage(claude);
+  },
+});
+
 // Doraemon banner - shown when user just runs "doraval" with no subcommand
 const doraemonArt = `
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣤⣴⣶⣶⣶⣶⣶⠶⣶⣤⣤⣀⠀⠀⠀⠀⠀⠀ 
@@ -68,6 +81,7 @@ const main = defineCommand({
     init: () => import("./commands/init.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
+    claude: () => Promise.resolve(claude),
   },
   run() {
     // Show Doraemon banner before the normal usage instructions
