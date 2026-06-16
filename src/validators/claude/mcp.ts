@@ -6,7 +6,7 @@ export const claudeMcpValidator: Validator = {
   id: "claude:mcp",
   provider: "claude",
   name: "Claude MCP Config",
-  description: "Validates .mcp.json: server definitions, required fields, path portability",
+  description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, ${CLAUDE_PLUGIN_ROOT} etc. substitutions per Plugins reference",
 
   detect(dir: string): boolean {
     return existsSync(resolve(dir, ".mcp.json"));
@@ -43,8 +43,41 @@ export const claudeMcpValidator: Validator = {
 
     passes.push(`${serverNames.length} server(s) defined`);
 
-    // TODO: Validate each server entry (type-specific required fields)
-    // Rules will be added incrementally from official docs
+    // Per-server validation (from MCP server configuration examples + env var section)
+    for (const [name, entry] of Object.entries(config)) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        errors.push(`mcp server "${name}": definition must be an object`);
+        continue;
+      }
+      const e = entry as Record<string, unknown>;
+
+      const hasCommand = typeof e.command === "string";
+      const hasUrl = typeof e.url === "string";
+
+      if (!hasCommand && !hasUrl) {
+        errors.push(`mcp server "${name}": must have either "command" (for stdio) or "url" (for SSE/HTTP)`);
+      }
+      if (hasCommand && !Array.isArray(e.args)) {
+        // args optional but conventionally present; only warn if command without args for common case
+        warnings.push(`mcp server "${name}": "command" present but no "args" array (ok for some servers)`);
+      }
+      if (hasUrl && hasCommand) {
+        warnings.push(`mcp server "${name}": both "command" and "url" present — usually one or the other`);
+      }
+
+      if (e.env && typeof e.env === "object") {
+        passes.push(`mcp server "${name}": has env`);
+      }
+      if (typeof e.cwd === "string") {
+        passes.push(`mcp server "${name}": has cwd`);
+      }
+
+      // Variable substitutions supported in command/args/env/cwd values (documented)
+      const hasSubs = JSON.stringify(e).match(/\$\{CLAUDE_PLUGIN_(ROOT|DATA)|CLAUDE_PROJECT_DIR|user_config\.|ENV_VAR\}/);
+      if (hasSubs) {
+        passes.push(`mcp server "${name}": uses \${CLAUDE_PLUGIN_*} / user_config / env substitution`);
+      }
+    }
 
     return { errors, warnings, passes };
   },

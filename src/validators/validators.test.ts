@@ -9,6 +9,8 @@ import { claudeMcpValidator } from "./claude/mcp.js";
 import { claudeSubagentValidator } from "./claude/subagent.js";
 import { claudeCommandValidator } from "./claude/command.js";
 import { claudeMemoryValidator } from "./claude/memory.js";
+import { claudeLspValidator } from "./claude/lsp.js";
+import { claudeMonitorsValidator } from "./claude/monitors.js";
 
 const fixtures = resolve(import.meta.dir, "../../test/fixtures");
 
@@ -25,6 +27,8 @@ describe("registry", () => {
     expect(claudeIds).toContain("claude:subagent");
     expect(claudeIds).toContain("claude:command");
     expect(claudeIds).toContain("claude:memory");
+    expect(claudeIds).toContain("claude:lsp");
+    expect(claudeIds).toContain("claude:monitors");
   });
 
   test("all validators have unique ids", () => {
@@ -98,6 +102,38 @@ describe("claude:plugin", () => {
     );
     expect(result.errors).toEqual([]);
     expect(result.passes).toContain('name: "test-plugin"');
+  });
+
+  test("warns on unrecognized fields (with suggestion) and version semantics", async () => {
+    // Use a temp dir to test new rules without polluting fixtures
+    const tmp = resolve(import.meta.dir, "../../tmp-plugin-validate-test");
+    try {
+      await Bun.write(resolve(tmp, ".claude-plugin/plugin.json"), JSON.stringify({
+        name: "demo",
+        version: "1.2.3",
+        foobar: "x",           // unknown
+        licence: "MIT",        // common typo -> suggestion
+      }, null, 2));
+      const result = await claudePluginValidator.validate(tmp, { format: "table", verbose: false, ci: false });
+      expect(result.errors).toEqual([]);
+      expect(result.warnings.some(w => w.includes("Unrecognized") && w.includes("foobar"))).toBe(true);
+      expect(result.warnings.some(w => w.includes("licence") && w.includes("license"))).toBe(true);
+      expect(result.passes.some(p => p.includes("explicit") && p.includes("1.2.3"))).toBe(true);
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
+  });
+
+  test("warns on .claude-plugin/ purity violation", async () => {
+    const tmp = resolve(import.meta.dir, "../../tmp-plugin-purity-test");
+    try {
+      await Bun.write(resolve(tmp, ".claude-plugin/plugin.json"), JSON.stringify({ name: "purity-test" }));
+      await Bun.write(resolve(tmp, ".claude-plugin/evil.txt"), "oops");
+      const result = await claudePluginValidator.validate(tmp, { format: "table", verbose: false, ci: false });
+      expect(result.warnings.some(w => w.includes("Unexpected") && w.includes("evil.txt"))).toBe(true);
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
   });
 });
 
