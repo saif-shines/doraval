@@ -40,3 +40,7 @@ package-lock.json
 # local docs (not published)
 /docs/
 plans/
+
+# worktrees for isolated feature development (using-git-worktrees skill)
+.worktrees/
+worktrees/

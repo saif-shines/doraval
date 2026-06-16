@@ -6,6 +6,8 @@ import { claudeMcpValidator } from "./claude/mcp.js";
 import { claudeSubagentValidator } from "./claude/subagent.js";
 import { claudeCommandValidator } from "./claude/command.js";
 import { claudeMemoryValidator } from "./claude/memory.js";
+import { claudeLspValidator } from "./claude/lsp.js";
+import { claudeMonitorsValidator } from "./claude/monitors.js";
 import type { Validator } from "./types.js";
 
 export const validators: Validator[] = [
@@ -18,6 +20,8 @@ export const validators: Validator[] = [
   claudeSubagentValidator,
   claudeCommandValidator,
   claudeMemoryValidator,
+  claudeLspValidator,
+  claudeMonitorsValidator,
   // Future: cursor, codex, windsurf validators go here
 ];
 

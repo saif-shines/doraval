@@ -67,12 +67,14 @@ doraval validate . --for claude:plugin    # just the plugin validator
 
 | Validator | Detects | Checks |
 |---|---|---|
-| `claude:skill` | `SKILL.md` | Frontmatter, body, supporting files, dynamic injection, advanced fields |
-| `claude:plugin` | `.claude-plugin/plugin.json` | Manifest fields, component paths |
+| `claude:skill` | `SKILL.md` | Frontmatter (all known fields), body, supporting files, dynamic injection (!`...`, $ARGUMENTS, ${CLAUDE_*}), advanced fields, unknown field warnings |
+| `claude:plugin` | `.claude-plugin/plugin.json` | Full manifest schema (name, version rules, displayName, author, license, keywords, defaultEnabled, userConfig, channels, dependencies, ...), path rules (./, replace vs augment), .claude-plugin/ purity (only manifest allowed inside), default dirs + co-existence warnings, root SKILL.md single-skill layout, unrecognized fields + suggestions, version pinning semantics |
 | `claude:marketplace` | `plugins/` | Plugin directory structure, README, LICENSE |
-| `claude:hooks` | `hooks/hooks.json` | Valid JSON, known event names |
-| `claude:mcp` | `.mcp.json` | Valid JSON, server definitions |
-| `claude:subagent` | `agents/*.md` | Frontmatter with description, non-empty body |
+| `claude:hooks` | `hooks/hooks.json` or `hooks.json` | All 30+ lifecycle events (full list), hook group structure (matcher + hooks[]), supported types (command/http/mcp_tool/prompt/agent), basic required fields per type, substitution notes |
+| `claude:mcp` | `.mcp.json` | Server entries (command+args stdio or url), env/cwd, substitution detection (${CLAUDE_PLUGIN_*} etc) |
+| `claude:lsp` | `.lsp.json` (or inline) | Per-language: required command + extensionToLanguage map; notes on separate binary install requirement |
+| `claude:monitors` | `monitors/monitors.json` (or experimental) | Array entries (name, command, description, when), unique names, substitution support; experimental caveats |
+| `claude:subagent` | `agents/*.md` | Supported frontmatter (name/desc/model/effort/maxTurns/tools/disallowedTools/skills/memory/background/isolation=worktree), disallowed security fields (hooks/mcpServers/permissionMode) are errors, non-empty body |
 | `claude:command` | `commands/*.md` | Frontmatter, body, advanced fields |
 | `claude:memory` | `CLAUDE.md` | Non-empty, length limit, @path import resolution |
 
