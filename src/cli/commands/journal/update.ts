@@ -11,7 +11,7 @@ import {
   sanitizeProjectName,
 } from "../../../core/journal-config.js";
 import {
-  ensureGhCliOrExit,
+  ensureGhCli,
   refreshLocalJournalFile,
 } from "../../../core/journal-remote.js";
 
@@ -34,7 +34,17 @@ export default defineCommand({
   },
 
   async run({ args }) {
-    ensureGhCliOrExit();
+    const ghCheck = ensureGhCli();
+    if (!ghCheck.ok) {
+      ui.write(`  ${pc.red("✗")} ${pc.white("The GitHub CLI (")}${pc.bold("gh")}${pc.white(") is not installed.")}\n`);
+      ui.write(`  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`);
+      ui.write(`  Install it:\n`);
+      ui.write(`    macOS:   ${pc.dim("brew install gh")}`);
+      ui.write(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+      ui.write(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
+      ui.write(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
+      process.exit(1);
+    }
 
     const config = await readConfig();
     if (!config?.journal.repo) {
@@ -78,7 +88,19 @@ export default defineCommand({
 
     // Always refresh global first (cross-project principles)
     const globalLocal = join(journalsDir, "global.md");
-    const gotGlobal = await refreshLocalJournalFile(journalRepo, "global.md", globalLocal);
+    const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", globalLocal);
+    let gotGlobal: boolean;
+    if (!refreshGlobalRes.ok) {
+      if (refreshGlobalRes.isNotFound) {
+        gotGlobal = false;
+      } else {
+        ui.write(`${pc.red("✗")} Failed to fetch global.md from ${journalRepo}:`);
+        ui.write(refreshGlobalRes.error);
+        process.exit(1);
+      }
+    } else {
+      gotGlobal = refreshGlobalRes.value;
+    }
     if (gotGlobal) {
       ui.write(`  ${pc.green("✓")} global.md`);
     } else {
@@ -101,7 +123,19 @@ export default defineCommand({
       const remotePath = `projects/${project}.md`;
       const localPath = join(journalsDir, `${project}.md`);
 
-      const got = await refreshLocalJournalFile(journalRepo, remotePath, localPath);
+      const refreshRes = await refreshLocalJournalFile(journalRepo, remotePath, localPath);
+      let got: boolean;
+      if (!refreshRes.ok) {
+        if (refreshRes.isNotFound) {
+          got = false;
+        } else {
+          ui.write(`${pc.red("✗")} Failed to fetch ${remotePath} from ${journalRepo}:`);
+          ui.write(refreshRes.error);
+          process.exit(1);
+        }
+      } else {
+        got = refreshRes.value;
+      }
       if (got) {
         ui.write(`  ${pc.green("✓")} ${remotePath}`);
       } else {

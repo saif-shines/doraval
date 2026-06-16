@@ -13,7 +13,7 @@ import {
   type JournalConfig,
 } from "../../../core/journal-config.js";
 import {
-  ensureGhCliOrExit,
+  ensureGhCli,
   refreshLocalJournalFile,
   getGitRemoteOwner,
   ghUser,
@@ -52,7 +52,17 @@ export default defineCommand({
     );
 
     // ── 0. Check gh CLI is available ───────────────────────────────
-    ensureGhCliOrExit();
+    const ghCheck = ensureGhCli();
+    if (!ghCheck.ok) {
+      ui.write(`  ${pc.red("✗")} ${pc.white("The GitHub CLI (")}${pc.bold("gh")}${pc.white(") is not installed.")}\n`);
+      ui.write(`  doraval uses ${pc.bold("gh")} to fetch and sync journal files with GitHub.\n`);
+      ui.write(`  Install it:\n`);
+      ui.write(`    macOS:   ${pc.dim("brew install gh")}`);
+      ui.write(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+      ui.write(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
+      ui.write(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
+      process.exit(1);
+    }
 
     // ── 1. Resolve repo ────────────────────────────────────────────
     // Precedence: --repo flag > DORAVAL_JOURNAL_REPO env > smart default
@@ -169,7 +179,19 @@ export default defineCommand({
     ui.write(`  ${pc.dim(pc.gray(`${actionLabel} journal files from`))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
 
     const globalDest = join(journalsDir, "global.md");
-    const wroteGlobal = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
+    const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
+    let wroteGlobal: boolean;
+    if (!refreshGlobalRes.ok) {
+      if (refreshGlobalRes.isNotFound) {
+        wroteGlobal = false;
+      } else {
+        ui.write(`  ${pc.red("✗")} Failed to fetch global.md from ${effectiveRepo}:`);
+        ui.write(refreshGlobalRes.error);
+        process.exit(1);
+      }
+    } else {
+      wroteGlobal = refreshGlobalRes.value;
+    }
     if (wroteGlobal) {
       ui.write(`  ${pc.green("✓")} global.md`);
     } else {
@@ -177,7 +199,19 @@ export default defineCommand({
       await Bun.write(globalDest, "# Global Journal\n\nCross-project principles.\n");
     }
 
-    const wroteProject = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
+    const refreshProjectRes = await refreshLocalJournalFile(effectiveRepo, remotePath, localPath);
+    let wroteProject: boolean;
+    if (!refreshProjectRes.ok) {
+      if (refreshProjectRes.isNotFound) {
+        wroteProject = false;
+      } else {
+        ui.write(`  ${pc.red("✗")} Failed to fetch ${remotePath} from ${effectiveRepo}:`);
+        ui.write(refreshProjectRes.error);
+        process.exit(1);
+      }
+    } else {
+      wroteProject = refreshProjectRes.value;
+    }
     if (wroteProject) {
       ui.write(`  ${pc.green("✓")} ${remotePath}`);
     } else {
