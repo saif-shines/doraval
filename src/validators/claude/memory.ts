@@ -39,7 +39,7 @@ export const claudeMemoryValidator: Validator = {
     const importRegex = /^@([^\s]+)\s*$/gm;
     let match;
     while ((match = importRegex.exec(raw)) !== null) {
-      const importPath = match[1];
+      const importPath = match[1]!;
       const resolvedImport = resolve(dir, importPath);
       if (existsSync(resolvedImport)) {
         passes.push(`@import "${importPath}" exists`);
