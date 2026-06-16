@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "path";
 import {
   validateSkillModel, merge,
   checkFrontmatterPresence, checkName, checkDescription, checkBody,
   checkAdvancedFields, checkUnknownFields, checkSupportingDirs, checkDynamicInjection,
+  loadSkillFromDir,
 } from "./skill-validate.js";
 
 describe("validateSkillModel", () => {
@@ -289,5 +291,44 @@ describe("checkDynamicInjection", () => {
       { existingDirs: [] }
     );
     expect(result.passes?.length).toBe(2);
+  });
+});
+
+describe("loadSkillFromDir", () => {
+  const fixtures = resolve(import.meta.dir, "../../test/fixtures/skills");
+
+  test("happy path: loads minimal-good with model and no supporting dirs", async () => {
+    const res = await loadSkillFromDir(resolve(fixtures, "minimal-good"));
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.model.data.name).toBe("minimal-good");
+      expect(res.model.content).toContain("# Minimal Good Skill");
+      expect(res.existingDirs).toEqual([]);
+    }
+  });
+
+  test("returns ok:false for missing SKILL.md", async () => {
+    const res = await loadSkillFromDir(resolve(fixtures, "..")); // skills/ parent dir has no SKILL.md at this level
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error).toBe("No SKILL.md found");
+    }
+  });
+
+  test("returns ok:false + parse error for bad frontmatter", async () => {
+    const res = await loadSkillFromDir(resolve(fixtures, "bad-frontmatter"));
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error).toBe("frontmatter-parse-error");
+    }
+  });
+
+  test("includes detected supporting dirs (e.g. scripts/ in rich-modern)", async () => {
+    const res = await loadSkillFromDir(resolve(fixtures, "rich-modern"));
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.existingDirs).toContain("scripts");
+      expect(res.existingDirs).not.toContain("references");
+    }
   });
 });
