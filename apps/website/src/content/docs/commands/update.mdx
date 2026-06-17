@@ -1,0 +1,121 @@
+---
+title: update
+description: Update doraval to the latest version.
+sidebar:
+  order: 10
+---
+
+Update doraval to the latest version after installing via Homebrew, npm, or Bun.
+
+```bash
+doraval update
+```
+
+The command detects how doraval was installed, checks for a newer version on npm, shows a summary, and (with confirmation or `--yes`) runs the matching upgrade command.
+
+## Usage
+
+```bash
+doraval update [options]
+```
+
+## Options
+
+| Flag       | Description                                                  |
+|------------|--------------------------------------------------------------|
+| `--check`  | Only check for updates, do not install (Default: false)      |
+| `--yes`    | Skip confirmation prompt (Default: false)                    |
+| `--via`    | Force install method detection: "homebrew" \| "npm" \| "bun" |
+
+Exact help:
+
+```
+Update doraval to the latest version (doraval update v0.2.28)
+
+USAGE doraval update [OPTIONS] 
+
+OPTIONS
+
+      --check    Only check for updates, do not install (Default: false)   
+        --yes    Skip confirmation prompt (Default: false)                 
+  --via=<via>    Force install method detection: "homebrew" | "npm" | "bun"
+```
+
+## Normal update flow
+
+`doraval update` performs a version check against the npm registry.
+
+- If up to date, it exits 0 with a success message.
+- If an update is available, it prints current and latest versions plus a short release summary, then asks for confirmation (unless `--yes`).
+- On confirm, it runs the detected package manager upgrade command (e.g. `brew upgrade doraval`).
+
+It writes an install marker on success so future runs can detect the method reliably even if PATH changes.
+
+Example:
+
+```
+doraval update
+
+  Current: 0.2.27
+  Latest:  0.2.28
+
+  New release available.
+
+Running: brew upgrade doraval
+
+Successfully updated to 0.2.28.
+You may need to restart your shell to pick up the new version.
+```
+
+## `--check` mode
+
+Use `--check` in scripts or CI to test whether an update is available without side effects.
+
+```bash
+doraval update --check
+```
+
+When an update exists it prints the versions and exits 1:
+
+```
+Update available: 0.2.27 → 0.2.28
+```
+
+When up to date it exits 0.
+
+## Transient installs (npx / bunx)
+
+If you are running via `npx @hacksmith/doraval` or `bunx @hacksmith/doraval`, `doraval update` detects this and prints guidance instead of attempting an upgrade. Transient runs always fetch the latest on the next invocation.
+
+Example output:
+
+```
+It looks like you're using doraval via npx or bunx.
+These always fetch the latest version on the next run.
+
+For easier updates, install globally:
+  brew install saif-shines/tap/doraval
+  npm install -g @hacksmith/doraval
+  bun add -g @hacksmith/doraval
+```
+
+## Unknown installs and `--via`
+
+If detection fails, `doraval update` explains the reason and suggests `--via`:
+
+```
+Could not determine how doraval was installed: ...
+You can force it with --via homebrew|npm|bun
+```
+
+Force a method when needed:
+
+```bash
+doraval update --via npm
+```
+
+See [Installation](/get-started/installation/) for the supported install paths.
+
+## How detection works
+
+doraval uses layered detection (entrypoint path, package manager probes, then a persistent marker written on the last successful update). The marker lives under your home directory and helps after PATH or shell changes.

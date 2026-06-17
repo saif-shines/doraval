@@ -31,12 +31,38 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Get Started",
+          label: "Get started",
           autogenerate: { directory: "get-started" },
         },
         {
-          label: "Commands",
-          autogenerate: { directory: "commands" },
+          label: "Validate & check",
+          items: [
+            "commands/validate",
+            "commands/drift",
+            "commands/judge",
+          ],
+        },
+        {
+          label: "Scaffold for agents",
+          items: [
+            { label: "claude new (codex new)", link: "/commands/claude-new/" }
+          ],
+        },
+        {
+          label: "Decision journal",
+          items: [
+            "commands/journal-init",
+            "commands/journal-list",
+            "commands/journal-add",
+            "commands/journal-sync",
+            "commands/journal-update",
+          ],
+        },
+        {
+          label: "Keep doraval current",
+          items: [
+            { label: "update", link: "/commands/update/" },
+          ],
         },
         {
           label: "Concepts",

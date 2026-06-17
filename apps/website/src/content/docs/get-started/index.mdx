@@ -26,6 +26,8 @@ Manual review doesn't scale. doraval automates these checks across every artifac
 | Command | What it does | Speed |
 |---------|-------------|-------|
 | `validate` | Auto-detect and validate all agent config in a directory | Instant |
+| `update` | Update doraval to the latest version (Homebrew, npm, or Bun) | Instant |
+| `claude new` / `codex new` | Interactive wizard to scaffold skills or plugins following official packaging rules | Instant |
 | `skill validate` | Structural correctness for a single skill | Instant |
 | `skill drift` | Rubric deviation — 6 categories of quality drift | Instant |
 | `skill judge` | AI-driven qualitative assessment via LLM | *(coming soon)* |
@@ -51,5 +53,11 @@ npx @hacksmith/doraval skill drift ./my-skill/                         # rubric 
 ```
 
 ## Beyond validation
+
+Start with `doraval init` — the recommended one-time setup for doraval + your journal + coding agent (see [Installation](/get-started/installation/)).
+
+Keep doraval current with `doraval update` (see the [update command](/commands/update/)).
+
+Scaffold new skills or plugins with the interactive wizard: `doraval claude new` or `doraval codex new` (see [claude new](/commands/claude-new/)).
 
 `doraval journal` provides a separate system for recording project decisions and principles with pushback (see [Agent Journal](/concepts/agent-journal)). It is completely optional and lives outside your project directories.

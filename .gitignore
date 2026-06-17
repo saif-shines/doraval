@@ -44,4 +44,4 @@ plans/
 # worktrees for isolated feature development (using-git-worktrees skill)
 .worktrees/
 worktrees/
-superpowers/
+.superpowers/

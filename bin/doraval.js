@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.23",
+    version: "0.2.28",
     author: "Saif",
     repository: {
       type: "git",
@@ -772,6 +772,23 @@ var init_frontmatter = __esm(() => {
 });
 
 // src/core/skill-validate.ts
+import { existsSync } from "fs";
+import { resolve } from "path";
+async function loadSkill(dir) {
+  const skillMd = resolve(dir, "SKILL.md");
+  if (!existsSync(skillMd)) {
+    return { ok: false, error: "No SKILL.md found" };
+  }
+  const raw = await Bun.file(skillMd).text();
+  let parsed;
+  try {
+    parsed = parseFrontmatter(raw);
+  } catch {
+    return { ok: false, error: "Failed to parse YAML frontmatter in SKILL.md" };
+  }
+  const existingDirs = OPTIONAL_DIRS.filter((d) => existsSync(resolve(dir, d)));
+  return { ok: true, model: parsed, existingDirs };
+}
 function checkFrontmatterPresence(model, _ctx) {
   const keys = Object.keys(model.data);
   if (keys.length === 0) {
@@ -836,8 +853,9 @@ var merge = (a, b) => ({
   errors: [...a.errors, ...b.errors ?? []],
   warnings: [...a.warnings, ...b.warnings ?? []],
   passes: [...a.passes, ...b.passes ?? []]
-}), NAME_REGEX, KNOWN_FIELDS, SUPPORTING_DIRS, EMPTY, checks;
+}), NAME_REGEX, KNOWN_FIELDS, SUPPORTING_DIRS, OPTIONAL_DIRS, EMPTY, checks;
 var init_skill_validate = __esm(() => {
+  init_frontmatter();
   NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
   KNOWN_FIELDS = new Set([
     "name",
@@ -858,6 +876,7 @@ var init_skill_validate = __esm(() => {
     "shell"
   ]);
   SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"];
+  OPTIONAL_DIRS = ["references", "scripts", "assets"];
   EMPTY = { errors: [], warnings: [], passes: [] };
   checks = [
     checkFrontmatterPresence,
@@ -876,16 +895,14 @@ var exports_validate = {};
 __export(exports_validate, {
   default: () => validate_default
 });
-import { existsSync } from "fs";
-import { resolve } from "path";
-var import_picocolors2, OPTIONAL_DIRS, validate_default;
+import { existsSync as existsSync2 } from "fs";
+import { resolve as resolve2 } from "path";
+var import_picocolors2, validate_default;
 var init_validate = __esm(() => {
   init_dist();
   init_out();
-  init_frontmatter();
   init_skill_validate();
   import_picocolors2 = __toESM(require_picocolors(), 1);
-  OPTIONAL_DIRS = ["references", "scripts", "assets"];
   validate_default = defineCommand({
     meta: {
       name: "validate",
@@ -921,16 +938,17 @@ var init_validate = __esm(() => {
     },
     async run({ args }) {
       const targetPath = args.path;
-      const fullPath = resolve(targetPath);
-      if (!existsSync(fullPath)) {
+      const fullPath = resolve2(targetPath);
+      if (!existsSync2(fullPath)) {
         ui.fail(`Path not found: ${targetPath}
 
 Check that the path is correct and the directory exists.`);
         process.exit(1);
       }
-      const skillMd = resolve(fullPath, "SKILL.md");
-      if (!existsSync(skillMd)) {
-        ui.fail(`No skill or plugin found at ${targetPath}
+      const loaded = await loadSkill(fullPath);
+      if (!loaded.ok) {
+        if (loaded.error === "No SKILL.md found") {
+          ui.fail(`No skill or plugin found at ${targetPath}
 
 Searched for:
   \u2022 SKILL.md (Agent Skills spec)
@@ -939,19 +957,14 @@ Searched for:
 Try:
   \u2022 Check the path points to a skill or plugin directory
   \u2022 Use --for to target a specific validator`);
-        process.exit(1);
-      }
-      const raw = await Bun.file(skillMd).text();
-      let parsed;
-      try {
-        parsed = parseFrontmatter(raw);
-      } catch {
-        ui.fail(`Failed to parse YAML frontmatter in SKILL.md
+        } else {
+          ui.fail(`${loaded.error}
 
 Fix the YAML syntax and retry.`);
+        }
         process.exit(1);
       }
-      const existingDirs = OPTIONAL_DIRS.filter((dir) => existsSync(resolve(fullPath, dir)));
+      const { model: parsed, existingDirs } = loaded;
       const { errors, warnings, passes } = validateSkillModel(parsed, {
         existingDirs: [...existingDirs]
       });
@@ -1060,13 +1073,12 @@ var exports_drift = {};
 __export(exports_drift, {
   default: () => drift_default
 });
-import { existsSync as existsSync2 } from "fs";
-import { resolve as resolve2 } from "path";
+import { resolve as resolve3 } from "path";
 var import_picocolors3, drift_default;
 var init_drift = __esm(() => {
   init_dist();
   init_out();
-  init_frontmatter();
+  init_skill_validate();
   init_skill_drift();
   import_picocolors3 = __toESM(require_picocolors(), 1);
   drift_default = defineCommand({
@@ -1104,22 +1116,19 @@ var init_drift = __esm(() => {
     },
     async run({ args }) {
       const targetPath = args.path;
-      const fullPath = resolve2(targetPath);
-      const skillMd = resolve2(fullPath, "SKILL.md");
-      if (!existsSync2(skillMd)) {
-        ui.fail(`No SKILL.md found at ${targetPath}
+      const fullPath = resolve3(targetPath);
+      const loaded = await loadSkill(fullPath);
+      if (!loaded.ok) {
+        if (loaded.error === "No SKILL.md found") {
+          ui.fail(`No SKILL.md found at ${targetPath}
 
 Check that the path points to a skill directory containing SKILL.md.`);
+        } else {
+          ui.fail(loaded.error);
+        }
         process.exit(1);
       }
-      const raw = await Bun.file(skillMd).text();
-      let parsed;
-      try {
-        parsed = parseFrontmatter(raw);
-      } catch {
-        ui.fail("Failed to parse YAML frontmatter in SKILL.md");
-        process.exit(1);
-      }
+      const { model: parsed } = loaded;
       const desc = String(parsed.data.description || "");
       const when = String(parsed.data.when_to_use || "");
       const { drifts, driftCount, total } = analyzeDrift({
@@ -2869,7 +2878,7 @@ var exports_bump = {};
 __export(exports_bump, {
   default: () => bump_default
 });
-import { resolve as resolve3, join as join9, dirname, relative } from "path";
+import { resolve as resolve4, join as join9, dirname, relative } from "path";
 import { existsSync as existsSync10, readFileSync, writeFileSync as writeFileSync2, readdirSync as readdirSync4, statSync } from "fs";
 function bumpVersion(current, type) {
   if (/^\d+\.\d+\.\d+$/.test(type))
@@ -3005,7 +3014,7 @@ var init_bump = __esm(() => {
         process.exit(1);
       }
       const isKnownType = ["patch", "minor", "major"].includes(rawType) || /^\d+\.\d+\.\d+$/.test(rawType);
-      const maybePath = resolve3(rawType);
+      const maybePath = resolve4(rawType);
       const looksLikeDir = existsSync10(maybePath) || rawType === "." || rawType.startsWith("./") || rawType.startsWith("../");
       if (!isKnownType && looksLikeDir) {
         targetPath = rawType;
@@ -3014,7 +3023,7 @@ var init_bump = __esm(() => {
         ui.fail(`Unknown bump type "${rawType}". Use patch | minor | major | 1.2.3`);
         process.exit(1);
       }
-      const root = resolve3(targetPath);
+      const root = resolve4(targetPath);
       if (!existsSync10(root)) {
         ui.fail(`Path does not exist: ${root}`);
         process.exit(1);
@@ -3329,42 +3338,36 @@ var init_new2 = __esm(() => {
 
 // src/validators/claude/skill.ts
 import { existsSync as existsSync13 } from "fs";
-import { resolve as resolve4 } from "path";
-var OPTIONAL_DIRS2, claudeSkillValidator;
+import { resolve as resolve5 } from "path";
+var claudeSkillValidator;
 var init_skill = __esm(() => {
-  init_frontmatter();
   init_skill_validate();
-  OPTIONAL_DIRS2 = ["references", "scripts", "assets"];
   claudeSkillValidator = {
     id: "claude:skill",
     provider: "claude",
     name: "Claude Skill",
     description: "Validates SKILL.md per current Claude Code spec: frontmatter (name/description relaxed to recommended; directory name usually provides the /command), body, supporting files, dynamic injection (!`cmd`), substitutions ($ARGUMENTS, ${CLAUDE_*}), and advanced fields (allowed-tools, context, disable-model-invocation, when_to_use, etc.)",
     detect(dir) {
-      return existsSync13(resolve4(dir, "SKILL.md"));
+      return existsSync13(resolve5(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
-      const skillMd = resolve4(dir, "SKILL.md");
-      const raw = await Bun.file(skillMd).text();
-      let parsed;
-      try {
-        parsed = parseFrontmatter(raw);
-      } catch {
+      const loaded = await loadSkill(dir);
+      if (!loaded.ok) {
         return {
-          errors: ["Failed to parse YAML frontmatter in SKILL.md"],
+          errors: [loaded.error],
           warnings: [],
           passes: []
         };
       }
-      const existingDirs = OPTIONAL_DIRS2.filter((d) => existsSync13(resolve4(dir, d)));
-      return validateSkillModel(parsed, { existingDirs: [...existingDirs] });
+      const { model, existingDirs } = loaded;
+      return validateSkillModel(model, { existingDirs: [...existingDirs] });
     }
   };
 });
 
 // src/validators/claude/plugin.ts
 import { existsSync as existsSync14, readdirSync as readdirSync6 } from "fs";
-import { resolve as resolve5, join as join12 } from "path";
+import { resolve as resolve6, join as join12 } from "path";
 function levenshtein(a, b) {
   if (a === b)
     return 0;
@@ -3373,15 +3376,21 @@ function levenshtein(a, b) {
     return n;
   if (n === 0)
     return m;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0;i <= m; i++)
-    dp[i][0] = i;
-  for (let j = 0;j <= n; j++)
-    dp[0][j] = j;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0;i <= m; i++) {
+    const row = dp[i];
+    row[0] = i;
+  }
+  for (let j = 0;j <= n; j++) {
+    const row = dp[0];
+    row[j] = j;
+  }
   for (let i = 1;i <= m; i++) {
+    const row = dp[i];
+    const prev = dp[i - 1];
     for (let j = 1;j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      row[j] = Math.min((prev[j] ?? 0) + 1, (row[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
     }
   }
   return dp[m][n];
@@ -3450,14 +3459,14 @@ var init_plugin = __esm(() => {
     name: "Claude Plugin",
     description: "Validates .claude-plugin/plugin.json manifest (complete schema per Plugins reference), component path rules (replace vs augment), .claude-plugin/ purity, default dirs, single-root-skill layout, unrecognized fields + suggestions, and structure",
     detect(dir) {
-      return existsSync14(resolve5(dir, ".claude-plugin", "plugin.json"));
+      return existsSync14(resolve6(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const manifestPath = resolve5(dir, ".claude-plugin", "plugin.json");
-      const dotClaudePluginDir = resolve5(dir, ".claude-plugin");
+      const manifestPath = resolve6(dir, ".claude-plugin", "plugin.json");
+      const dotClaudePluginDir = resolve6(dir, ".claude-plugin");
       let manifest;
       try {
         const raw = await Bun.file(manifestPath).text();
@@ -3553,7 +3562,7 @@ var init_plugin = __esm(() => {
               errors.push(`${field}: path "${s}" must start with "./"`);
             } else if (s.includes("..")) {
               errors.push(`${field}: path "${s}" must not use ".." (paths are confined to the plugin tree after cache copy)`);
-            } else if (existsSync14(resolve5(dir, s))) {
+            } else if (existsSync14(resolve6(dir, s))) {
               passes.push(`${field}: path "${s}" exists`);
             } else {
               warnings.push(`${field}: path "${s}" does not exist on disk`);
@@ -3602,7 +3611,7 @@ var init_plugin = __esm(() => {
       if (Array.isArray(manifest.dependencies)) {
         passes.push(`dependencies: declares ${manifest.dependencies.length} plugin dependency/ies`);
       }
-      const skillsDir = resolve5(dir, "skills");
+      const skillsDir = resolve6(dir, "skills");
       if (existsSync14(skillsDir)) {
         const entries = readdirSync6(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
@@ -3617,7 +3626,7 @@ var init_plugin = __esm(() => {
           warnings.push('Default skills/ dir co-exists with manifest "skills" \u2014 manifest path is authoritative; default folder ignored for loading');
         }
       }
-      const commandsDir = resolve5(dir, "commands");
+      const commandsDir = resolve6(dir, "commands");
       if (existsSync14(commandsDir)) {
         const mds = readdirSync6(commandsDir).filter((f) => f.endsWith(".md"));
         if (mds.length) {
@@ -3627,7 +3636,7 @@ var init_plugin = __esm(() => {
           warnings.push('commands/ co-exists with manifest "commands" \u2014 manifest replaces default (dir ignored)');
         }
       }
-      const agentsDir = resolve5(dir, "agents");
+      const agentsDir = resolve6(dir, "agents");
       if (existsSync14(agentsDir)) {
         const mds = readdirSync6(agentsDir).filter((f) => f.endsWith(".md"));
         if (mds.length) {
@@ -3637,30 +3646,30 @@ var init_plugin = __esm(() => {
           warnings.push('agents/ co-exists with manifest "agents" \u2014 manifest replaces default (dir ignored)');
         }
       }
-      if (existsSync14(resolve5(dir, "output-styles"))) {
+      if (existsSync14(resolve6(dir, "output-styles"))) {
         passes.push("output-styles/ directory present");
         if (manifest.outputStyles)
           warnings.push("output-styles/ co-exists with manifest outputStyles \u2014 manifest wins");
       }
-      if (existsSync14(resolve5(dir, "themes")))
+      if (existsSync14(resolve6(dir, "themes")))
         passes.push("themes/ present (experimental)");
-      if (existsSync14(resolve5(dir, "monitors")) || manifest.experimental?.monitors) {
+      if (existsSync14(resolve6(dir, "monitors")) || manifest.experimental?.monitors) {
         passes.push("monitors config present (experimental)");
       }
-      if (existsSync14(resolve5(dir, "bin")))
+      if (existsSync14(resolve6(dir, "bin")))
         passes.push("bin/ present (adds executables to Bash tool $PATH)");
-      if (existsSync14(resolve5(dir, "settings.json")))
+      if (existsSync14(resolve6(dir, "settings.json")))
         passes.push("settings.json present (plugin defaults for agent/statusline)");
-      if (existsSync14(resolve5(dir, "README.md")))
+      if (existsSync14(resolve6(dir, "README.md")))
         passes.push("README.md present");
-      if (existsSync14(resolve5(dir, ".mcp.json")))
+      if (existsSync14(resolve6(dir, ".mcp.json")))
         passes.push(".mcp.json present (validated by claude:mcp)");
-      if (existsSync14(resolve5(dir, ".lsp.json")))
+      if (existsSync14(resolve6(dir, ".lsp.json")))
         passes.push(".lsp.json present (validated by claude:lsp when registered)");
-      if (existsSync14(resolve5(dir, "hooks/hooks.json")) || existsSync14(resolve5(dir, "hooks.json"))) {
+      if (existsSync14(resolve6(dir, "hooks/hooks.json")) || existsSync14(resolve6(dir, "hooks.json"))) {
         passes.push("hooks config present (validated by claude:hooks)");
       }
-      if (existsSync14(resolve5(dir, "SKILL.md")) && !existsSync14(skillsDir) && manifest.skills === undefined) {
+      if (existsSync14(resolve6(dir, "SKILL.md")) && !existsSync14(skillsDir) && manifest.skills === undefined) {
         passes.push('Root SKILL.md detected \u2014 plugin will be treated as a single-skill plugin (prefer frontmatter "name" for stable /command)');
       }
       return { errors, warnings, passes };
@@ -3670,7 +3679,7 @@ var init_plugin = __esm(() => {
 
 // src/validators/claude/marketplace.ts
 import { existsSync as existsSync15, readdirSync as readdirSync7 } from "fs";
-import { resolve as resolve6, join as join13 } from "path";
+import { resolve as resolve7, join as join13 } from "path";
 var claudeMarketplaceValidator;
 var init_marketplace = __esm(() => {
   claudeMarketplaceValidator = {
@@ -3679,7 +3688,7 @@ var init_marketplace = __esm(() => {
     name: "Claude Plugin Marketplace",
     description: "Validates marketplace structure: plugins/ directory with valid plugin subdirectories",
     detect(dir) {
-      const pluginsDir = resolve6(dir, "plugins");
+      const pluginsDir = resolve7(dir, "plugins");
       if (!existsSync15(pluginsDir))
         return false;
       try {
@@ -3699,7 +3708,7 @@ var init_marketplace = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const pluginsDir = resolve6(dir, "plugins");
+      const pluginsDir = resolve7(dir, "plugins");
       if (!existsSync15(pluginsDir)) {
         errors.push("Missing plugins/ directory");
         return { errors, warnings, passes };
@@ -3711,12 +3720,12 @@ var init_marketplace = __esm(() => {
         return { errors, warnings, passes };
       }
       passes.push(`${pluginEntries.length} plugin(s) found`);
-      if (existsSync15(resolve6(dir, "README.md"))) {
+      if (existsSync15(resolve7(dir, "README.md"))) {
         passes.push("README.md exists at marketplace root");
       } else {
         warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
       }
-      if (existsSync15(resolve6(dir, "LICENSE"))) {
+      if (existsSync15(resolve7(dir, "LICENSE"))) {
         passes.push("LICENSE exists at marketplace root");
       } else {
         warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -3742,7 +3751,7 @@ var init_marketplace = __esm(() => {
 
 // src/validators/claude/hooks.ts
 import { existsSync as existsSync16 } from "fs";
-import { resolve as resolve7 } from "path";
+import { resolve as resolve8 } from "path";
 var KNOWN_EVENTS, claudeHooksValidator;
 var init_hooks = __esm(() => {
   KNOWN_EVENTS = [
@@ -3783,13 +3792,13 @@ var init_hooks = __esm(() => {
     name: "Claude Hooks",
     description: "Validates hooks/hooks.json (or root hooks.json): all lifecycle events per Plugins reference, hook group structure (matcher + hooks[]), supported hook types (command, http, mcp_tool, prompt, agent)",
     detect(dir) {
-      return existsSync16(resolve7(dir, "hooks", "hooks.json")) || existsSync16(resolve7(dir, "hooks.json"));
+      return existsSync16(resolve8(dir, "hooks", "hooks.json")) || existsSync16(resolve8(dir, "hooks.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const hooksPath = existsSync16(resolve7(dir, "hooks", "hooks.json")) ? resolve7(dir, "hooks", "hooks.json") : resolve7(dir, "hooks.json");
+      const hooksPath = existsSync16(resolve8(dir, "hooks", "hooks.json")) ? resolve8(dir, "hooks", "hooks.json") : resolve8(dir, "hooks.json");
       let config;
       try {
         const raw = await Bun.file(hooksPath).text();
@@ -3856,7 +3865,7 @@ var init_hooks = __esm(() => {
 
 // src/validators/claude/mcp.ts
 import { existsSync as existsSync17 } from "fs";
-import { resolve as resolve8 } from "path";
+import { resolve as resolve9 } from "path";
 var claudeMcpValidator;
 var init_mcp = __esm(() => {
   claudeMcpValidator = {
@@ -3865,13 +3874,13 @@ var init_mcp = __esm(() => {
     name: "Claude MCP Config",
     description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, ${CLAUDE_PLUGIN_ROOT} etc. substitutions per Plugins reference",
     detect(dir) {
-      return existsSync17(resolve8(dir, ".mcp.json"));
+      return existsSync17(resolve9(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const mcpPath = resolve8(dir, ".mcp.json");
+      const mcpPath = resolve9(dir, ".mcp.json");
       let config;
       try {
         const raw = await Bun.file(mcpPath).text();
@@ -3926,7 +3935,7 @@ var init_mcp = __esm(() => {
 
 // src/validators/claude/subagent.ts
 import { existsSync as existsSync18, readdirSync as readdirSync8 } from "fs";
-import { resolve as resolve9, join as join14 } from "path";
+import { resolve as resolve10, join as join14 } from "path";
 var claudeSubagentValidator;
 var init_subagent = __esm(() => {
   init_frontmatter();
@@ -3936,7 +3945,7 @@ var init_subagent = __esm(() => {
     name: "Claude Subagents",
     description: "Validates agents/*.md (plugin subagents): frontmatter per spec (name, description, model, effort, maxTurns, tools, disallowedTools, skills, memory, background, isolation=worktree), body; warns on disallowed fields (hooks, mcpServers, permissionMode) for security",
     detect(dir) {
-      const agentsDir = resolve9(dir, "agents");
+      const agentsDir = resolve10(dir, "agents");
       if (!existsSync18(agentsDir))
         return false;
       try {
@@ -3949,7 +3958,7 @@ var init_subagent = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const agentsDir = resolve9(dir, "agents");
+      const agentsDir = resolve10(dir, "agents");
       const mdFiles = readdirSync8(agentsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("agents/ directory has no .md files");
@@ -4018,7 +4027,7 @@ var init_subagent = __esm(() => {
 
 // src/validators/claude/command.ts
 import { existsSync as existsSync19, readdirSync as readdirSync9 } from "fs";
-import { resolve as resolve10, join as join15 } from "path";
+import { resolve as resolve11, join as join15 } from "path";
 var claudeCommandValidator;
 var init_command = __esm(() => {
   init_frontmatter();
@@ -4028,7 +4037,7 @@ var init_command = __esm(() => {
     name: "Claude Commands",
     description: "Validates commands/ (or legacy .claude/commands/) .md files: frontmatter (including rich skill fields), description, body",
     detect(dir) {
-      const commandsDir = resolve10(dir, "commands");
+      const commandsDir = resolve11(dir, "commands");
       if (!existsSync19(commandsDir))
         return false;
       try {
@@ -4041,7 +4050,7 @@ var init_command = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const commandsDir = resolve10(dir, "commands");
+      const commandsDir = resolve11(dir, "commands");
       const mdFiles = readdirSync9(commandsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("commands/ directory has no .md files");
@@ -4079,7 +4088,7 @@ var init_command = __esm(() => {
 
 // src/validators/claude/memory.ts
 import { existsSync as existsSync20 } from "fs";
-import { resolve as resolve11 } from "path";
+import { resolve as resolve12 } from "path";
 var claudeMemoryValidator;
 var init_memory = __esm(() => {
   claudeMemoryValidator = {
@@ -4088,13 +4097,13 @@ var init_memory = __esm(() => {
     name: "Claude CLAUDE.md",
     description: "Validates CLAUDE.md: non-empty, length recommendations, @path imports",
     detect(dir) {
-      return existsSync20(resolve11(dir, "CLAUDE.md"));
+      return existsSync20(resolve12(dir, "CLAUDE.md"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const filePath = resolve11(dir, "CLAUDE.md");
+      const filePath = resolve12(dir, "CLAUDE.md");
       const raw = await Bun.file(filePath).text();
       if (!raw.trim()) {
         errors.push("CLAUDE.md is empty");
@@ -4112,7 +4121,7 @@ var init_memory = __esm(() => {
       let match;
       while ((match = importRegex.exec(raw)) !== null) {
         const importPath = match[1];
-        const resolvedImport = resolve11(dir, importPath);
+        const resolvedImport = resolve12(dir, importPath);
         if (existsSync20(resolvedImport)) {
           passes.push(`@import "${importPath}" exists`);
         } else {
@@ -4126,7 +4135,7 @@ var init_memory = __esm(() => {
 
 // src/validators/claude/lsp.ts
 import { existsSync as existsSync21 } from "fs";
-import { resolve as resolve12 } from "path";
+import { resolve as resolve13 } from "path";
 var claudeLspValidator;
 var init_lsp = __esm(() => {
   claudeLspValidator = {
@@ -4135,14 +4144,14 @@ var init_lsp = __esm(() => {
     name: "Claude LSP Servers",
     description: "Validates .lsp.json (or plugin.json lspServers): language server configs with required command + extensionToLanguage; optional transport, env, settings, diagnostics etc. (binaries installed separately)",
     detect(dir) {
-      return existsSync21(resolve12(dir, ".lsp.json")) || existsSync21(resolve12(dir, ".claude-plugin", "plugin.json"));
+      return existsSync21(resolve13(dir, ".lsp.json")) || existsSync21(resolve13(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
       let cfg = null;
-      const lspPath = resolve12(dir, ".lsp.json");
+      const lspPath = resolve13(dir, ".lsp.json");
       if (existsSync21(lspPath)) {
         try {
           cfg = JSON.parse(await Bun.file(lspPath).text());
@@ -4152,7 +4161,7 @@ var init_lsp = __esm(() => {
           return { errors, warnings, passes };
         }
       } else {
-        const manifestPath = resolve12(dir, ".claude-plugin", "plugin.json");
+        const manifestPath = resolve13(dir, ".claude-plugin", "plugin.json");
         if (existsSync21(manifestPath)) {
           try {
             const m = JSON.parse(await Bun.file(manifestPath).text());
@@ -4194,7 +4203,7 @@ var init_lsp = __esm(() => {
 
 // src/validators/claude/monitors.ts
 import { existsSync as existsSync22 } from "fs";
-import { resolve as resolve13 } from "path";
+import { resolve as resolve14 } from "path";
 var claudeMonitorsValidator;
 var init_monitors = __esm(() => {
   claudeMonitorsValidator = {
@@ -4203,7 +4212,7 @@ var init_monitors = __esm(() => {
     name: "Claude Monitors (experimental)",
     description: "Validates monitors/monitors.json (or experimental.monitors): array of {name, command, description, when?}; commands support ${CLAUDE_PLUGIN_*} subs. Monitors run only in interactive CLI sessions.",
     detect(dir) {
-      return existsSync22(resolve13(dir, "monitors", "monitors.json")) || existsSync22(resolve13(dir, "monitors.json")) || existsSync22(resolve13(dir, ".claude-plugin", "plugin.json"));
+      return existsSync22(resolve14(dir, "monitors", "monitors.json")) || existsSync22(resolve14(dir, "monitors.json")) || existsSync22(resolve14(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4211,8 +4220,8 @@ var init_monitors = __esm(() => {
       const passes = [];
       let arr = null;
       const candidates = [
-        resolve13(dir, "monitors", "monitors.json"),
-        resolve13(dir, "monitors.json")
+        resolve14(dir, "monitors", "monitors.json"),
+        resolve14(dir, "monitors.json")
       ];
       for (const p of candidates) {
         if (existsSync22(p)) {
@@ -4230,7 +4239,7 @@ var init_monitors = __esm(() => {
         }
       }
       if (!arr) {
-        const mp = resolve13(dir, ".claude-plugin", "plugin.json");
+        const mp = resolve14(dir, ".claude-plugin", "plugin.json");
         if (existsSync22(mp)) {
           try {
             const m = JSON.parse(await Bun.file(mp).text());
@@ -4422,7 +4431,7 @@ __export(exports_validate_top, {
   default: () => validate_top_default
 });
 import { existsSync as existsSync24 } from "fs";
-import { resolve as resolve14 } from "path";
+import { resolve as resolve15 } from "path";
 var import_picocolors13, validate_top_default;
 var init_validate_top = __esm(() => {
   init_dist();
@@ -4472,7 +4481,7 @@ var init_validate_top = __esm(() => {
   Cloning ${import_picocolors13.default.dim(args.path)}...`);
         try {
           const result = await cloneToTemp(remote);
-          fullPath = remote.subpath ? resolve14(result.dir, remote.subpath) : result.dir;
+          fullPath = remote.subpath ? resolve15(result.dir, remote.subpath) : result.dir;
           cleanup = result.cleanup;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -4485,7 +4494,7 @@ var init_validate_top = __esm(() => {
           process.exit(1);
         }
       } else {
-        fullPath = resolve14(args.path);
+        fullPath = resolve15(args.path);
         if (!existsSync24(fullPath)) {
           ui.fail(`Path not found: ${args.path}
 
@@ -4822,62 +4831,121 @@ Project-specific decisions.
 });
 
 // src/core/update.ts
-import { execSync } from "child_process";
-import { existsSync as existsSync25 } from "fs";
-import { resolve as resolve15 } from "path";
+import { resolve as resolve16 } from "path";
 import { homedir as homedir2 } from "os";
-function isInPath(cmd) {
+function normalizePath(p) {
+  return p.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+function isInside(child, parent) {
+  const c = normalizePath(child);
+  const p = normalizePath(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+async function realpathOrSelf(ctx, p) {
   try {
-    execSync(`which ${cmd}`, { stdio: "ignore" });
-    return true;
+    return await ctx.realpath(p);
   } catch {
-    return false;
+    return p;
   }
 }
-async function autoDetect() {
-  const execPath = process.execPath;
-  const argv0 = process.argv[0] || "";
-  if (execPath.includes("/Cellar/") || execPath.includes("/homebrew/") || execPath.includes("/opt/homebrew/")) {
-    if (isInPath("brew"))
-      return { type: "homebrew" };
+function markerMatchesCurrentInstall(marker, realEntry) {
+  if (marker.entrypointRealpath && normalizePath(marker.entrypointRealpath) === realEntry) {
+    return true;
   }
-  if (execPath.includes("/.npm/") || argv0.includes("npm")) {
-    return { type: "npm" };
+  if (marker.packageRoot && isInside(realEntry, normalizePath(marker.packageRoot))) {
+    return true;
   }
-  if (execPath.includes("/.bun/") || argv0.includes("bun")) {
-    return { type: "bun" };
-  }
-  const home = homedir2();
-  const possibleGlobals = [
-    resolve15(home, ".npm-global/bin/doraval"),
-    resolve15(home, ".bun/bin/doraval")
-  ];
-  for (const p of possibleGlobals) {
-    if (existsSync25(p)) {
-      if (p.includes(".npm"))
-        return { type: "npm" };
-      if (p.includes(".bun"))
-        return { type: "bun" };
-    }
+  return false;
+}
+async function detectHomebrew(ctx, entry, realEntry) {
+  const prefix = await ctx.run("brew", ["--prefix", "doraval"]);
+  if (!prefix.ok)
+    return null;
+  const brewPrefix = normalizePath(await realpathOrSelf(ctx, prefix.stdout.trim()));
+  if (isInside(realEntry, brewPrefix) || realEntry.includes("/Cellar/doraval/")) {
+    return { type: "homebrew", source: "probe" };
   }
   return null;
 }
-async function detectInstallMethod(options) {
-  if (options?.force) {
-    if (["homebrew", "npm", "bun"].includes(options.force)) {
-      return { type: options.force };
-    }
-    if (options.force === "npx" || options.force === "bunx") {
-      return { type: "transient", via: options.force };
+async function detectNpmGlobal(ctx, entry, realEntry) {
+  const root = await ctx.run("npm", ["root", "-g"]);
+  if (root.ok) {
+    const npmRoot = normalizePath(await realpathOrSelf(ctx, root.stdout.trim()));
+    if (isInside(realEntry, `${npmRoot}/@hacksmith/doraval`)) {
+      return { type: "npm", source: "probe" };
     }
   }
-  const auto = await autoDetect();
-  if (auto)
-    return auto;
-  const marker = await readInstallMarker();
-  if (marker)
-    return marker;
-  return { type: "transient", via: "npx" };
+  if (realEntry.includes("/lib/node_modules/@hacksmith/doraval/")) {
+    return { type: "npm", source: "path" };
+  }
+  return null;
+}
+async function detectBunGlobal(ctx, entry, realEntry) {
+  const bunBin = await ctx.run("bun", ["pm", "bin", "-g"]);
+  if (bunBin.ok) {
+    for (const name of ["doraval", "dora"]) {
+      const shim = normalizePath(`${bunBin.stdout.trim()}/${name}`);
+      if (await ctx.exists(shim)) {
+        const realShim = normalizePath(await realpathOrSelf(ctx, shim));
+        if (realShim === realEntry || shim === entry) {
+          return { type: "bun", source: "probe" };
+        }
+      }
+    }
+  }
+  if (realEntry.includes("/.bun/install/global/node_modules/@hacksmith/doraval/")) {
+    return { type: "bun", source: "path" };
+  }
+  return null;
+}
+function detectTransient(entry, realEntry) {
+  if (realEntry.includes("/_npx/") && realEntry.includes("/node_modules/@hacksmith/doraval/")) {
+    return { type: "transient", via: "npx", source: "path" };
+  }
+  if (realEntry.includes("/.bun/install/cache/")) {
+    return { type: "transient", via: "bunx", source: "path" };
+  }
+  return null;
+}
+async function detectInstallMethod(ctx, options) {
+  const env = ctx.env || {};
+  if (env.DORAVAL_TEST) {
+    return { type: "npm", source: "probe" };
+  }
+  if (options?.force) {
+    const f = options.force;
+    if (["homebrew", "npm", "bun"].includes(f)) {
+      return { type: f, source: "probe" };
+    }
+    if (f === "npx" || f === "bunx") {
+      return { type: "transient", via: f, source: "path" };
+    }
+  }
+  const rawEntry = ctx.entrypoint ?? ctx.argv?.[1];
+  if (!rawEntry) {
+    return { type: "unknown", reason: "No CLI entrypoint path available" };
+  }
+  const entry = normalizePath(rawEntry);
+  const realEntry = normalizePath(await realpathOrSelf(ctx, rawEntry));
+  const owners = await Promise.all([
+    detectHomebrew(ctx, entry, realEntry),
+    detectNpmGlobal(ctx, entry, realEntry),
+    detectBunGlobal(ctx, entry, realEntry)
+  ]);
+  const owned = owners.filter(Boolean);
+  if (owned.length === 1)
+    return owned[0];
+  const transient = detectTransient(entry, realEntry);
+  if (transient)
+    return transient;
+  const marker = await ctx.readMarker();
+  if (marker && markerMatchesCurrentInstall(marker, realEntry)) {
+    return { type: marker.type, source: "marker" };
+  }
+  if (owned.length > 1) {
+    return { type: "unknown", reason: "Multiple package managers appear to own this path" };
+  }
+  return { type: "unknown", reason: "Could not determine install method" };
 }
 async function fetchLatestVersionInfo() {
   const npmRes = await fetch("https://registry.npmjs.org/@hacksmith/doraval/latest");
@@ -4905,6 +4973,9 @@ async function fetchLatestVersionInfo() {
   return { version, summary };
 }
 function buildUpgradeCommand(method) {
+  if (method.type === "transient" || method.type === "unknown") {
+    throw new Error("Cannot build upgrade command for transient or unknown installs");
+  }
   switch (method.type) {
     case "homebrew":
       return ["brew", "upgrade", "doraval"];
@@ -4912,8 +4983,6 @@ function buildUpgradeCommand(method) {
       return ["npm", "install", "-g", "@hacksmith/doraval@latest"];
     case "bun":
       return ["bun", "add", "-g", "@hacksmith/doraval@latest"];
-    default:
-      throw new Error("Cannot build upgrade command for transient installs");
   }
 }
 function shouldUpdate(current, latest) {
@@ -4929,27 +4998,26 @@ function shouldUpdate(current, latest) {
   }
   return false;
 }
-async function readInstallMarker() {
+async function readMarker() {
   try {
     const { readFile } = await import("fs/promises");
     const data = await readFile(MARKER_PATH, "utf8");
-    const parsed = JSON.parse(data);
-    if (parsed && parsed.type)
-      return parsed;
-  } catch {}
-  return null;
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
 }
-async function writeInstallMarker(method) {
+async function writeMarker(marker) {
   try {
     const { mkdir, writeFile } = await import("fs/promises");
     const { dirname: dirname2 } = await import("path");
     await mkdir(dirname2(MARKER_PATH), { recursive: true });
-    await writeFile(MARKER_PATH, JSON.stringify(method, null, 2));
+    await writeFile(MARKER_PATH, JSON.stringify(marker, null, 2));
   } catch {}
 }
 var MARKER_PATH;
 var init_update2 = __esm(() => {
-  MARKER_PATH = resolve15(homedir2(), ".doraval", "install.json");
+  MARKER_PATH = resolve16(homedir2(), ".doraval", "install.json");
 });
 
 // src/cli/commands/update.ts
@@ -4958,13 +5026,16 @@ __export(exports_update2, {
   default: () => update_default2
 });
 import { spawnSync as spawnSync6 } from "child_process";
+import { homedir as homedir3 } from "os";
+import { fileURLToPath } from "url";
+import { realpath, access } from "fs/promises";
 async function confirmUpdate() {
   const { createInterface } = await import("readline");
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve16) => {
+  return new Promise((resolve17) => {
     rl.question("Update now? (y/N) ", (answer) => {
       rl.close();
-      resolve16(answer.toLowerCase().startsWith("y"));
+      resolve17(answer.toLowerCase().startsWith("y"));
     });
   });
 }
@@ -4988,14 +5059,37 @@ var init_update3 = __esm(() => {
         type: "boolean",
         description: "Skip confirmation prompt",
         default: false
+      },
+      via: {
+        type: "string",
+        description: 'Force install method detection: "homebrew" | "npm" | "bun"'
       }
     },
     async run({ args }) {
       const currentVersion = require_package().version;
-      const argv1 = process.argv[1] || "";
-      const isNpx = process.env.npm_execpath?.includes("npx") || argv1.includes("/.npm/") || process.env.npm_lifecycle_script?.includes("npx");
-      const isBunx = process.env.BUN_INSTALL || argv1.includes(".bun/bin/bunx") || argv1.includes("bunx");
-      if (isNpx || isBunx) {
+      const entrypoint = fileURLToPath(import.meta.url);
+      const ctx = {
+        entrypoint,
+        argv: process.argv,
+        env: process.env,
+        homeDir: homedir3(),
+        realpath: (p) => realpath(p),
+        exists: async (p) => {
+          try {
+            await access(p);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        run: async (cmd2, args2) => {
+          const res = spawnSync6(cmd2, args2, { encoding: "utf8" });
+          return { ok: res.status === 0, stdout: res.stdout || "" };
+        },
+        readMarker
+      };
+      const method = await detectInstallMethod(ctx, args.via ? { force: args.via } : undefined);
+      if (method.type === "transient") {
         ui.info("It looks like you're using doraval via npx or bunx.");
         ui.info("These always fetch the latest version on the next run.");
         ui.info("");
@@ -5005,10 +5099,10 @@ var init_update3 = __esm(() => {
         ui.info("  bun add -g @hacksmith/doraval");
         process.exit(0);
       }
-      const method = await detectInstallMethod();
-      if (method.type === "transient") {
-        ui.info("Transient usage detected. Install globally for update support.");
-        process.exit(0);
+      if (method.type === "unknown") {
+        ui.fail(`Could not determine how doraval was installed: ${method.reason}`);
+        ui.info("You can force it with --via homebrew|npm|bun");
+        process.exit(2);
       }
       const latestInfo = await fetchLatestVersionInfo();
       if (!shouldUpdate(currentVersion, latestInfo.version)) {
@@ -5039,14 +5133,23 @@ var init_update3 = __esm(() => {
       if (result.status === 0) {
         ui.success(`Successfully updated to ${latestInfo.version}.`);
         ui.info("You may need to restart your shell to pick up the new version.");
-        await writeInstallMarker(method);
+        const marker = {
+          type: method.type,
+          packageRoot: undefined,
+          entrypointRealpath: await realpath(entrypoint).catch(() => entrypoint),
+          version: latestInfo.version,
+          writtenAt: new Date().toISOString()
+        };
+        await writeMarker(marker);
       } else {
         ui.fail("Update failed.");
         ui.info("Common fixes:");
-        if (cmd[0] === "brew")
+        if (cmd[0] === "brew") {
           ui.info("  \u2022 Try: sudo brew upgrade doraval  or  ensure you are in the admin group");
-        if (cmd[0] === "npm" || cmd[0] === "bun")
+        }
+        if (cmd[0] === "npm" || cmd[0] === "bun") {
           ui.info("  \u2022 Try running with appropriate permissions or check network.");
+        }
         ui.info(`
 Raw output above.`);
         process.exit(result.status ?? 1);
