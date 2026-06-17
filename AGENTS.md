@@ -1,0 +1,1 @@
+Always look up in the project or system for the available skills and use them as required especially while making decisions. Mention those skills to even inform the user by giving them couple of options.

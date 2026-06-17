@@ -595,6 +595,71 @@ var init_dist = __esm(() => {
   negativePrefixRe = /^no[-A-Z]/;
 });
 
+// package.json
+var require_package = __commonJS((exports, module) => {
+  module.exports = {
+    name: "@hacksmith/doraval",
+    version: "0.2.23",
+    author: "Saif",
+    repository: {
+      type: "git",
+      url: "git+https://github.com/saif-shines/doraval.git"
+    },
+    devDependencies: {
+      "@types/bun": "latest"
+    },
+    bin: {
+      doraval: "bin/doraval-wrapper.js",
+      dora: "bin/doraval-wrapper.js"
+    },
+    description: "The context engineering toolkit for coding agents",
+    engines: {
+      bun: ">=1.2.0",
+      node: ">=14.18.0"
+    },
+    files: [
+      "bin/",
+      "dist/",
+      "README.md"
+    ],
+    keywords: [
+      "cli",
+      "skills",
+      "plugins",
+      "agent",
+      "validation",
+      "lint",
+      "claude-code",
+      "grok",
+      "cursor",
+      "windsurf",
+      "mcp"
+    ],
+    license: "MIT",
+    workspaces: [
+      "apps/*"
+    ],
+    scripts: {
+      build: "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun",
+      dev: "bun run ./src/cli/index.ts",
+      test: "bun test",
+      typecheck: "bunx tsc --noEmit --skipLibCheck",
+      prepublishOnly: `bun run build && node -e "const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}"`,
+      bump: "bun run scripts/bump.ts",
+      release: "bun run scripts/release.ts",
+      "jsr:publish": "bunx jsr publish",
+      "site:dev": "cd apps/website && bun run dev",
+      "site:build": "cd apps/website && bun run build",
+      "site:preview": "cd apps/website && bun run preview"
+    },
+    type: "module",
+    dependencies: {
+      citty: "^0.2.2",
+      picocolors: "^1.1.1"
+    }
+  };
+});
+
 // node_modules/.bun/picocolors@1.1.1/node_modules/picocolors/picocolors.js
 var require_picocolors = __commonJS((exports, module) => {
   var p = process || {};
@@ -2835,6 +2900,28 @@ function writeJson(p, data) {
   writeFileSync2(p, JSON.stringify(data, null, 2) + `
 `, "utf8");
 }
+function getVersion(obj) {
+  if (!obj || typeof obj !== "object")
+    return;
+  if (typeof obj.version === "string")
+    return obj.version;
+  if (obj.metadata && typeof obj.metadata.version === "string")
+    return obj.metadata.version;
+  return;
+}
+function setVersion(obj, newVersion) {
+  if (!obj || typeof obj !== "object")
+    return false;
+  if (typeof obj.version === "string") {
+    obj.version = newVersion;
+    return true;
+  }
+  if (obj.metadata && typeof obj.metadata.version === "string") {
+    obj.metadata.version = newVersion;
+    return true;
+  }
+  return false;
+}
 function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
   const results = [];
   if (currentDepth > maxDepth)
@@ -2860,7 +2947,7 @@ function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
       if (entry === "plugin.json") {
         const parentDir = dirname(full);
         const parentName = parentDir.split(/[/\\]/).pop();
-        if (parentName === ".claude-plugin" || parentName === ".codex-plugin") {
+        if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin") {
           results.push({
             file: full,
             kind: "plugin",
@@ -2869,7 +2956,7 @@ function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
         }
       } else if (entry === "marketplace.json") {
         const json = readJson(full);
-        if (json && typeof json.version === "string") {
+        if (json && getVersion(json)) {
           results.push({
             file: full,
             kind: "marketplace",
@@ -2889,7 +2976,7 @@ var init_bump = __esm(() => {
   bump_default = defineCommand({
     meta: {
       name: "bump",
-      description: "Bump semver versions in plugin.json (manifests) and marketplace.json files for Claude/Codex plugins"
+      description: "Bump semver versions in plugin.json (manifests) and marketplace.json files (supports Claude, Codex, Cursor)"
     },
     args: {
       type: {
@@ -2934,7 +3021,7 @@ var init_bump = __esm(() => {
       }
       ui.heading("doraval bump");
       ui.info(`  scanning: ${root}`);
-      ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow)`);
+      ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow; Cursor metadata.version supported)`);
       const discovered = walkForTargets(root);
       let targets = discovered;
       if (scope === "plugin") {
@@ -2948,14 +3035,15 @@ var init_bump = __esm(() => {
         ui.info("  Looked for (recursively):");
         ui.info("    \u2022 **/.claude-plugin/plugin.json");
         ui.info("    \u2022 **/.codex-plugin/plugin.json");
-        ui.info('    \u2022 **/marketplace.json (only those with a top-level "version" string)');
+        ui.info("    \u2022 **/.cursor-plugin/plugin.json (or marketplace.json)");
+        ui.info("    \u2022 **/marketplace.json (top-level version or metadata.version for Cursor)");
         ui.info("");
         ui.info("  Tip: run from inside a plugin directory, or pass a path that contains plugins/.");
         ui.info("  Examples:");
         ui.info("    dora bump minor");
         ui.info("    dora bump minor ./my-claude-plugin");
         ui.info("    dora bump --only plugin .          # only the manifests");
-        ui.info("    dora bump --only marketplace ./marketplaces-root");
+        ui.info("    dora bump --only marketplace ./marketplaces-root   # includes Cursor metadata.version");
         process.exit(1);
       }
       ui.info(`  matched ${targets.length} file(s)`);
@@ -2966,7 +3054,7 @@ var init_bump = __esm(() => {
           ui.warnItem(`skipped (invalid JSON): ${relative(root, t.file)}`);
           continue;
         }
-        const current = typeof json.version === "string" ? json.version : undefined;
+        const current = getVersion(json);
         let next;
         try {
           next = bumpVersion(current, rawType);
@@ -2979,7 +3067,11 @@ var init_bump = __esm(() => {
           ui.dim(`  \u2022 ${t.label}  ${current || "(no version)"}  (no change)  [${relPath}]`);
           continue;
         }
-        json.version = next;
+        const didUpdate = setVersion(json, next);
+        if (!didUpdate) {
+          ui.warnItem(`skipped (could not locate version field to update): ${relPath}`);
+          continue;
+        }
         writeJson(t.file, json);
         ui.success(`${t.label}: ${import_picocolors11.default.dim(current || "(none)")} \u2192 ${import_picocolors11.default.green(next)}`);
         ui.info(`    ${relPath}`);
@@ -4729,72 +4821,243 @@ Project-specific decisions.
   });
 });
 
-// src/cli/index.ts
-init_dist();
-// package.json
-var package_default = {
-  name: "@hacksmith/doraval",
-  version: "0.2.21",
-  author: "Saif",
-  repository: {
-    type: "git",
-    url: "git+https://github.com/saif-shines/doraval.git"
-  },
-  devDependencies: {
-    "@types/bun": "latest"
-  },
-  bin: {
-    doraval: "bin/doraval-wrapper.js",
-    dora: "bin/doraval-wrapper.js"
-  },
-  description: "The context engineering toolkit for coding agents",
-  engines: {
-    bun: ">=1.2.0",
-    node: ">=14.18.0"
-  },
-  files: [
-    "bin/",
-    "dist/",
-    "README.md"
-  ],
-  keywords: [
-    "cli",
-    "skills",
-    "plugins",
-    "agent",
-    "validation",
-    "lint",
-    "claude-code",
-    "grok",
-    "cursor",
-    "windsurf",
-    "mcp"
-  ],
-  license: "MIT",
-  workspaces: [
-    "apps/*"
-  ],
-  scripts: {
-    build: "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun",
-    dev: "bun run ./src/cli/index.ts",
-    test: "bun test",
-    typecheck: "bunx tsc --noEmit --skipLibCheck",
-    prepublishOnly: `bun run build && node -e "const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)}"`,
-    bump: "bun run scripts/bump.ts",
-    release: "bun run scripts/release.ts",
-    "jsr:publish": "bunx jsr publish",
-    "site:dev": "cd apps/website && bun run dev",
-    "site:build": "cd apps/website && bun run build",
-    "site:preview": "cd apps/website && bun run preview"
-  },
-  type: "module",
-  dependencies: {
-    citty: "^0.2.2",
-    picocolors: "^1.1.1"
+// src/core/update.ts
+import { execSync } from "child_process";
+import { existsSync as existsSync25 } from "fs";
+import { resolve as resolve15 } from "path";
+import { homedir as homedir2 } from "os";
+function isInPath(cmd) {
+  try {
+    execSync(`which ${cmd}`, { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
   }
-};
+}
+async function autoDetect() {
+  const execPath = process.execPath;
+  const argv0 = process.argv[0] || "";
+  if (execPath.includes("/Cellar/") || execPath.includes("/homebrew/") || execPath.includes("/opt/homebrew/")) {
+    if (isInPath("brew"))
+      return { type: "homebrew" };
+  }
+  if (execPath.includes("/.npm/") || argv0.includes("npm")) {
+    return { type: "npm" };
+  }
+  if (execPath.includes("/.bun/") || argv0.includes("bun")) {
+    return { type: "bun" };
+  }
+  const home = homedir2();
+  const possibleGlobals = [
+    resolve15(home, ".npm-global/bin/doraval"),
+    resolve15(home, ".bun/bin/doraval")
+  ];
+  for (const p of possibleGlobals) {
+    if (existsSync25(p)) {
+      if (p.includes(".npm"))
+        return { type: "npm" };
+      if (p.includes(".bun"))
+        return { type: "bun" };
+    }
+  }
+  return null;
+}
+async function detectInstallMethod(options) {
+  if (options?.force) {
+    if (["homebrew", "npm", "bun"].includes(options.force)) {
+      return { type: options.force };
+    }
+    if (options.force === "npx" || options.force === "bunx") {
+      return { type: "transient", via: options.force };
+    }
+  }
+  const auto = await autoDetect();
+  if (auto)
+    return auto;
+  const marker = await readInstallMarker();
+  if (marker)
+    return marker;
+  return { type: "transient", via: "npx" };
+}
+async function fetchLatestVersionInfo() {
+  const npmRes = await fetch("https://registry.npmjs.org/@hacksmith/doraval/latest");
+  if (!npmRes.ok)
+    throw new Error("Failed to fetch from npm");
+  const npmData = await npmRes.json();
+  const version = npmData.version;
+  let summary = "New release available.";
+  try {
+    const ghRes = await fetch("https://api.github.com/repos/saif-shines/doraval/releases/latest", {
+      headers: { "User-Agent": "doraval-update" }
+    });
+    if (ghRes.ok) {
+      const ghData = await ghRes.json();
+      const body = (ghData.body || "").trim();
+      const lines = body.split(`
+`).filter((l) => l.trim().startsWith("-") || l.trim().startsWith("*")).slice(0, 2);
+      if (lines.length)
+        summary = lines.join(" ").slice(0, 200);
+      else if (body)
+        summary = body.split(`
+`)[0].slice(0, 150);
+    }
+  } catch {}
+  return { version, summary };
+}
+function buildUpgradeCommand(method) {
+  switch (method.type) {
+    case "homebrew":
+      return ["brew", "upgrade", "doraval"];
+    case "npm":
+      return ["npm", "install", "-g", "@hacksmith/doraval@latest"];
+    case "bun":
+      return ["bun", "add", "-g", "@hacksmith/doraval@latest"];
+    default:
+      throw new Error("Cannot build upgrade command for transient installs");
+  }
+}
+function shouldUpdate(current, latest) {
+  if (current === latest)
+    return false;
+  const c = current.split(".").map(Number);
+  const l = latest.split(".").map(Number);
+  for (let i = 0;i < 3; i++) {
+    if ((l[i] || 0) > (c[i] || 0))
+      return true;
+    if ((l[i] || 0) < (c[i] || 0))
+      return false;
+  }
+  return false;
+}
+async function readInstallMarker() {
+  try {
+    const { readFile } = await import("fs/promises");
+    const data = await readFile(MARKER_PATH, "utf8");
+    const parsed = JSON.parse(data);
+    if (parsed && parsed.type)
+      return parsed;
+  } catch {}
+  return null;
+}
+async function writeInstallMarker(method) {
+  try {
+    const { mkdir, writeFile } = await import("fs/promises");
+    const { dirname: dirname2 } = await import("path");
+    await mkdir(dirname2(MARKER_PATH), { recursive: true });
+    await writeFile(MARKER_PATH, JSON.stringify(method, null, 2));
+  } catch {}
+}
+var MARKER_PATH;
+var init_update2 = __esm(() => {
+  MARKER_PATH = resolve15(homedir2(), ".doraval", "install.json");
+});
+
+// src/cli/commands/update.ts
+var exports_update2 = {};
+__export(exports_update2, {
+  default: () => update_default2
+});
+import { spawnSync as spawnSync6 } from "child_process";
+async function confirmUpdate() {
+  const { createInterface } = await import("readline");
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve16) => {
+    rl.question("Update now? (y/N) ", (answer) => {
+      rl.close();
+      resolve16(answer.toLowerCase().startsWith("y"));
+    });
+  });
+}
+var update_default2;
+var init_update3 = __esm(() => {
+  init_dist();
+  init_out();
+  init_update2();
+  update_default2 = defineCommand({
+    meta: {
+      name: "update",
+      description: "Update doraval to the latest version"
+    },
+    args: {
+      check: {
+        type: "boolean",
+        description: "Only check for updates, do not install",
+        default: false
+      },
+      yes: {
+        type: "boolean",
+        description: "Skip confirmation prompt",
+        default: false
+      }
+    },
+    async run({ args }) {
+      const currentVersion = require_package().version;
+      const argv1 = process.argv[1] || "";
+      const isNpx = process.env.npm_execpath?.includes("npx") || argv1.includes("/.npm/") || process.env.npm_lifecycle_script?.includes("npx");
+      const isBunx = process.env.BUN_INSTALL || argv1.includes(".bun/bin/bunx") || argv1.includes("bunx");
+      if (isNpx || isBunx) {
+        ui.info("It looks like you're using doraval via npx or bunx.");
+        ui.info("These always fetch the latest version on the next run.");
+        ui.info("");
+        ui.info("For easier updates, install globally:");
+        ui.info("  brew install saif-shines/tap/doraval");
+        ui.info("  npm install -g @hacksmith/doraval");
+        ui.info("  bun add -g @hacksmith/doraval");
+        process.exit(0);
+      }
+      const method = await detectInstallMethod();
+      if (method.type === "transient") {
+        ui.info("Transient usage detected. Install globally for update support.");
+        process.exit(0);
+      }
+      const latestInfo = await fetchLatestVersionInfo();
+      if (!shouldUpdate(currentVersion, latestInfo.version)) {
+        ui.success(`doraval is up to date (${currentVersion}).`);
+        process.exit(0);
+      }
+      if (args.check) {
+        ui.info(`Update available: ${currentVersion} \u2192 ${latestInfo.version}`);
+        process.exit(1);
+      }
+      ui.heading("doraval update");
+      ui.info(`  Current: ${currentVersion}`);
+      ui.info(`  Latest:  ${latestInfo.version}
+`);
+      ui.info(`  ${latestInfo.summary}
+`);
+      if (!args.yes) {
+        const confirmed = await confirmUpdate();
+        if (!confirmed) {
+          ui.info("Update cancelled.");
+          process.exit(0);
+        }
+      }
+      const cmd = buildUpgradeCommand(method);
+      ui.info(`Running: ${cmd.join(" ")}
+`);
+      const result = spawnSync6(cmd[0], cmd.slice(1), { stdio: "inherit" });
+      if (result.status === 0) {
+        ui.success(`Successfully updated to ${latestInfo.version}.`);
+        ui.info("You may need to restart your shell to pick up the new version.");
+        await writeInstallMarker(method);
+      } else {
+        ui.fail("Update failed.");
+        ui.info("Common fixes:");
+        if (cmd[0] === "brew")
+          ui.info("  \u2022 Try: sudo brew upgrade doraval  or  ensure you are in the admin group");
+        if (cmd[0] === "npm" || cmd[0] === "bun")
+          ui.info("  \u2022 Try running with appropriate permissions or check network.");
+        ui.info(`
+Raw output above.`);
+        process.exit(result.status ?? 1);
+      }
+    }
+  });
+});
 
 // src/cli/index.ts
+init_dist();
+var import__package = __toESM(require_package(), 1);
 var import_picocolors15 = __toESM(require_picocolors(), 1);
 var skill = defineCommand({
   meta: {
@@ -4867,13 +5130,14 @@ var doraemonArt = `
 var main = defineCommand({
   meta: {
     name: "doraval",
-    version: package_default.version,
+    version: import__package.default.version,
     description: "The context engineering toolkit for coding agents"
   },
   subCommands: {
     validate: () => Promise.resolve().then(() => (init_validate_top(), exports_validate_top)).then((m) => m.default),
     init: () => Promise.resolve().then(() => (init_init2(), exports_init2)).then((m) => m.default),
     bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default),
+    update: () => Promise.resolve().then(() => (init_update3(), exports_update2)).then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     claude: () => Promise.resolve(claude),

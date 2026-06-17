@@ -13,6 +13,7 @@ export interface DoravalRunResult {
 
 export interface RunOptions {
   cwd?: string;
+  env?: Record<string, string | undefined>;
 }
 
 export function runDoraval(args: string[], options: RunOptions = {}): DoravalRunResult {
@@ -20,7 +21,7 @@ export function runDoraval(args: string[], options: RunOptions = {}): DoravalRun
     cwd: options.cwd ?? repoRoot,
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env, NO_COLOR: "1" },
+    env: { ...process.env, NO_COLOR: "1", ...(options.env || {}) },
   });
 
   return {

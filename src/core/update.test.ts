@@ -8,7 +8,7 @@ describe("update core", () => {
   });
 
   test("buildUpgradeCommand for homebrew", () => {
-    const cmd = buildUpgradeCommand({ type: "homebrew" });
+    const cmd = buildUpgradeCommand({ type: "homebrew", source: "probe" });
     expect(cmd).toEqual(["brew", "upgrade", "doraval"]);
   });
 });

@@ -270,7 +270,7 @@ describe("doraval CLI", () => {
   });
 
   test("update --check exits 0 and reports up to date when current version matches latest", () => {
-    const { exitCode, stdout, stderr } = runDoraval(["update", "--check"]);
+    const { exitCode, stdout, stderr } = runDoraval(["update", "--check"], { env: { DORAVAL_TEST: "1" } });
     const output = stdout + stderr;
     expect(exitCode).toBe(0);
     expect(output).toContain("up to date");

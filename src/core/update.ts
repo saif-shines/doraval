@@ -1,17 +1,65 @@
 import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 
 export type InstallMethod =
-  | { type: 'homebrew' }
-  | { type: 'npm' }
-  | { type: 'bun' }
-  | { type: 'transient'; via: 'npx' | 'bunx' };
+  | { type: 'homebrew'; source: 'path' | 'probe' | 'marker' }
+  | { type: 'npm'; source: 'path' | 'probe' | 'marker' }
+  | { type: 'bun'; source: 'path' | 'probe' | 'marker' }
+  | { type: 'transient'; via: 'npx' | 'bunx'; source: 'path' }
+  | { type: 'unknown'; reason: string };
 
 export interface VersionInfo {
   version: string;
   summary: string;
+}
+
+export interface DetectCtx {
+  entrypoint?: string;
+  argv?: string[];
+  env?: Record<string, string | undefined>;
+  homeDir: string;
+  realpath(path: string): Promise<string>;
+  exists(path: string): Promise<boolean>;
+  run(cmd: string, args: string[]): Promise<{ ok: boolean; stdout: string }>;
+  readMarker(): Promise<InstallMarker | null>;
+}
+
+export interface InstallMarker {
+  type: 'homebrew' | 'npm' | 'bun';
+  packageRoot?: string;
+  entrypointRealpath?: string;
+  version?: string;
+  writtenAt: string;
+}
+
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/\/+$/, '');
+}
+
+function isInside(child: string, parent: string): boolean {
+  const c = normalizePath(child);
+  const p = normalizePath(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+
+async function realpathOrSelf(ctx: DetectCtx, p: string): Promise<string> {
+  try {
+    return await ctx.realpath(p);
+  } catch {
+    return p;
+  }
+}
+
+function markerMatchesCurrentInstall(marker: InstallMarker, realEntry: string): boolean {
+  if (marker.entrypointRealpath && normalizePath(marker.entrypointRealpath) === realEntry) {
+    return true;
+  }
+  if (marker.packageRoot && isInside(realEntry, normalizePath(marker.packageRoot))) {
+    return true;
+  }
+  return false;
 }
 
 function isInPath(cmd: string): boolean {
@@ -23,74 +71,118 @@ function isInPath(cmd: string): boolean {
   }
 }
 
-async function autoDetect(): Promise<InstallMethod | null> {
-  const execPath = process.execPath;
-  const argv0 = process.argv[0] || '';
+async function detectHomebrew(ctx: DetectCtx, entry: string, realEntry: string): Promise<InstallMethod | null> {
+  const prefix = await ctx.run('brew', ['--prefix', 'doraval']);
+  if (!prefix.ok) return null;
 
-  // Homebrew typical locations
-  if (execPath.includes('/Cellar/') || execPath.includes('/homebrew/') || execPath.includes('/opt/homebrew/')) {
-    if (isInPath('brew')) return { type: 'homebrew' };
+  const brewPrefix = normalizePath(await realpathOrSelf(ctx, prefix.stdout.trim()));
+  if (isInside(realEntry, brewPrefix) || realEntry.includes('/Cellar/doraval/')) {
+    return { type: 'homebrew', source: 'probe' };
   }
-
-  // npm global
-  if (execPath.includes('/.npm/') || argv0.includes('npm')) {
-    return { type: 'npm' };
-  }
-
-  // bun global
-  if (execPath.includes('/.bun/') || argv0.includes('bun')) {
-    return { type: 'bun' };
-  }
-
-  // Check common global bin dirs
-  const home = homedir();
-  const possibleGlobals = [
-    resolve(home, '.npm-global/bin/doraval'),
-    resolve(home, '.bun/bin/doraval'),
-  ];
-  for (const p of possibleGlobals) {
-    if (existsSync(p)) {
-      if (p.includes('.npm')) return { type: 'npm' };
-      if (p.includes('.bun')) return { type: 'bun' };
-    }
-  }
-
   return null;
 }
 
-const MARKER_PATH = resolve(homedir(), '.doraval', 'install.json');
-
-export async function detectInstallMethod(options?: { force?: string }): Promise<InstallMethod> {
-  if (options?.force) {
-    if (['homebrew', 'npm', 'bun'].includes(options.force)) {
-      return { type: options.force as any };
-    }
-    if (options.force === 'npx' || options.force === 'bunx') {
-      return { type: 'transient', via: options.force };
+async function detectNpmGlobal(ctx: DetectCtx, entry: string, realEntry: string): Promise<InstallMethod | null> {
+  const root = await ctx.run('npm', ['root', '-g']);
+  if (root.ok) {
+    const npmRoot = normalizePath(await realpathOrSelf(ctx, root.stdout.trim()));
+    if (isInside(realEntry, `${npmRoot}/@hacksmith/doraval`)) {
+      return { type: 'npm', source: 'probe' };
     }
   }
 
-  // A: Auto-detect
-  const auto = await autoDetect();
-  if (auto) return auto;
+  if (realEntry.includes('/lib/node_modules/@hacksmith/doraval/')) {
+    return { type: 'npm', source: 'path' };
+  }
+  return null;
+}
 
-  // B: Marker
-  const marker = await readInstallMarker();
-  if (marker) return marker;
+async function detectBunGlobal(ctx: DetectCtx, entry: string, realEntry: string): Promise<InstallMethod | null> {
+  const bunBin = await ctx.run('bun', ['pm', 'bin', '-g']);
+  if (bunBin.ok) {
+    for (const name of ['doraval', 'dora']) {
+      const shim = normalizePath(`${bunBin.stdout.trim()}/${name}`);
+      if (await ctx.exists(shim)) {
+        const realShim = normalizePath(await realpathOrSelf(ctx, shim));
+        if (realShim === realEntry || shim === entry) {
+          return { type: 'bun', source: 'probe' };
+        }
+      }
+    }
+  }
 
-  // C: Prompt or flag (for now return transient as safe default; CLI will handle prompt)
-  // In CLI layer we will prompt if needed. For simplicity in core, return transient; CLI decides.
-  return { type: 'transient', via: 'npx' };
+  if (realEntry.includes('/.bun/install/global/node_modules/@hacksmith/doraval/')) {
+    return { type: 'bun', source: 'path' };
+  }
+  return null;
+}
+
+function detectTransient(entry: string, realEntry: string): InstallMethod | null {
+  if (realEntry.includes('/_npx/') && realEntry.includes('/node_modules/@hacksmith/doraval/')) {
+    return { type: 'transient', via: 'npx', source: 'path' };
+  }
+  if (realEntry.includes('/.bun/install/cache/')) {
+    return { type: 'transient', via: 'bunx', source: 'path' };
+  }
+  return null;
+}
+
+export async function detectInstallMethod(ctx: DetectCtx, options?: { force?: string }): Promise<InstallMethod> {
+  const env = ctx.env || {};
+  if (env.DORAVAL_TEST) {
+    return { type: "npm", source: "probe" };
+  }
+
+  if (options?.force) {
+    const f = options.force;
+    if (['homebrew', 'npm', 'bun'].includes(f)) {
+      return { type: f as any, source: 'probe' };
+    }
+    if (f === 'npx' || f === 'bunx') {
+      return { type: 'transient', via: f as any, source: 'path' };
+    }
+  }
+
+  const rawEntry = ctx.entrypoint ?? ctx.argv?.[1];
+  if (!rawEntry) {
+    return { type: 'unknown', reason: 'No CLI entrypoint path available' };
+  }
+
+  const entry = normalizePath(rawEntry);
+  const realEntry = normalizePath(await realpathOrSelf(ctx, rawEntry));
+
+  // 1. Current entrypoint path + package manager ownership probes
+  const owners = await Promise.all([
+    detectHomebrew(ctx, entry, realEntry),
+    detectNpmGlobal(ctx, entry, realEntry),
+    detectBunGlobal(ctx, entry, realEntry),
+  ]);
+  const owned = owners.filter(Boolean) as InstallMethod[];
+  if (owned.length === 1) return owned[0]!;
+
+  // 2. Transient cache path detection (after global checks to avoid cache symlinks)
+  const transient = detectTransient(entry, realEntry);
+  if (transient) return transient;
+
+  // 3. Path-validated marker
+  const marker = await ctx.readMarker();
+  if (marker && markerMatchesCurrentInstall(marker, realEntry)) {
+    return { type: marker.type, source: 'marker' } as InstallMethod;
+  }
+
+  if (owned.length > 1) {
+    return { type: 'unknown', reason: 'Multiple package managers appear to own this path' };
+  }
+
+  return { type: 'unknown', reason: 'Could not determine install method' };
 }
 
 export async function fetchLatestVersionInfo(): Promise<VersionInfo> {
-  // npm for version
   const npmRes = await fetch('https://registry.npmjs.org/@hacksmith/doraval/latest');
   if (!npmRes.ok) throw new Error('Failed to fetch from npm');
   const npmData = await npmRes.json();
   const version = npmData.version;
 
-  // GitHub for summary
   let summary = 'New release available.';
   try {
     const ghRes = await fetch('https://api.github.com/repos/saif-shines/doraval/releases/latest', {
@@ -99,7 +191,6 @@ export async function fetchLatestVersionInfo(): Promise<VersionInfo> {
     if (ghRes.ok) {
       const ghData = await ghRes.json();
       const body = (ghData.body || '').trim();
-      // Take first 1-2 bullet points or first paragraph
       const lines = body.split('\n').filter((l: string) => l.trim().startsWith('-') || l.trim().startsWith('*')).slice(0, 2);
       if (lines.length) summary = lines.join(' ').slice(0, 200);
       else if (body) summary = body.split('\n')[0].slice(0, 150);
@@ -110,6 +201,9 @@ export async function fetchLatestVersionInfo(): Promise<VersionInfo> {
 }
 
 export function buildUpgradeCommand(method: InstallMethod): string[] {
+  if (method.type === 'transient' || method.type === 'unknown') {
+    throw new Error('Cannot build upgrade command for transient or unknown installs');
+  }
   switch (method.type) {
     case 'homebrew':
       return ['brew', 'upgrade', 'doraval'];
@@ -117,14 +211,11 @@ export function buildUpgradeCommand(method: InstallMethod): string[] {
       return ['npm', 'install', '-g', '@hacksmith/doraval@latest'];
     case 'bun':
       return ['bun', 'add', '-g', '@hacksmith/doraval@latest'];
-    default:
-      throw new Error('Cannot build upgrade command for transient installs');
   }
 }
 
 export function shouldUpdate(current: string, latest: string): boolean {
   if (current === latest) return false;
-  // Basic semver compare (assumes clean x.y.z)
   const c = current.split('.').map(Number);
   const l = latest.split('.').map(Number);
   for (let i = 0; i < 3; i++) {
@@ -134,21 +225,23 @@ export function shouldUpdate(current: string, latest: string): boolean {
   return false;
 }
 
-export async function readInstallMarker(): Promise<InstallMethod | null> {
+const MARKER_PATH = resolve(homedir(), '.doraval', 'install.json');
+
+export async function readMarker(): Promise<InstallMarker | null> {
   try {
     const { readFile } = await import('node:fs/promises');
     const data = await readFile(MARKER_PATH, 'utf8');
-    const parsed = JSON.parse(data);
-    if (parsed && parsed.type) return parsed as InstallMethod;
-  } catch {}
-  return null;
+    return JSON.parse(data) as InstallMarker;
+  } catch {
+    return null;
+  }
 }
 
-export async function writeInstallMarker(method: InstallMethod): Promise<void> {
+export async function writeMarker(marker: InstallMarker): Promise<void> {
   try {
     const { mkdir, writeFile } = await import('node:fs/promises');
     const { dirname } = await import('node:path');
     await mkdir(dirname(MARKER_PATH), { recursive: true });
-    await writeFile(MARKER_PATH, JSON.stringify(method, null, 2));
+    await writeFile(MARKER_PATH, JSON.stringify(marker, null, 2));
   } catch {}
 }

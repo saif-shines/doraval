@@ -1,3 +1,7 @@
+import { existsSync } from "fs";
+import { resolve } from "path";
+import { parseFrontmatter } from "./frontmatter.js";
+
 export interface SkillModel {
   data: Record<string, unknown>;
   content: string;
@@ -47,6 +51,29 @@ const KNOWN_FIELDS = new Set([
 
 // Directories commonly bundled with skills (supporting files, scripts, examples, etc.)
 const SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"] as const;
+
+export const OPTIONAL_DIRS = ["references", "scripts", "assets"] as const;
+
+export async function loadSkill(dir: string): Promise<
+  | { ok: true; model: SkillModel; existingDirs: string[] }
+  | { ok: false; error: string }
+> {
+  const skillMd = resolve(dir, "SKILL.md");
+  if (!existsSync(skillMd)) {
+    return { ok: false, error: "No SKILL.md found" };
+  }
+  const raw = await Bun.file(skillMd).text();
+  let parsed;
+  try {
+    parsed = parseFrontmatter(raw);
+  } catch {
+    return { ok: false, error: "Failed to parse YAML frontmatter in SKILL.md" };
+  }
+  const existingDirs = OPTIONAL_DIRS.filter((d) =>
+    existsSync(resolve(dir, d))
+  );
+  return { ok: true, model: parsed, existingDirs };
+}
 
 export function checkFrontmatterPresence(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
   const keys = Object.keys(model.data);

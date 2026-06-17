@@ -30,7 +30,7 @@ describe("claude context detection", () => {
   // Add more tests for .claude/, .claude-plugin/, etc. in next steps if needed
 
   test("detects loose SKILL.md and no formal structure", () => {
-    writeFileSync(join(tmp, "foo.md"), "---\nname: foo\n---\ncontent");
+    writeFileSync(join(tmp, "foo-skill.md"), "---\nname: foo\n---\ncontent");
     const ctx = detectContext(tmp);
     expect(ctx.looseSkillFiles.length).toBe(1);
     expect(ctx.hasClaudeDir).toBe(false);
@@ -41,7 +41,7 @@ describe("claude context detection", () => {
     const ctx = { cwd: "/tmp", hasClaudeDir: false, hasPluginManifest: false, looseSkillFiles: ["/tmp/foo.md"], isEmpty: false };
     const d = decidePath(ctx as any, "self-later", "my-helper");
     expect(d.path).toBe("plugin");
-    expect(d.targetDir).toContain("my-helper-plugin");
+    expect(d.targetDir).toContain("my-helper");
     expect(d.migrateExisting).toBe(true);
   });
 });

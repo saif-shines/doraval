@@ -36,22 +36,55 @@ const KNOWN_FIELDS = new Set([
 // skills augments; hooks/mcp/lsp have merge rules.
 const REPLACES_DEFAULT = new Set(["commands", "agents", "outputStyles", "lspServers"]);
 
+interface PluginManifest {
+  name?: unknown;
+  version?: unknown;
+  description?: unknown;
+  displayName?: unknown;
+  author?: unknown;
+  license?: unknown;
+  keywords?: unknown;
+  defaultEnabled?: unknown;
+  homepage?: unknown;
+  repository?: unknown;
+  skills?: unknown;
+  commands?: unknown;
+  agents?: unknown;
+  hooks?: unknown;
+  mcpServers?: unknown;
+  outputStyles?: unknown;
+  lspServers?: unknown;
+  experimental?: unknown;
+  userConfig?: unknown;
+  channels?: unknown;
+  dependencies?: unknown;
+  [key: string]: unknown;
+}
+
 // Levenshtein for close-match suggestions on unrecognized fields (supports the "1 or 2 characters off" behavior described).
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
   const m = a.length, n = b.length;
   if (m === 0) return n;
   if (n === 0) return m;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0)) as number[][];
+  for (let i = 0; i <= m; i++) {
+    const row = dp[i]!;
+    row[0] = i;
+  }
+  for (let j = 0; j <= n; j++) {
+    const row = dp[0]!;
+    row[j] = j;
+  }
   for (let i = 1; i <= m; i++) {
+    const row = dp[i]!;
+    const prev = dp[i - 1]!;
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      row[j] = Math.min((prev[j] ?? 0) + 1, (row[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
     }
   }
-  return dp[m][n];
+  return dp[m]![n] as number;
 }
 
 function suggestField(unknown: string): string | null {
@@ -94,10 +127,10 @@ export const claudePluginValidator: Validator = {
     const dotClaudePluginDir = resolve(dir, ".claude-plugin");
 
     // Parse manifest
-    let manifest: Record<string, unknown>;
+    let manifest: PluginManifest;
     try {
       const raw = await Bun.file(manifestPath).text();
-      manifest = JSON.parse(raw);
+      manifest = JSON.parse(raw) as PluginManifest;
       passes.push(".claude-plugin/plugin.json is valid JSON");
     } catch {
       errors.push(".claude-plugin/plugin.json is missing or invalid JSON");
@@ -161,7 +194,7 @@ export const claudePluginValidator: Validator = {
       passes.push(`displayName: "${manifest.displayName}" (human UI label; falls back to name)`);
     }
     if (manifest.author !== undefined) {
-      const a = manifest.author as any;
+      const a = manifest.author as { name?: string } | undefined;
       if (a && typeof a === "object" && a.name) {
         passes.push("author present");
       } else {
