@@ -45,22 +45,23 @@ export default defineCommand({
       process.exit(0);
     }
 
+    // Fetch and use for version check, --check exit, and conditional summary display
     const latestInfo = await fetchLatestVersionInfo();
-    const latest = latestInfo.version;
 
-    if (!shouldUpdate(currentVersion, latest)) {
+    if (!shouldUpdate(currentVersion, latestInfo.version)) {
       ui.success(`doraval is up to date (${currentVersion}).`);
       process.exit(0);
     }
 
     if (args.check) {
-      ui.info(`Update available: ${currentVersion} → ${latest}`);
+      ui.info(`Update available: ${currentVersion} → ${latestInfo.version}`);
       process.exit(1);
     }
 
+    // Heading and info (with summary) shown only when an update is available
     ui.heading("doraval update");
     ui.info(`  Current: ${currentVersion}`);
-    ui.info(`  Latest:  ${latest}\n`);
+    ui.info(`  Latest:  ${latestInfo.version}\n`);
     ui.info(`  ${latestInfo.summary}\n`);
 
     if (!args.yes) {
