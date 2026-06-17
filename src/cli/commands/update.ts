@@ -6,7 +6,7 @@ import {
   fetchLatestVersionInfo,
   buildUpgradeCommand,
   shouldUpdate,
-  InstallMethod,
+  writeInstallMarker,
 } from "../../core/update.js";
 
 export default defineCommand({
@@ -81,10 +81,10 @@ export default defineCommand({
     const cmd = buildUpgradeCommand(method);
     ui.info(`Running: ${cmd.join(' ')}\n`);
 
-    const result = spawnSync(cmd[0], cmd.slice(1), { stdio: 'inherit' });
+    const result = spawnSync(cmd[0]!, cmd.slice(1), { stdio: 'inherit' });
 
     if (result.status === 0) {
-      ui.success(`Successfully updated to ${latest}.`);
+      ui.success(`Successfully updated to ${latestInfo.version}.`);
       ui.info("You may need to restart your shell to pick up the new version.");
       // Write marker
       await writeInstallMarker(method);
@@ -100,8 +100,7 @@ export default defineCommand({
 });
 
 async function confirmUpdate(): Promise<boolean> {
-  // Reuse or simple prompt. For now use a basic implementation.
-  // In real, import from prompt.ts or use readline
+  // Simple async confirm using readline (project's prompt helper is sync + fallback-oriented).
   const { createInterface } = await import('node:readline');
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
@@ -110,10 +109,4 @@ async function confirmUpdate(): Promise<boolean> {
       resolve(answer.toLowerCase().startsWith('y'));
     });
   });
-}
-
-async function writeInstallMarker(method: InstallMethod) {
-  // simple re-export or duplicate for now; will clean in refactor
-  const { writeInstallMarker } = await import("../../core/update.js");
-  await writeInstallMarker(method);
 }
