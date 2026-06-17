@@ -29,12 +29,18 @@ export default defineCommand({
   async run({ args }) {
     const currentVersion = require("../../../package.json").version;  // or import
 
-    // Early npx/bunx detection (simple for now)
-    const isTransient = process.env.npm_lifecycle_event || process.argv[1]?.includes('npx') || process.argv[1]?.includes('bunx');
-    if (isTransient) {
+    // Enhanced npx/bunx early detection
+    const argv1 = process.argv[1] || '';
+    const isNpx = process.env.npm_execpath?.includes('npx') || argv1.includes('/.npm/') || process.env.npm_lifecycle_script?.includes('npx');
+    const isBunx = process.env.BUN_INSTALL || argv1.includes('.bun/bin/bunx') || argv1.includes('bunx');
+    if (isNpx || isBunx) {
       ui.info("It looks like you're using doraval via npx or bunx.");
-      ui.info("These always fetch the latest on the next run.");
-      ui.info("For easier updates, install globally with brew, npm, or bun.");
+      ui.info("These always fetch the latest version on the next run.");
+      ui.info("");
+      ui.info("For easier updates, install globally:");
+      ui.info("  brew install saif-shines/tap/doraval");
+      ui.info("  npm install -g @hacksmith/doraval");
+      ui.info("  bun add -g @hacksmith/doraval");
       process.exit(0);
     }
 
