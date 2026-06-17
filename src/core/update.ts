@@ -89,8 +89,16 @@ export async function fetchLatestVersionInfo(): Promise<VersionInfo> {
 }
 
 export function buildUpgradeCommand(method: InstallMethod): string[] {
-  // Returns [cmd, ...args]
-  throw new Error('Not implemented');
+  switch (method.type) {
+    case 'homebrew':
+      return ['brew', 'upgrade', 'doraval'];
+    case 'npm':
+      return ['npm', 'install', '-g', '@hacksmith/doraval@latest'];
+    case 'bun':
+      return ['bun', 'add', '-g', '@hacksmith/doraval@latest'];
+    default:
+      throw new Error('Cannot build upgrade command for transient installs');
+  }
 }
 
 export function shouldUpdate(current: string, latest: string): boolean {
