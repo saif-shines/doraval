@@ -95,6 +95,7 @@ const main = defineCommand({
       import("./commands/validate-top.js").then((m) => m.default),
     init: () => import("./commands/init.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
+    update: () => import("./commands/update.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     claude: () => Promise.resolve(claude),
