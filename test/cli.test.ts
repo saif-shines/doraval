@@ -268,4 +268,11 @@ describe("doraval CLI", () => {
 
     rmSync(tmp, { recursive: true, force: true });
   });
+
+  test("update --check exits 0 and reports up to date when current version matches latest", () => {
+    const { exitCode, stdout, stderr } = runDoraval(["update", "--check"]);
+    const output = stdout + stderr;
+    expect(exitCode).toBe(0);
+    expect(output).toContain("up to date");
+  });
 });
