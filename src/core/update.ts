@@ -84,8 +84,29 @@ export async function detectInstallMethod(options?: { force?: string }): Promise
 }
 
 export async function fetchLatestVersionInfo(): Promise<VersionInfo> {
-  // npm + GitHub
-  throw new Error('Not implemented');
+  // npm for version
+  const npmRes = await fetch('https://registry.npmjs.org/@hacksmith/doraval/latest');
+  if (!npmRes.ok) throw new Error('Failed to fetch from npm');
+  const npmData = await npmRes.json();
+  const version = npmData.version;
+
+  // GitHub for summary
+  let summary = 'New release available.';
+  try {
+    const ghRes = await fetch('https://api.github.com/repos/saif-shines/doraval/releases/latest', {
+      headers: { 'User-Agent': 'doraval-update' }
+    });
+    if (ghRes.ok) {
+      const ghData = await ghRes.json();
+      const body = (ghData.body || '').trim();
+      // Take first 1-2 bullet points or first paragraph
+      const lines = body.split('\n').filter((l: string) => l.trim().startsWith('-') || l.trim().startsWith('*')).slice(0, 2);
+      if (lines.length) summary = lines.join(' ').slice(0, 200);
+      else if (body) summary = body.split('\n')[0].slice(0, 150);
+    }
+  } catch {}
+
+  return { version, summary };
 }
 
 export function buildUpgradeCommand(method: InstallMethod): string[] {
@@ -102,8 +123,15 @@ export function buildUpgradeCommand(method: InstallMethod): string[] {
 }
 
 export function shouldUpdate(current: string, latest: string): boolean {
-  // Simple semver compare stub
-  return current !== latest;
+  if (current === latest) return false;
+  // Basic semver compare (assumes clean x.y.z)
+  const c = current.split('.').map(Number);
+  const l = latest.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((l[i] || 0) > (c[i] || 0)) return true;
+    if ((l[i] || 0) < (c[i] || 0)) return false;
+  }
+  return false;
 }
 
 export async function readInstallMarker(): Promise<InstallMethod | null> {
