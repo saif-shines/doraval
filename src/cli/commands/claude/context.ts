@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
+import { getProviderSpec } from "../../../providers/spec.js";
 
 export interface Context {
   cwd: string;
@@ -11,8 +12,9 @@ export interface Context {
 }
 
 export function detectContext(cwd: string = process.cwd()): Context {
+  const claudeSpec = getProviderSpec("claude");
   const hasClaudeDir = existsSync(join(cwd, ".claude"));
-  const hasPluginManifest = existsSync(join(cwd, ".claude-plugin", "plugin.json"));
+  const hasPluginManifest = existsSync(join(cwd, claudeSpec.manifestPath));
 
   let looseSkillFiles: string[] = [];
   try {

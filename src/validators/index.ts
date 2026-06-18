@@ -1,29 +1,9 @@
-import { claudeSkillValidator } from "./claude/skill.js";
-import { claudePluginValidator } from "./claude/plugin.js";
-import { claudeMarketplaceValidator } from "./claude/marketplace.js";
-import { claudeHooksValidator } from "./claude/hooks.js";
-import { claudeMcpValidator } from "./claude/mcp.js";
-import { claudeSubagentValidator } from "./claude/subagent.js";
-import { claudeCommandValidator } from "./claude/command.js";
-import { claudeMemoryValidator } from "./claude/memory.js";
-import { claudeLspValidator } from "./claude/lsp.js";
-import { claudeMonitorsValidator } from "./claude/monitors.js";
 import type { Validator } from "./types.js";
+import { adapters } from "../providers/index.js";
+import { supportedProviders } from "../providers/spec.js";
 
-export const validators: Validator[] = [
-  // Claude Code
-  claudeSkillValidator,
-  claudePluginValidator,
-  claudeMarketplaceValidator,
-  claudeHooksValidator,
-  claudeMcpValidator,
-  claudeSubagentValidator,
-  claudeCommandValidator,
-  claudeMemoryValidator,
-  claudeLspValidator,
-  claudeMonitorsValidator,
-  // Future: cursor, codex, windsurf validators go here
-];
+// Validators are sourced from ProviderAdapter[] (see src/providers/index.ts + spec.ts).
+export const validators: Validator[] = adapters.flatMap((a) => a.validators);
 
 /**
  * Resolve --for flag to matching validators.
@@ -54,8 +34,16 @@ export function resolveFor(
   // Provider match: "claude"
   const byProvider = allValidators.filter((v) => v.provider === forFlag);
   if (byProvider.length === 0) {
-    const providers = [...new Set(allValidators.map((v) => v.provider))];
-    return { matched: [], error: `Unknown provider: "${forFlag}"\n\nAvailable providers: ${providers.join(", ")}` };
+    // Also allow providers that have adapters even if they have no validators yet (foundation phase)
+    const knownProviders = [...new Set([
+      ...allValidators.map((v) => v.provider),
+      ...supportedProviders,
+    ])];
+    if (!knownProviders.includes(forFlag as any)) {
+      return { matched: [], error: `Unknown provider: "${forFlag}"\n\nAvailable providers: ${knownProviders.join(", ")}` };
+    }
+    // Provider is known (e.g. codex) but has no validators yet
+    return { matched: [] };
   }
   return { matched: byProvider };
 }

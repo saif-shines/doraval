@@ -1,0 +1,11 @@
+{
+  "name": "my-codex-plugin",
+  "version": "0.1.0",
+  "description": "Scaffolded by doraval codex new",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "my-codex-plugin",
+    "shortDescription": "Scaffolded starter plugin",
+    "category": "Productivity"
+  }
+}

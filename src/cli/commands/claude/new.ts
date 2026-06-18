@@ -3,8 +3,9 @@ import { ui } from "../../out.js";
 import { detectContext } from "./context.js";
 import { prompt } from "../../prompt.js";
 import pc from "picocolors";
-import { join, basename } from "path";
+import { join, basename, dirname } from "path";
 import { mkdirSync, writeFileSync, existsSync } from "fs";
+import { getProviderSpec } from "../../../providers/spec.js";
 
 export type Intent = "self" | "self-later" | "distribute";
 
@@ -72,13 +73,15 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
 
   if (path === "plugin") {
     const pluginName = basename(targetDir);
+    const claudeSpec = getProviderSpec("claude");
+    const claudeManifestDir = dirname(claudeSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       description: "Scaffolded by doraval claude new",
       version: "0.1.0",
     };
-    mkdirSync(join(targetDir, ".claude-plugin"), { recursive: true });
-    writeFileSync(join(targetDir, ".claude-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
+    mkdirSync(join(targetDir, claudeManifestDir), { recursive: true });
+    writeFileSync(join(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
 
     // marketplace.json for cross-provider / Build-with-AI marketplace distribution
     // (pairs with .claude-plugin/plugin.json; used for unified marketplace metadata, install commands, categories etc.)
@@ -183,7 +186,8 @@ export default defineCommand({
     const cmdName = decision.path === "plugin" ? `/${basename(decision.targetDir)}:doraval` : "/my-skill";
     ui.info(`  Command: ${cmdName}`);
     if (decision.path === "plugin") {
-      ui.info(`  Claude: .claude-plugin/plugin.json`);
+      const claudeSpec = getProviderSpec("claude");
+      ui.info(`  Claude: ${claudeSpec.manifestPath}`);
       ui.info(`  Marketplace: marketplace.json (unified / cross-provider listings)`);
     }
     ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);

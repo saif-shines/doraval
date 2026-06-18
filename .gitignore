@@ -45,3 +45,9 @@ plans/
 .worktrees/
 worktrees/
 .superpowers/
+
+# test temporary directories (created by validators.test.ts etc. for isolation)
+test/tmp-*
+# legacy root-level test artifacts (now moved under test/)
+tmp-*
+my-test-plugin/

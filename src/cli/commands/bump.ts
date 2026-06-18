@@ -58,6 +58,32 @@ function setVersion(obj: any, newVersion: string): boolean {
   return false;
 }
 
+/**
+ * Bumps version fields inside a marketplace's plugins[] array (used by Copilot, and sometimes Cursor/other).
+ * Returns number of plugin entries whose version was actually changed.
+ */
+function bumpPluginEntriesVersions(plugins: any[], bumpType: string): number {
+  if (!Array.isArray(plugins)) return 0;
+  let changed = 0;
+  for (const p of plugins) {
+    if (p && typeof p === "object") {
+      const currentVer = typeof p.version === "string" ? p.version : undefined;
+      if (currentVer) {
+        try {
+          const nextVer = bumpVersion(currentVer, bumpType);
+          if (currentVer !== nextVer) {
+            p.version = nextVer;
+            changed++;
+          }
+        } catch {
+          // ignore non-semver or bad current versions
+        }
+      }
+    }
+  }
+  return changed;
+}
+
 interface Target {
   file: string;
   kind: "plugin" | "marketplace";
@@ -91,7 +117,7 @@ function walkForTargets(dir: string, maxDepth = 6, currentDepth = 0): Target[] {
       if (entry === "plugin.json") {
         const parentDir = dirname(full);
         const parentName = parentDir.split(/[/\\]/).pop();
-        if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin") {
+        if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin" || parentName === ".github") {
           results.push({
             file: full,
             kind: "plugin",
@@ -117,7 +143,7 @@ function walkForTargets(dir: string, maxDepth = 6, currentDepth = 0): Target[] {
 export default defineCommand({
   meta: {
     name: "bump",
-    description: "Bump semver versions in plugin.json (manifests) and marketplace.json files (supports Claude, Codex, Cursor)",
+    description: "Bump semver versions in plugin.json (manifests) and marketplace.json files (supports Claude, Codex, Cursor, Copilot)",
   },
   args: {
     type: {
@@ -168,7 +194,7 @@ export default defineCommand({
 
     ui.heading("doraval bump");
     ui.info(`  scanning: ${root}`);
-    ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow; Cursor metadata.version supported)`);
+    ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow; Cursor/Copilot metadata.version supported)`);
 
     const discovered = walkForTargets(root);
     let targets = discovered;
@@ -186,14 +212,15 @@ export default defineCommand({
       ui.info("    • **/.claude-plugin/plugin.json");
       ui.info("    • **/.codex-plugin/plugin.json");
       ui.info("    • **/.cursor-plugin/plugin.json (or marketplace.json)");
-      ui.info("    • **/marketplace.json (top-level version or metadata.version for Cursor)");
+      ui.info("    • **/.github/plugin/plugin.json (or marketplace.json)");
+      ui.info("    • **/marketplace.json (top-level/metadata.version + versions inside plugins[] for Cursor/Copilot)");
       ui.info("");
       ui.info("  Tip: run from inside a plugin directory, or pass a path that contains plugins/.");
       ui.info("  Examples:");
       ui.info("    dora bump minor");
       ui.info("    dora bump minor ./my-claude-plugin");
       ui.info("    dora bump --only plugin .          # only the manifests");
-      ui.info("    dora bump --only marketplace ./marketplaces-root   # includes Cursor metadata.version");
+      ui.info("    dora bump --only marketplace ./marketplaces-root   # bumps metadata.version + plugins[].version (Copilot/Cursor)");
       process.exit(1);
     }
 
@@ -219,21 +246,42 @@ export default defineCommand({
 
       const relPath = relative(root, t.file);
 
-      if (current === next) {
+      // For marketplaces we also consider inner plugin[] versions
+      const rootUnchanged = current === next;
+      let innerChanged = 0;
+
+      if (t.kind === "marketplace" && Array.isArray(json.plugins)) {
+        innerChanged = bumpPluginEntriesVersions(json.plugins, rawType);
+      }
+
+      if (rootUnchanged && innerChanged === 0) {
         ui.dim(`  • ${t.label}  ${current || "(no version)"}  (no change)  [${relPath}]`);
         continue;
       }
 
-      const didUpdate = setVersion(json, next);
-      if (!didUpdate) {
+      const didRootUpdate = setVersion(json, next);
+      const didAnyUpdate = didRootUpdate || innerChanged > 0;
+
+      if (!didAnyUpdate) {
         ui.warnItem(`skipped (could not locate version field to update): ${relPath}`);
         continue;
       }
 
       writeJson(t.file, json);
 
-      ui.success(`${t.label}: ${pc.dim(current || "(none)")} → ${pc.green(next)}`);
+      if (didRootUpdate && current) {
+        ui.success(`${t.label}: ${pc.dim(current)} → ${pc.green(next)}`);
+      } else if (didRootUpdate) {
+        ui.success(`${t.label}: ${pc.green(next)}`);
+      } else {
+        ui.success(`${t.label} (no root version)`);
+      }
       ui.info(`    ${relPath}`);
+
+      if (innerChanged > 0) {
+        ui.info(`    + bumped ${innerChanged} entry version(s) inside plugins[]`);
+      }
+
       bumpedCount++;
     }
 

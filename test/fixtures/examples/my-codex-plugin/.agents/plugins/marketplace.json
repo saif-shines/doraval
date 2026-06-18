@@ -1,0 +1,20 @@
+{
+  "name": "local",
+  "interface": {
+    "displayName": "Local (doraval scaffold)"
+  },
+  "plugins": [
+    {
+      "name": "my-codex-plugin",
+      "source": {
+        "source": "local",
+        "path": "../.."
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

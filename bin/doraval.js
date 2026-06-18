@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.28",
+    version: "0.2.30",
     author: "Saif",
     repository: {
       type: "git",
@@ -2662,12 +2662,64 @@ var init_sync = __esm(() => {
   });
 });
 
+// src/providers/spec.ts
+function getProviderSpec(id) {
+  return PROVIDER_SPECS[id];
+}
+var PROVIDER_SPECS, supportedProviders;
+var init_spec = __esm(() => {
+  PROVIDER_SPECS = {
+    claude: {
+      id: "claude",
+      name: "Claude Code",
+      manifestPath: ".claude-plugin/plugin.json",
+      marketplacePath: ".claude-plugin/marketplace.json",
+      mcpFilename: ".mcp.json",
+      skillsField: "array-or-dir-string",
+      sourceShape: "string",
+      requiresInterface: false
+    },
+    codex: {
+      id: "codex",
+      name: "Codex",
+      manifestPath: ".codex-plugin/plugin.json",
+      marketplacePath: ".agents/plugins/marketplace.json",
+      mcpFilename: ".mcp.json",
+      skillsField: "directory-string",
+      sourceShape: "object",
+      requiresInterface: true
+    },
+    cursor: {
+      id: "cursor",
+      name: "Cursor",
+      manifestPath: ".cursor-plugin/plugin.json",
+      marketplacePath: ".cursor-plugin/marketplace.json",
+      mcpFilename: "mcp.json",
+      skillsField: "directory-string",
+      sourceShape: "string",
+      requiresInterface: false
+    },
+    copilot: {
+      id: "copilot",
+      name: "Copilot CLI",
+      manifestPath: ".github/plugin/plugin.json",
+      marketplacePath: ".github/plugin/marketplace.json",
+      mcpFilename: ".mcp.json",
+      skillsField: "array-of-paths",
+      sourceShape: "string",
+      requiresInterface: false
+    }
+  };
+  supportedProviders = Object.keys(PROVIDER_SPECS);
+});
+
 // src/cli/commands/claude/context.ts
 import { existsSync as existsSync8, readdirSync as readdirSync3 } from "fs";
 import { join as join7 } from "path";
 function detectContext(cwd = process.cwd()) {
+  const claudeSpec = getProviderSpec("claude");
   const hasClaudeDir = existsSync8(join7(cwd, ".claude"));
-  const hasPluginManifest = existsSync8(join7(cwd, ".claude-plugin", "plugin.json"));
+  const hasPluginManifest = existsSync8(join7(cwd, claudeSpec.manifestPath));
   let looseSkillFiles = [];
   try {
     const files = readdirSync3(cwd);
@@ -2689,7 +2741,9 @@ function detectContext(cwd = process.cwd()) {
     isEmpty
   };
 }
-var init_context = () => {};
+var init_context = __esm(() => {
+  init_spec();
+});
 
 // src/cli/commands/claude/new.ts
 var exports_new = {};
@@ -2698,7 +2752,7 @@ __export(exports_new, {
   default: () => new_default,
   decidePath: () => decidePath
 });
-import { join as join8, basename as basename2 } from "path";
+import { join as join8, basename as basename2, dirname } from "path";
 import { mkdirSync as mkdirSync2, writeFileSync, existsSync as existsSync9 } from "fs";
 function decidePath(ctx, intent, providedName) {
   const rawName = providedName || "";
@@ -2748,13 +2802,15 @@ function scaffold(decision, ctx, migrateContent) {
   }
   if (path === "plugin") {
     const pluginName = basename2(targetDir);
+    const claudeSpec = getProviderSpec("claude");
+    const claudeManifestDir = dirname(claudeSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       description: "Scaffolded by doraval claude new",
       version: "0.1.0"
     };
-    mkdirSync2(join8(targetDir, ".claude-plugin"), { recursive: true });
-    writeFileSync(join8(targetDir, ".claude-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
+    mkdirSync2(join8(targetDir, claudeManifestDir), { recursive: true });
+    writeFileSync(join8(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
     const marketplaceJson = {
       name: pluginName,
       version: "0.1.0",
@@ -2817,6 +2873,7 @@ var init_new = __esm(() => {
   init_out();
   init_context();
   init_prompt();
+  init_spec();
   import_picocolors10 = __toESM(require_picocolors(), 1);
   new_default = defineCommand({
     meta: {
@@ -2860,7 +2917,8 @@ var init_new = __esm(() => {
       const cmdName = decision.path === "plugin" ? `/${basename2(decision.targetDir)}:doraval` : "/my-skill";
       ui.info(`  Command: ${cmdName}`);
       if (decision.path === "plugin") {
-        ui.info(`  Claude: .claude-plugin/plugin.json`);
+        const claudeSpec = getProviderSpec("claude");
+        ui.info(`  Claude: ${claudeSpec.manifestPath}`);
         ui.info(`  Marketplace: marketplace.json (unified / cross-provider listings)`);
       }
       ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
@@ -2878,7 +2936,7 @@ var exports_bump = {};
 __export(exports_bump, {
   default: () => bump_default
 });
-import { resolve as resolve4, join as join9, dirname, relative } from "path";
+import { resolve as resolve4, join as join9, dirname as dirname2, relative } from "path";
 import { existsSync as existsSync10, readFileSync, writeFileSync as writeFileSync2, readdirSync as readdirSync4, statSync } from "fs";
 function bumpVersion(current, type) {
   if (/^\d+\.\d+\.\d+$/.test(type))
@@ -2931,6 +2989,26 @@ function setVersion(obj, newVersion) {
   }
   return false;
 }
+function bumpPluginEntriesVersions(plugins, bumpType) {
+  if (!Array.isArray(plugins))
+    return 0;
+  let changed = 0;
+  for (const p of plugins) {
+    if (p && typeof p === "object") {
+      const currentVer = typeof p.version === "string" ? p.version : undefined;
+      if (currentVer) {
+        try {
+          const nextVer = bumpVersion(currentVer, bumpType);
+          if (currentVer !== nextVer) {
+            p.version = nextVer;
+            changed++;
+          }
+        } catch {}
+      }
+    }
+  }
+  return changed;
+}
 function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
   const results = [];
   if (currentDepth > maxDepth)
@@ -2954,9 +3032,9 @@ function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
       results.push(...sub);
     } else if (st.isFile()) {
       if (entry === "plugin.json") {
-        const parentDir = dirname(full);
+        const parentDir = dirname2(full);
         const parentName = parentDir.split(/[/\\]/).pop();
-        if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin") {
+        if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin" || parentName === ".github") {
           results.push({
             file: full,
             kind: "plugin",
@@ -2985,7 +3063,7 @@ var init_bump = __esm(() => {
   bump_default = defineCommand({
     meta: {
       name: "bump",
-      description: "Bump semver versions in plugin.json (manifests) and marketplace.json files (supports Claude, Codex, Cursor)"
+      description: "Bump semver versions in plugin.json (manifests) and marketplace.json files (supports Claude, Codex, Cursor, Copilot)"
     },
     args: {
       type: {
@@ -3030,7 +3108,7 @@ var init_bump = __esm(() => {
       }
       ui.heading("doraval bump");
       ui.info(`  scanning: ${root}`);
-      ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow; Cursor metadata.version supported)`);
+      ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow; Cursor/Copilot metadata.version supported)`);
       const discovered = walkForTargets(root);
       let targets = discovered;
       if (scope === "plugin") {
@@ -3045,14 +3123,15 @@ var init_bump = __esm(() => {
         ui.info("    \u2022 **/.claude-plugin/plugin.json");
         ui.info("    \u2022 **/.codex-plugin/plugin.json");
         ui.info("    \u2022 **/.cursor-plugin/plugin.json (or marketplace.json)");
-        ui.info("    \u2022 **/marketplace.json (top-level version or metadata.version for Cursor)");
+        ui.info("    \u2022 **/.github/plugin/plugin.json (or marketplace.json)");
+        ui.info("    \u2022 **/marketplace.json (top-level/metadata.version + versions inside plugins[] for Cursor/Copilot)");
         ui.info("");
         ui.info("  Tip: run from inside a plugin directory, or pass a path that contains plugins/.");
         ui.info("  Examples:");
         ui.info("    dora bump minor");
         ui.info("    dora bump minor ./my-claude-plugin");
         ui.info("    dora bump --only plugin .          # only the manifests");
-        ui.info("    dora bump --only marketplace ./marketplaces-root   # includes Cursor metadata.version");
+        ui.info("    dora bump --only marketplace ./marketplaces-root   # bumps metadata.version + plugins[].version (Copilot/Cursor)");
         process.exit(1);
       }
       ui.info(`  matched ${targets.length} file(s)`);
@@ -3072,18 +3151,33 @@ var init_bump = __esm(() => {
           process.exit(1);
         }
         const relPath = relative(root, t.file);
-        if (current === next) {
+        const rootUnchanged = current === next;
+        let innerChanged = 0;
+        if (t.kind === "marketplace" && Array.isArray(json.plugins)) {
+          innerChanged = bumpPluginEntriesVersions(json.plugins, rawType);
+        }
+        if (rootUnchanged && innerChanged === 0) {
           ui.dim(`  \u2022 ${t.label}  ${current || "(no version)"}  (no change)  [${relPath}]`);
           continue;
         }
-        const didUpdate = setVersion(json, next);
-        if (!didUpdate) {
+        const didRootUpdate = setVersion(json, next);
+        const didAnyUpdate = didRootUpdate || innerChanged > 0;
+        if (!didAnyUpdate) {
           ui.warnItem(`skipped (could not locate version field to update): ${relPath}`);
           continue;
         }
         writeJson(t.file, json);
-        ui.success(`${t.label}: ${import_picocolors11.default.dim(current || "(none)")} \u2192 ${import_picocolors11.default.green(next)}`);
+        if (didRootUpdate && current) {
+          ui.success(`${t.label}: ${import_picocolors11.default.dim(current)} \u2192 ${import_picocolors11.default.green(next)}`);
+        } else if (didRootUpdate) {
+          ui.success(`${t.label}: ${import_picocolors11.default.green(next)}`);
+        } else {
+          ui.success(`${t.label} (no root version)`);
+        }
         ui.info(`    ${relPath}`);
+        if (innerChanged > 0) {
+          ui.info(`    + bumped ${innerChanged} entry version(s) inside plugins[]`);
+        }
         bumpedCount++;
       }
       ui.blank();
@@ -3102,9 +3196,10 @@ var init_bump = __esm(() => {
 import { existsSync as existsSync11, readdirSync as readdirSync5 } from "fs";
 import { join as join10 } from "path";
 function detectContext2(cwd = process.cwd()) {
+  const codexSpec = getProviderSpec("codex");
   const hasCodexDir = existsSync11(join10(cwd, ".codex"));
-  const hasPluginManifest = existsSync11(join10(cwd, ".codex-plugin", "plugin.json"));
-  const hasMarketplace = existsSync11(join10(cwd, ".agents", "plugins", "marketplace.json")) || existsSync11(join10(cwd, ".codex-plugin", "marketplace.json"));
+  const hasPluginManifest = existsSync11(join10(cwd, codexSpec.manifestPath));
+  const hasMarketplace = existsSync11(join10(cwd, ".agents", "plugins", "marketplace.json")) || existsSync11(join10(cwd, codexSpec.manifestPath));
   let looseSkillFiles = [];
   try {
     const files = readdirSync5(cwd);
@@ -3127,7 +3222,9 @@ function detectContext2(cwd = process.cwd()) {
     isEmpty
   };
 }
-var init_context2 = () => {};
+var init_context2 = __esm(() => {
+  init_spec();
+});
 
 // src/cli/commands/codex/new.ts
 var exports_new2 = {};
@@ -3136,7 +3233,7 @@ __export(exports_new2, {
   default: () => new_default2,
   decidePath: () => decidePath2
 });
-import { join as join11, basename as basename3 } from "path";
+import { join as join11, basename as basename3, dirname as dirname3 } from "path";
 import { mkdirSync as mkdirSync3, writeFileSync as writeFileSync3, existsSync as existsSync12 } from "fs";
 function decidePath2(ctx, intent, providedName) {
   const rawName = providedName || "";
@@ -3186,6 +3283,8 @@ function scaffold2(decision, ctx, migrateContent) {
   }
   if (path === "plugin") {
     const pluginName = basename3(targetDir);
+    const codexSpec = getProviderSpec("codex");
+    const codexManifestDir = dirname3(codexSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
@@ -3197,9 +3296,10 @@ function scaffold2(decision, ctx, migrateContent) {
         category: "Productivity"
       }
     };
-    mkdirSync3(join11(targetDir, ".codex-plugin"), { recursive: true });
-    writeFileSync3(join11(targetDir, ".codex-plugin", "plugin.json"), JSON.stringify(pluginJson, null, 2));
-    mkdirSync3(join11(targetDir, ".agents", "plugins"), { recursive: true });
+    mkdirSync3(join11(targetDir, codexManifestDir), { recursive: true });
+    writeFileSync3(join11(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname3(codexSpec.marketplacePath);
+    mkdirSync3(join11(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: "local",
       interface: {
@@ -3220,7 +3320,7 @@ function scaffold2(decision, ctx, migrateContent) {
         }
       ]
     };
-    writeFileSync3(join11(targetDir, ".agents", "plugins", "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync3(join11(targetDir, codexSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
     mkdirSync3(join11(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
@@ -3279,6 +3379,7 @@ var init_new2 = __esm(() => {
   init_out();
   init_context2();
   init_prompt();
+  init_spec();
   import_picocolors12 = __toESM(require_picocolors(), 1);
   new_default2 = defineCommand({
     meta: {
@@ -3686,8 +3787,10 @@ var init_marketplace = __esm(() => {
     id: "claude:marketplace",
     provider: "claude",
     name: "Claude Plugin Marketplace",
-    description: "Validates marketplace structure: plugins/ directory with valid plugin subdirectories",
+    description: "Validates .claude-plugin/marketplace.json or plugins/ marketplace layouts (plugins array with sources)",
     detect(dir) {
+      if (existsSync15(resolve7(dir, ".claude-plugin", "marketplace.json")))
+        return true;
       const pluginsDir = resolve7(dir, "plugins");
       if (!existsSync15(pluginsDir))
         return false;
@@ -3708,41 +3811,117 @@ var init_marketplace = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
+      const claudeMktPath = resolve7(dir, ".claude-plugin", "marketplace.json");
+      const hasClaudeMkt = existsSync15(claudeMktPath);
       const pluginsDir = resolve7(dir, "plugins");
-      if (!existsSync15(pluginsDir)) {
-        errors.push("Missing plugins/ directory");
+      const hasPluginsDirLayout = existsSync15(pluginsDir);
+      if (!hasClaudeMkt && !hasPluginsDirLayout) {
+        errors.push("Missing .claude-plugin/marketplace.json or plugins/ directory");
         return { errors, warnings, passes };
       }
-      passes.push("plugins/ directory exists");
-      const pluginEntries = readdirSync7(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
-      if (pluginEntries.length === 0) {
-        errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
-        return { errors, warnings, passes };
-      }
-      passes.push(`${pluginEntries.length} plugin(s) found`);
-      if (existsSync15(resolve7(dir, "README.md"))) {
-        passes.push("README.md exists at marketplace root");
-      } else {
-        warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
-      }
-      if (existsSync15(resolve7(dir, "LICENSE"))) {
-        passes.push("LICENSE exists at marketplace root");
-      } else {
-        warnings.push("No LICENSE at marketplace root \u2014 recommended");
-      }
-      for (const plugin of pluginEntries) {
-        const pluginPath = join13(pluginsDir, plugin.name);
-        const hasSkills = existsSync15(join13(pluginPath, "skills"));
-        const hasManifest = existsSync15(join13(pluginPath, ".claude-plugin", "plugin.json"));
-        const hasReadme = existsSync15(join13(pluginPath, "README.md"));
-        if (hasManifest || hasSkills) {
-          passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
+      if (hasClaudeMkt) {
+        let mkt;
+        try {
+          const raw = await Bun.file(claudeMktPath).text();
+          mkt = JSON.parse(raw);
+          passes.push(".claude-plugin/marketplace.json is valid JSON");
+        } catch {
+          errors.push(".claude-plugin/marketplace.json is missing or invalid JSON");
+          return { errors, warnings, passes };
+        }
+        if (mkt.name) {
+          passes.push(`name: "${mkt.name}"`);
         } else {
-          warnings.push(`Plugin "${plugin.name}" has neither .claude-plugin/plugin.json nor skills/`);
+          warnings.push('Missing "name" at marketplace root');
         }
-        if (!hasReadme) {
-          warnings.push(`Plugin "${plugin.name}" has no README.md`);
+        if (mkt.description) {
+          passes.push("description present");
         }
+        if (mkt.owner) {
+          passes.push("owner present");
+        }
+        if (!Array.isArray(mkt.plugins) || mkt.plugins.length === 0) {
+          errors.push('"plugins" must be a non-empty array');
+          return { errors, warnings, passes };
+        }
+        passes.push(`${mkt.plugins.length} plugin(s) declared`);
+        for (const [i, p] of mkt.plugins.entries()) {
+          if (!p || typeof p !== "object") {
+            errors.push(`plugins[${i}]: must be an object`);
+            continue;
+          }
+          if (p.name) {
+            passes.push(`plugins[${i}].name: "${p.name}"`);
+          } else {
+            errors.push(`plugins[${i}]: missing "name"`);
+          }
+          if (p.source) {
+            const src = String(p.source);
+            passes.push(`plugins[${i}].source: "${src}"`);
+            const srcDir = resolve7(dir, src);
+            if (existsSync15(srcDir)) {
+              const hasManifest = existsSync15(resolve7(srcDir, ".claude-plugin", "plugin.json"));
+              const hasSkills = existsSync15(resolve7(srcDir, "skills"));
+              if (hasManifest || hasSkills) {
+                passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
+              } else {
+                warnings.push(`plugins[${i}].source "${src}" exists but lacks plugin markers`);
+              }
+            } else {
+              warnings.push(`plugins[${i}].source path "${src}" does not exist`);
+            }
+          } else {
+            errors.push(`plugins[${i}]: missing "source"`);
+          }
+          if (p.category) {
+            passes.push(`plugins[${i}].category: "${p.category}"`);
+          }
+        }
+        if (existsSync15(resolve7(dir, "README.md"))) {
+          passes.push("README.md exists at marketplace root");
+        } else {
+          warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
+        }
+        if (existsSync15(resolve7(dir, "LICENSE"))) {
+          passes.push("LICENSE exists at marketplace root");
+        } else {
+          warnings.push("No LICENSE at marketplace root \u2014 recommended");
+        }
+        return { errors, warnings, passes };
+      }
+      if (hasPluginsDirLayout) {
+        passes.push("plugins/ directory exists");
+        const pluginEntries = readdirSync7(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        if (pluginEntries.length === 0) {
+          errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
+          return { errors, warnings, passes };
+        }
+        passes.push(`${pluginEntries.length} plugin(s) found`);
+        if (existsSync15(resolve7(dir, "README.md"))) {
+          passes.push("README.md exists at marketplace root");
+        } else {
+          warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
+        }
+        if (existsSync15(resolve7(dir, "LICENSE"))) {
+          passes.push("LICENSE exists at marketplace root");
+        } else {
+          warnings.push("No LICENSE at marketplace root \u2014 recommended");
+        }
+        for (const plugin of pluginEntries) {
+          const pluginPath = join13(pluginsDir, plugin.name);
+          const hasSkills = existsSync15(join13(pluginPath, "skills"));
+          const hasManifest = existsSync15(join13(pluginPath, ".claude-plugin", "plugin.json"));
+          const hasReadme = existsSync15(join13(pluginPath, "README.md"));
+          if (hasManifest || hasSkills) {
+            passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
+          } else {
+            warnings.push(`Plugin "${plugin.name}" has neither .claude-plugin/plugin.json nor skills/`);
+          }
+          if (!hasReadme) {
+            warnings.push(`Plugin "${plugin.name}" has no README.md`);
+          }
+        }
+        return { errors, warnings, passes };
       }
       return { errors, warnings, passes };
     }
@@ -4292,6 +4471,1155 @@ var init_monitors = __esm(() => {
   };
 });
 
+// src/validators/codex/plugin.ts
+import { existsSync as existsSync23, readdirSync as readdirSync10 } from "fs";
+import { resolve as resolve15, join as join16 } from "path";
+var NAME_REGEX3, codexPluginValidator;
+var init_plugin2 = __esm(() => {
+  NAME_REGEX3 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+  codexPluginValidator = {
+    id: "codex:plugin",
+    provider: "codex",
+    name: "Codex Plugin",
+    description: "Validates .codex-plugin/plugin.json manifest (requires interface block and skills as directory string per Codex packaging)",
+    detect(dir) {
+      return existsSync23(resolve15(dir, ".codex-plugin", "plugin.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const manifestPath = resolve15(dir, ".codex-plugin", "plugin.json");
+      let manifest;
+      try {
+        const raw = await Bun.file(manifestPath).text();
+        manifest = JSON.parse(raw);
+        passes.push(".codex-plugin/plugin.json is valid JSON");
+      } catch {
+        errors.push(".codex-plugin/plugin.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (!manifest.name) {
+        errors.push('Missing required field: "name"');
+      } else {
+        const name = String(manifest.name);
+        if (!NAME_REGEX3.test(name)) {
+          errors.push(`Invalid name format: "${name}" \u2014 must be kebab-case (a-z, 0-9, hyphens)`);
+        } else {
+          passes.push(`name: "${name}"`);
+        }
+      }
+      if (manifest.skills === undefined) {
+        errors.push('Missing required field: "skills" (must be a directory string like "./skills/")');
+      } else if (typeof manifest.skills !== "string") {
+        errors.push('"skills" must be a string directory path');
+      } else {
+        const s = manifest.skills;
+        if (!s.startsWith("./")) {
+          warnings.push('"skills" should start with "./"');
+        }
+        passes.push(`skills: "${s}" (directory string)`);
+      }
+      if (!manifest.interface || typeof manifest.interface !== "object") {
+        errors.push('Missing required "interface" object (Codex uses it for displayName, shortDescription, category, etc.)');
+      } else {
+        const iface = manifest.interface;
+        if (iface.displayName) {
+          passes.push(`interface.displayName: "${iface.displayName}"`);
+        } else {
+          warnings.push("interface.displayName recommended");
+        }
+        if (iface.category) {
+          passes.push(`interface.category: "${iface.category}"`);
+        }
+        passes.push("interface block present");
+      }
+      if (manifest.version !== undefined) {
+        const v = String(manifest.version);
+        if (!/^\d+\.\d+\.\d+/.test(v)) {
+          warnings.push(`version "${v}" should look like semver for explicit versioning`);
+        } else {
+          passes.push(`version: "${v}"`);
+        }
+      } else {
+        passes.push("version omitted (git commit SHA used as version key)");
+      }
+      if (manifest.description !== undefined) {
+        const desc = String(manifest.description);
+        if (desc.length < 10) {
+          warnings.push(`Description is very short (${desc.length} chars) \u2014 50-200 chars recommended`);
+        } else {
+          passes.push("description field present");
+        }
+      } else {
+        warnings.push('Missing "description" (recommended)');
+      }
+      const skillsDir = resolve15(dir, "skills");
+      if (existsSync23(skillsDir)) {
+        const entries = readdirSync10(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        for (const e of entries) {
+          const md = join16(skillsDir, e.name, "SKILL.md");
+          if (existsSync23(md)) {
+            passes.push(`skills/${e.name}/SKILL.md exists`);
+          } else {
+            errors.push(`skills/${e.name}/ is missing SKILL.md`);
+          }
+        }
+      }
+      const known = new Set(["name", "version", "description", "skills", "interface", "author", "homepage", "repository", "license", "keywords"]);
+      const unknown = Object.keys(manifest).filter((k) => !known.has(k));
+      for (const k of unknown) {
+        warnings.push(`Unrecognized field "${k}" \u2014 will be ignored (for compatibility)`);
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/codex/marketplace.ts
+import { existsSync as existsSync24 } from "fs";
+import { resolve as resolve16 } from "path";
+var codexMarketplaceValidator;
+var init_marketplace2 = __esm(() => {
+  codexMarketplaceValidator = {
+    id: "codex:marketplace",
+    provider: "codex",
+    name: "Codex Plugin Marketplace",
+    description: "Validates .agents/plugins/marketplace.json (Codex convention: object source + policy blocks)",
+    detect(dir) {
+      if (existsSync24(resolve16(dir, ".agents", "plugins", "marketplace.json")))
+        return true;
+      if (existsSync24(resolve16(dir, ".agents", "plugins", "marketplace.json")))
+        return true;
+      return false;
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const marketplacePath = resolve16(dir, ".agents", "plugins", "marketplace.json");
+      if (!existsSync24(marketplacePath)) {
+        errors.push("Missing .agents/plugins/marketplace.json");
+        return { errors, warnings, passes };
+      }
+      let marketplace;
+      try {
+        const raw = await Bun.file(marketplacePath).text();
+        marketplace = JSON.parse(raw);
+        passes.push(".agents/plugins/marketplace.json is valid JSON");
+      } catch {
+        errors.push(".agents/plugins/marketplace.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (marketplace.name) {
+        passes.push(`name: "${marketplace.name}"`);
+      } else {
+        warnings.push('Missing "name" at marketplace root');
+      }
+      if (marketplace.interface && typeof marketplace.interface === "object") {
+        const iface = marketplace.interface;
+        if (iface.displayName) {
+          passes.push(`interface.displayName: "${iface.displayName}"`);
+        }
+        passes.push("interface block present");
+      } else {
+        warnings.push('Recommended: "interface" with displayName at marketplace root');
+      }
+      if (!Array.isArray(marketplace.plugins) || marketplace.plugins.length === 0) {
+        errors.push('"plugins" must be a non-empty array');
+        return { errors, warnings, passes };
+      }
+      passes.push(`${marketplace.plugins.length} plugin(s) declared`);
+      for (const [i, p] of marketplace.plugins.entries()) {
+        if (!p || typeof p !== "object") {
+          errors.push(`plugins[${i}]: must be an object`);
+          continue;
+        }
+        if (!p.name) {
+          errors.push(`plugins[${i}]: missing "name"`);
+        } else {
+          passes.push(`plugins[${i}].name: "${p.name}"`);
+        }
+        if (!p.source || typeof p.source !== "object") {
+          errors.push(`plugins[${i}].source: must be an object like { "source": "local", "path": "..." }`);
+        } else {
+          if (p.source.source) {
+            passes.push(`plugins[${i}].source.source: "${p.source.source}"`);
+          } else {
+            warnings.push(`plugins[${i}].source: missing "source"`);
+          }
+          if (p.source.path) {
+            const pathStr = String(p.source.path);
+            if (!pathStr.startsWith("./") && !pathStr.startsWith("../")) {
+              warnings.push(`plugins[${i}].source.path: "${pathStr}" should be relative (./ or ../)`);
+            }
+            passes.push(`plugins[${i}].source.path: "${pathStr}"`);
+          } else {
+            errors.push(`plugins[${i}].source: missing "path"`);
+          }
+        }
+        if (p.policy && typeof p.policy === "object") {
+          passes.push(`plugins[${i}].policy present`);
+          if (p.policy.installation) {
+            passes.push(`plugins[${i}].policy.installation: "${p.policy.installation}"`);
+          }
+          if (p.policy.authentication) {
+            passes.push(`plugins[${i}].policy.authentication: "${p.policy.authentication}"`);
+          }
+        } else {
+          warnings.push(`plugins[${i}]: "policy" recommended (installation/authentication)`);
+        }
+        if (p.category) {
+          passes.push(`plugins[${i}].category: "${p.category}"`);
+        }
+      }
+      if (existsSync24(resolve16(dir, "README.md"))) {
+        passes.push("README.md exists at marketplace root");
+      } else {
+        warnings.push("No README.md at marketplace root \u2014 recommended");
+      }
+      if (existsSync24(resolve16(dir, "LICENSE"))) {
+        passes.push("LICENSE exists at marketplace root");
+      } else {
+        warnings.push("No LICENSE at marketplace root \u2014 recommended");
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/codex/mcp.ts
+import { existsSync as existsSync25 } from "fs";
+import { resolve as resolve17 } from "path";
+var codexMcpValidator;
+var init_mcp2 = __esm(() => {
+  codexMcpValidator = {
+    id: "codex:mcp",
+    provider: "codex",
+    name: "Codex MCP Config",
+    description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, substitutions per Codex MCP support",
+    detect(dir) {
+      return existsSync25(resolve17(dir, ".mcp.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const mcpPath = resolve17(dir, ".mcp.json");
+      let config;
+      try {
+        const raw = await Bun.file(mcpPath).text();
+        config = JSON.parse(raw);
+        passes.push(".mcp.json is valid JSON");
+      } catch {
+        errors.push(".mcp.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (typeof config !== "object" || Array.isArray(config)) {
+        errors.push(".mcp.json must be a JSON object with server name keys");
+        return { errors, warnings, passes };
+      }
+      const serverNames = Object.keys(config);
+      if (serverNames.length === 0) {
+        warnings.push(".mcp.json is empty \u2014 no servers defined");
+        return { errors, warnings, passes };
+      }
+      passes.push(`${serverNames.length} server(s) defined`);
+      for (const [name, entry] of Object.entries(config)) {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          errors.push(`mcp server "${name}": definition must be an object`);
+          continue;
+        }
+        const e = entry;
+        const hasCommand = typeof e.command === "string";
+        const hasUrl = typeof e.url === "string";
+        if (!hasCommand && !hasUrl) {
+          errors.push(`mcp server "${name}": must have either "command" (for stdio) or "url" (for SSE/HTTP)`);
+        }
+        if (hasCommand && !Array.isArray(e.args)) {
+          warnings.push(`mcp server "${name}": "command" present but no "args" array (ok for some servers)`);
+        }
+        if (hasUrl && hasCommand) {
+          warnings.push(`mcp server "${name}": both "command" and "url" present \u2014 usually one or the other`);
+        }
+        if (e.env && typeof e.env === "object") {
+          passes.push(`mcp server "${name}": has env`);
+        }
+        if (typeof e.cwd === "string") {
+          passes.push(`mcp server "${name}": has cwd`);
+        }
+        const hasSubs = JSON.stringify(e).match(/\$\{CODEX_|CLAUDE_PLUGIN_|user_config\.|ENV_VAR\}/);
+        if (hasSubs) {
+          passes.push(`mcp server "${name}": uses substitutions (e.g. \${CODEX_*} or env)`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/codex/skill.ts
+import { existsSync as existsSync26 } from "fs";
+import { resolve as resolve18 } from "path";
+var codexSkillValidator;
+var init_skill2 = __esm(() => {
+  init_skill_validate();
+  codexSkillValidator = {
+    id: "codex:skill",
+    provider: "codex",
+    name: "Codex Skill",
+    description: "Validates SKILL.md (shared format): frontmatter (name/description), body, supporting files, substitutions. Codex uses the same SKILL.md spec as other providers.",
+    detect(dir) {
+      return existsSync26(resolve18(dir, "SKILL.md"));
+    },
+    async validate(dir, _opts) {
+      const loaded = await loadSkill(dir);
+      if (!loaded.ok) {
+        return {
+          errors: [loaded.error],
+          warnings: [],
+          passes: []
+        };
+      }
+      const { model, existingDirs } = loaded;
+      return validateSkillModel(model, { existingDirs: [...existingDirs] });
+    }
+  };
+});
+
+// src/validators/cursor/plugin.ts
+import { existsSync as existsSync27, readdirSync as readdirSync12 } from "fs";
+import { resolve as resolve19, join as join18 } from "path";
+var NAME_REGEX4, cursorPluginValidator;
+var init_plugin3 = __esm(() => {
+  NAME_REGEX4 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+  cursorPluginValidator = {
+    id: "cursor:plugin",
+    provider: "cursor",
+    name: "Cursor Plugin",
+    description: "Validates .cursor-plugin/plugin.json manifest (skills as directory string; mcpServers support)",
+    detect(dir) {
+      return existsSync27(resolve19(dir, ".cursor-plugin", "plugin.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const manifestPath = resolve19(dir, ".cursor-plugin", "plugin.json");
+      let manifest;
+      try {
+        const raw = await Bun.file(manifestPath).text();
+        manifest = JSON.parse(raw);
+        passes.push(".cursor-plugin/plugin.json is valid JSON");
+      } catch {
+        errors.push(".cursor-plugin/plugin.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (!manifest.name) {
+        errors.push('Missing required field: "name"');
+      } else {
+        const name = String(manifest.name);
+        if (!NAME_REGEX4.test(name)) {
+          errors.push(`Invalid name format: "${name}" \u2014 must be kebab-case (a-z, 0-9, hyphens)`);
+        } else {
+          passes.push(`name: "${name}"`);
+        }
+      }
+      if (manifest.skills === undefined) {
+        errors.push('Missing required field: "skills" (must be a directory string like "./skills")');
+      } else if (typeof manifest.skills !== "string") {
+        errors.push('"skills" must be a string directory path');
+      } else {
+        const s = manifest.skills;
+        if (!s.startsWith("./")) {
+          warnings.push('"skills" should start with "./"');
+        }
+        passes.push(`skills: "${s}" (directory string)`);
+      }
+      if (manifest.mcpServers !== undefined) {
+        if (typeof manifest.mcpServers === "string") {
+          passes.push(`mcpServers: "${manifest.mcpServers}"`);
+        } else {
+          warnings.push('"mcpServers" should be a string path when present');
+        }
+      }
+      if (manifest.displayName) {
+        passes.push(`displayName: "${manifest.displayName}"`);
+      } else {
+        warnings.push("displayName recommended for Cursor UI");
+      }
+      if (manifest.version !== undefined) {
+        const v = String(manifest.version);
+        if (!/^\d+\.\d+\.\d+/.test(v)) {
+          warnings.push(`version "${v}" should look like semver`);
+        } else {
+          passes.push(`version: "${v}"`);
+        }
+      } else {
+        passes.push("version omitted (git commit SHA used as version key)");
+      }
+      if (manifest.description !== undefined) {
+        const desc = String(manifest.description);
+        if (desc.length < 10) {
+          warnings.push(`Description is very short (${desc.length} chars) \u2014 50-200 chars recommended`);
+        } else {
+          passes.push("description field present");
+        }
+      } else {
+        warnings.push('Missing "description" (recommended)');
+      }
+      if (manifest.author)
+        passes.push("author present");
+      if (manifest.license)
+        passes.push(`license: "${manifest.license}"`);
+      if (manifest.homepage)
+        passes.push("homepage present");
+      if (manifest.repository)
+        passes.push("repository present");
+      if (Array.isArray(manifest.keywords)) {
+        passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+      }
+      const skillsDir = resolve19(dir, "skills");
+      if (existsSync27(skillsDir)) {
+        const entries = readdirSync12(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        for (const e of entries) {
+          const md = join18(skillsDir, e.name, "SKILL.md");
+          if (existsSync27(md)) {
+            passes.push(`skills/${e.name}/SKILL.md exists`);
+          } else {
+            errors.push(`skills/${e.name}/ is missing SKILL.md`);
+          }
+        }
+      }
+      if (typeof manifest.mcpServers === "string") {
+        const mcpRef = manifest.mcpServers;
+        if (mcpRef.startsWith("./") || mcpRef.startsWith("../")) {
+          const mcpPath = resolve19(dir, mcpRef);
+          if (existsSync27(mcpPath)) {
+            passes.push(`mcpServers file exists at ${mcpRef}`);
+          } else {
+            warnings.push(`mcpServers path "${mcpRef}" does not exist on disk`);
+          }
+        }
+      }
+      const known = new Set([
+        "name",
+        "displayName",
+        "version",
+        "description",
+        "author",
+        "homepage",
+        "repository",
+        "license",
+        "keywords",
+        "skills",
+        "mcpServers"
+      ]);
+      const unknown = Object.keys(manifest).filter((k) => !known.has(k));
+      for (const k of unknown) {
+        warnings.push(`Unrecognized field "${k}" \u2014 will be ignored (for compatibility)`);
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/cursor/marketplace.ts
+import { existsSync as existsSync28, readdirSync as readdirSync13 } from "fs";
+import { resolve as resolve20, join as join19 } from "path";
+var cursorMarketplaceValidator;
+var init_marketplace3 = __esm(() => {
+  cursorMarketplaceValidator = {
+    id: "cursor:marketplace",
+    provider: "cursor",
+    name: "Cursor Plugin Marketplace",
+    description: "Validates .cursor-plugin/marketplace.json (string sources + metadata.pluginRoot)",
+    detect(dir) {
+      if (existsSync28(resolve20(dir, ".cursor-plugin", "marketplace.json")))
+        return true;
+      const pluginsDir = resolve20(dir, "plugins");
+      if (!existsSync28(pluginsDir))
+        return false;
+      try {
+        const entries = readdirSync13(pluginsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (!entry.isDirectory())
+            continue;
+          const hasSkills = existsSync28(join19(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync28(join19(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
+          if (hasSkills || hasManifest)
+            return true;
+        }
+      } catch {}
+      return false;
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const cursorMktPath = resolve20(dir, ".cursor-plugin", "marketplace.json");
+      const hasCursorMkt = existsSync28(cursorMktPath);
+      const pluginsDir = resolve20(dir, "plugins");
+      const hasPluginsDirLayout = existsSync28(pluginsDir);
+      if (!hasCursorMkt && !hasPluginsDirLayout) {
+        errors.push("Missing .cursor-plugin/marketplace.json or plugins/ directory");
+        return { errors, warnings, passes };
+      }
+      if (hasCursorMkt) {
+        let mkt;
+        try {
+          const raw = await Bun.file(cursorMktPath).text();
+          mkt = JSON.parse(raw);
+          passes.push(".cursor-plugin/marketplace.json is valid JSON");
+        } catch {
+          errors.push(".cursor-plugin/marketplace.json is missing or invalid JSON");
+          return { errors, warnings, passes };
+        }
+        if (mkt.name) {
+          passes.push(`name: "${mkt.name}"`);
+        } else {
+          warnings.push('Missing "name" at marketplace root');
+        }
+        if (mkt.metadata && typeof mkt.metadata === "object") {
+          passes.push("metadata present");
+          if (mkt.metadata.pluginRoot) {
+            passes.push(`metadata.pluginRoot: "${mkt.metadata.pluginRoot}"`);
+          }
+          if (mkt.metadata.description) {
+            passes.push("metadata.description present");
+          }
+        } else {
+          warnings.push('Recommended: "metadata" with pluginRoot and description');
+        }
+        if (mkt.owner) {
+          passes.push("owner present");
+        }
+        if (!Array.isArray(mkt.plugins) || mkt.plugins.length === 0) {
+          errors.push('"plugins" must be a non-empty array');
+          return { errors, warnings, passes };
+        }
+        passes.push(`${mkt.plugins.length} plugin(s) declared`);
+        const pluginRoot = mkt.metadata && mkt.metadata.pluginRoot ? String(mkt.metadata.pluginRoot) : ".";
+        for (const [i, p] of mkt.plugins.entries()) {
+          if (!p || typeof p !== "object") {
+            errors.push(`plugins[${i}]: must be an object`);
+            continue;
+          }
+          if (p.name) {
+            passes.push(`plugins[${i}].name: "${p.name}"`);
+          } else {
+            errors.push(`plugins[${i}]: missing "name"`);
+          }
+          if (p.source !== undefined) {
+            const src = String(p.source);
+            passes.push(`plugins[${i}].source: "${src}"`);
+            const srcDir = resolve20(dir, pluginRoot, src);
+            if (existsSync28(srcDir)) {
+              const hasManifest = existsSync28(resolve20(srcDir, ".cursor-plugin", "plugin.json"));
+              const hasSkills = existsSync28(resolve20(srcDir, "skills"));
+              if (hasManifest || hasSkills) {
+                passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
+              } else {
+                warnings.push(`plugins[${i}].source "${src}" exists but lacks plugin markers`);
+              }
+            } else {
+              warnings.push(`plugins[${i}].source path "${src}" (under ${pluginRoot}) does not exist`);
+            }
+          } else {
+            const implicitSrc = resolve20(dir, pluginRoot, p.name || "");
+            if (p.name && existsSync28(implicitSrc)) {
+              passes.push(`plugins[${i}]: implicit source via name under ${pluginRoot}`);
+            } else {
+              warnings.push(`plugins[${i}]: missing "source" (and no implicit dir)`);
+            }
+          }
+          if (p.description)
+            passes.push(`plugins[${i}].description present`);
+          if (p.category) {
+            passes.push(`plugins[${i}].category: "${p.category}"`);
+          }
+          if (p.homepage) {
+            passes.push(`plugins[${i}].homepage present`);
+          }
+        }
+        if (existsSync28(resolve20(dir, "README.md"))) {
+          passes.push("README.md exists at marketplace root");
+        } else {
+          warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
+        }
+        if (existsSync28(resolve20(dir, "LICENSE"))) {
+          passes.push("LICENSE exists at marketplace root");
+        } else {
+          warnings.push("No LICENSE at marketplace root \u2014 recommended");
+        }
+        return { errors, warnings, passes };
+      }
+      if (hasPluginsDirLayout) {
+        passes.push("plugins/ directory exists");
+        const pluginEntries = readdirSync13(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        if (pluginEntries.length === 0) {
+          errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
+          return { errors, warnings, passes };
+        }
+        passes.push(`${pluginEntries.length} plugin(s) found`);
+        if (existsSync28(resolve20(dir, "README.md"))) {
+          passes.push("README.md exists at marketplace root");
+        } else {
+          warnings.push("No README.md at marketplace root \u2014 recommended");
+        }
+        for (const plugin of pluginEntries) {
+          const pluginPath = join19(pluginsDir, plugin.name);
+          const hasSkills = existsSync28(join19(pluginPath, "skills"));
+          const hasManifest = existsSync28(join19(pluginPath, ".cursor-plugin", "plugin.json"));
+          if (hasManifest || hasSkills) {
+            passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
+          }
+        }
+        return { errors, warnings, passes };
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/cursor/mcp.ts
+import { existsSync as existsSync29 } from "fs";
+import { resolve as resolve21 } from "path";
+var cursorMcpValidator;
+var init_mcp3 = __esm(() => {
+  cursorMcpValidator = {
+    id: "cursor:mcp",
+    provider: "cursor",
+    name: "Cursor MCP Config",
+    description: "Validates mcp.json (Cursor uses no leading dot; supports mcpServers wrapper or direct server map)",
+    detect(dir) {
+      return existsSync29(resolve21(dir, "mcp.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const mcpPath = resolve21(dir, "mcp.json");
+      let rawConfig;
+      try {
+        const raw = await Bun.file(mcpPath).text();
+        rawConfig = JSON.parse(raw);
+        passes.push("mcp.json is valid JSON");
+      } catch {
+        errors.push("mcp.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      let config;
+      if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig) && rawConfig.mcpServers && typeof rawConfig.mcpServers === "object") {
+        config = rawConfig.mcpServers;
+        passes.push("mcp.json uses mcpServers wrapper (normalized)");
+      } else if (typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
+        config = rawConfig;
+      } else {
+        errors.push("mcp.json must be an object (or contain mcpServers object)");
+        return { errors, warnings, passes };
+      }
+      const serverNames = Object.keys(config);
+      if (serverNames.length === 0) {
+        warnings.push("mcp.json is empty \u2014 no servers defined");
+        return { errors, warnings, passes };
+      }
+      passes.push(`${serverNames.length} server(s) defined`);
+      for (const [name, entry] of Object.entries(config)) {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          errors.push(`mcp server "${name}": definition must be an object`);
+          continue;
+        }
+        const e = entry;
+        const hasCommand = typeof e.command === "string";
+        const hasUrl = typeof e.url === "string";
+        if (!hasCommand && !hasUrl) {
+          errors.push(`mcp server "${name}": must have either "command" (for stdio) or "url" (for SSE/HTTP)`);
+        }
+        if (hasCommand && !Array.isArray(e.args)) {
+          warnings.push(`mcp server "${name}": "command" present but no "args" array (ok for some servers)`);
+        }
+        if (hasUrl && hasCommand) {
+          warnings.push(`mcp server "${name}": both "command" and "url" present \u2014 usually one or the other`);
+        }
+        if (e.env && typeof e.env === "object") {
+          passes.push(`mcp server "${name}": has env`);
+        }
+        if (typeof e.cwd === "string") {
+          passes.push(`mcp server "${name}": has cwd`);
+        }
+        const hasSubs = JSON.stringify(e).match(/\$\{CODEX_|CLAUDE_PLUGIN_|CURSOR_|user_config\.|ENV_VAR\}/);
+        if (hasSubs) {
+          passes.push(`mcp server "${name}": uses substitutions`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/cursor/skill.ts
+import { existsSync as existsSync30 } from "fs";
+import { resolve as resolve22 } from "path";
+var cursorSkillValidator;
+var init_skill3 = __esm(() => {
+  init_skill_validate();
+  cursorSkillValidator = {
+    id: "cursor:skill",
+    provider: "cursor",
+    name: "Cursor Skill",
+    description: "Validates SKILL.md (shared format): frontmatter (name/description), body, supporting files, substitutions. Cursor uses the same SKILL.md spec as other providers.",
+    detect(dir) {
+      return existsSync30(resolve22(dir, "SKILL.md"));
+    },
+    async validate(dir, _opts) {
+      const loaded = await loadSkill(dir);
+      if (!loaded.ok) {
+        return {
+          errors: [loaded.error],
+          warnings: [],
+          passes: []
+        };
+      }
+      const { model, existingDirs } = loaded;
+      return validateSkillModel(model, { existingDirs: [...existingDirs] });
+    }
+  };
+});
+
+// src/validators/copilot/plugin.ts
+import { existsSync as existsSync31 } from "fs";
+import { resolve as resolve23 } from "path";
+var NAME_REGEX5, copilotPluginValidator;
+var init_plugin4 = __esm(() => {
+  NAME_REGEX5 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+  copilotPluginValidator = {
+    id: "copilot:plugin",
+    provider: "copilot",
+    name: "Copilot Plugin",
+    description: "Validates .github/plugin/plugin.json (skills as array of paths, mcpServers support)",
+    detect(dir) {
+      return existsSync31(resolve23(dir, ".github", "plugin", "plugin.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const manifestPath = resolve23(dir, ".github", "plugin", "plugin.json");
+      let manifest;
+      try {
+        const raw = await Bun.file(manifestPath).text();
+        manifest = JSON.parse(raw);
+        passes.push(".github/plugin/plugin.json is valid JSON");
+      } catch {
+        errors.push(".github/plugin/plugin.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (!manifest.name) {
+        errors.push('Missing required field: "name"');
+      } else {
+        const name = String(manifest.name);
+        if (!NAME_REGEX5.test(name)) {
+          errors.push(`Invalid name format: "${name}" \u2014 must be kebab-case (a-z, 0-9, hyphens)`);
+        } else {
+          passes.push(`name: "${name}"`);
+        }
+      }
+      if (manifest.skills === undefined) {
+        errors.push('Missing required field: "skills" (must be an array of paths like ["./skills/foo"])');
+      } else if (!Array.isArray(manifest.skills)) {
+        errors.push('"skills" must be an array of relative paths');
+      } else {
+        const skillsArr = manifest.skills;
+        passes.push(`skills: array with ${skillsArr.length} path(s)`);
+        for (const [i, p] of skillsArr.entries()) {
+          if (typeof p !== "string") {
+            errors.push(`skills[${i}]: must be a string path`);
+            continue;
+          }
+          if (!p.startsWith("./") && !p.startsWith("../")) {
+            warnings.push(`skills[${i}]: "${p}" should be relative (./ or ../)`);
+          }
+          const skillDir = resolve23(dir, p);
+          const skillMd = resolve23(skillDir, "SKILL.md");
+          if (existsSync31(skillMd)) {
+            passes.push(`skills[${i}]: ${p}/SKILL.md exists`);
+          } else if (existsSync31(skillDir)) {
+            warnings.push(`skills[${i}]: directory exists but no SKILL.md inside`);
+          } else {
+            warnings.push(`skills[${i}]: path "${p}" does not exist`);
+          }
+        }
+      }
+      if (manifest.mcpServers !== undefined) {
+        if (typeof manifest.mcpServers === "string") {
+          passes.push(`mcpServers: "${manifest.mcpServers}"`);
+          const mcpRef = String(manifest.mcpServers);
+          const mcpPath = resolve23(dir, mcpRef);
+          if (existsSync31(mcpPath)) {
+            passes.push(`mcpServers file exists at ${mcpRef}`);
+          } else {
+            warnings.push(`mcpServers path "${mcpRef}" does not exist on disk`);
+          }
+        } else {
+          warnings.push('"mcpServers" should be a string path when present');
+        }
+      }
+      if (manifest.description) {
+        const desc = String(manifest.description);
+        if (desc.length < 10) {
+          warnings.push(`Description is very short (${desc.length} chars)`);
+        } else {
+          passes.push("description field present");
+        }
+      } else {
+        warnings.push('Missing "description" (recommended)');
+      }
+      if (manifest.version)
+        passes.push(`version: "${manifest.version}"`);
+      if (manifest.author)
+        passes.push("author present");
+      if (manifest.license)
+        passes.push(`license: "${manifest.license}"`);
+      if (manifest.homepage)
+        passes.push("homepage present");
+      if (manifest.repository)
+        passes.push("repository present");
+      if (Array.isArray(manifest.keywords)) {
+        passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+      }
+      const known = new Set([
+        "name",
+        "version",
+        "description",
+        "author",
+        "homepage",
+        "repository",
+        "license",
+        "keywords",
+        "skills",
+        "mcpServers"
+      ]);
+      const unknown = Object.keys(manifest).filter((k) => !known.has(k));
+      for (const k of unknown) {
+        warnings.push(`Unrecognized field "${k}" \u2014 will be ignored (for compatibility)`);
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/copilot/marketplace.ts
+import { existsSync as existsSync32 } from "fs";
+import { resolve as resolve24 } from "path";
+var copilotMarketplaceValidator;
+var init_marketplace4 = __esm(() => {
+  copilotMarketplaceValidator = {
+    id: "copilot:marketplace",
+    provider: "copilot",
+    name: "Copilot Plugin Marketplace",
+    description: "Validates .github/plugin/marketplace.json (string sources)",
+    detect(dir) {
+      return existsSync32(resolve24(dir, ".github", "plugin", "marketplace.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const mktPath = resolve24(dir, ".github", "plugin", "marketplace.json");
+      let mkt;
+      try {
+        const raw = await Bun.file(mktPath).text();
+        mkt = JSON.parse(raw);
+        passes.push(".github/plugin/marketplace.json is valid JSON");
+      } catch {
+        errors.push(".github/plugin/marketplace.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      if (mkt.name) {
+        passes.push(`name: "${mkt.name}"`);
+      } else {
+        warnings.push('Missing "name" at marketplace root');
+      }
+      if (mkt.metadata && typeof mkt.metadata === "object") {
+        passes.push("metadata present");
+        if (mkt.metadata.description)
+          passes.push("metadata.description present");
+        if (mkt.metadata.version)
+          passes.push(`metadata.version: "${mkt.metadata.version}"`);
+      }
+      if (mkt.owner) {
+        passes.push("owner present");
+      }
+      if (!Array.isArray(mkt.plugins) || mkt.plugins.length === 0) {
+        errors.push('"plugins" must be a non-empty array');
+        return { errors, warnings, passes };
+      }
+      passes.push(`${mkt.plugins.length} plugin(s) declared`);
+      for (const [i, p] of mkt.plugins.entries()) {
+        if (!p || typeof p !== "object") {
+          errors.push(`plugins[${i}]: must be an object`);
+          continue;
+        }
+        if (p.name) {
+          passes.push(`plugins[${i}].name: "${p.name}"`);
+        } else {
+          errors.push(`plugins[${i}]: missing "name"`);
+        }
+        if (p.source) {
+          const src = String(p.source);
+          passes.push(`plugins[${i}].source: "${src}"`);
+          const srcDir = resolve24(dir, src);
+          if (existsSync32(srcDir)) {
+            const hasManifest = existsSync32(resolve24(srcDir, ".github", "plugin", "plugin.json"));
+            const hasSkills = existsSync32(resolve24(srcDir, "skills"));
+            if (hasManifest || hasSkills) {
+              passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
+            } else {
+              warnings.push(`plugins[${i}].source "${src}" exists but lacks plugin markers`);
+            }
+          } else {
+            warnings.push(`plugins[${i}].source path "${src}" does not exist`);
+          }
+        } else {
+          warnings.push(`plugins[${i}]: missing "source"`);
+        }
+        if (p.description)
+          passes.push(`plugins[${i}].description present`);
+        if (p.version)
+          passes.push(`plugins[${i}].version: "${p.version}"`);
+      }
+      if (existsSync32(resolve24(dir, "README.md"))) {
+        passes.push("README.md exists at marketplace root");
+      } else {
+        warnings.push("No README.md at marketplace root \u2014 recommended");
+      }
+      if (existsSync32(resolve24(dir, "LICENSE"))) {
+        passes.push("LICENSE exists at marketplace root");
+      } else {
+        warnings.push("No LICENSE at marketplace root \u2014 recommended");
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/copilot/mcp.ts
+import { existsSync as existsSync33 } from "fs";
+import { resolve as resolve25 } from "path";
+var copilotMcpValidator;
+var init_mcp4 = __esm(() => {
+  copilotMcpValidator = {
+    id: "copilot:mcp",
+    provider: "copilot",
+    name: "Copilot MCP Config",
+    description: "Validates .mcp.json (referenced via mcpServers in manifest). Supports stdio and http servers.",
+    detect(dir) {
+      return existsSync33(resolve25(dir, ".mcp.json"));
+    },
+    async validate(dir, _opts) {
+      const errors = [];
+      const warnings = [];
+      const passes = [];
+      const mcpPath = resolve25(dir, ".mcp.json");
+      let rawConfig;
+      try {
+        const raw = await Bun.file(mcpPath).text();
+        rawConfig = JSON.parse(raw);
+        passes.push(".mcp.json is valid JSON");
+      } catch {
+        errors.push(".mcp.json is missing or invalid JSON");
+        return { errors, warnings, passes };
+      }
+      let config;
+      if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig) && rawConfig.mcpServers && typeof rawConfig.mcpServers === "object") {
+        config = rawConfig.mcpServers;
+        passes.push("mcp.json uses mcpServers wrapper (normalized)");
+      } else if (typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
+        config = rawConfig;
+      } else {
+        errors.push(".mcp.json must be an object (or contain mcpServers object)");
+        return { errors, warnings, passes };
+      }
+      const serverNames = Object.keys(config);
+      if (serverNames.length === 0) {
+        warnings.push(".mcp.json is empty \u2014 no servers defined");
+        return { errors, warnings, passes };
+      }
+      passes.push(`${serverNames.length} server(s) defined`);
+      for (const [name, entry] of Object.entries(config)) {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+          errors.push(`mcp server "${name}": definition must be an object`);
+          continue;
+        }
+        const e = entry;
+        const hasCommand = typeof e.command === "string";
+        const hasUrl = typeof e.url === "string";
+        if (!hasCommand && !hasUrl) {
+          errors.push(`mcp server "${name}": must have either "command" (for stdio) or "url" (for SSE/HTTP)`);
+        }
+        if (hasCommand && !Array.isArray(e.args)) {
+          warnings.push(`mcp server "${name}": "command" present but no "args" array (ok for some servers)`);
+        }
+        if (hasUrl && hasCommand) {
+          warnings.push(`mcp server "${name}": both "command" and "url" present \u2014 usually one or the other`);
+        }
+        if (e.env && typeof e.env === "object") {
+          passes.push(`mcp server "${name}": has env`);
+        }
+        if (typeof e.cwd === "string") {
+          passes.push(`mcp server "${name}": has cwd`);
+        }
+        const hasSubs = JSON.stringify(e).match(/\$\{CODEX_|CLAUDE_PLUGIN_|COPILOT_|PLUGIN_ROOT|user_config\.|ENV_VAR\}/);
+        if (hasSubs) {
+          passes.push(`mcp server "${name}": uses substitutions (e.g. \${PLUGIN_ROOT} or env)`);
+        }
+      }
+      return { errors, warnings, passes };
+    }
+  };
+});
+
+// src/validators/copilot/skill.ts
+import { existsSync as existsSync34 } from "fs";
+import { resolve as resolve26 } from "path";
+var copilotSkillValidator;
+var init_skill4 = __esm(() => {
+  init_skill_validate();
+  copilotSkillValidator = {
+    id: "copilot:skill",
+    provider: "copilot",
+    name: "Copilot Skill",
+    description: "Validates SKILL.md (shared format). Copilot supports skills referenced via array paths in the manifest.",
+    detect(dir) {
+      return existsSync34(resolve26(dir, "SKILL.md"));
+    },
+    async validate(dir, _opts) {
+      const loaded = await loadSkill(dir);
+      if (!loaded.ok) {
+        return {
+          errors: [loaded.error],
+          warnings: [],
+          passes: []
+        };
+      }
+      const { model, existingDirs } = loaded;
+      return validateSkillModel(model, { existingDirs: [...existingDirs] });
+    }
+  };
+});
+
+// src/providers/index.ts
+var claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter, adapters;
+var init_providers = __esm(() => {
+  init_skill();
+  init_plugin();
+  init_marketplace();
+  init_hooks();
+  init_mcp();
+  init_subagent();
+  init_command();
+  init_memory();
+  init_lsp();
+  init_monitors();
+  init_plugin2();
+  init_marketplace2();
+  init_mcp2();
+  init_skill2();
+  init_plugin3();
+  init_marketplace3();
+  init_mcp3();
+  init_skill3();
+  init_plugin4();
+  init_marketplace4();
+  init_mcp4();
+  init_skill4();
+  init_spec();
+  claudeAdapter = {
+    id: "claude",
+    name: "Claude Code",
+    manifestPath: ".claude-plugin/plugin.json",
+    marketplacePath: ".claude-plugin/marketplace.json",
+    mcpFilename: ".mcp.json",
+    validators: [
+      claudeSkillValidator,
+      claudePluginValidator,
+      claudeMarketplaceValidator,
+      claudeHooksValidator,
+      claudeMcpValidator,
+      claudeSubagentValidator,
+      claudeCommandValidator,
+      claudeMemoryValidator,
+      claudeLspValidator,
+      claudeMonitorsValidator
+    ],
+    detectContext(dir) {
+      return { cwd: dir };
+    },
+    async scaffold(decision, ctx) {
+      throw new Error("Scaffold via adapter not yet implemented");
+    }
+  };
+  codexAdapter = {
+    id: "codex",
+    name: "Codex",
+    manifestPath: ".codex-plugin/plugin.json",
+    marketplacePath: ".agents/plugins/marketplace.json",
+    mcpFilename: ".mcp.json",
+    validators: [
+      codexPluginValidator,
+      codexMarketplaceValidator,
+      codexMcpValidator,
+      codexSkillValidator
+    ],
+    detectContext(dir) {
+      return { cwd: dir };
+    },
+    async scaffold(decision, ctx) {
+      throw new Error("Scaffold via adapter not yet implemented");
+    }
+  };
+  cursorAdapter = {
+    id: "cursor",
+    name: "Cursor",
+    manifestPath: ".cursor-plugin/plugin.json",
+    marketplacePath: ".cursor-plugin/marketplace.json",
+    mcpFilename: "mcp.json",
+    validators: [
+      cursorPluginValidator,
+      cursorMarketplaceValidator,
+      cursorMcpValidator,
+      cursorSkillValidator
+    ],
+    detectContext(dir) {
+      return { cwd: dir };
+    },
+    async scaffold(decision, ctx) {
+      throw new Error("Scaffold via adapter not yet implemented");
+    }
+  };
+  copilotAdapter = {
+    id: "copilot",
+    name: "Copilot CLI",
+    manifestPath: ".github/plugin/plugin.json",
+    marketplacePath: ".github/plugin/marketplace.json",
+    mcpFilename: ".mcp.json",
+    validators: [
+      copilotPluginValidator,
+      copilotMarketplaceValidator,
+      copilotMcpValidator,
+      copilotSkillValidator
+    ],
+    detectContext(dir) {
+      return { cwd: dir };
+    },
+    async scaffold(decision, ctx) {
+      throw new Error("Scaffold via adapter not yet implemented");
+    }
+  };
+  adapters = [claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter];
+});
+
 // src/validators/index.ts
 function resolveFor(forFlag, allValidators = validators) {
   if (!forFlag) {
@@ -4309,43 +5637,30 @@ Available: ${available}` };
   }
   const byProvider = allValidators.filter((v) => v.provider === forFlag);
   if (byProvider.length === 0) {
-    const providers = [...new Set(allValidators.map((v) => v.provider))];
-    return { matched: [], error: `Unknown provider: "${forFlag}"
+    const knownProviders = [...new Set([
+      ...allValidators.map((v) => v.provider),
+      ...supportedProviders
+    ])];
+    if (!knownProviders.includes(forFlag)) {
+      return { matched: [], error: `Unknown provider: "${forFlag}"
 
-Available providers: ${providers.join(", ")}` };
+Available providers: ${knownProviders.join(", ")}` };
+    }
+    return { matched: [] };
   }
   return { matched: byProvider };
 }
 var validators;
 var init_validators = __esm(() => {
-  init_skill();
-  init_plugin();
-  init_marketplace();
-  init_hooks();
-  init_mcp();
-  init_subagent();
-  init_command();
-  init_memory();
-  init_lsp();
-  init_monitors();
-  validators = [
-    claudeSkillValidator,
-    claudePluginValidator,
-    claudeMarketplaceValidator,
-    claudeHooksValidator,
-    claudeMcpValidator,
-    claudeSubagentValidator,
-    claudeCommandValidator,
-    claudeMemoryValidator,
-    claudeLspValidator,
-    claudeMonitorsValidator
-  ];
+  init_providers();
+  init_spec();
+  validators = adapters.flatMap((a) => a.validators);
 });
 
 // src/core/remote.ts
 import { spawnSync as spawnSync4 } from "child_process";
 import { mkdtempSync, rmSync } from "fs";
-import { join as join16 } from "path";
+import { join as join21 } from "path";
 import { tmpdir } from "os";
 function parseRemoteUrl(input) {
   if (input.startsWith(".") || input.startsWith("/") || input.startsWith("~")) {
@@ -4382,7 +5697,7 @@ function isGhAvailable() {
   return ghAvailable;
 }
 async function cloneToTemp(parsed) {
-  const tmpDir = mkdtempSync(join16(tmpdir(), "dora-"));
+  const tmpDir = mkdtempSync(join21(tmpdir(), "dora-"));
   const cleanup = () => {
     try {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -4430,8 +5745,8 @@ var exports_validate_top = {};
 __export(exports_validate_top, {
   default: () => validate_top_default
 });
-import { existsSync as existsSync24 } from "fs";
-import { resolve as resolve15 } from "path";
+import { existsSync as existsSync36 } from "fs";
+import { resolve as resolve27 } from "path";
 var import_picocolors13, validate_top_default;
 var init_validate_top = __esm(() => {
   init_dist();
@@ -4481,21 +5796,21 @@ var init_validate_top = __esm(() => {
   Cloning ${import_picocolors13.default.dim(args.path)}...`);
         try {
           const result = await cloneToTemp(remote);
-          fullPath = remote.subpath ? resolve15(result.dir, remote.subpath) : result.dir;
+          fullPath = remote.subpath ? resolve27(result.dir, remote.subpath) : result.dir;
           cleanup = result.cleanup;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           ui.fail(msg);
           process.exit(1);
         }
-        if (!existsSync24(fullPath)) {
+        if (!existsSync36(fullPath)) {
           cleanup();
           ui.fail(`Subdirectory not found in repo: ${remote.subpath}`);
           process.exit(1);
         }
       } else {
-        fullPath = resolve15(args.path);
-        if (!existsSync24(fullPath)) {
+        fullPath = resolve27(args.path);
+        if (!existsSync36(fullPath)) {
           ui.fail(`Path not found: ${args.path}
 
 Check that the path is correct and the directory exists.`);
@@ -4590,7 +5905,7 @@ var exports_init2 = {};
 __export(exports_init2, {
   default: () => init_default2
 });
-import { basename as basename4, join as join17 } from "path";
+import { basename as basename4, join as join22 } from "path";
 var {spawnSync: spawnSync5 } = globalThis.Bun;
 var import_picocolors14, init_default2;
 var init_init2 = __esm(() => {
@@ -4703,7 +6018,7 @@ var init_init2 = __esm(() => {
       }
       const journalsDir = getJournalsDir();
       const remotePath = `projects/${project}.md`;
-      const localPath = join17(journalsDir, `${project}.md`);
+      const localPath = join22(journalsDir, `${project}.md`);
       const effectiveRepo = isRefresh && !args.repo ? existing.journal.repo : repo;
       const config = existing ?? {
         journal: { repo: effectiveRepo, projects: {} }
@@ -4716,7 +6031,7 @@ var init_init2 = __esm(() => {
       ensureDoravalDirs();
       ui.write(`  ${import_picocolors14.default.dim(import_picocolors14.default.gray("Fetching journal files from"))} ${import_picocolors14.default.gray(effectiveRepo)}${import_picocolors14.default.dim(import_picocolors14.default.gray("..."))}
 `);
-      const globalDest = join17(journalsDir, "global.md");
+      const globalDest = join22(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       let wroteGlobal;
       if (!refreshGlobalRes.ok) {
@@ -4831,7 +6146,7 @@ Project-specific decisions.
 });
 
 // src/core/update.ts
-import { resolve as resolve16 } from "path";
+import { resolve as resolve28 } from "path";
 import { homedir as homedir2 } from "os";
 function normalizePath(p) {
   return p.replace(/\\/g, "/").replace(/\/+$/, "");
@@ -5010,14 +6325,14 @@ async function readMarker() {
 async function writeMarker(marker) {
   try {
     const { mkdir, writeFile } = await import("fs/promises");
-    const { dirname: dirname2 } = await import("path");
-    await mkdir(dirname2(MARKER_PATH), { recursive: true });
+    const { dirname: dirname5 } = await import("path");
+    await mkdir(dirname5(MARKER_PATH), { recursive: true });
     await writeFile(MARKER_PATH, JSON.stringify(marker, null, 2));
   } catch {}
 }
 var MARKER_PATH;
 var init_update2 = __esm(() => {
-  MARKER_PATH = resolve16(homedir2(), ".doraval", "install.json");
+  MARKER_PATH = resolve28(homedir2(), ".doraval", "install.json");
 });
 
 // src/cli/commands/update.ts
@@ -5032,10 +6347,10 @@ import { realpath, access } from "fs/promises";
 async function confirmUpdate() {
   const { createInterface } = await import("readline");
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve17) => {
+  return new Promise((resolve29) => {
     rl.question("Update now? (y/N) ", (answer) => {
       rl.close();
-      resolve17(answer.toLowerCase().startsWith("y"));
+      resolve29(answer.toLowerCase().startsWith("y"));
     });
   });
 }
@@ -5158,10 +6473,58 @@ Raw output above.`);
   });
 });
 
+// src/cli/commands/providers.ts
+var exports_providers = {};
+__export(exports_providers, {
+  default: () => providers_default
+});
+var import_picocolors15, providers_default;
+var init_providers2 = __esm(() => {
+  init_dist();
+  init_out();
+  init_spec();
+  import_picocolors15 = __toESM(require_picocolors(), 1);
+  providers_default = defineCommand({
+    meta: {
+      name: "providers",
+      description: "List supported providers and their packaging details"
+    },
+    args: {
+      json: {
+        type: "boolean",
+        description: "Output as JSON",
+        default: false
+      }
+    },
+    run({ args }) {
+      if (args.json) {
+        console.log(JSON.stringify(supportedProviders.map((id) => {
+          const spec = getProviderSpec(id);
+          return { ...spec, id };
+        }), null, 2));
+        process.exit(0);
+      }
+      ui.heading("doraval providers \u2014 Supported platforms");
+      for (const id of supportedProviders) {
+        const spec = getProviderSpec(id);
+        ui.write(`
+  ${import_picocolors15.default.bold(id)} \u2014 ${spec.name}`);
+        ui.info(`  Manifest: ${spec.manifestPath}`);
+        ui.info(`  Marketplace: ${spec.marketplacePath}`);
+        ui.info(`  MCP: ${spec.mcpFilename}`);
+        ui.info(`  Example: doraval validate . --for ${id}`);
+      }
+      ui.write(`
+  Use --json for machine-readable output.`);
+      process.exit(0);
+    }
+  });
+});
+
 // src/cli/index.ts
 init_dist();
 var import__package = __toESM(require_package(), 1);
-var import_picocolors15 = __toESM(require_picocolors(), 1);
+var import_picocolors16 = __toESM(require_picocolors(), 1);
 var skill = defineCommand({
   meta: {
     name: "skill",
@@ -5241,6 +6604,7 @@ var main = defineCommand({
     init: () => Promise.resolve().then(() => (init_init2(), exports_init2)).then((m) => m.default),
     bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default),
     update: () => Promise.resolve().then(() => (init_update3(), exports_update2)).then((m) => m.default),
+    providers: () => Promise.resolve().then(() => (init_providers2(), exports_providers)).then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     claude: () => Promise.resolve(claude),
@@ -5248,7 +6612,7 @@ var main = defineCommand({
   },
   run() {
     console.log(`
-` + import_picocolors15.default.blue(doraemonArt) + `
+` + import_picocolors16.default.blue(doraemonArt) + `
 `);
     showUsage(main);
   }

@@ -72,54 +72,37 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
   if (path === "plugin") {
     const pluginName = basename(targetDir);
 
-    const codexSpec = getProviderSpec("codex");
-    const codexManifestDir = dirname(codexSpec.manifestPath);
+    const copilotSpec = getProviderSpec("copilot");
+    const copilotManifestDir = dirname(copilotSpec.manifestPath);
 
-    // .codex-plugin/plugin.json per Codex Build plugins docs
+    // .github/plugin/plugin.json per Copilot (skills as array of paths)
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
-      description: "Scaffolded by doraval codex new",
-      skills: "./skills/",
-      interface: {
-        displayName: pluginName,
-        shortDescription: "Scaffolded starter plugin",
-        category: "Productivity",
-      },
+      description: "Scaffolded by doraval copilot new",
+      skills: ["./skills/doraval"],
+      displayName: pluginName,
     };
-    mkdirSync(join(targetDir, codexManifestDir), { recursive: true });
-    writeFileSync(join(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    mkdirSync(join(targetDir, copilotManifestDir), { recursive: true });
+    writeFileSync(join(targetDir, copilotSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
 
-    // Starter local marketplace catalog (Codex convention: .agents/plugins/marketplace.json)
-    // One entry for this plugin. `path` is relative to the marketplace file.
-    // When the marketplace lives at <plugin>/.agents/plugins/marketplace.json,
-    // "../.." points back at the plugin root (where .codex-plugin lives).
-    // For repo-wide use, move this marketplace.json to your $REPO_ROOT/.agents/plugins/
-    // and update the path accordingly (e.g. "./plugins/this-plugin").
-    const marketplaceDir = dirname(codexSpec.marketplacePath);
+    // marketplace inside .github/plugin per spec
+    const marketplaceDir = dirname(copilotSpec.marketplacePath);
     mkdirSync(join(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: "local",
-      interface: {
-        displayName: "Local (doraval scaffold)",
-      },
       plugins: [
         {
           name: pluginName,
           source: {
             source: "local",
-            path: "../..",
+            path: ".",
           },
-          policy: {
-            installation: "AVAILABLE",
-            authentication: "ON_INSTALL",
-          },
-          category: "Productivity",
         },
       ],
     };
     writeFileSync(
-      join(targetDir, codexSpec.marketplacePath),
+      join(targetDir, copilotSpec.marketplacePath),
       JSON.stringify(marketplaceJson, null, 2)
     );
 
@@ -133,14 +116,14 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
     } else {
       skillContent = `---
 name: ${demoSkillName}
-description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents (works for Codex too).
+description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents (works for Copilot too).
 ---
 
-# Use Doraval (Codex edition)
+# Use Doraval (Copilot edition)
 
 Doraval is the context engineering toolkit.
 
-When you need to check a skill or Codex plugin:
+When you need to check a skill or Copilot plugin:
 
 - Validate the current directory: \`doraval validate .\`
 - Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
@@ -149,25 +132,23 @@ When you need to check a skill or Codex plugin:
 
 Always run \`doraval validate\` before sharing or publishing a plugin.
 
-This skill demonstrates a complete, self-referential example of using doraval inside a generated Codex plugin.
+This skill demonstrates a complete, self-referential example of using doraval inside a generated Copilot plugin.
 
-To test in Codex:
-1. Make sure this plugin is listed in a marketplace (we created .agents/plugins/marketplace.json for you).
-2. Restart Codex.
-3. Open the plugin directory, select your local marketplace, and enable the plugin.
-4. Invoke the demo with /${pluginName}:doraval`;
+To test in Copilot:
+1. Configure the .github/plugin as local source.
+2. Restart/reload and invoke the skill.`;
     }
 
     writeFileSync(join(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
 
     const readmePath = join(targetDir, "README.md");
     if (!existsSync(readmePath)) {
-      writeFileSync(readmePath, "# " + pluginName + "\n\nCodex plugin scaffolded by doraval.");
+      writeFileSync(readmePath, "# " + pluginName + "\n\nCopilot plugin scaffolded by doraval.");
     }
   } else {
-    // "standalone" / local skill start for Codex (per "start with a local skill")
+    // "standalone" / local skill start for Copilot
     mkdirSync(join(targetDir, "skills", "doraval"), { recursive: true });
-    const skillBody = migrateContent || "# My Skill\n\nBasic starter for Codex.";
+    const skillBody = migrateContent || "# My Skill\n\nBasic starter for Copilot.";
     writeFileSync(join(targetDir, "skills", "doraval", "SKILL.md"), `---\nname: doraval\ndescription: Starter (local skill)\n---\n\n${skillBody}`);
   }
 }
@@ -175,7 +156,7 @@ To test in Codex:
 export default defineCommand({
   meta: {
     name: "new",
-    description: "Create a new skill or plugin following Codex packaging rules",
+    description: "Create a new skill or plugin following Copilot packaging rules",
   },
   args: {
     name: {
@@ -195,7 +176,7 @@ export default defineCommand({
     },
   },
   run({ args }) {
-    ui.heading("doraval codex new — Context-aware scaffolding");
+    ui.heading("doraval copilot new — Context-aware scaffolding");
     const ctx = detectContext();
     let intent: Intent = (args.intent as Intent) || "self-later";
     if (!args.yes) {
@@ -217,11 +198,10 @@ export default defineCommand({
     const cmdName = decision.path === "plugin" ? `/${basename(decision.targetDir)}:doraval` : "/doraval (local skill)";
     ui.info(`  Command: ${cmdName}`);
     if (decision.path === "plugin") {
-      ui.info(`  Codex manifest: .codex-plugin/plugin.json`);
-      ui.info(`  Marketplace catalog: .agents/plugins/marketplace.json (starter for local testing)`);
-      ui.info(`  (Move/expand the marketplace.json to $REPO_ROOT/.agents/plugins/ or ~/.agents/plugins/ as needed)`);
+      ui.info(`  Copilot manifest: .github/plugin/plugin.json`);
+      ui.info(`  Marketplace catalog: .github/plugin/marketplace.json`);
     }
-    ui.info(`  Test (local): restart Codex, select your marketplace in the plugin directory`);
+    ui.info(`  Test (local): configure local plugin source in Copilot and reload`);
     ui.info(`  Validate: doraval validate ${decision.targetDir}`);
     if (decision.path === "plugin" && decision.migrateExisting) {
       ui.info("  (Existing content migrated where confirmed.)");

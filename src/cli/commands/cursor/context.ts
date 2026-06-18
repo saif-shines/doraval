@@ -1,23 +1,18 @@
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
-import { getProviderSpec } from "../../../providers/spec.js";
 
 export interface Context {
   cwd: string;
-  hasCodexDir: boolean;
+  hasCursorDir: boolean;
   hasPluginManifest: boolean;
-  hasMarketplace: boolean;
   looseSkillFiles: string[];
   isEmpty: boolean;
+  // Add more fields as needed (e.g. hasGit)
 }
 
 export function detectContext(cwd: string = process.cwd()): Context {
-  const codexSpec = getProviderSpec("codex");
-  const hasCodexDir = existsSync(join(cwd, ".codex"));
-  const hasPluginManifest = existsSync(join(cwd, codexSpec.manifestPath));
-  const hasMarketplace =
-    existsSync(join(cwd, ".agents", "plugins", "marketplace.json")) ||
-    existsSync(join(cwd, codexSpec.manifestPath)); // legacy compat (note: codex spec uses .codex-plugin)
+  const hasCursorDir = existsSync(join(cwd, ".cursor"));
+  const hasPluginManifest = existsSync(join(cwd, ".cursor-plugin", "plugin.json"));
 
   let looseSkillFiles: string[] = [];
   try {
@@ -25,18 +20,18 @@ export function detectContext(cwd: string = process.cwd()): Context {
     looseSkillFiles = files.filter((f) => {
       if (!f.endsWith(".md") || f.startsWith(".")) return false;
       const lower = f.toLowerCase();
+      // Only treat as loose skill file if it looks like a skill (not README, changelog, etc.)
       if (lower === "readme.md" || lower === "changelog.md" || lower === "license.md" || lower.includes("contributing")) return false;
       return lower.includes("skill") || lower === "skill.md";
     });
   } catch {}
 
-  const isEmpty = !hasPluginManifest && looseSkillFiles.length === 0;
+  const isEmpty = !hasCursorDir && !hasPluginManifest && looseSkillFiles.length === 0;
 
   return {
     cwd,
-    hasCodexDir,
+    hasCursorDir,
     hasPluginManifest,
-    hasMarketplace,
     looseSkillFiles,
     isEmpty,
   };

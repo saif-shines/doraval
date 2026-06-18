@@ -69,6 +69,34 @@ const codex = defineCommand({
   },
 });
 
+const cursor = defineCommand({
+  meta: {
+    name: "cursor",
+    description: "Cursor-specific commands (packaging, scaffolding, distribution)",
+  },
+  subCommands: {
+    new: () => import("./commands/cursor/new.js").then((m) => m.default),
+    bump: () => import("./commands/bump.js").then((m) => m.default),
+  },
+  run() {
+    showUsage(cursor);
+  },
+});
+
+const copilot = defineCommand({
+  meta: {
+    name: "copilot",
+    description: "Copilot CLI-specific commands (packaging, scaffolding, distribution)",
+  },
+  subCommands: {
+    new: () => import("./commands/copilot/new.js").then((m) => m.default),
+    bump: () => import("./commands/bump.js").then((m) => m.default),
+  },
+  run() {
+    showUsage(copilot);
+  },
+});
+
 // Doraemon banner - shown when user just runs "doraval" with no subcommand
 const doraemonArt = `
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣤⣴⣶⣶⣶⣶⣶⠶⣶⣤⣤⣀⠀⠀⠀⠀⠀⠀ 
@@ -96,10 +124,13 @@ const main = defineCommand({
     init: () => import("./commands/init.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
     update: () => import("./commands/update.js").then((m) => m.default),
+    providers: () => import("./commands/providers.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),
+    cursor: () => Promise.resolve(cursor),
+    copilot: () => Promise.resolve(copilot),
   },
   run() {
     // Show Doraemon banner before the normal usage instructions

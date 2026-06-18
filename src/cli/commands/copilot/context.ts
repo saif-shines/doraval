@@ -1,23 +1,17 @@
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
-import { getProviderSpec } from "../../../providers/spec.js";
 
 export interface Context {
   cwd: string;
-  hasCodexDir: boolean;
+  hasGithubDir: boolean;
   hasPluginManifest: boolean;
-  hasMarketplace: boolean;
   looseSkillFiles: string[];
   isEmpty: boolean;
 }
 
 export function detectContext(cwd: string = process.cwd()): Context {
-  const codexSpec = getProviderSpec("codex");
-  const hasCodexDir = existsSync(join(cwd, ".codex"));
-  const hasPluginManifest = existsSync(join(cwd, codexSpec.manifestPath));
-  const hasMarketplace =
-    existsSync(join(cwd, ".agents", "plugins", "marketplace.json")) ||
-    existsSync(join(cwd, codexSpec.manifestPath)); // legacy compat (note: codex spec uses .codex-plugin)
+  const hasGithubDir = existsSync(join(cwd, ".github"));
+  const hasPluginManifest = existsSync(join(cwd, ".github", "plugin", "plugin.json"));
 
   let looseSkillFiles: string[] = [];
   try {
@@ -30,13 +24,12 @@ export function detectContext(cwd: string = process.cwd()): Context {
     });
   } catch {}
 
-  const isEmpty = !hasPluginManifest && looseSkillFiles.length === 0;
+  const isEmpty = !hasGithubDir && !hasPluginManifest && looseSkillFiles.length === 0;
 
   return {
     cwd,
-    hasCodexDir,
+    hasGithubDir,
     hasPluginManifest,
-    hasMarketplace,
     looseSkillFiles,
     isEmpty,
   };
