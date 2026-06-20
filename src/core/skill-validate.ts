@@ -47,6 +47,7 @@ const KNOWN_FIELDS = new Set([
   "hooks",
   "paths",
   "shell",
+  "expected-eval", // doraval eval: author-declared expected tool calls
 ]);
 
 // Directories commonly bundled with skills (supporting files, scripts, examples, etc.)

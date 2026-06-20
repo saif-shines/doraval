@@ -291,3 +291,23 @@ describe("checkDynamicInjection", () => {
     expect(result.passes?.length).toBe(2);
   });
 });
+
+describe("checkUnknownFields", () => {
+  test("does not warn on expected-eval field", () => {
+    const model = {
+      data: { name: "my-skill", "expected-eval": [{ tool: "Skill" }] },
+      content: "body",
+    };
+    const result = checkUnknownFields(model, { existingDirs: [] });
+    expect(result.warnings ?? []).toHaveLength(0);
+  });
+
+  test("warns on truly unknown fields", () => {
+    const model = {
+      data: { name: "my-skill", "totally-unknown": true },
+      content: "body",
+    };
+    const result = checkUnknownFields(model, { existingDirs: [] });
+    expect(result.warnings ?? []).toHaveLength(1);
+  });
+});
