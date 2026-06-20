@@ -1,6 +1,6 @@
 {
   "name": "@hacksmith/doraval",
-  "version": "0.2.39",
+  "version": "0.2.40",
   "author": "Saif",
   "repository": {
     "type": "git",
@@ -41,7 +41,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun",
+    "build": "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun && rm -rf bin/ui && cp -r src/ui bin/ui",
     "dev": "bun run ./src/cli/index.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit --skipLibCheck",
