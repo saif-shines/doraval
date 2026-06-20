@@ -179,13 +179,12 @@ describe("doraval CLI", () => {
   });
 
   describe("skill judge", () => {
-    test("delegates to eval (exits 2 when no model configured)", () => {
+    test("delegates to eval (exits 2 when no agent configured)", () => {
       const skillDir = fixturePath("minimal-good");
-      const { exitCode, stdout, stderr } = runDoraval([
-        "skill",
-        "judge",
-        skillDir,
-      ]);
+      const { exitCode, stdout, stderr } = runDoraval(
+        ["skill", "judge", skillDir],
+        { env: { DORAVAL_HOME: "/tmp/doraval-test-no-config" } },
+      );
 
       expect(exitCode).toBe(2);
       // Now delegates to doraval eval; will fail on missing eval config rather than stub
