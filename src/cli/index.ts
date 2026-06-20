@@ -64,19 +64,8 @@ const evalCmd = defineCommand({
   },
 });
 
-const config = defineCommand({
-  meta: {
-    name: "config",
-    description: "Get or set doraval configuration",
-  },
-  subCommands: {
-    set: () => import("./commands/config.js").then((m) => m.default),
-    get: () => import("./commands/config.js").then((m) => m.default),
-  },
-  run() {
-    uiHelper.info("Usage: doraval config set <key> <value>  |  doraval config get [key]");
-  },
-});
+// config command module already defines its own subCommands (set/get)
+const config = () => import("./commands/config.js").then((m) => m.default);
 
 const claude = defineCommand({
   meta: {
@@ -212,7 +201,7 @@ const main = defineCommand({
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     eval: () => Promise.resolve(evalCmd),
-    config: () => Promise.resolve(config),
+    config: config,
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),
     cursor: () => Promise.resolve(cursor),

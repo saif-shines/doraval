@@ -2,6 +2,8 @@ import type { AgentConfig } from "./agent-invoke.js";
 import { invokeAgent } from "./agent-invoke.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
+import pc from "picocolors";
+import { ui } from "../cli/out.js";
 
 export interface ChecklistItem {
   instruction: string;
@@ -72,6 +74,8 @@ TASKS:
    - "incomplete": no end_turn signal or session appears cut off
 5. Overall verdict: "PASS" if all critical instructions were followed, "FAIL" if any critical instruction was missed.
 
+CRITICAL: Output *ONLY* the JSON object. No markdown fences, no explanations, no text before or after it. The first character of your response must be '{' and the last must be '}'.
+
 Return ONLY a valid JSON object with exactly these keys:
 {
   "userFamiliarity": <number 1-10>,
@@ -128,6 +132,7 @@ export async function runEval(
 
   // Validate shape
   if (typeof raw.verdict !== "string" || !Array.isArray(raw.checklist)) {
+    ui.write(`  ${pc.yellow("⚠")} Received from agent (first 800 chars): ${JSON.stringify(raw).slice(0, 800)}`);
     return makeUnknownResult(primitives, skillName, "LLM returned malformed response");
   }
 

@@ -10,7 +10,7 @@
  * - Uses Bun.serve (see bun skill)
  */
 
-import { existsSync, readdirSync, writeFileSync, unlinkSync, readFileSync } from "fs";
+import { existsSync, readdirSync, writeFileSync, unlinkSync, readFileSync, statSync } from "fs";
 import { join } from "path";
 import { spawn } from "child_process";
 import pc from "picocolors";
@@ -25,6 +25,7 @@ import {
   ensureDoravalDirs,
   sanitizeProjectName,
   getDoravalDir,
+  getEvalsDir,
 } from "../../core/journal-config.js";
 import {
   parseJournalEntries,
@@ -33,6 +34,9 @@ import {
 import {
   generateJournalContext,
 } from "./journal/context.js";
+
+// Eval types (for dashboard display of learnings)
+import type { EvalResult } from "../../core/session-eval.js";
 
 // Hook pure functions (exported from hook.ts)
 import {
@@ -132,6 +136,35 @@ ${input.rationale}
 
   await Bun.write(filePath, content);
   return { filePath, filename };
+}
+
+async function loadEvals(limit = 30): Promise<(EvalResult & { _filename?: string })[]> {
+  const dir = getEvalsDir();
+  if (!existsSync(dir)) return [];
+
+  let files = readdirSync(dir)
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => ({ name: f, path: join(dir, f) }));
+
+  // Newest first by filename (contains timestamp suffix)
+  files.sort((a, b) => b.name.localeCompare(a.name));
+
+  const results: (EvalResult & { _filename?: string })[] = [];
+  for (const f of files.slice(0, limit)) {
+    try {
+      const raw = await Bun.file(f.path).text();
+      const parsed = JSON.parse(raw) as EvalResult;
+      if (parsed && (parsed.schemaVersion === 1 || parsed.verdict || parsed.skill)) {
+        results.push({ ...parsed, _filename: f.name });
+      }
+    } catch {
+      // ignore bad files
+    }
+  }
+
+  // Ensure sorted by timestamp desc
+  results.sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+  return results.slice(0, limit);
 }
 
 // --- Server ---
@@ -280,6 +313,7 @@ export default {
         if (url.pathname === "/api/status") {
           return Response.json({
             project: project || null,
+            doravalRoot: getDoravalDir(),
             doravalDir: getJournalsDir(),
             hasConfig: !!config,
             repo: config?.journal?.repo ?? null,
@@ -367,6 +401,11 @@ export default {
           return Response.json({ error: "not found" }, { status: 404 });
         }
 
+        if (url.pathname === "/api/evals") {
+          const evals = await loadEvals(25);
+          return Response.json({ evals });
+        }
+
         // Fallback 404 for API
         if (url.pathname.startsWith("/api/")) {
           return Response.json({ error: "Not found" }, { status: 404 });
@@ -390,11 +429,13 @@ export default {
     const msg = `
   ${pc.blue("◉")}  dora local dashboard
   ${pc.dim("Project:")} ${project ? pc.white(project) : pc.yellow("none (run dora init)")}
+  ${pc.dim("Data dir:")} ${getDoravalDir()}
   ${pc.dim("URL:")}     ${pc.underline(pc.cyan(url))}
 
   ${pc.dim("Press Ctrl+C to stop")}
 `;
     console.error(msg);
+    console.error(`  ${pc.dim("Tip:")} data location = ${getDoravalDir()} (set DORAVAL_HOME to change)`);
 
     if (shouldOpen && process.stdout.isTTY) {
       // macOS friendly + fallback

@@ -239,15 +239,16 @@ export default defineCommand({
     // ── Eval setup ──────────────────────────────────────────────────────────────
     ui.write(`\n  ${pc.bold("Step 3: Eval configuration (doraval eval)")}\n`);
 
-    const apiKeyFromEnv = !!process.env.ANTHROPIC_API_KEY;
-    if (apiKeyFromEnv) {
-      ui.success("ANTHROPIC_API_KEY found in environment — will be used for eval.");
+    const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    if (hasAnthropic || hasOpenAI) {
+      ui.success("API key found in environment — will be used for eval.");
     } else {
-      ui.warn("ANTHROPIC_API_KEY not set. Set it before running doraval eval.");
+      ui.warn("No ANTHROPIC_API_KEY or OPENAI_API_KEY set. Set the right one before running doraval eval.");
     }
 
     const evalModelAnswer = await prompt(
-      `  Which model should doraval eval use? ${pc.dim("(e.g. claude-sonnet-4-6, press Enter to skip)")} `,
+      `  Which model should doraval eval use? ${pc.dim("(e.g. claude-sonnet-4-6 or gpt-4o, press Enter to skip)")} `,
       ""
     );
 
@@ -263,7 +264,7 @@ export default defineCommand({
         ui.success(`eval.model set to ${evalModelAnswer.trim()}`);
       }
     } else {
-      ui.dim("  Skipped. Run: doraval config set eval.model <model-name>");
+      ui.dim("  Skipped. Run: dora config set eval.model <model-name>");
     }
 
     ui.info(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))}, ${pc.dim(pc.gray("dora journal list"))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);

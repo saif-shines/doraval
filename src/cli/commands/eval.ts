@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { join } from "path";
+import { join, basename } from "path";
 import { existsSync } from "fs";
 import pc from "picocolors";
 import { ui } from "../out.js";
@@ -7,10 +7,7 @@ import { getAdapter } from "../../core/session-adapters.js";
 import { runEval, type EvalResult } from "../../core/session-eval.js";
 import { readConfig, getEvalConfig, ensureDoravalDirs, getEvalsDir } from "../../core/journal-config.js";
 import { loadSkill } from "../../core/skill-validate.js";
-
-function resolveApiKey(evalCfg: { api_key?: string }): string | undefined {
-  return process.env.ANTHROPIC_API_KEY ?? evalCfg.api_key ?? undefined;
-}
+import { prompt } from "../prompt.js";
 
 function renderResult(result: EvalResult, verbose: boolean): void {
   const verdictColor = result.verdict === "PASS" ? pc.green : result.verdict === "FAIL" ? pc.red : pc.yellow;
@@ -41,6 +38,55 @@ function renderResult(result: EvalResult, verbose: boolean): void {
   }
 }
 
+function selectRecentSessions(
+  recent: Array<{ path: string; mtime: number; title?: string; skillCount: number }>
+): string[] {
+  if (recent.length === 0) return [];
+  if (recent.length === 1) return [recent[0]!.path];
+
+  ui.write(`\n  Recent sessions for this directory:`);
+  recent.forEach((s, i) => {
+    const date = new Date(s.mtime).toISOString().slice(0, 10);
+    const titleStr = s.title ? ` "${s.title.slice(0, 45)}"` : "";
+    const skillStr = s.skillCount > 0 ? ` (${s.skillCount} skill${s.skillCount === 1 ? "" : "s"})` : "";
+    const short = basename(s.path);
+    ui.write(`    ${i + 1}. ${date}${titleStr}${skillStr}  ${pc.dim(short)}`);
+  });
+
+  const input = prompt(
+    `\n  Select session(s) (e.g. 1,3 or 2-4 or all or latest): `,
+    "1"
+  ).trim().toLowerCase();
+
+  if (input === "all") return recent.map((s) => s.path);
+  if (input === "latest") return [recent[0]!.path];
+
+  // direct path?
+  if (input.includes("/") || input.endsWith(".jsonl")) return [input];
+
+  const selected = new Set<string>();
+  const parts = input.split(/[\s,]+/);
+  for (const part of parts) {
+    if (part.includes("-")) {
+      const nums = part.split("-").map((n) => parseInt(n, 10)).filter((n) => !isNaN(n));
+      const start = nums[0] ?? 0;
+      const end = nums[1] ?? start;
+      for (let n = start; n <= end; n++) {
+        const item = recent[n - 1];
+        if (item) selected.add(item.path);
+      }
+    } else {
+      const n = parseInt(part, 10);
+      if (!isNaN(n)) {
+        const item = recent[n - 1];
+        if (item) selected.add(item.path);
+      }
+    }
+  }
+
+  return selected.size > 0 ? Array.from(selected) : [recent[0]!.path];
+}
+
 export default defineCommand({
   meta: {
     name: "eval",
@@ -49,7 +95,7 @@ export default defineCommand({
   args: {
     session: {
       type: "string",
-      description: "Path to a .jsonl session file (default: auto-detect latest)",
+      description: "Path to .jsonl session file(s). Supports comma/space separated values, or omit to interactively select from recent sessions.",
     },
     skill: {
       type: "string",
@@ -80,112 +126,133 @@ export default defineCommand({
     const config = await readConfig();
     const evalCfg = getEvalConfig(config);
 
-    // Resolve API key
-    const apiKey = resolveApiKey(evalCfg);
-    if (!apiKey && !evalCfg.model) {
-      ui.fail("No eval model configured.");
-      ui.info("  Run: doraval config set eval.model claude-sonnet-4-6");
-      ui.info("  And set: ANTHROPIC_API_KEY env var, or doraval config set eval.api_key <key>");
-      process.exit(2);
-    }
-
     const agentCfg = config?.agent;
     if (!agentCfg) {
-      ui.fail("No coding agent configured. Run: doraval init");
+      ui.fail("No coding agent configured. Run: dora init");
       process.exit(2);
     }
 
-    // Find session
-    let sessionPath: string | null = args.session ?? null;
-    if (!sessionPath) {
+    // The point of eval is to reuse whatever agent the user already has configured.
+    // We only need eval.model for the "sending to ..." notice and the result record.
+    if (!evalCfg.model) {
+      ui.warn("No eval.model configured for the judge LLM.");
+      ui.info("  doraval will use your configured agent (" + agentCfg.command + ").");
+      ui.info("  If you want to record a specific model, run: dora config set eval.model claude-3-5-sonnet-20241022");
+    }
+
+    // Resolve session path(s)
+    let sessionPaths: string[] = [];
+    if (args.session) {
+      // Support comma or space separated for multiple sessions from CLI
+      sessionPaths = String(args.session)
+        .split(/[\s,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else {
       const adapter = getAdapter();
       if (!adapter) {
         ui.fail("No supported coding agent detected. Is Claude Code installed?");
         process.exit(2);
       }
-      sessionPath = adapter.findLatestSession(process.cwd());
-      if (!sessionPath) {
-        ui.fail(`No sessions found for ${process.cwd()}`);
+      let recent = adapter.listRecentSessions(process.cwd(), 12);
+      const withSkills = recent.filter((s) => s.skillCount > 0);
+      if (withSkills.length > 0) recent = withSkills;
+
+      if (recent.length === 0) {
+        ui.fail(`No sessions with skills found for ${process.cwd()}`);
         ui.info("  Use --session <path> to specify a session file.");
         process.exit(2);
       }
+      if (recent.length === 1) {
+        sessionPaths = [recent[0]!.path];
+      } else if (!process.stdout.isTTY || !process.stdin.isTTY) {
+        // non-interactive: fall back to latest with skills
+        sessionPaths = [recent[0]!.path];
+      } else {
+        sessionPaths = selectRecentSessions(recent);
+      }
     }
 
-    ui.info(`  Session: ${pc.dim(sessionPath)}`);
+    if (sessionPaths.length === 0) {
+      ui.fail("No sessions selected.");
+      process.exit(2);
+    }
 
-    // Parse session
+    // Parse + process sessions
     const adapter = getAdapter();
     if (!adapter) {
       ui.fail("No supported coding agent detected.");
       process.exit(2);
     }
-    const primitives = adapter.parse(sessionPath);
 
-    if (primitives.skillsInvoked.length === 0) {
-      ui.warn("No skills were invoked in this session.");
-      if (args.format === "json") {
-        process.stdout.write(JSON.stringify([], null, 2) + "\n");
+    const allResults: EvalResult[] = [];
+    for (const sessionPath of sessionPaths) {
+      ui.info(`  Session: ${pc.dim(sessionPath)}`);
+
+      const primitives = adapter.parse(sessionPath);
+
+      if (primitives.skillsInvoked.length === 0) {
+        ui.warn("  No skills were invoked in this session.");
+        continue;
       }
-      process.exit(0);
-    }
 
-    // Filter skills if --skill provided
-    let skillsToEval = primitives.skillsInvoked;
-    if (args.skill) {
-      skillsToEval = skillsToEval.filter((s) => s.includes(args.skill!));
-      if (skillsToEval.length === 0) {
-        ui.warn(`No matching skills found for filter: ${args.skill}`);
-        process.exit(0);
-      }
-    }
-
-    // Privacy notice
-    ui.write(`  ${pc.dim("· Sending session summary (tool calls + 5 user messages) to")} ${pc.dim(evalCfg.model || "configured model")}${pc.dim(". Use --verbose to inspect.")}`);
-
-    ensureDoravalDirs();
-    const results: EvalResult[] = [];
-
-    for (const skillName of skillsToEval) {
-      ui.info(`\n  Evaluating: ${pc.bold(skillName)}`);
-
-      // Try to load skill content from cwd
-      let skillContent = `Skill: ${skillName}\n(skill content not found locally — using skill name only for evaluation)`;
-      const candidateDirs = [
-        process.cwd(),
-        join(process.cwd(), ".claude", "skills", skillName.split(":").pop() ?? skillName),
-        join(process.cwd(), "skills", skillName.split(":").pop() ?? skillName),
-      ];
-      for (const dir of candidateDirs) {
-        if (existsSync(join(dir, "SKILL.md"))) {
-          const loaded = await loadSkill(dir);
-          if (loaded.ok) {
-            skillContent = loaded.model.content;
-            break;
-          }
+      // Filter skills if --skill provided
+      let skillsToEval = primitives.skillsInvoked;
+      if (args.skill) {
+        skillsToEval = skillsToEval.filter((s) => s.includes(args.skill!));
+        if (skillsToEval.length === 0) {
+          ui.warn(`  No matching skills found for filter: ${args.skill}`);
+          continue;
         }
       }
 
-      const result = await runEval(primitives, skillName, skillContent, agentCfg, evalCfg);
-      results.push(result);
+      // Privacy notice
+      ui.write(`  ${pc.dim("· Sending session summary (tool calls + 5 user messages) to")} ${pc.dim(evalCfg.model || "configured model")}${pc.dim(". Use --verbose to inspect.")}`);
 
-      // Save to history
-      if (evalCfg.save_history) {
-        const evalPath = join(getEvalsDir(), `${primitives.sessionId}-${Date.now()}.json`);
-        await Bun.write(evalPath, JSON.stringify(result, null, 2));
+      ensureDoravalDirs();
+
+      for (const skillName of skillsToEval) {
+        ui.info(`\n  Evaluating: ${pc.bold(skillName)}`);
+
+        // Try to load skill content from cwd
+        let skillContent = `Skill: ${skillName}\n(skill content not found locally — using skill name only for evaluation)`;
+        const candidateDirs = [
+          process.cwd(),
+          join(process.cwd(), ".claude", "skills", skillName.split(":").pop() ?? skillName),
+          join(process.cwd(), "skills", skillName.split(":").pop() ?? skillName),
+        ];
+        for (const dir of candidateDirs) {
+          if (existsSync(join(dir, "SKILL.md"))) {
+            const loaded = await loadSkill(dir);
+            if (loaded.ok) {
+              skillContent = loaded.model.content;
+              break;
+            }
+          }
+        }
+
+        const result = await runEval(primitives, skillName, skillContent, agentCfg, evalCfg);
+        allResults.push(result);
+
+        // Save to history
+        if (evalCfg.save_history) {
+          const evalPath = join(getEvalsDir(), `${primitives.sessionId}-${Date.now()}.json`);
+          await Bun.write(evalPath, JSON.stringify(result, null, 2));
+        }
       }
     }
 
     if (args.format === "json") {
-      process.stdout.write(JSON.stringify(results, null, 2) + "\n");
+      process.stdout.write(JSON.stringify(allResults, null, 2) + "\n");
     } else {
-      for (const result of results) {
+      for (const result of allResults) {
         renderResult(result, Boolean(args.verbose));
       }
       ui.blank();
     }
 
     // --ci: exit 1 if any FAIL
-    if (args.ci && results.some((r) => r.verdict === "FAIL")) {
+    if (args.ci && allResults.some((r) => r.verdict === "FAIL")) {
       process.exit(1);
     }
 

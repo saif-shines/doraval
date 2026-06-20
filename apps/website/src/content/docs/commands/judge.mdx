@@ -1,37 +1,36 @@
 ---
 title: skill judge
-description: AI-driven qualitative assessment for skills.
+description: Evaluate a real agent session for a specific skill (alias for eval --skill).
 sidebar:
   order: 3
 ---
 
-import { Aside } from "@astrojs/starlight/components";
-
-<Aside type="caution" title="Not yet implemented">
-  This command prints a notice and exits with code 2. The description below covers planned behavior.
-</Aside>
-
-`skill judge` will send a skill to an LLM for qualitative review — assessing clarity, completeness, and effectiveness beyond what deterministic checks can catch.
-
-## Usage
+`skill judge` (and the top-level `judge` command) are convenient aliases for evaluating the latest session against one specific skill.
 
 ```bash
-doraval skill judge <path> [options]
+dora skill judge ./skills/my-skill/
+dora judge my-skill
+dora eval --skill my-skill
 ```
 
-## Why a separate command?
+All three delegate to the same underlying `doraval eval` machinery.
 
-`validate` and `drift` are deterministic and run locally with zero network calls. `judge` is different:
+See the full documentation on the [eval](/commands/eval/) page, including:
 
-- **Requires an API key** or local model
-- **Non-deterministic** — same input may produce different output
-- **Slower** — network round-trip vs. instant local checks
-- **Optional** — fast CI uses `validate` + `drift`; deep feedback uses `judge`
+- Interactive recent-session selection
+- How the LLM judge produces the adherence checklist
+- `familiarity`, `closure`, and verdict interpretation
+- `dora eval history`
+- Configuration via `dora init` and `dora config set eval.model`
 
-## Options
+## Quick reference
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--format <type>` | `-f` | `table` (default) or `json` |
-| `--for <spec>` | | Target a provider or validator |
-| `--verbose` | `-v` | Show detailed diagnostics |
+```bash
+# Most ergonomic for a single skill
+dora judge ./path/to/skill/
+
+# Or from anywhere
+dora eval --skill improve --verbose
+```
+
+`judge` exists so you can stay in the muscle memory of `validate` / `drift` / `judge` when working on a skill. Under the hood it is exactly `eval --skill`.

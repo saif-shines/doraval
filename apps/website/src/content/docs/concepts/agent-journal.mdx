@@ -144,9 +144,9 @@ For a clear explanation of the mental model and why the journal is built this wa
 See the individual command pages under **Commands** (e.g. [journal init](/commands/journal-init), [journal update](/commands/journal-update)) for flag details and examples.
 ## Integration with existing commands
 
-- `doraval skill drift` gains **Principle drift** — flags when a skill contradicts an active journal entry.
-- `doraval skill judge` uses the journal as context for AI assessment.
-- Entries with `pushback >= 7` surface as warnings in `doraval skill validate`.
+- `doraval skill drift` gains **Principle drift** — flags when a skill contradicts an active journal entry (planned).
+- `doraval eval` / `skill judge` can be extended in the future to incorporate journal entries as additional context for the LLM judge.
+- Entries with `pushback >= 7` surface as warnings in `doraval skill validate` (planned).
 
 ## What this is NOT
 

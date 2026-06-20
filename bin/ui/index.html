@@ -249,6 +249,26 @@
       </div>
     </div>
 
+    <!-- Evals / Skill Learnings -->
+    <div class="lg:col-span-5 section">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="text-sm font-semibold tracking-tight">Skill adherence learnings</div>
+          <div class="text-[10px] text-zinc-500 mt-0.5">From <span class="font-mono">dora eval</span> (respects DORAVAL_HOME) • last 25</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="eval-search" oninput="filterEvals()" 
+                 class="bg-zinc-950 border border-zinc-800 text-xs rounded-2xl px-3 py-1 placeholder:text-zinc-600 w-40 focus:outline-none focus:border-zinc-600" 
+                 placeholder="filter skill...">
+          <div class="text-[10px] text-zinc-500 tabular-nums" id="eval-count"></div>
+          <button onclick="loadEvals()" 
+                  class="px-3 py-1 text-xs rounded-xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Refresh</button>
+        </div>
+      </div>
+      <div id="evals" class="space-y-1.5 text-sm max-h-[260px] overflow-auto pr-1 -mr-1"></div>
+      <div class="mt-2 text-[10px] text-zinc-500">Click a row for full checklist. Run <span class="font-mono">dora eval</span> from the terminal to generate more.</div>
+    </div>
+
     <!-- Footer actions -->
     <div class="mt-8 flex items-center gap-2 text-sm">
       <button onclick="doAction('sync')" 
@@ -261,11 +281,11 @@
       </button>
       <button onclick="doAction('open-dir')" 
               class="px-4 py-2 rounded-2xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.975] transition text-sm">
-        Open ~/.doraval
+        Open data dir
       </button>
       
       <div class="flex-1"></div>
-      <div class="text-xs text-zinc-500">CLI is best for heavy lifting. This is for quick capture &amp; review.</div>
+      <div class="text-xs text-zinc-500">CLI is best for heavy lifting. This is for quick capture &amp; review. Data location depends on DORAVAL_HOME.</div>
     </div>
   </div>
 
@@ -300,6 +320,7 @@
 const $ = (id) => document.getElementById(id);
 
 let allEntriesCache = [];
+let allEvalsCache = [];
 let currentProject = null;
 
 function showToast(msg, type = 'info') {
@@ -553,14 +574,143 @@ async function copyContext() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadEntries(), loadContext(), loadHooks()]);
+  await Promise.all([loadEntries(), loadContext(), loadHooks(), loadEvals()]);
   showToast('Refreshed');
+}
+
+async function loadEvals() {
+  try {
+    const data = await fetchJSON('/api/evals');
+    allEvalsCache = data.evals || [];
+    const container = $('evals');
+    container.innerHTML = '';
+
+    if (allEvalsCache.length === 0) {
+      $('eval-count').textContent = '0 evals';
+      container.innerHTML = '<div class="text-zinc-500 text-sm py-2">No evals yet. Make sure <span class="font-mono">DORAVAL_HOME</span> matches where you ran <span class="font-mono">dora eval</span>, then refresh.</div>';
+      return;
+    }
+
+    $('eval-count').textContent = `${allEvalsCache.length} evals`;
+    allEvalsCache.forEach(e => renderEval(e, container));
+  } catch (e) {
+    const container = $('evals');
+    container.innerHTML = '<div class="text-red-400/70 text-sm py-2">Failed to load evals (check DORAVAL_HOME and restart ui with --force)</div>';
+  }
+}
+
+function renderEval(e, container) {
+  const div = document.createElement('div');
+  div.className = `entry border-l-[3px] bg-zinc-900/50 hover:bg-zinc-900/80 rounded-r-2xl px-3 py-2 cursor-pointer flex items-start gap-3 ${e.verdict === 'PASS' ? 'border-emerald-400' : e.verdict === 'FAIL' ? 'border-red-400' : 'border-yellow-400'}`;
+  div.onclick = () => showEvalModal(e);
+
+  const date = (e.timestamp || '').slice(0, 10);
+  const skillShort = (e.skill || '').slice(0, 28);
+  const fam = typeof e.userFamiliarity === 'number' ? `${e.userFamiliarity}/10` : '';
+  const passed = e.checklist ? e.checklist.filter((c) => c.pass).length : 0;
+  const total = e.checklist ? e.checklist.length : 0;
+  const score = total > 0 ? `${passed}/${total}` : '';
+
+  const verdictColor = e.verdict === 'PASS' ? 'text-emerald-400' : e.verdict === 'FAIL' ? 'text-red-400' : 'text-yellow-400';
+
+  div.innerHTML = `
+    <div class="w-14 shrink-0 pt-0.5">
+      <div class="${verdictColor} font-semibold text-xs tracking-wider">${e.verdict || 'UNKNOWN'}</div>
+      <div class="text-[10px] text-zinc-500 mt-0.5 tabular-nums">${date}</div>
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="font-medium leading-tight flex items-baseline gap-2">
+        <span>${skillShort}</span>
+        ${score ? `<span class="text-[10px] font-mono text-zinc-400">${score}</span>` : ''}
+      </div>
+      <div class="text-xs text-zinc-400 mt-0.5 flex gap-x-2 flex-wrap">
+        <span>familiarity ${fam || '—'}</span>
+        <span class="text-zinc-700">·</span>
+        <span>${e.closure || ''}</span>
+        ${e.sessionTitle ? `<span class="text-zinc-700">·</span> <span class="truncate max-w-[220px]">${e.sessionTitle}</span>` : ''}
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
+function filterEvals() {
+  const q = ($('eval-search')?.value || '').toLowerCase().trim();
+  const container = $('evals');
+  container.innerHTML = '';
+
+  let filtered = allEvalsCache;
+  if (q) {
+    filtered = allEvalsCache.filter((e) =>
+      (e.skill || '').toLowerCase().includes(q) ||
+      (e.sessionTitle || '').toLowerCase().includes(q) ||
+      (e.verdict || '').toLowerCase().includes(q)
+    );
+  }
+
+  $('eval-count').textContent = `${filtered.length} / ${allEvalsCache.length} evals`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="text-zinc-500 text-sm py-2">No matches.</div>`;
+    return;
+  }
+  filtered.forEach(e => renderEval(e, container));
+}
+
+function showEvalModal(e) {
+  const modal = $('modal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  // Repurpose modal for eval
+  $('modal-pb').className = `inline-flex items-center px-3 py-px rounded-full text-[10px] font-semibold tracking-[0.5px] ${e.verdict === 'PASS' ? 'bg-emerald-500 text-black' : e.verdict === 'FAIL' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-black'}`;
+  $('modal-pb').textContent = `${e.verdict || 'UNKNOWN'}  •  ${e.skill || ''}`;
+
+  $('modal-title').textContent = e.sessionTitle || e.skill || 'Session eval';
+
+  const metaParts = [];
+  if (e.timestamp) metaParts.push(e.timestamp.slice(0,16).replace('T',' '));
+  if (typeof e.userFamiliarity === 'number') metaParts.push(`familiarity ${e.userFamiliarity}/10`);
+  if (e.closure) metaParts.push(e.closure);
+  if (e.agent) metaParts.push(e.agent);
+  $('modal-meta').innerHTML = metaParts.join(' · ');
+
+  const tagsStr = e.model ? `model: ${e.model}` : '';
+  $('modal-tags').innerHTML = tagsStr;
+
+  // Build rich rationale area with checklist
+  const checklistHtml = (e.checklist || []).map((item) => {
+    const sym = item.pass ? '<span class="text-emerald-400">✓</span>' : '<span class="text-red-400">✗</span>';
+    const detail = item.detail ? ` <span class="text-zinc-500 text-xs">— ${item.detail}</span>` : '';
+    return `<div class="py-0.5">${sym} ${item.instruction}${detail}</div>`;
+  }).join('');
+
+  const reason = e.verdictReason ? `<div class="mt-3 text-xs text-zinc-400">Reason: ${e.verdictReason}</div>` : '';
+
+  $('modal-rationale').innerHTML = `
+    <div class="text-sm">
+      <div class="font-medium mb-1">Adherence checklist</div>
+      <div class="space-y-0.5 text-[13px]">${checklistHtml || 'No checklist items.'}</div>
+      ${reason}
+      <div class="mt-3 text-[11px] text-zinc-500">Result: ${e.checklist ? e.checklist.filter((c)=>c.pass).length : 0}/${(e.checklist||[]).length} — ${e.verdict}</div>
+    </div>
+  `;
+
+  const actions = $('modal-actions');
+  actions.innerHTML = '';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'ml-auto px-5 py-1.5 text-sm rounded-2xl border border-zinc-700 hover:bg-zinc-800 active:scale-[0.975] transition';
+  closeBtn.textContent = 'Close';
+  closeBtn.onclick = closeModal;
+  actions.appendChild(closeBtn);
 }
 
 async function doAction(name) {
   if (name === 'open-dir') {
     const s = await fetchJSON('/api/status');
-    showToast('Path: ' + s.doravalDir);
+    const root = s.doravalRoot || s.doravalDir || '~/.doraval';
+    showToast('Data directory: ' + root);
     // optionally try to open, but browser security limits it
     return;
   }
@@ -697,7 +847,7 @@ async function boot() {
   setupCaptureKeys();
 
   await loadStatus();
-  await Promise.all([loadContext(), loadEntries(), loadHooks()]);
+  await Promise.all([loadContext(), loadEntries(), loadHooks(), loadEvals()]);
 
   const search = $('search');
   if (search) {
@@ -714,6 +864,7 @@ async function boot() {
     if (!document.hidden) {
       loadEntries().catch(() => {});
       loadContext().catch(() => {});
+      loadEvals().catch(() => {});
     }
   }, 9000);
 }

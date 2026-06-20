@@ -25,6 +25,38 @@ export function buildAgentArgv(template: string, promptText: string): string[] {
   });
 }
 
+function extractCandidates(text: string): Record<string, unknown>[] {
+  let cleaned = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
+
+  const candidates: Record<string, unknown>[] = [];
+  const allMatches = cleaned.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
+  const fullMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (fullMatch) {
+    try { candidates.push(JSON.parse(fullMatch[0]) as Record<string, unknown>); } catch {}
+  }
+  for (const m of allMatches) {
+    try { candidates.push(JSON.parse(m) as Record<string, unknown>); } catch {}
+  }
+
+  if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
+    try {
+      const direct = JSON.parse(cleaned);
+      if (direct && typeof direct === 'object') candidates.push(direct as Record<string, unknown>);
+    } catch {}
+  }
+
+  const unwrapped: Record<string, unknown>[] = [];
+  for (const c of candidates) {
+    if (c.result) {
+      let inner = c.result;
+      if (typeof inner === "string") { try { inner = JSON.parse(inner); } catch {} }
+      if (inner && typeof inner === "object") unwrapped.push(inner as Record<string, unknown>);
+    }
+    unwrapped.push(c);
+  }
+  return unwrapped;
+}
+
 /**
  * Invokes the configured coding agent with promptText and returns the first
  * parsed JSON object that contains at least one of expectedKeys.
@@ -35,7 +67,7 @@ export async function invokeAgent(
   agentCfg: AgentConfig,
   expectedKeys: string[]
 ): Promise<Record<string, unknown> | null> {
-  const template = agentCfg.prompt_template ?? '-p "{{prompt}}" --output-format json';
+  const template = agentCfg.prompt_template ?? '-p "{{prompt}}" --output-format json --bare';
   const extraArgs = buildAgentArgv(template, promptText);
 
   const shortTemplate = template.slice(0, 80);
@@ -46,6 +78,7 @@ export async function invokeAgent(
     result = spawnSync([agentCfg.command, ...extraArgs], {
       stdout: "pipe",
       stderr: "pipe",
+      env: { ...process.env },
     });
   } catch (e) {
     ui.write(`  ${pc.yellow("⚠")} Failed to spawn ${agentCfg.command}: ${(e as Error).message}`);
@@ -57,31 +90,19 @@ export async function invokeAgent(
 
   if (result.exitCode !== 0) {
     ui.write(`  ${pc.yellow("⚠")} Agent exited with code ${result.exitCode}.`);
-    if (stderr) ui.write(`    stderr: ${stderr.slice(0, 400)}`);
+    const out = stdout.replace(/sk-[a-zA-Z0-9_-]+/g, "sk-REDACTED").slice(0, 800);
+    const err = stderr.replace(/sk-[a-zA-Z0-9_-]+/g, "sk-REDACTED").slice(0, 800);
+    if (err) ui.write(`    stderr: ${err}`);
+    if (out) ui.write(`    stdout: ${out}`);
+    if (!err && !out) ui.write(`    (no output captured)`);
     return null;
   }
 
-  // Extract all JSON blobs from stdout
-  const candidates: Record<string, unknown>[] = [];
-  const allMatches = stdout.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
-  const fullMatch = stdout.match(/\{[\s\S]*\}/);
-  if (fullMatch) {
-    try { candidates.push(JSON.parse(fullMatch[0]) as Record<string, unknown>); } catch {}
-  }
-  for (const m of allMatches) {
-    try { candidates.push(JSON.parse(m) as Record<string, unknown>); } catch {}
-  }
+  // Clean markdown code fences that models often add
+  let cleaned = stdout.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
 
-  // Unwrap common agent runner wrapper: { type: "result", result: "..." }
-  const unwrapped: Record<string, unknown>[] = [];
-  for (const c of candidates) {
-    if (c.result) {
-      let inner = c.result;
-      if (typeof inner === "string") { try { inner = JSON.parse(inner); } catch {} }
-      if (inner && typeof inner === "object") unwrapped.push(inner as Record<string, unknown>);
-    }
-    unwrapped.push(c);
-  }
+  // Extract candidates using shared helper
+  const unwrapped = extractCandidates(cleaned);
 
   // Prefer first blob that has one of the expected keys
   for (const c of unwrapped) {

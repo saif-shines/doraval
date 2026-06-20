@@ -7,6 +7,12 @@ export interface SessionAdapter {
   agent: string;
   detect(): boolean;
   findLatestSession(cwd: string): string | null;
+  listRecentSessions(cwd: string, limit?: number): Array<{
+    path: string;
+    mtime: number;
+    title?: string;
+    skillCount: number;
+  }>;
   parse(path: string): SessionPrimitives;
 }
 
@@ -39,6 +45,43 @@ export const claudeCodeAdapter: SessionAdapter = {
       }
     }
     return files[0]?.path ?? null;
+  },
+
+  listRecentSessions(cwd: string, limit = 10): Array<{
+    path: string;
+    mtime: number;
+    title?: string;
+    skillCount: number;
+  }> {
+    const hash = cwdToProjectHash(cwd);
+    const dir = join(homedir(), ".claude", "projects", hash);
+    if (!existsSync(dir)) return [];
+
+    const allFiles = readdirSync(dir)
+      .filter((f) => f.endsWith(".jsonl"))
+      .map((f) => ({ name: f, path: join(dir, f), mtime: statSync(join(dir, f)).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime);
+
+    const results: Array<{ path: string; mtime: number; title?: string; skillCount: number }> = [];
+    for (const file of allFiles) {
+      try {
+        const text = readFileSync(file.path, "utf8");
+        if (!text.includes('"type":"assistant"') && !text.includes('"type": "assistant"')) {
+          continue; // skip queue-only
+        }
+        const prim = parseSession(text);
+        results.push({
+          path: file.path,
+          mtime: file.mtime,
+          title: prim.sessionTitle,
+          skillCount: prim.skillsInvoked.length,
+        });
+        if (results.length >= limit) break;
+      } catch {
+        // ignore bad files
+      }
+    }
+    return results;
   },
 
   parse(path: string): SessionPrimitives {

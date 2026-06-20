@@ -134,6 +134,21 @@ doraval skill drift ./skills/my-skill/
 | **Guardrail** | Has explicit `MUST` / `MUST NOT` constraints |
 | **Clarity** | Free of ambiguous words (`maybe`, `perhaps`, `consider`) |
 
+### `eval` — Did the agent follow the skill?
+
+After a real session, evaluate whether the coding agent actually adhered to the skills it invoked.
+
+```bash
+doraval eval                    # pick from recent sessions interactively
+doraval eval --verbose
+doraval judge ./skills/improve/ # evaluate latest session for one skill
+doraval eval history
+```
+
+`eval` uses an LLM judge (via your configured agent) to produce a per-skill `PASS`/`FAIL` with a dynamic checklist, user familiarity score, and closure information (1-shot vs multi-turn vs incomplete).
+
+Requires `doraval init` first. See the [full docs](https://thehacksmith.dev/commands/eval/).
+
 ### `journal` — Decision memory
 
 Record and sync project principles so future you (and agents) don't accidentally contradict past choices.
@@ -177,6 +192,7 @@ doraval claude new          # interactive wizard for skills/plugins (follows off
 doraval validate . --for claude --format json --ci
 doraval skill validate ./my-skill/ --format json --ci
 doraval skill drift ./my-skill/ --format json --ci
+doraval eval --ci --format json
 ```
 
 Exits with code `1` when errors are found. Pipe `--format json` output to `jq` or consume programmatically.
