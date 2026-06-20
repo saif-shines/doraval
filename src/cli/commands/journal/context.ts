@@ -230,9 +230,9 @@ export default defineCommand({
           },
         ],
       }, null, 2));
-      console.error("\nTip: Use `dora journal hook enable` to install the hook automatically.");
-      console.error("     Use `dora journal hook disable` to remove it.");
-      console.error("     (sh -c wrapper ensures shell features like redir work reliably.)");
+      ui.write("\nTip: Use `dora journal hook enable` to install the hook automatically.");
+      ui.write("     Use `dora journal hook disable` to remove it.");
+      ui.write("     (sh -c wrapper ensures shell features like redir work reliably.)");
       process.exit(0);
     }
 

@@ -214,7 +214,7 @@ const main = defineCommand({
 
     // Show Doraemon banner before the normal usage instructions (to stderr so it doesn't pollute data output or hooks)
     if (process.stdout.isTTY) {
-      console.error("\n" + pc.blue(doraemonArt) + "\n");
+      uiHelper.write("\n" + pc.blue(doraemonArt) + "\n");
     }
 
     showUsage(main);
