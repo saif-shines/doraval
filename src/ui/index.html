@@ -305,7 +305,7 @@
             <div class="text-[10px] text-zinc-500 mt-0.5">Add to your journal</div>
           </div>
           <button onclick="clearForm()" 
-                  class="text-[10px] text-zinc-500 hover:text-zinc-300 px-2 py-0.5 rounded-lg hover:bg-zinc-950 transition">clear</button>
+                  class="text-[10px] text-zinc-500 hover:text-zinc-300 px-2 py-0.5 rounded hover:bg-zinc-950 transition">clear</button>
         </div>
         
         <div class="space-y-4">
@@ -357,7 +357,7 @@
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <div class="text-xs font-semibold tracking-widest uppercase text-zinc-400">What agents will see</div>
-            <select id="agent-select" onchange="updateAgentPreview()" class="text-xs bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-0.5 focus:outline-none">
+            <select id="agent-select" onchange="updateAgentPreview()" class="text-xs bg-zinc-950 border border-zinc-800 rounded px-2 py-0.5 focus:outline-none">
               <option value="claude">Claude (SessionStart)</option>
               <option value="cursor">Cursor (workspaceOpen)</option>
               <option value="codex">Codex (hooks)</option>
@@ -366,7 +366,7 @@
             </select>
           </div>
           <button onclick="copyContext()" 
-                  class="text-xs px-3 py-1 rounded-xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Copy</button>
+                  class="text-xs px-3 py-1 rounded border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Copy</button>
         </div>
         <pre id="context" class="context bg-zinc-950 border border-zinc-800 rounded p-5 text-zinc-300 text-[13px] overflow-auto max-h-[220px] leading-relaxed"><span class="text-zinc-600 animate-pulse">Loading context...</span></pre>
         <div id="agent-note" class="mt-2 text-[10px] text-zinc-500 px-1">Exact output from <span class="font-mono">dora journal context</span>. Injected via startup hook for the selected agent.</div>
@@ -413,7 +413,7 @@
                  placeholder="filter skill...">
           <div class="text-[10px] text-zinc-500 tabular-nums" id="eval-count"></div>
           <button onclick="loadEvals()" 
-                  class="px-3 py-1 text-xs rounded-xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Refresh</button>
+                  class="px-3 py-1 text-xs rounded border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Refresh</button>
         </div>
       </div>
       <div id="evals" class="space-y-1.5 text-sm max-h-[260px] overflow-auto pr-1 -mr-1">
