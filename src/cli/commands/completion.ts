@@ -6,6 +6,8 @@ const commands = [
   "claude", "codex", "cursor", "copilot"
 ];
 
+const uiFlags = ["--port", "--open", "--no-open", "--host", "--status", "--force"];
+
 const subCommands: Record<string, string[]> = {
   skill: ["validate", "drift", "judge"],
   journal: ["init", "list", "context", "hook", "update", "add", "sync"],
@@ -46,6 +48,7 @@ _doraval_completions() {
       skill) COMPREPLY=( $(compgen -W "${subCommands.skill.join(" ")}" -- "$cur") ) ;;
       journal) COMPREPLY=( $(compgen -W "${subCommands.journal.join(" ")}" -- "$cur") ) ;;
       hook) COMPREPLY=( $(compgen -W "${subCommands.hook.join(" ")}" -- "$cur") ) ;;
+      ui) COMPREPLY=( $(compgen -W "${uiFlags.join(" ")}" -- "$cur") ) ;;
       claude|codex|cursor|copilot) COMPREPLY=( $(compgen -W "${subCommands.claude.join(" ")}" -- "$cur") ) ;;
     esac
   fi
@@ -78,6 +81,9 @@ _doraval() {
         hook)
           _describe 'subcommand' (enable disable status)
           ;;
+        ui)
+          _describe 'flag' (${uiFlags})
+          ;;
         claude|codex|cursor|copilot)
           _describe 'subcommand' (new bump)
           ;;
@@ -96,6 +102,12 @@ complete -c doraval -n '__fish_use_subcommand' -a 'validate init bump update pro
 complete -c doraval -n '__fish_seen_subcommand_from skill' -a 'validate drift judge'
 complete -c doraval -n '__fish_seen_subcommand_from journal' -a 'init list context hook update add sync'
 complete -c doraval -n '__fish_seen_subcommand_from hook' -a 'enable disable status'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l port -d 'Port'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l open -d 'Open browser'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l no-open -d 'Do not open browser'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l host -d 'Host'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l status -d 'Show status only'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l force -d 'Force restart'
 complete -c doraval -n '__fish_seen_subcommand_from claude codex cursor copilot' -a 'new bump'
 `);
     } else {

@@ -10,7 +10,7 @@
  * - Uses Bun.serve (see bun skill)
  */
 
-import { existsSync, readdirSync } from "fs";
+import { existsSync, readdirSync, writeFileSync, unlinkSync, readFileSync } from "fs";
 import { join } from "path";
 import { spawn } from "child_process";
 import pc from "picocolors";
@@ -24,6 +24,7 @@ import {
   getPendingDir,
   ensureDoravalDirs,
   sanitizeProjectName,
+  getDoravalDir,
 } from "../../core/journal-config.js";
 import {
   parseJournalEntries,
@@ -138,8 +139,8 @@ ${input.rationale}
 const DEFAULT_PORT = 3737;
 
 /**
- * Kill any process listening on the given port (best-effort).
- * Useful so that `dora ui` can replace a previous instance.
+ * Legacy best-effort port killer (used only for first-run or --force without a tracked PID).
+ * New launches prefer PID tracking for safety.
  */
 async function killPort(port: number) {
   if (process.platform === 'win32') {
@@ -171,13 +172,81 @@ async function killPort(port: number) {
   }
 }
 
+// --- PID management for idempotent ui launches (better than blind port kill) ---
+
+const getPidFile = () => join(getDoravalDir(), "ui.pid");
+
+function readPid(): number | null {
+  const file = getPidFile();
+  if (!existsSync(file)) return null;
+  try {
+    const raw = readFileSync(file, "utf8").trim();
+    const pid = parseInt(raw, 10);
+    if (isNaN(pid)) return null;
+    // Check if process is still alive
+    process.kill(pid, 0);
+    return pid;
+  } catch {
+    // stale pid file
+    try { unlinkSync(file); } catch {}
+    return null;
+  }
+}
+
+function writePid(pid: number) {
+  ensureDoravalDirs();
+  writeFileSync(getPidFile(), String(pid) + "\n");
+}
+
+function removePid() {
+  try { unlinkSync(getPidFile()); } catch {}
+}
+
 export default {
   async run({ args }: { args: any }) {
     const port = Number(args.port) || DEFAULT_PORT;
     const host = args.host || "127.0.0.1";
     const shouldOpen = args.open !== false;
+    const showStatusOnly = !!args.status;
+    const force = !!args.force;
 
-    await killPort(port);
+    ensureDoravalDirs();
+
+    const existingPid = readPid();
+
+    if (showStatusOnly) {
+      if (existingPid) {
+        const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
+        console.error(`  Dashboard running (pid ${existingPid})`);
+        console.error(`  URL:     ${pc.underline(pc.cyan(url))}`);
+      } else {
+        console.error(`  No dashboard running.`);
+      }
+      return;
+    }
+
+    if (existingPid && !force) {
+      const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
+      console.error(`  Dashboard already running (pid ${existingPid}).`);
+      console.error(`  URL:     ${pc.underline(pc.cyan(url))}`);
+      if (shouldOpen && process.stdout.isTTY) {
+        try {
+          const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+          spawn(opener, [url], { stdio: "ignore", detached: true }).unref();
+        } catch {}
+      }
+      return;
+    }
+
+    if (existingPid && force) {
+      console.error(`  Force restarting (killing pid ${existingPid})...`);
+      try { process.kill(existingPid, "SIGTERM"); } catch {}
+      await new Promise((r) => setTimeout(r, 400));
+      removePid();
+    } else if (!existingPid) {
+      // only do blind port kill if no pid and not our instance (legacy safety)
+      await killPort(port);
+    }
 
     const config = await readConfig();
     let project = resolveProjectName(config) ?? undefined;
@@ -305,6 +374,9 @@ export default {
 
     const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${server.port}`;
 
+    // write our pid
+    writePid(process.pid);
+
     // All human messages to stderr (preserve stdout hygiene for any future piping)
     const msg = `
   ${pc.blue("◉")}  dora local dashboard
@@ -325,12 +397,16 @@ export default {
       }
     }
 
-    // Keep process alive
-    process.on("SIGINT", () => {
+    const cleanup = () => {
+      removePid();
       console.error("\n  Stopping dashboard...");
       server.stop();
       process.exit(0);
-    });
+    };
+
+    // Keep process alive + cleanup pid
+    process.on("SIGINT", cleanup);
+    process.on("SIGTERM", cleanup);
   },
 };
 

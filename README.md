@@ -144,6 +144,17 @@ doraval journal update        # pull latest from remote
 
 Requires the GitHub CLI (`gh`). Journal lives in a private GitHub repo you control.
 
+### `ui` — Local dashboard (avoid typing repetitive commands)
+
+```bash
+doraval ui                 # start the web dashboard (opens browser)
+doraval ui --port 4921     # different port
+doraval ui --status        # check if running + show URL
+doraval ui --force         # force restart
+```
+
+Re-running `doraval ui` is now idempotent (uses PID tracking). Use `--force` to restart.
+
 doraval update              # self-update doraval to the latest version
 doraval claude new          # interactive wizard for skills/plugins (follows official table)
 

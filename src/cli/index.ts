@@ -134,6 +134,16 @@ const ui = defineCommand({
       description: "Host to bind (default 127.0.0.1 for local only)",
       default: "127.0.0.1",
     },
+    status: {
+      type: "boolean",
+      description: "Check if a dashboard is running and print its URL (no start)",
+      default: false,
+    },
+    force: {
+      type: "boolean",
+      description: "Force start/restart even if one is already running",
+      default: false,
+    },
   },
   async run({ args }) {
     // Always delegate for `dora ui` (with or without flags). The old guard pattern was only for groups that show usage.

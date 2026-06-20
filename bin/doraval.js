@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.42",
+    version: "0.2.44",
     author: "Saif",
     repository: {
       type: "git",
@@ -1719,19 +1719,17 @@ var init_list = __esm(() => {
       if (!args.all) {
         allEntries = allEntries.filter((e) => e.status === "active");
       }
-      const staged = [];
+      let staged = [];
       try {
         const pdir = getPendingProjectDir(project);
         if (existsSync4(pdir)) {
           const files = readdirSync(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
-          for (const f of files) {
+          const stagedResults = await Promise.all(files.map(async (f) => {
             const txt = await Bun.file(join3(pdir, f)).text();
             const parsed = parseJournalEntries(txt);
-            for (const e of parsed) {
-              e._staged = true;
-              staged.push(e);
-            }
-          }
+            return parsed.map((e) => ({ ...e, _staged: true }));
+          }));
+          staged = stagedResults.flat();
         }
       } catch {}
       if (args.format === "json") {
@@ -4369,7 +4367,7 @@ var exports_ui = {};
 __export(exports_ui, {
   default: () => ui_default
 });
-import { existsSync as existsSync19, readdirSync as readdirSync9 } from "fs";
+import { existsSync as existsSync19, readdirSync as readdirSync9, writeFileSync as writeFileSync6, unlinkSync as unlinkSync2, readFileSync as readFileSync2 } from "fs";
 import { join as join18 } from "path";
 import { spawn } from "child_process";
 function slugify2(title) {
@@ -4459,6 +4457,34 @@ async function killPort(port) {
     await new Promise((r) => setTimeout(r, 400));
   } catch {}
 }
+function readPid() {
+  const file = getPidFile();
+  if (!existsSync19(file))
+    return null;
+  try {
+    const raw = readFileSync2(file, "utf8").trim();
+    const pid = parseInt(raw, 10);
+    if (isNaN(pid))
+      return null;
+    process.kill(pid, 0);
+    return pid;
+  } catch {
+    try {
+      unlinkSync2(file);
+    } catch {}
+    return null;
+  }
+}
+function writePid(pid) {
+  ensureDoravalDirs();
+  writeFileSync6(getPidFile(), String(pid) + `
+`);
+}
+function removePid() {
+  try {
+    unlinkSync2(getPidFile());
+  } catch {}
+}
 async function getDashboardHtml() {
   const isSource = import.meta.url.includes("/src/");
   const htmlPath = isSource ? new URL("../../ui/index.html", import.meta.url) : new URL("./ui/index.html", import.meta.url);
@@ -4469,7 +4495,7 @@ async function getDashboardHtml() {
     return `<!doctype html><meta charset="utf-8"><body style="font-family:monospace;background:#111;color:#ddd;padding:2rem"><h1>doraval ui</h1><p>Dashboard HTML missing.</p><pre>${String(err)}</pre></body>`;
   }
 }
-var import_picocolors16, DEFAULT_PORT = 3737, ui_default;
+var import_picocolors16, DEFAULT_PORT = 3737, getPidFile = () => join18(getDoravalDir(), "ui.pid"), ui_default;
 var init_ui = __esm(() => {
   init_journal_config();
   init_journal_parse();
@@ -4481,7 +4507,42 @@ var init_ui = __esm(() => {
       const port = Number(args.port) || DEFAULT_PORT;
       const host = args.host || "127.0.0.1";
       const shouldOpen = args.open !== false;
-      await killPort(port);
+      const showStatusOnly = !!args.status;
+      const force = !!args.force;
+      ensureDoravalDirs();
+      const existingPid = readPid();
+      if (showStatusOnly) {
+        if (existingPid) {
+          const url2 = `http://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
+          console.error(`  Dashboard running (pid ${existingPid})`);
+          console.error(`  URL:     ${import_picocolors16.default.underline(import_picocolors16.default.cyan(url2))}`);
+        } else {
+          console.error(`  No dashboard running.`);
+        }
+        return;
+      }
+      if (existingPid && !force) {
+        const url2 = `http://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
+        console.error(`  Dashboard already running (pid ${existingPid}).`);
+        console.error(`  URL:     ${import_picocolors16.default.underline(import_picocolors16.default.cyan(url2))}`);
+        if (shouldOpen && process.stdout.isTTY) {
+          try {
+            const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+            spawn(opener, [url2], { stdio: "ignore", detached: true }).unref();
+          } catch {}
+        }
+        return;
+      }
+      if (existingPid && force) {
+        console.error(`  Force restarting (killing pid ${existingPid})...`);
+        try {
+          process.kill(existingPid, "SIGTERM");
+        } catch {}
+        await new Promise((r) => setTimeout(r, 400));
+        removePid();
+      } else if (!existingPid) {
+        await killPort(port);
+      }
       const config = await readConfig();
       let project = resolveProjectName(config) ?? undefined;
       if (project) {
@@ -4590,6 +4651,7 @@ var init_ui = __esm(() => {
         }
       });
       const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${server.port}`;
+      writePid(process.pid);
       const msg = `
   ${import_picocolors16.default.blue("\u25C9")}  dora local dashboard
   ${import_picocolors16.default.dim("Project:")} ${project ? import_picocolors16.default.white(project) : import_picocolors16.default.yellow("none (run dora init)")}
@@ -4606,12 +4668,15 @@ var init_ui = __esm(() => {
           console.error(import_picocolors16.default.dim(`  Could not auto-open. Visit ${url}`));
         }
       }
-      process.on("SIGINT", () => {
+      const cleanup = () => {
+        removePid();
         console.error(`
   Stopping dashboard...`);
         server.stop();
         process.exit(0);
-      });
+      };
+      process.on("SIGINT", cleanup);
+      process.on("SIGTERM", cleanup);
     }
   };
 });
@@ -7735,7 +7800,7 @@ var exports_completion = {};
 __export(exports_completion, {
   default: () => completion_default
 });
-var commands, subCommands, completion_default;
+var commands, uiFlags, subCommands, completion_default;
 var init_completion = __esm(() => {
   init_dist();
   commands = [
@@ -7746,11 +7811,13 @@ var init_completion = __esm(() => {
     "providers",
     "skill",
     "journal",
+    "ui",
     "claude",
     "codex",
     "cursor",
     "copilot"
   ];
+  uiFlags = ["--port", "--open", "--no-open", "--host", "--status", "--force"];
   subCommands = {
     skill: ["validate", "drift", "judge"],
     journal: ["init", "list", "context", "hook", "update", "add", "sync"],
@@ -7789,6 +7856,7 @@ _doraval_completions() {
       skill) COMPREPLY=( $(compgen -W "${subCommands.skill.join(" ")}" -- "$cur") ) ;;
       journal) COMPREPLY=( $(compgen -W "${subCommands.journal.join(" ")}" -- "$cur") ) ;;
       hook) COMPREPLY=( $(compgen -W "${subCommands.hook.join(" ")}" -- "$cur") ) ;;
+      ui) COMPREPLY=( $(compgen -W "${uiFlags.join(" ")}" -- "$cur") ) ;;
       claude|codex|cursor|copilot) COMPREPLY=( $(compgen -W "${subCommands.claude.join(" ")}" -- "$cur") ) ;;
     esac
   fi
@@ -7801,7 +7869,7 @@ complete -F _doraval_completions doraval
 
 _doraval() {
   local -a commands sub
-  commands=(validate init bump update providers skill journal claude codex cursor copilot)
+  commands=(validate init bump update providers skill journal ui claude codex cursor copilot)
   _arguments -C \\
     '1: :->cmd' \\
     '*::arg:->args'
@@ -7821,6 +7889,9 @@ _doraval() {
         hook)
           _describe 'subcommand' (enable disable status)
           ;;
+        ui)
+          _describe 'flag' (${uiFlags})
+          ;;
         claude|codex|cursor|copilot)
           _describe 'subcommand' (new bump)
           ;;
@@ -7834,11 +7905,17 @@ _doraval "$@"
       } else if (shell === "fish") {
         console.log(`# doraval fish completion
 complete -c doraval -f
-complete -c doraval -n '__fish_use_subcommand' -a 'validate init bump update providers skill journal claude codex cursor copilot'
+complete -c doraval -n '__fish_use_subcommand' -a 'validate init bump update providers skill journal ui claude codex cursor copilot'
 
 complete -c doraval -n '__fish_seen_subcommand_from skill' -a 'validate drift judge'
 complete -c doraval -n '__fish_seen_subcommand_from journal' -a 'init list context hook update add sync'
 complete -c doraval -n '__fish_seen_subcommand_from hook' -a 'enable disable status'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l port -d 'Port'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l open -d 'Open browser'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l no-open -d 'Do not open browser'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l host -d 'Host'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l status -d 'Show status only'
+complete -c doraval -n '__fish_seen_subcommand_from ui' -l force -d 'Force restart'
 complete -c doraval -n '__fish_seen_subcommand_from claude codex cursor copilot' -a 'new bump'
 `);
       } else {
@@ -7976,6 +8053,16 @@ var ui2 = defineCommand({
       type: "string",
       description: "Host to bind (default 127.0.0.1 for local only)",
       default: "127.0.0.1"
+    },
+    status: {
+      type: "boolean",
+      description: "Check if a dashboard is running and print its URL (no start)",
+      default: false
+    },
+    force: {
+      type: "boolean",
+      description: "Force start/restart even if one is already running",
+      default: false
     }
   },
   async run({ args }) {
