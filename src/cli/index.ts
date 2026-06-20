@@ -15,6 +15,8 @@ const skill = defineCommand({
     judge: () => import("./commands/judge.js").then((m) => m.default),
   },
   run() {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "skill" && cliArgs.length > 1) return;
     showUsage(skill);
   },
 });
@@ -29,6 +31,10 @@ const journal = defineCommand({
       import("./commands/journal/init.js").then((m) => m.default),
     list: () =>
       import("./commands/journal/list.js").then((m) => m.default),
+    context: () =>
+      import("./commands/journal/context.js").then((m) => m.default),
+    hook: () =>
+      import("./commands/journal/hook.js").then((m) => m.default),
     update: () =>
       import("./commands/journal/update.js").then((m) => m.default),
     add: () =>
@@ -37,6 +43,8 @@ const journal = defineCommand({
       import("./commands/journal/sync.js").then((m) => m.default),
   },
   run() {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "journal" && cliArgs.length > 1) return;
     showUsage(journal);
   },
 });
@@ -51,6 +59,8 @@ const claude = defineCommand({
     bump: () => import("./commands/bump.js").then((m) => m.default),
   },
   run() {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "claude" && cliArgs.length > 1) return;
     showUsage(claude);
   },
 });
@@ -65,6 +75,8 @@ const codex = defineCommand({
     bump: () => import("./commands/bump.js").then((m) => m.default),
   },
   run() {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "codex" && cliArgs.length > 1) return;
     showUsage(codex);
   },
 });
@@ -79,6 +91,8 @@ const cursor = defineCommand({
     bump: () => import("./commands/bump.js").then((m) => m.default),
   },
   run() {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "cursor" && cliArgs.length > 1) return;
     showUsage(cursor);
   },
 });
@@ -93,7 +107,37 @@ const copilot = defineCommand({
     bump: () => import("./commands/bump.js").then((m) => m.default),
   },
   run() {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "copilot" && cliArgs.length > 1) return;
     showUsage(copilot);
+  },
+});
+
+const ui = defineCommand({
+  meta: {
+    name: "ui",
+    description: "Launch the local doraval web dashboard (no more typing commands for common tasks)",
+  },
+  args: {
+    port: {
+      type: "string",
+      description: "Port to run the local UI server on (default 3737)",
+      default: "3737",
+    },
+    open: {
+      type: "boolean",
+      description: "Automatically open the dashboard in your browser",
+      default: true,
+    },
+    host: {
+      type: "string",
+      description: "Host to bind (default 127.0.0.1 for local only)",
+      default: "127.0.0.1",
+    },
+  },
+  async run({ args }) {
+    // Always delegate for `dora ui` (with or without flags). The old guard pattern was only for groups that show usage.
+    await import("./commands/ui.js").then((m) => m.default.run({ args }));
   },
 });
 
@@ -132,10 +176,16 @@ const main = defineCommand({
     codex: () => Promise.resolve(codex),
     cursor: () => Promise.resolve(cursor),
     copilot: () => Promise.resolve(copilot),
+    ui: () => Promise.resolve(ui),
   },
   run() {
-    // Show Doraemon banner before the normal usage instructions
-    console.log("\n" + pc.blue(doraemonArt) + "\n");
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs.length > 0) return; // subcommand provided — do not leak banner/usage to stdout
+
+    // Show Doraemon banner before the normal usage instructions (to stderr so it doesn't pollute data output or hooks)
+    if (process.stdout.isTTY) {
+      console.error("\n" + pc.blue(doraemonArt) + "\n");
+    }
 
     showUsage(main);
   },

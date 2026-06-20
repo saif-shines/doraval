@@ -1,6 +1,6 @@
 import { defineConfig, passthroughImageService } from "astro/config";
 import starlight from "@astrojs/starlight";
-import lucode from "lucode-starlight";
+import starlightThemeTerminal from "starlight-theme-terminal";
 
 export default defineConfig({
   site: "https://thehacksmith.dev",
@@ -9,7 +9,7 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      plugins: [lucode()],
+      plugins: [starlightThemeTerminal()],
       expressiveCode: {
         themes: ["github-dark", "github-light"],
         styleOverrides: {
@@ -32,7 +32,7 @@ export default defineConfig({
       sidebar: [
         {
           label: "Get started",
-          autogenerate: { directory: "get-started" },
+          items: [{ autogenerate: { directory: "get-started" } }],
         },
         {
           label: "Validate & check",
@@ -69,7 +69,7 @@ export default defineConfig({
         },
         {
           label: "Concepts",
-          autogenerate: { directory: "concepts" },
+          items: [{ autogenerate: { directory: "concepts" } }],
         },
       ],
     }),

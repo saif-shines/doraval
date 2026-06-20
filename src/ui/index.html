@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>dora • local dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .section { @apply bg-zinc-900 border border-zinc-800 rounded-2xl p-5; }
+    .entry { @apply border-l-4 pl-3 py-1.5; }
+    .pb-strong { border-color: #f87171; }
+    .pb-friction { border-color: #facc15; }
+    .pb-nudge { border-color: #4ade80; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .push { font-variant-numeric: tabular-nums; }
+    pre.context { white-space: pre-wrap; font-size: 13px; line-height: 1.45; }
+    .staged { background: #27251f; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+  <div class="max-w-6xl mx-auto p-6">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="text-2xl">🐱</div>
+        <div>
+          <div class="font-semibold tracking-tight text-xl">doraval</div>
+          <div class="text-xs text-zinc-500 -mt-0.5">local dashboard</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <div id="project-badge" class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs"></div>
+        <button onclick="refreshAll()" class="px-3 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">Refresh</button>
+        <button onclick="window.open('https://github.com/saif-shines/doraval','_blank')" class="px-3 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">GitHub</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <!-- Capture -->
+      <div class="lg:col-span-2 section">
+        <div class="uppercase text-xs tracking-[1px] text-zinc-500 mb-2">Capture decision</div>
+        <div class="space-y-3">
+          <input id="title" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700" placeholder="Title (e.g. Prefer pure functions for new code)">
+          
+          <div>
+            <div class="flex justify-between text-xs mb-1.5 text-zinc-400">
+              <div>Pushback</div>
+              <div id="pb-value" class="push font-medium">4</div>
+            </div>
+            <input id="pushback" type="range" min="1" max="10" step="1" value="4" class="w-full accent-zinc-400">
+            <div class="flex justify-between text-[10px] text-zinc-500 mt-0.5">
+              <div>Nudge</div><div>Friction</div><div>Strong</div>
+            </div>
+          </div>
+
+          <input id="tags" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700" placeholder="tags (comma separated) e.g. architecture,cli">
+
+          <textarea id="rationale" rows="3" class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700" placeholder="Why does this matter? (optional but recommended)"></textarea>
+
+          <button onclick="addDecision()" 
+                  class="w-full py-2.5 rounded-2xl bg-white text-black font-medium text-sm active:scale-[0.985] transition">Add to pending</button>
+          <div id="add-status" class="text-xs text-emerald-400 h-4"></div>
+        </div>
+      </div>
+
+      <!-- What agents see -->
+      <div class="lg:col-span-3 section">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <span class="uppercase text-xs tracking-[1px] text-zinc-500">What agents will see on next session</span>
+          </div>
+          <button onclick="copyContext()" class="text-xs px-2.5 py-1 rounded-lg border border-zinc-800 hover:bg-zinc-900">Copy</button>
+        </div>
+        <pre id="context" class="context bg-black/60 border border-zinc-800 rounded-2xl p-4 text-zinc-300 overflow-auto max-h-[260px]"></pre>
+        <div class="mt-2 text-[11px] text-zinc-500">This is the exact payload from <span class="font-mono">dora journal context</span>.</div>
+      </div>
+
+      <!-- Hooks -->
+      <div class="lg:col-span-2 section">
+        <div class="uppercase text-xs tracking-[1px] text-zinc-500 mb-3">Journal injection hooks</div>
+        <div id="hooks" class="space-y-2 text-sm"></div>
+        <div class="mt-3 text-[11px] text-zinc-500">Toggles call the same logic as <span class="font-mono">dora journal hook enable/disable</span>. Restart your agent after changes.</div>
+      </div>
+
+      <!-- Journal -->
+      <div class="lg:col-span-3 section">
+        <div class="flex items-baseline justify-between mb-2">
+          <div class="uppercase text-xs tracking-[1px] text-zinc-500">Journal entries</div>
+          <div class="text-xs text-zinc-500" id="entry-count"></div>
+        </div>
+        <div id="entries" class="space-y-2 text-sm max-h-[380px] overflow-auto pr-1"></div>
+      </div>
+    </div>
+
+    <div class="mt-6 flex flex-wrap gap-2 text-xs">
+      <button onclick="doAction('sync')" class="px-3 py-1.5 rounded-2xl border border-zinc-800 hover:bg-zinc-900">Sync pending → remote</button>
+      <button onclick="doAction('update')" class="px-3 py-1.5 rounded-2xl border border-zinc-800 hover:bg-zinc-900">Update local cache</button>
+      <button onclick="doAction('open-dir')" class="px-3 py-1.5 rounded-2xl border border-zinc-800 hover:bg-zinc-900">Open ~/.doraval</button>
+      <div class="flex-1"></div>
+      <div class="text-zinc-500 self-center">Tip: use the CLI for heavy sync/agent enrichment. This UI is for speed.</div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+function setProjectBadge(project) {
+  const el = $('project-badge');
+  el.textContent = project ? project : 'no project';
+  el.className = 'px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs ' + (project ? '' : 'text-amber-400');
+}
+
+let currentProject = null;
+
+async function loadStatus() {
+  const s = await fetchJSON('/api/status');
+  currentProject = s.project;
+  setProjectBadge(currentProject);
+}
+
+async function loadContext() {
+  const c = await fetchJSON('/api/context');
+  $('context').textContent = c.text || '(no active high-pushback decisions yet)';
+}
+
+async function loadEntries() {
+  const data = await fetchJSON('/api/entries');
+  const container = $('entries');
+  container.innerHTML = '';
+  const all = [...(data.staged || []), ...(data.committed || [])];
+
+  $('entry-count').textContent = all.length + ' entries';
+
+  if (all.length === 0) {
+    container.innerHTML = '<div class="text-zinc-500 text-sm py-4">No entries. Add your first decision on the left.</div>';
+    return;
+  }
+
+  all.forEach(e => {
+    const pb = e.pushback ?? 0;
+    let cls = 'pb-nudge';
+    if (pb >= 7) cls = 'pb-strong';
+    else if (pb >= 4) cls = 'pb-friction';
+
+    const div = document.createElement('div');
+    div.className = 'entry ' + cls + (e._staged ? ' staged rounded-r-xl' : '');
+    div.innerHTML = `
+      <div class="flex gap-2 items-start">
+        <div class="push w-6 text-right font-semibold text-zinc-400">${pb}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium">${e.title}${e._staged ? ' <span class="text-amber-400 text-xs">(staged)</span>' : ''}</div>
+          <div class="text-xs text-zinc-500 mt-0.5 line-clamp-2">${(e.rationale||'').replace(/\s+/g,' ').slice(0,160)}</div>
+          <div class="mt-1 flex gap-2 text-[10px] text-zinc-500">
+            <span>${(e.tags||[]).join(', ') || 'no tags'}</span>
+            <span class="text-zinc-600">·</span>
+            <span>${e.author || 'human'}</span>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+async function loadHooks() {
+  const h = await fetchJSON('/api/hooks/status');
+  const el = $('hooks');
+  el.innerHTML = '';
+
+  const mk = (label, info, isGlobal) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center justify-between gap-2 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-2';
+    row.innerHTML = `
+      <div>
+        <div class="font-medium">${label}</div>
+        <div class="text-[10px] text-zinc-500 font-mono truncate max-w-[260px]">${info.path}</div>
+      </div>
+      <div>
+        <button data-action="${info.enabled ? 'disable' : 'enable'}" data-global="${isGlobal}" 
+                class="text-xs px-3 py-1 rounded-xl border ${info.enabled ? 'border-emerald-800 text-emerald-400 hover:bg-emerald-950' : 'border-zinc-700 hover:bg-zinc-900'}">
+          ${info.enabled ? 'Disable' : 'Enable'}
+        </button>
+      </div>
+    `;
+    const btn = row.querySelector('button');
+    btn.onclick = async () => {
+      const action = btn.dataset.action;
+      const g = btn.dataset.global === 'true';
+      try {
+        await fetchJSON('/api/hooks/' + action, {
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify({ global: g })
+        });
+        await loadHooks();
+      } catch (e) {
+        alert('Hook change failed: ' + e.message);
+      }
+    };
+    el.appendChild(row);
+  };
+
+  mk('Claude (local)', h.local, false);
+  mk('Claude (global ~/.claude)', h.global, true);
+}
+
+async function addDecision() {
+  const title = $('title').value.trim();
+  if (!title) { $('add-status').textContent = 'Title is required'; return; }
+  const pushback = parseInt($('pushback').value, 10);
+  const tags = $('tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const rationale = $('rationale').value.trim();
+
+  $('add-status').textContent = 'Saving...';
+  try {
+    await fetchJSON('/api/add', {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({ title, pushback, tags, rationale })
+    });
+    $('add-status').textContent = '✓ Added to pending';
+    $('title').value = ''; $('tags').value = ''; $('rationale').value = '';
+    await Promise.all([loadEntries(), loadContext()]);
+    setTimeout(() => { $('add-status').textContent = ''; }, 1400);
+  } catch (e) {
+    $('add-status').textContent = 'Error: ' + e.message;
+  }
+}
+
+async function copyContext() {
+  const text = $('context').textContent;
+  await navigator.clipboard.writeText(text);
+  const t = document.createElement('span');
+  t.textContent = ' copied!';
+  t.className = 'text-emerald-400 ml-2 text-xs';
+  $('context').after(t);
+  setTimeout(() => t.remove(), 900);
+}
+
+async function refreshAll() {
+  await Promise.all([loadEntries(), loadContext(), loadHooks()]);
+}
+
+async function doAction(name) {
+  if (name === 'open-dir') {
+    const s = await fetchJSON('/api/status');
+    alert('Open in Finder/Terminal: ' + s.doravalDir);
+    return;
+  }
+  if (name === 'sync' || name === 'update') {
+    alert('Use the CLI for now: dora journal ' + name + ' (full git + gh flow)');
+    return;
+  }
+}
+
+function setupSlider() {
+  const slider = $('pushback');
+  const val = $('pb-value');
+  const update = () => { val.textContent = slider.value; };
+  slider.addEventListener('input', update);
+  update();
+}
+
+async function boot() {
+  setupSlider();
+  await loadStatus();
+  await Promise.all([loadContext(), loadEntries(), loadHooks()]);
+  // gentle polling so the UI feels alive when you add via CLI too
+  setInterval(() => {
+    loadEntries().catch(()=>{});
+    loadContext().catch(()=>{});
+  }, 8000);
+}
+
+boot().catch(console.error);
+</script>
+</body>
+</html>
