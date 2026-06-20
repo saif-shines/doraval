@@ -166,9 +166,9 @@
   }
 }
 
-/* Home page body — clearer section rhythm */
+/* Home page body — let content span full width; prose width controlled per-section */
 [data-has-hero] .hero ~ .sl-markdown-content {
-  max-width: 72ch;
+  max-width: 100%;
 }
 
 /* Story arc — pain → evidence → question → category → guide (devrel-story-craft) */
@@ -402,14 +402,103 @@
     var(--sl-color-bg) !important;
 }
 
-/* Home intro — larger, more readable opening paragraphs, full content width */
+/* Home intro — two-column editorial layout (Basecamp-style) */
 .home-intro {
+  display: grid;
+  grid-template-columns: 1fr 1.75fr;
+  gap: 0 4.5rem;
   max-width: none;
+  margin: 2.5rem 0 3rem;
+  align-items: start;
 }
 
-.home-intro p {
-  font-size: 1.1rem;
-  line-height: 1.7;
+.home-intro-anchor {
+  position: sticky;
+  top: 5rem;
+}
+
+.home-intro-headline {
+  font-family: var(--sl-font-mono);
+  font-size: clamp(1.6rem, 2.8vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--sl-color-white);
+}
+
+.home-intro-headline em {
+  font-style: normal;
+  color: var(--sl-color-accent);
+}
+
+.home-intro-body p {
+  font-size: 1rem;
+  line-height: 1.75;
+  margin-bottom: 1.5rem;
+  color: var(--sl-color-gray-2);
+}
+
+.home-intro-body p:last-child { margin-bottom: 0; }
+
+.home-intro-pivot {
+  padding: 0.875rem 1.125rem !important;
+  border-left: 3px solid var(--sl-color-accent) !important;
+  background: color-mix(in srgb, var(--sl-color-accent) 6%, transparent) !important;
+  border-radius: 0 4px 4px 0 !important;
+  margin: 0.25rem 0 1.75rem !important;
+  color: var(--sl-color-gray-1) !important;
+}
+
+.home-intro hr {
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
+  margin: 1.75rem 0;
+}
+
+@media (max-width: 640px) {
+  .home-intro {
+    grid-template-columns: 1fr;
+    gap: 1.5rem 0;
+  }
+  .home-intro-anchor { position: static; }
+}
+
+/* 4-card grid for orchestrator problems */
+.problem-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0 2.5rem;
+}
+
+.problem-card {
+  padding: 1.125rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 20%, transparent);
+  border-radius: var(--sl-border-radius);
+  background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg));
+  margin: 0 !important;
+}
+
+.problem-card-title {
+  display: block;
+  font-family: var(--sl-font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sl-color-accent-high);
+  margin-bottom: 0.5rem;
+}
+
+.problem-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--sl-color-gray-2);
+}
+
+@media (max-width: 640px) {
+  .problem-cards { grid-template-columns: 1fr; }
 }
 
 /* Final !important hammer — guarantees Doraemon blue wins over any late theme rules */

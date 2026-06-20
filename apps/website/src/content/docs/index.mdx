@@ -23,37 +23,11 @@ hero:
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-<div class="home-intro">
-
-**If you're a senior engineer** and 10 new engineers join your team, you hand them a skill so they can get something done — onboard, set up a repo, no matter their experience, familiarity, model, or coding agent.
-
-Only 3/10 succeed on the first attempt. 4/10 in a few hours. 7/10 in a day. 10/10 take a few days.
-
-**How do we left-shift that success?** Make the first attempt work for almost everyone.
-
----
-
-The same problem hits when you publish AI resources as a company (Resend, dev tools, etc.): how well do community members succeed on day one?
-
-doraval exists for **coding agent orchestrators** — the people who design, validate, and scale context for teams of agents and humans.
-
-</div>
-
-## Installation
-
-Install globally for repeated local use.
-
 <Tabs>
   <TabItem label="macOS (Homebrew)">
     ```bash
     brew tap saif-shines/tap
     brew install doraval
-    ```
-
-    Verify:
-
-    ```bash
-    doraval --help
     ```
   </TabItem>
   <TabItem label="npm">
@@ -84,12 +58,45 @@ Install globally for repeated local use.
   </TabItem>
 </Tabs>
 
-## The orchestrator problems doraval solves
+<div class="home-intro">
+<div class="home-intro-anchor">
+<p class="home-intro-headline">Does this<br/>sound<br/><em>familiar?</em></p>
+</div>
+<div class="home-intro-body">
 
-- **Onboarding left-shift**: Give new engineers (or agents) skills that actually work on first try across Claude, Cursor, Codex, Copilot.
-- **Publishing success**: Ship resources to the community that deliver real value sooner.
-- **Validation**: Confirm your skill, plugin, hooks, MCP, or memory works for the agents you target.
-- **Productivity**: Use your (and your agents') context window better with decisions that stick.
+**If you're a senior engineer** and 10 new engineers join your team, you hand them a skill so they can get something done — onboard, set up a repo, no matter their experience, familiarity, model, or coding agent.
+
+Only 3/10 succeed on the first attempt. 4/10 in a few hours. 7/10 in a day. 10/10 take a few days.
+
+<p class="home-intro-pivot"><strong>How do we left-shift that success?</strong> Make the first attempt work for almost everyone.</p>
+
+---
+
+The same problem hits when you publish AI resources as a company (Resend, dev tools, etc.): how well do community members succeed on day one?
+
+doraval exists for **coding agent orchestrators** — the people who design, validate, and scale context for teams of agents and humans.
+
+</div>
+</div>
+
+<div class="problem-cards">
+<div class="problem-card">
+<span class="problem-card-title">Onboarding left-shift</span>
+<p>Give new engineers (or agents) skills that actually work on first try across Claude, Cursor, Codex, Copilot.</p>
+</div>
+<div class="problem-card">
+<span class="problem-card-title">Publishing success</span>
+<p>Ship resources to the community that deliver real value sooner.</p>
+</div>
+<div class="problem-card">
+<span class="problem-card-title">Validation</span>
+<p>Confirm your skill, plugin, hooks, MCP, or memory works for the agents you target.</p>
+</div>
+<div class="problem-card">
+<span class="problem-card-title">Productivity</span>
+<p>Use your (and your agents') context window better with decisions that stick.</p>
+</div>
+</div>
 
 ## Common commands
 
