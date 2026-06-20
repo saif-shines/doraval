@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
-import { resolve } from "path";
-import { parseSession, truncateToolCalls, type ToolCall } from "./session-parse.js";
+import { resolve, join, relative } from "path";
+import { parseSession, truncateToolCalls, sanitizeSessionId, type ToolCall } from "./session-parse.js";
 
 const miniFixture = readFileSync(
   resolve(import.meta.dir, "../../test/fixtures/sessions/mini-session.jsonl"),
@@ -111,5 +111,45 @@ describe("truncateToolCalls", () => {
     const result = truncateToolCalls(calls, 10);
     expect(result[0].index).toBe(0);
     expect(result[result.length - 1].index).toBe(29);
+  });
+});
+
+describe("sanitizeSessionId", () => {
+  test("passes through safe ids", () => {
+    expect(sanitizeSessionId("abc123")).toBe("abc123");
+    expect(sanitizeSessionId("my-session_42")).toBe("my-session_42");
+  });
+
+  test("sanitizes path traversal attempts", () => {
+    // some inputs collapse to harmless names; key is no traversal possible
+    const e1 = sanitizeSessionId("../../evil");
+    expect(e1).not.toContain("..");
+    expect(e1.startsWith(".")).toBe(false);
+    expect(sanitizeSessionId("..")).toMatch(/^unknown-/);
+    const e3 = sanitizeSessionId("/etc/passwd");
+    expect(e3).not.toContain("..");
+    expect(e3).not.toMatch(/^\//);
+  });
+
+  test("caps length and collapses separators", () => {
+    const long = "a".repeat(100) + "-bad--name";
+    const s = sanitizeSessionId(long);
+    expect(s.length).toBeLessThanOrEqual(64);
+    expect(s).not.toContain("--");
+  });
+
+  test("falls back safely on bad input", () => {
+    expect(sanitizeSessionId("")).toMatch(/^unknown-/);
+    expect(sanitizeSessionId(null)).toMatch(/^unknown-/);
+    expect(sanitizeSessionId(undefined)).toMatch(/^unknown-/);
+  });
+
+  test("sanitized id produces path inside evals dir", () => {
+    const evalsDir = "/tmp/doraval-evals";
+    const bad = "../../escape";
+    const safe = sanitizeSessionId(bad);
+    const p = join(evalsDir, `${safe}-123.json`);
+    expect(relative(evalsDir, p)).not.toMatch(/^\.\./);
+    expect(p.startsWith(evalsDir)).toBe(true);
   });
 });

@@ -169,3 +169,24 @@ export function truncateToolCalls(calls: ToolCall[], maxCalls: number): ToolCall
 
   return calls.filter((c) => selected.has(c.index));
 }
+
+/**
+ * Sanitize a sessionId (from untrusted JSONL) for safe use in filenames under ~/.doraval/evals/.
+ * Allows only safe chars, collapses separators, caps length.
+ * Returns a safe fallback if the result would be empty, traversal-like, or unsafe.
+ */
+export function sanitizeSessionId(raw: string | undefined | null): string {
+  if (!raw || typeof raw !== "string") {
+    return `unknown-${Date.now()}`;
+  }
+  let sanitized = raw
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-_]+|[-_]+$/g, "")
+    .slice(0, 64);
+
+  if (!sanitized || sanitized === "." || sanitized === ".." || sanitized.includes("..")) {
+    return `unknown-${Date.now()}`;
+  }
+  return sanitized;
+}

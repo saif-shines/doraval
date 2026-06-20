@@ -47,13 +47,13 @@ _doraval_completions() {
     COMPREPLY=( $(compgen -W "${commands.join(" ")}" -- "$cur") )
   elif [ $COMP_CWORD -eq 2 ]; then
     case "$prev" in
-      skill) COMPREPLY=( $(compgen -W "${subCommands.skill.join(" ")}" -- "$cur") ) ;;
-      journal) COMPREPLY=( $(compgen -W "${subCommands.journal.join(" ")}" -- "$cur") ) ;;
-      eval) COMPREPLY=( $(compgen -W "${subCommands.eval.join(" ")}" -- "$cur") ) ;;
-      config) COMPREPLY=( $(compgen -W "${subCommands.config.join(" ")}" -- "$cur") ) ;;
-      hook) COMPREPLY=( $(compgen -W "${subCommands.hook.join(" ")}" -- "$cur") ) ;;
+      skill) COMPREPLY=( $(compgen -W "${(subCommands.skill ?? []).join(" ")}" -- "$cur") ) ;;
+      journal) COMPREPLY=( $(compgen -W "${(subCommands.journal ?? []).join(" ")}" -- "$cur") ) ;;
+      eval) COMPREPLY=( $(compgen -W "${(subCommands.eval ?? []).join(" ")}" -- "$cur") ) ;;
+      config) COMPREPLY=( $(compgen -W "${(subCommands.config ?? []).join(" ")}" -- "$cur") ) ;;
+      hook) COMPREPLY=( $(compgen -W "${(subCommands.hook ?? []).join(" ")}" -- "$cur") ) ;;
       ui) COMPREPLY=( $(compgen -W "${uiFlags.join(" ")}" -- "$cur") ) ;;
-      claude|codex|cursor|copilot) COMPREPLY=( $(compgen -W "${subCommands.claude.join(" ")}" -- "$cur") ) ;;
+      claude|codex|cursor|copilot) COMPREPLY=( $(compgen -W "${(subCommands.claude ?? []).join(" ")}" -- "$cur") ) ;;
     esac
   fi
 }

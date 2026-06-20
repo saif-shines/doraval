@@ -2,8 +2,6 @@ import type { AgentConfig } from "./agent-invoke.js";
 import { invokeAgent } from "./agent-invoke.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
-import pc from "picocolors";
-import { ui } from "../cli/out.js";
 
 export interface ChecklistItem {
   instruction: string;
@@ -132,7 +130,6 @@ export async function runEval(
 
   // Validate shape
   if (typeof raw.verdict !== "string" || !Array.isArray(raw.checklist)) {
-    ui.write(`  ${pc.yellow("⚠")} Received from agent (first 800 chars): ${JSON.stringify(raw).slice(0, 800)}`);
     return makeUnknownResult(primitives, skillName, "LLM returned malformed response");
   }
 

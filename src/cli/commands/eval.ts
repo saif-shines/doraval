@@ -1,9 +1,10 @@
 import { defineCommand } from "citty";
 import { join, basename } from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import pc from "picocolors";
 import { ui } from "../out.js";
 import { getAdapter } from "../../core/session-adapters.js";
+import { parseSession, sanitizeSessionId, type SessionPrimitives } from "../../core/session-parse.js";
 import { runEval, type EvalResult } from "../../core/session-eval.js";
 import { readConfig, getEvalConfig, ensureDoravalDirs, getEvalsDir } from "../../core/journal-config.js";
 import { loadSkill } from "../../core/skill-validate.js";
@@ -142,20 +143,23 @@ export default defineCommand({
 
     // Resolve session path(s)
     let sessionPaths: string[] = [];
+    let discoveryAdapter: ReturnType<typeof getAdapter> = null;
+
     if (args.session) {
-      // Support comma or space separated for multiple sessions from CLI
+      // Support comma or space separated for multiple sessions from CLI.
+      // Explicit --session does NOT require a supported coding agent (works for any compatible .jsonl).
       sessionPaths = String(args.session)
         .split(/[\s,]+/)
         .map((s) => s.trim())
         .filter(Boolean);
     } else {
-      const adapter = getAdapter();
-      if (!adapter) {
+      discoveryAdapter = getAdapter();
+      if (!discoveryAdapter) {
         ui.fail("No supported coding agent detected. Is Claude Code installed?");
         process.exit(2);
       }
-      let recent = adapter.listRecentSessions(process.cwd(), 12);
-      const withSkills = recent.filter((s) => s.skillCount > 0);
+      let recent = discoveryAdapter.listRecentSessions(process.cwd(), 12);
+      const withSkills = recent.filter((s: { skillCount: number }) => s.skillCount > 0);
       if (withSkills.length > 0) recent = withSkills;
 
       if (recent.length === 0) {
@@ -178,18 +182,24 @@ export default defineCommand({
       process.exit(2);
     }
 
-    // Parse + process sessions
-    const adapter = getAdapter();
-    if (!adapter) {
-      ui.fail("No supported coding agent detected.");
-      process.exit(2);
-    }
-
     const allResults: EvalResult[] = [];
     for (const sessionPath of sessionPaths) {
       ui.info(`  Session: ${pc.dim(sessionPath)}`);
 
-      const primitives = adapter.parse(sessionPath);
+      let primitives: SessionPrimitives;
+      try {
+        if (discoveryAdapter) {
+          primitives = discoveryAdapter.parse(sessionPath);
+        } else {
+          // explicit --session path: parse directly (no adapter or detect required)
+          const text = readFileSync(sessionPath, "utf8");
+          primitives = parseSession(text);
+        }
+      } catch (err: any) {
+        ui.fail(`Failed to read or parse session: ${sessionPath}`);
+        if (err?.message) ui.info(`  ${err.message}`);
+        continue;
+      }
 
       if (primitives.skillsInvoked.length === 0) {
         ui.warn("  No skills were invoked in this session.");
@@ -234,9 +244,10 @@ export default defineCommand({
         const result = await runEval(primitives, skillName, skillContent, agentCfg, evalCfg);
         allResults.push(result);
 
-        // Save to history
+        // Save to history (use sanitized sessionId to prevent path traversal from untrusted JSONL)
         if (evalCfg.save_history) {
-          const evalPath = join(getEvalsDir(), `${primitives.sessionId}-${Date.now()}.json`);
+          const safeId = sanitizeSessionId(primitives.sessionId) || `unknown-${Date.now()}`;
+          const evalPath = join(getEvalsDir(), `${safeId}-${Date.now()}.json`);
           await Bun.write(evalPath, JSON.stringify(result, null, 2));
         }
       }

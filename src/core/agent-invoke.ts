@@ -1,6 +1,4 @@
 import { spawnSync } from "bun";
-import pc from "picocolors";
-import { ui } from "../cli/out.js";
 
 export interface AgentConfig {
   command: string;
@@ -70,9 +68,6 @@ export async function invokeAgent(
   const template = agentCfg.prompt_template ?? '-p "{{prompt}}" --output-format json --bare';
   const extraArgs = buildAgentArgv(template, promptText);
 
-  const shortTemplate = template.slice(0, 80);
-  ui.write(`  ${pc.dim(`→ ${agentCfg.command} ${shortTemplate}...`)}`);
-
   let result: ReturnType<typeof spawnSync>;
   try {
     result = spawnSync([agentCfg.command, ...extraArgs], {
@@ -81,20 +76,13 @@ export async function invokeAgent(
       env: { ...process.env },
     });
   } catch (e) {
-    ui.write(`  ${pc.yellow("⚠")} Failed to spawn ${agentCfg.command}: ${(e as Error).message}`);
     return null;
   }
 
-  const stdout = result.stdout.toString().trim();
-  const stderr = result.stderr.toString().trim();
+  const stdout = (result.stdout ?? "").toString().trim();
+  const stderr = (result.stderr ?? "").toString().trim();
 
   if (result.exitCode !== 0) {
-    ui.write(`  ${pc.yellow("⚠")} Agent exited with code ${result.exitCode}.`);
-    const out = stdout.replace(/sk-[a-zA-Z0-9_-]+/g, "sk-REDACTED").slice(0, 800);
-    const err = stderr.replace(/sk-[a-zA-Z0-9_-]+/g, "sk-REDACTED").slice(0, 800);
-    if (err) ui.write(`    stderr: ${err}`);
-    if (out) ui.write(`    stdout: ${out}`);
-    if (!err && !out) ui.write(`    (no output captured)`);
     return null;
   }
 
@@ -111,6 +99,5 @@ export async function invokeAgent(
 
   if (unwrapped[0]) return unwrapped[0];
 
-  ui.write(`  ${pc.yellow("⚠")} Agent produced no usable JSON. stdout (700 chars): ${stdout.slice(0, 700)}`);
   return null;
 }
