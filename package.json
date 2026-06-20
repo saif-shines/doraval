@@ -1,6 +1,6 @@
 {
   "name": "@hacksmith/doraval",
-  "version": "0.2.45",
+  "version": "0.2.46",
   "author": "Saif",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "doraval": "bin/doraval-wrapper.js",
     "dora": "bin/doraval-wrapper.js"
   },
-  "description": "The context engineering toolkit for coding agents",
+  "description": "The context engineering toolkit for coding agent orchestrators",
   "engines": {
     "bun": ">=1.2.0",
     "node": ">=14.18.0"

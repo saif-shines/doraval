@@ -56,3 +56,9 @@
   display: block;
 }
 
+/* Landing page tweaks */
+[data-has-hero] .hero {
+  margin-bottom: 1rem;
+}
+
+

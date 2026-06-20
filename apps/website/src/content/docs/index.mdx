@@ -1,8 +1,9 @@
 ---
 title: doraval
-description: The context engineering toolkit for coding agents.
+description: The context engineering toolkit for coding agent orchestrators.
+template: splash
 hero:
-  tagline: Validate skills, plugins, hooks, MCP configs, and memory files — locally or from a Git URL. The context engineering toolkit for coding agents.
+  tagline: The context engineering toolkit for coding agent orchestrators.
   actions:
     - text: Get Started
       link: /get-started/
@@ -33,49 +34,115 @@ hero:
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
+**If you're a senior engineer** and 10 new engineers join your team, you hand them a skill so they can get something done — onboard, set up a repo, no matter their experience, familiarity, model, or coding agent.
+
+Only 3/10 succeed on the first attempt. 4/10 in a few hours. 7/10 in a day. 10/10 take a few days.
+
+**How do we left-shift that success?** Make the first attempt work for almost everyone.
+
+The same problem hits when you publish AI resources as a company (Resend, dev tools, etc.): how well do community members succeed on day one?
+
+doraval exists for **coding agent orchestrators** — the people who design, validate, and scale context for teams of agents and humans.
+
+## The orchestrator problems doraval solves
+
+- **Onboarding left-shift**: Give new engineers (or agents) skills that actually work on first try across Claude, Cursor, Codex, Copilot.
+- **Publishing success**: Ship resources to the community that deliver real value sooner.
+- **Validation**: Confirm your skill, plugin, hooks, MCP, or memory works for the agents you target.
+- **Productivity**: Use your (and your agents') context window better with decisions that stick.
+
+## Common commands
+
+Copy and paste these to try immediately (no install required).
+
+### Left-shift onboarding — validate so new engineers (and agents) succeed on first try
+
+```bash
+npx @hacksmith/doraval validate .
+```
+
+### Validate a published resource or remote repo (for community success)
+
+```bash
+npx @hacksmith/doraval validate https://github.com/owner/repo
+```
+
+### Validate for a specific agent (Claude? Cursor? Codex? Copilot?)
+
+```bash
+npx @hacksmith/doraval validate . --for claude
+npx @hacksmith/doraval validate . --for claude:skill
+npx @hacksmith/doraval validate . --for cursor:plugin
+```
+
+### Scaffold skills/plugins that work across agents (on first attempt)
+
+```bash
+npx @hacksmith/doraval claude new my-skill
+npx @hacksmith/doraval cursor new my-skill
+npx @hacksmith/doraval codex new my-skill
+npx @hacksmith/doraval copilot new my-skill
+```
+
+### See what agents understand (keyword triggers & providers)
+
+```bash
+npx @hacksmith/doraval providers
+```
+
+### Stop typing repetitive commands — local dashboard for context
+
+```bash
+npx @hacksmith/doraval ui
+```
+
+### One-time setup so your whole team (humans + agents) stays consistent
+
+```bash
+npx @hacksmith/doraval init
+```
+
+## Installation
+
+Install globally for repeated local use.
+
 <Tabs>
   <TabItem label="macOS (Homebrew)">
     ```bash
-    brew install saif-shines/tap/doraval
-    doraval validate .
+    brew tap saif-shines/tap
+    brew install doraval
+    ```
+
+    Verify:
+
+    ```bash
+    doraval --help
     ```
   </TabItem>
-  <TabItem label="npm / npx">
+  <TabItem label="npm">
+    Global install:
+
+    ```bash
+    npm install -g @hacksmith/doraval
+    ```
+
+    Or run without installing:
+
     ```bash
     npx @hacksmith/doraval validate .
-    # if Bun is not installed: npm i -g bun
     ```
   </TabItem>
   <TabItem label="Bun">
+    Global install:
+
+    ```bash
+    bun add -g @hacksmith/doraval
+    ```
+
+    Or run without installing:
+
     ```bash
     bunx @hacksmith/doraval validate .
     ```
   </TabItem>
 </Tabs>
-
-Keep current:
-
-```bash
-doraval update --check
-```
-
-List providers and keyword support for discovery:
-
-```bash
-doraval providers
-```
-
-Scaffold a skill or plugin:
-
-```bash
-doraval claude new --yes my-skill
-doraval codex new --yes my-skill
-doraval cursor new --yes my-skill
-doraval copilot new --yes my-skill
-```
-
-Generate shell completions:
-
-```bash
-doraval completion bash
-```

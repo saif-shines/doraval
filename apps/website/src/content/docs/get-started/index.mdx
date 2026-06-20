@@ -1,44 +1,50 @@
 ---
 title: What is doraval?
-description: The context engineering toolkit for coding agents.
+description: The context engineering toolkit for coding agent orchestrators.
 sidebar:
   order: 1
 ---
 
-**doraval** is a context engineering toolkit for coding agents. It validates the files that shape how your agents behave — skills, plugins, hooks, MCP configs, memory files, and more.
+**doraval** is the context engineering toolkit for coding agent orchestrators.
 
-Works with Claude Code today. Cursor, Codex, and Windsurf support is coming.
+If you're a senior engineer handing skills to new team members, a company publishing resources to the community, or someone who wants agents (and humans) to succeed on the first attempt instead of after days of debugging — this is for you.
 
-## Why
+### The problem orchestrators face
+- Give 10 new engineers (or agents) a skill. Only 3/10 succeed on the first try. 4/10 take hours. 7/10 take a day. 10/10 take days.
+- Publish a skill or plugin? Community members hit the same slow ramp.
+- Validate that your resource actually works for Claude, Cursor, Codex, or Copilot?
+- Want to use your context window (and your agents') more effectively?
 
-The context you give coding agents — SKILL.md files, CLAUDE.md, plugin manifests, hooks, MCP configs — is what determines whether they're useful or chaotic. These files are easy to write but hard to keep correct:
+doraval helps you **left-shift success** by making the context you engineer reliable from the first attempt.
 
-- A missing `description` (or unhelpful trigger phrases) can prevent Claude from auto-loading a skill when relevant; `name` is recommended for display but the directory name usually provides the `/command`
-- A malformed `plugin.json` silently breaks the entire plugin
-- An `@import` pointing at a deleted file creates a silent hole in memory
-- Unknown hook event names are silently ignored
-- Vague phrasing like "you might want to" confuses agents that need direct instructions
+## Why this matters for orchestrators
 
-Manual review doesn't scale. doraval automates these checks across every artifact type your agent consumes.
+You don't just write one skill. You orchestrate context across teams, agents, models, and time.
 
-## Commands
+When that context is wrong, success is slow and expensive:
 
-| Command | What it does | Speed |
-|---------|-------------|-------|
-| `validate` | Auto-detect and validate all agent config in a directory | Instant |
-| `init` | One-time setup for doraval + journal + coding agent | Instant |
-| `update` | Update doraval to the latest version (Homebrew, npm, or Bun) | Instant |
-| `providers` | List supported providers and packaging details (including keyword discovery) | Instant |
-| `completion` | Generate shell completion scripts (bash, zsh, fish) | Instant |
-| `ui` | Local web dashboard for capturing and browsing journal decisions | Instant |
-| `claude new` / `codex new` / `cursor new` / `copilot new` | Interactive wizard to scaffold skills or plugins following official packaging rules | Instant |
-| `skill validate` | Structural correctness for a single skill | Instant |
-| `skill drift` | Rubric deviation — 6 categories of quality drift | Instant |
-| `skill judge` | AI-driven qualitative assessment via LLM | *(coming soon)* |
+- New engineers (or new agents) waste days instead of shipping in hours.
+- Published resources fail for most users on first try.
+- You can't confidently say "this works for Claude, Cursor, and Copilot."
+- Your team's decisions drift because agents (and humans) don't have the right shared context.
 
-`validate` is the primary command. It auto-detects which validators apply (skill, plugin, marketplace, hooks, MCP, subagent, command, memory) and runs them all. It also accepts Git URLs — point it at a GitHub repo and it clones, validates, and cleans up.
+doraval turns "it works on my machine with my agent" into "this reliably works for the people and agents I orchestrate."
 
-## Quick start
+## How orchestrators use doraval
+
+| Command | Orchestrator job it accelerates | Speed |
+|---------|--------------------------------|-------|
+| `validate` | Make sure a skill/plugin/hook/MCP actually works (for the right agents) | Instant |
+| `claude new` / `cursor new` etc. | Scaffold resources that succeed on first attempt across agents | Instant |
+| `init` | One-time setup so your team + agents start with the right context foundation | Instant |
+| `providers` | See exactly which agents understand which keywords | Instant |
+| `ui` | Stop re-typing. Capture and reuse decisions in a local dashboard | Instant |
+| `journal` | Record team principles with pushback so agents (and humans) stay consistent over time | Instant |
+| `skill validate` / `skill drift` | Check individual resources or measure how far they've drifted | Instant |
+
+`validate` is the workhorse for left-shifting success. Point it at a directory or GitHub URL and it tells you what's broken before your new engineers or community members waste time on it.
+
+## Quick start (left-shift success in minutes)
 
 ```bash
 # macOS (no runtime required)
@@ -48,27 +54,24 @@ brew install saif-shines/tap/doraval
 npx @hacksmith/doraval validate .
 ```
 
-More examples:
+**This is the first success for orchestrators**: validate before you hand something to a new engineer or publish it to the community.
+
+More examples framed as orchestrator jobs:
 
 ```bash
-npx @hacksmith/doraval validate https://github.com/obra/superpowers   # remote repo
-npx @hacksmith/doraval validate . --for claude:plugin                  # specific validator
-npx @hacksmith/doraval providers                                       # list providers + keyword support
-npx @hacksmith/doraval skill drift ./my-skill/                         # rubric drift
+npx @hacksmith/doraval validate https://github.com/obra/superpowers   # validate a published resource so others succeed sooner
+npx @hacksmith/doraval validate . --for claude:plugin                  # "Will this work for the agents my team actually uses?"
+npx @hacksmith/doraval providers                                       # understand the landscape before you publish
+npx @hacksmith/doraval skill drift ./my-skill/                         # measure quality over time
 ```
 
-## Beyond validation
+## What orchestrators do next
 
-Start with `doraval init` — the recommended one-time setup for doraval + your journal + coding agent (see [Installation](/get-started/installation/)).
+- `doraval init` — One-time foundation so your team + agents share context from day one (see [Installation](/get-started/installation/)).
+- `doraval update` — Stay current.
+- `doraval providers` + `--for` — Target the right agents.
+- `doraval claude new` / `cursor new` etc. — Create resources that are correct by construction.
+- `dora ui` — Daily context management without repetitive typing.
+- `doraval journal` — Capture decisions with pushback so agents and humans don't contradict the past.
 
-Keep doraval current with `doraval update` (see the [update command](/commands/update/)).
-
-List providers and their keyword discovery support with `doraval providers`.
-
-Scaffold new skills or plugins with the interactive wizard: `doraval claude new`, `doraval codex new`, `doraval cursor new`, or `doraval copilot new` (see [claude new](/commands/claude-new/)).
-
-Generate shell completions with `doraval completion bash|zsh|fish`.
-
-Launch a local web dashboard with `dora ui` for fast capture and reviewing of journal decisions.
-
-`doraval journal` provides a separate system for recording project decisions and principles with pushback (see [Agent Journal](/concepts/agent-journal)). It is completely optional and lives outside your project directories.
+The goal is always the same: make the first attempt the successful one.

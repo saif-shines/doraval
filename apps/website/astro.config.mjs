@@ -20,7 +20,7 @@ export default defineConfig({
       },
       title: "doraval",
       description:
-        "The context engineering toolkit for coding agents",
+        "The context engineering toolkit for coding agent orchestrators",
       customCss: ["./src/styles/custom.css"],
       social: [
         {

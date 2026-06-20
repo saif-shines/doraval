@@ -173,11 +173,13 @@ async function killPort(port: number) {
 }
 
 // --- PID management for idempotent ui launches (better than blind port kill) ---
+// PID files are port-scoped (ui.<port>.pid) so `dora ui --port 4000` and default
+// port are independent. This is safer + more correct than a single global pid.
 
-const getPidFile = () => join(getDoravalDir(), "ui.pid");
+const getPidFile = (p: number) => join(getDoravalDir(), `ui.${p}.pid`);
 
-function readPid(): number | null {
-  const file = getPidFile();
+function readPid(p: number): number | null {
+  const file = getPidFile(p);
   if (!existsSync(file)) return null;
   try {
     const raw = readFileSync(file, "utf8").trim();
@@ -193,13 +195,13 @@ function readPid(): number | null {
   }
 }
 
-function writePid(pid: number) {
+function writePid(pid: number, p: number) {
   ensureDoravalDirs();
-  writeFileSync(getPidFile(), String(pid) + "\n");
+  writeFileSync(getPidFile(p), String(pid) + "\n");
 }
 
-function removePid() {
-  try { unlinkSync(getPidFile()); } catch {}
+function removePid(p: number) {
+  try { unlinkSync(getPidFile(p)); } catch {}
 }
 
 export default {
@@ -212,7 +214,7 @@ export default {
 
     ensureDoravalDirs();
 
-    const existingPid = readPid();
+    const existingPid = readPid(port);
 
     if (showStatusOnly) {
       if (existingPid) {
@@ -242,7 +244,7 @@ export default {
       console.error(`  Force restarting (killing pid ${existingPid})...`);
       try { process.kill(existingPid, "SIGTERM"); } catch {}
       await new Promise((r) => setTimeout(r, 400));
-      removePid();
+      removePid(port);
     } else if (!existingPid) {
       // only do blind port kill if no pid and not our instance (legacy safety)
       await killPort(port);
@@ -258,10 +260,12 @@ export default {
       }
     }
 
-    const server = Bun.serve({
-      port,
-      hostname: host,
-      async fetch(req) {
+    let server: ReturnType<typeof Bun.serve>;
+    try {
+      server = Bun.serve({
+        port,
+        hostname: host,
+        async fetch(req) {
         const url = new URL(req.url);
 
         // Serve the dashboard shell
@@ -371,11 +375,16 @@ export default {
         return new Response("Not found", { status: 404 });
       },
     });
+    } catch (err: any) {
+      removePid(port);
+      console.error(`  Failed to start dashboard on port ${port}: ${err?.message || err}`);
+      process.exit(1);
+    }
 
     const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${server.port}`;
 
-    // write our pid
-    writePid(process.pid);
+    // write our pid (port-scoped)
+    writePid(process.pid, port);
 
     // All human messages to stderr (preserve stdout hygiene for any future piping)
     const msg = `
@@ -398,7 +407,7 @@ export default {
     }
 
     const cleanup = () => {
-      removePid();
+      removePid(port);
       console.error("\n  Stopping dashboard...");
       server.stop();
       process.exit(0);

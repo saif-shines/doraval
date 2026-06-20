@@ -1,10 +1,14 @@
 # doraval
 
-The context engineering toolkit for coding agents.
+The context engineering toolkit for coding agent orchestrators.
 
-If you've ever shipped a Claude Code skill that stopped firing after a refactor, or wondered whether your plugin's structure actually matches what the agent expects — doraval validates that before it becomes a runtime surprise.
+If you're a senior engineer handing skills to new team members, a company publishing AI resources, or anyone who wants agents (and humans) to succeed on the first attempt instead of after days of debugging — this is for you.
 
-> **Quick start:**
+**The orchestrator problem:** Give 10 new engineers (or agents) a skill and only 3/10 succeed on the first try. 4/10 take hours. 7/10 take a day. 10/10 take days.
+
+doraval helps you **left-shift success** — validate, scaffold, and manage context so the first attempt works across Claude, Cursor, Codex, Copilot, and whatever comes next.
+
+> **Quick start (left-shift success in < 2 minutes):**
 > ```bash
 > # macOS
 > brew install saif-shines/tap/doraval
@@ -14,7 +18,7 @@ If you've ever shipped a Claude Code skill that stopped firing after a refactor,
 > npx @hacksmith/doraval validate .
 > ```
 
-Point it at any local directory or GitHub URL. It auto-detects what you have and tells you what's broken.
+Validate before you hand a skill to a new engineer or publish it. It auto-detects issues across agents and tells you what's broken.
 
 ## Install
 

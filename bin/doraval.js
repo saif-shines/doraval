@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.44",
+    version: "0.2.45",
     author: "Saif",
     repository: {
       type: "git",
@@ -4457,8 +4457,8 @@ async function killPort(port) {
     await new Promise((r) => setTimeout(r, 400));
   } catch {}
 }
-function readPid() {
-  const file = getPidFile();
+function readPid(p) {
+  const file = getPidFile(p);
   if (!existsSync19(file))
     return null;
   try {
@@ -4475,14 +4475,14 @@ function readPid() {
     return null;
   }
 }
-function writePid(pid) {
+function writePid(pid, p) {
   ensureDoravalDirs();
-  writeFileSync6(getPidFile(), String(pid) + `
+  writeFileSync6(getPidFile(p), String(pid) + `
 `);
 }
-function removePid() {
+function removePid(p) {
   try {
-    unlinkSync2(getPidFile());
+    unlinkSync2(getPidFile(p));
   } catch {}
 }
 async function getDashboardHtml() {
@@ -4495,7 +4495,7 @@ async function getDashboardHtml() {
     return `<!doctype html><meta charset="utf-8"><body style="font-family:monospace;background:#111;color:#ddd;padding:2rem"><h1>doraval ui</h1><p>Dashboard HTML missing.</p><pre>${String(err)}</pre></body>`;
   }
 }
-var import_picocolors16, DEFAULT_PORT = 3737, getPidFile = () => join18(getDoravalDir(), "ui.pid"), ui_default;
+var import_picocolors16, DEFAULT_PORT = 3737, getPidFile = (p) => join18(getDoravalDir(), `ui.${p}.pid`), ui_default;
 var init_ui = __esm(() => {
   init_journal_config();
   init_journal_parse();
@@ -4510,7 +4510,7 @@ var init_ui = __esm(() => {
       const showStatusOnly = !!args.status;
       const force = !!args.force;
       ensureDoravalDirs();
-      const existingPid = readPid();
+      const existingPid = readPid(port);
       if (showStatusOnly) {
         if (existingPid) {
           const url2 = `http://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
@@ -4539,7 +4539,7 @@ var init_ui = __esm(() => {
           process.kill(existingPid, "SIGTERM");
         } catch {}
         await new Promise((r) => setTimeout(r, 400));
-        removePid();
+        removePid(port);
       } else if (!existingPid) {
         await killPort(port);
       }
@@ -4552,106 +4552,113 @@ var init_ui = __esm(() => {
           project = undefined;
         }
       }
-      const server = Bun.serve({
-        port,
-        hostname: host,
-        async fetch(req) {
-          const url2 = new URL(req.url);
-          if (url2.pathname === "/" || url2.pathname === "/index.html") {
-            const html = await getDashboardHtml();
-            return new Response(html, {
-              headers: { "content-type": "text/html; charset=utf-8" }
-            });
-          }
-          if (url2.pathname === "/api/status") {
-            return Response.json({
-              project: project || null,
-              doravalDir: getJournalsDir(),
-              hasConfig: !!config,
-              repo: config?.journal?.repo ?? null
-            });
-          }
-          if (url2.pathname === "/api/entries") {
-            const { committed, staged } = await loadAllEntries(project || null);
-            return Response.json({ project, committed, staged });
-          }
-          if (url2.pathname === "/api/context") {
-            const { committed, staged } = await loadAllEntries(project || null);
-            const all = [...staged, ...committed].filter((e) => (e.status || "active") === "active");
-            const text = generateJournalContext(all, project || null, { minPushback: 1 });
-            return Response.json({ text, project });
-          }
-          if (url2.pathname === "/api/hooks/status" && req.method === "GET") {
-            const localPath = getLocalHooksPath();
-            const globalPath = getGlobalSettingsPath();
-            const localHas = hasHook(await readJson(localPath));
-            const globalHas = hasHook(await readJson(globalPath));
-            return Response.json({
-              local: { enabled: localHas, path: localPath },
-              global: { enabled: globalHas, path: globalPath }
-            });
-          }
-          if (url2.pathname === "/api/hooks/enable" && req.method === "POST") {
-            const body = await req.json().catch(() => ({}));
-            const useGlobal = !!body.global;
-            const target = useGlobal ? getGlobalSettingsPath() : getLocalHooksPath();
-            const res = await addHook(target);
-            return Response.json(res);
-          }
-          if (url2.pathname === "/api/hooks/disable" && req.method === "POST") {
-            const body = await req.json().catch(() => ({}));
-            const useGlobal = !!body.global;
-            const target = useGlobal ? getGlobalSettingsPath() : getLocalHooksPath();
-            const res = await removeHook(target);
-            return Response.json(res);
-          }
-          if (url2.pathname === "/api/add" && req.method === "POST") {
-            if (!project) {
-              return Response.json({ error: "No project configured. Run dora init or dora journal init first." }, { status: 400 });
+      let server;
+      try {
+        server = Bun.serve({
+          port,
+          hostname: host,
+          async fetch(req) {
+            const url2 = new URL(req.url);
+            if (url2.pathname === "/" || url2.pathname === "/index.html") {
+              const html = await getDashboardHtml();
+              return new Response(html, {
+                headers: { "content-type": "text/html; charset=utf-8" }
+              });
             }
-            const body = await req.json();
-            const title = String(body.title || "Untitled decision").trim();
-            const pushback = Number(body.pushback ?? 4);
-            const tags = Array.isArray(body.tags) ? body.tags.map((t) => String(t).trim()).filter(Boolean) : [];
-            const rationale = String(body.rationale || title).trim();
-            try {
-              const result = await writePendingEntry(project, { title, pushback, tags, rationale });
-              return Response.json({ ok: true, ...result });
-            } catch (e) {
-              return Response.json({ error: e.message }, { status: 500 });
+            if (url2.pathname === "/api/status") {
+              return Response.json({
+                project: project || null,
+                doravalDir: getJournalsDir(),
+                hasConfig: !!config,
+                repo: config?.journal?.repo ?? null
+              });
             }
-          }
-          if (url2.pathname === "/api/refresh" && req.method === "POST") {
-            const { committed, staged } = await loadAllEntries(project || null);
-            return Response.json({ ok: true, committed, staged });
-          }
-          if (url2.pathname === "/api/delete-staged" && req.method === "POST") {
-            if (!project) {
-              return Response.json({ error: "No project" }, { status: 400 });
+            if (url2.pathname === "/api/entries") {
+              const { committed, staged } = await loadAllEntries(project || null);
+              return Response.json({ project, committed, staged });
             }
-            const body = await req.json().catch(() => ({}));
-            const filename = body.filename;
-            if (!filename) {
-              return Response.json({ error: "filename required" }, { status: 400 });
+            if (url2.pathname === "/api/context") {
+              const { committed, staged } = await loadAllEntries(project || null);
+              const all = [...staged, ...committed].filter((e) => (e.status || "active") === "active");
+              const text = generateJournalContext(all, project || null, { minPushback: 1 });
+              return Response.json({ text, project });
             }
-            const pdir = getPendingProjectDir(project);
-            const filePath = join18(pdir, filename);
-            if (existsSync19(filePath)) {
+            if (url2.pathname === "/api/hooks/status" && req.method === "GET") {
+              const localPath = getLocalHooksPath();
+              const globalPath = getGlobalSettingsPath();
+              const localHas = hasHook(await readJson(localPath));
+              const globalHas = hasHook(await readJson(globalPath));
+              return Response.json({
+                local: { enabled: localHas, path: localPath },
+                global: { enabled: globalHas, path: globalPath }
+              });
+            }
+            if (url2.pathname === "/api/hooks/enable" && req.method === "POST") {
+              const body = await req.json().catch(() => ({}));
+              const useGlobal = !!body.global;
+              const target = useGlobal ? getGlobalSettingsPath() : getLocalHooksPath();
+              const res = await addHook(target);
+              return Response.json(res);
+            }
+            if (url2.pathname === "/api/hooks/disable" && req.method === "POST") {
+              const body = await req.json().catch(() => ({}));
+              const useGlobal = !!body.global;
+              const target = useGlobal ? getGlobalSettingsPath() : getLocalHooksPath();
+              const res = await removeHook(target);
+              return Response.json(res);
+            }
+            if (url2.pathname === "/api/add" && req.method === "POST") {
+              if (!project) {
+                return Response.json({ error: "No project configured. Run dora init or dora journal init first." }, { status: 400 });
+              }
+              const body = await req.json();
+              const title = String(body.title || "Untitled decision").trim();
+              const pushback = Number(body.pushback ?? 4);
+              const tags = Array.isArray(body.tags) ? body.tags.map((t) => String(t).trim()).filter(Boolean) : [];
+              const rationale = String(body.rationale || title).trim();
               try {
-                await Bun.file(filePath).unlink();
-              } catch {}
-              return Response.json({ ok: true });
+                const result = await writePendingEntry(project, { title, pushback, tags, rationale });
+                return Response.json({ ok: true, ...result });
+              } catch (e) {
+                return Response.json({ error: e.message }, { status: 500 });
+              }
             }
-            return Response.json({ error: "not found" }, { status: 404 });
+            if (url2.pathname === "/api/refresh" && req.method === "POST") {
+              const { committed, staged } = await loadAllEntries(project || null);
+              return Response.json({ ok: true, committed, staged });
+            }
+            if (url2.pathname === "/api/delete-staged" && req.method === "POST") {
+              if (!project) {
+                return Response.json({ error: "No project" }, { status: 400 });
+              }
+              const body = await req.json().catch(() => ({}));
+              const filename = body.filename;
+              if (!filename) {
+                return Response.json({ error: "filename required" }, { status: 400 });
+              }
+              const pdir = getPendingProjectDir(project);
+              const filePath = join18(pdir, filename);
+              if (existsSync19(filePath)) {
+                try {
+                  await Bun.file(filePath).unlink();
+                } catch {}
+                return Response.json({ ok: true });
+              }
+              return Response.json({ error: "not found" }, { status: 404 });
+            }
+            if (url2.pathname.startsWith("/api/")) {
+              return Response.json({ error: "Not found" }, { status: 404 });
+            }
+            return new Response("Not found", { status: 404 });
           }
-          if (url2.pathname.startsWith("/api/")) {
-            return Response.json({ error: "Not found" }, { status: 404 });
-          }
-          return new Response("Not found", { status: 404 });
-        }
-      });
+        });
+      } catch (err) {
+        removePid(port);
+        console.error(`  Failed to start dashboard on port ${port}: ${err?.message || err}`);
+        process.exit(1);
+      }
       const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${server.port}`;
-      writePid(process.pid);
+      writePid(process.pid, port);
       const msg = `
   ${import_picocolors16.default.blue("\u25C9")}  dora local dashboard
   ${import_picocolors16.default.dim("Project:")} ${project ? import_picocolors16.default.white(project) : import_picocolors16.default.yellow("none (run dora init)")}
@@ -4669,7 +4676,7 @@ var init_ui = __esm(() => {
         }
       }
       const cleanup = () => {
-        removePid();
+        removePid(port);
         console.error(`
   Stopping dashboard...`);
         server.stop();
