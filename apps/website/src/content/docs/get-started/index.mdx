@@ -44,27 +44,6 @@ doraval turns "it works on my machine with my agent" into "this reliably works f
 
 `validate` is the workhorse for left-shifting success. Point it at a directory or GitHub URL and it tells you what's broken before your new engineers or community members waste time on it.
 
-## Quick start (left-shift success in minutes)
-
-```bash
-# macOS (no runtime required)
-brew install saif-shines/tap/doraval
-
-# Everyone else
-npx @hacksmith/doraval validate .
-```
-
-**This is the first success for orchestrators**: validate before you hand something to a new engineer or publish it to the community.
-
-More examples framed as orchestrator jobs:
-
-```bash
-npx @hacksmith/doraval validate https://github.com/obra/superpowers   # validate a published resource so others succeed sooner
-npx @hacksmith/doraval validate . --for claude:plugin                  # "Will this work for the agents my team actually uses?"
-npx @hacksmith/doraval providers                                       # understand the landscape before you publish
-npx @hacksmith/doraval skill drift ./my-skill/                         # measure quality over time
-```
-
 ## What orchestrators do next
 
 - `doraval init` — One-time foundation so your team + agents share context from day one (see [Installation](/get-started/installation/)).

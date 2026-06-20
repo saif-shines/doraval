@@ -32,7 +32,11 @@ export default defineConfig({
       sidebar: [
         {
           label: "Get started",
-          items: [{ autogenerate: { directory: "get-started" } }],
+          items: [
+            "get-started",
+            "get-started/installation",
+            "get-started/quickstart",
+          ],
         },
         {
           label: "Validate & check",

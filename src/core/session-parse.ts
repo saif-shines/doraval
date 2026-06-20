@@ -38,16 +38,26 @@ function extractUserText(message: unknown): string | null {
   return null;
 }
 
+/**
+ * Pragmatic safe parse for tolerant JSONL streams (session logs).
+ * Returns null on any failure — callers decide to skip.
+ * (Inspired by pragmatic-fp: wrap the throwing effect instead of scattering try/catch.)
+ */
+export function safeJsonParse<T = any>(text: string): T | null {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 export function parseSession(jsonlText: string): SessionPrimitives {
   const lines = jsonlText.split("\n").filter((l) => l.trim());
   const messages: RawMessage[] = [];
 
   for (const line of lines) {
-    try {
-      messages.push(JSON.parse(line) as RawMessage);
-    } catch {
-      // skip malformed lines
-    }
+    const parsed = safeJsonParse<RawMessage>(line);
+    if (parsed) messages.push(parsed);
   }
 
   let sessionId = "";

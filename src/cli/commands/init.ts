@@ -185,7 +185,7 @@ export default defineCommand({
     const existingAgent = (await readConfig())?.agent;
     if (existingAgent?.command) {
       ui.write(`  ${pc.bold(pc.white("Coding agent (already configured)"))}\n`);
-      ui.write(`    Current: ${pc.dim(pc.gray(existingAgent.command))}  template: ${pc.dim(pc.gray(existingAgent.prompt_template || "(default)"))}\n`);
+      ui.write(`    Current: ${pc.dim(pc.gray(existingAgent.command))}  template: ${pc.dim(pc.gray(existingAgent.prompt_template || "(default)"))}  cwd_flag: ${pc.dim(pc.gray(existingAgent.cwd_flag || "(none)"))}\n`);
       const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
       if (!/^y/i.test(String(change))) {
         ui.dim("  Keeping existing agent config. You can re-run dora init later to change it.\n");
@@ -203,8 +203,9 @@ export default defineCommand({
     }
 
     const common = [
-      { name: "claude", template: '-p "{{prompt}}" --output-format json' },
-      { name: "cursor", template: '' },
+      { name: "claude", template: '-p "{{prompt}}" --output-format json', cwd_flag: "--cwd" },
+      { name: "grok", template: '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen', cwd_flag: "--cwd" },
+      { name: "cursor", template: '', cwd_flag: "" },
     ];
 
     let detected = "";
@@ -227,10 +228,18 @@ export default defineCommand({
     ui.info(`  Prompt template (use {{prompt}} placeholder):`);
     template = prompt("  ", template);
 
+    const detectedCommon = common.find(c => c.name === detected);
+    let cwdFlag = detectedCommon?.cwd_flag ?? "";
+    if (detected) {
+      ui.info(`  Cwd flag (flag your agent uses to set working directory/repo, e.g. --cwd or -C; blank = rely on process cwd only):`);
+      cwdFlag = prompt("  ", cwdFlag);
+    }
+
     const finalConfig: JournalConfig = (await readConfig()) || { journal: { repo: effectiveRepo, projects: {} } };
     finalConfig.agent = {
       command: agentCmd,
       prompt_template: template,
+      ...(cwdFlag ? { cwd_flag: cwdFlag } : {}),
     };
     await writeConfig(finalConfig);
 

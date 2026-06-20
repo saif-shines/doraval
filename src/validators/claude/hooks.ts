@@ -39,6 +39,21 @@ const KNOWN_EVENTS = [
 
 type HookType = "command" | "http" | "mcp_tool" | "prompt" | "agent";
 
+/** Plugin and settings files often nest events under a top-level `"hooks"` key. */
+function normalizeHooksConfig(config: Record<string, unknown>): Record<string, unknown> {
+  const keys = Object.keys(config);
+  if (
+    keys.length === 1 &&
+    keys[0] === "hooks" &&
+    config.hooks &&
+    typeof config.hooks === "object" &&
+    !Array.isArray(config.hooks)
+  ) {
+    return config.hooks as Record<string, unknown>;
+  }
+  return config;
+}
+
 export const claudeHooksValidator: Validator = {
   id: "claude:hooks",
   provider: "claude",
@@ -64,8 +79,12 @@ export const claudeHooksValidator: Validator = {
     let config: Record<string, unknown>;
     try {
       const raw = await Bun.file(hooksPath).text();
-      config = JSON.parse(raw);
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      config = normalizeHooksConfig(parsed);
       passes.push("hooks.json is valid JSON");
+      if (parsed !== config && Object.keys(parsed).length === 1 && "hooks" in parsed) {
+        passes.push('Uses nested "hooks" object (plugin/settings layout)');
+      }
     } catch {
       errors.push("hooks.json is missing or invalid JSON");
       return { errors, warnings, passes };

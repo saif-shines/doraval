@@ -133,7 +133,25 @@ const copilotAdapter: ProviderAdapter = {
   },
 };
 
-export const adapters: ProviderAdapter[] = [claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter];
+const grokAdapter: ProviderAdapter = {
+  id: "grok",
+  name: "Grok",
+  manifestPath: ".grok-plugin/plugin.json",
+  marketplacePath: ".grok-plugin/marketplace.json",
+  mcpFilename: ".mcp.json",
+  validators: [], // Grok provider support is focused on agent driving for test sessions; packaging validators added later
+  detectContext(dir: string): ProviderContext {
+    return { cwd: dir };
+  },
+  async scaffold(
+    decision: Decision,
+    ctx: ProviderContext
+  ): Promise<ScaffoldResult> {
+    throw new Error("Scaffold via adapter not yet implemented for grok");
+  },
+};
+
+export const adapters: ProviderAdapter[] = [claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter, grokAdapter];
 
 export function resolveAdapter(id: string): ProviderAdapter | undefined {
   return adapters.find((a) => a.id === id);

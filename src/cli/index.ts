@@ -7,13 +7,14 @@ import { ui as uiHelper } from "./out.js";
 const skill = defineCommand({
   meta: {
     name: "skill",
-    description: "Validate, measure drift, and judge AI agent skills",
+    description: "Validate, measure drift, run sessions with prompts, and judge AI agent skills",
   },
   subCommands: {
     validate: () =>
       import("./commands/validate.js").then((m) => m.default),
     drift: () => import("./commands/drift.js").then((m) => m.default),
     judge: () => import("./commands/judge.js").then((m) => m.default),
+
   },
   run() {
     const cliArgs = process.argv.slice(2);
@@ -50,19 +51,7 @@ const journal = defineCommand({
   },
 });
 
-const evalCmd = defineCommand({
-  meta: {
-    name: "eval",
-    description: "Evaluate a coding agent session against skill instructions",
-  },
-  subCommands: {
-    history: () => import("./commands/eval-history.js").then((m) => m.default),
-  },
-  async run(ctx) {
-    const evalMain = await import("./commands/eval.js").then((m) => m.default);
-    return evalMain.run?.(ctx);
-  },
-});
+
 
 // config command module already defines its own subCommands (set/get)
 const config = () => import("./commands/config.js").then((m) => m.default);
@@ -200,7 +189,7 @@ const main = defineCommand({
     completion: () => import("./commands/completion.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
-    eval: () => Promise.resolve(evalCmd),
+    eval: () => import("./commands/eval.js").then((m) => m.default),
     config: config,
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),

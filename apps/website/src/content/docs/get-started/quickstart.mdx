@@ -1,0 +1,280 @@
+---
+title: Quickstart
+description: Get up and running with doraval.
+sidebar:
+  order: 3
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+In this quickstart, we'll walk through three use cases.
+
+```
+  Context you engineer (skills, plugins, decisions)
+                        │
+                        ▼
+                 ┌─────────────┐
+                 │   doraval   │  validate · providers · journal · init
+                 └─────────────┘
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+   FOR CONTEXT DISTRIBUTORS    FOR CONTEXT ORCHESTRATORS
+          │                           │
+   Devtool company              Expert engineer
+   ships React skills           tuning their own agent
+   to the community                    │
+          │                           ▼
+   Senior engineer               You succeed on
+   onboarding 10 juniors          first try
+          │
+          ▼
+   Others pick up the skill
+   and succeed on first try
+   (community or juniors)
+```
+
+This quickstart assumes you have doraval installed on your system. If you haven't yet, see [Installation](/get-started/installation/).
+
+## For Context Distributors
+
+- You're a **devtool company publishing React skills to the community** and need those resources to work reliably for everyone.
+- You're a **senior engineer onboarding 10 juniors** and need them to succeed with your team's skills on the first try.
+
+<Steps>
+
+1. ### Scaffold a distributable plugin
+
+   Create a plugin package you can ship to the community or hand to juniors:
+
+   ```bash
+   doraval claude new --yes --intent distribute aiboomi-demo
+   ```
+
+   Pick the agent you target (`doraval cursor new`, `doraval codex new`, etc.) if your audience does not use Claude Code. See [`claude new`](/commands/claude-new/).
+
+   :::note
+   You can run this yourself, or have a coding agent run it on your behalf as the context distributor.
+   :::
+
+2. ### Validate before you ship
+
+   `dora validate` auto-detects what you scaffolded and runs every check that applies — skills, plugins, hooks, MCP servers, subagents, memory files, and more. It catches broken manifests, missing `SKILL.md` files, bad frontmatter, and packaging mistakes **before** your community or juniors waste a session debugging context that was wrong from the start.
+
+   Run it for **every coding agent** your audience uses. Target a provider with `--for`, or inspect one validator at a time:
+
+   ```bash
+   dora validate .
+   dora validate . --for claude:plugin
+   dora validate . --for cursor:plugin
+   doraval providers
+   ```
+
+   See [validate](/commands/validate/) and [providers](/commands/providers/) for the full matrix.
+
+   ```text
+   dora validate — Claude Plugin (claude:plugin)
+   Path:  .
+   ✓ .claude-plugin/plugin.json is valid JSON
+   ✓ .claude-plugin/ contains only plugin.json (correct layout)
+   ✓ name: "aiboomi-demo"
+   ✓ version: "0.1.0" (explicit — bump on every release to publish updates)
+   ✓ description field present
+   ✓ keywords: [example-keyword, another-keyword] — If users mention any of these keywords, your plugin will get triggered in Claude Code
+   ✓ skills/doraval/SKILL.md exists
+   ✓ README.md present
+
+   ✓ All checks passed.
+
+   dora validate — Claude LSP Servers (claude:lsp)
+   Path:  .
+
+   ✓ All checks passed.
+
+   dora validate — Claude Monitors (experimental) (claude:monitors)
+   Path:  .
+
+   ✓ All checks passed.
+   ```
+
+3. ### Set your coding agent
+
+   Tell doraval which agent runs on your behalf — for scaffolding, validation, journal enrichment, and eval. Run [`doraval init`](/commands/init/) once (it detects `claude` or `grok` if installed), or set keys directly.
+
+   Claude Code and Grok have the deepest support today. **Cursor**, **Copilot**, **OpenCode**, and more work for scaffolding and validation — with fuller agent-driving and eval integrations coming soon. Run `doraval providers` for the current list.
+
+   **Claude Code**
+
+   ```bash
+   dora config set agent.command claude
+   dora config set agent.prompt_template '-p "{{prompt}}" --output-format json'
+   dora config set agent.cwd_flag --cwd
+   ```
+
+   **Grok**
+
+   ```bash
+   dora config set agent.command grok
+   dora config set agent.prompt_template '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen'
+   dora config set agent.cwd_flag --cwd
+   ```
+
+   Verify with `dora config get agent`. Re-run `dora init` anytime to change it.
+
+   Going forward, doraval uses an **LLM as a judge** to run [evals](/commands/eval/) on real agent sessions — so you can see **subjective drift**: whether juniors or community users actually followed your skill in practice, not just whether the packaging validated. `validate` catches structural problems; `dora eval` and [`judge`](/commands/judge/) answer whether the skill worked in a real session.
+
+</Steps>
+
+## For Context Orchestrators
+
+- You're an **expert engineer** who wants to better manage context for your own coding agent.
+
+<Steps>
+
+1. ### Scaffold context for your own agent
+
+   Create a lightweight standalone skill in your project or experiments folder:
+
+   ```bash
+   doraval claude new --yes --intent self my-agent-context
+   ```
+
+   Use `doraval cursor new`, `doraval codex new`, or `doraval copilot new` for the agent you run day to day. See [`claude new`](/commands/claude-new/).
+
+   :::note
+   You can run this yourself, or have your coding agent run it on your behalf as the context orchestrator.
+   :::
+
+2. ### Validate before you rely on it
+
+   `dora validate` auto-detects what you scaffolded and runs every check that applies — skills, plugins, hooks, MCP servers, subagents, memory files, and more. It catches broken manifests, missing `SKILL.md` files, bad frontmatter, and packaging mistakes **before** your coding agent burns context on resources that will not load or trigger correctly.
+
+   Run it for **every coding agent** you use day to day. Target a provider with `--for`, or inspect one validator at a time:
+
+   ```bash
+   dora validate .
+   dora validate . --for claude:skill
+   dora validate . --for cursor:skill
+   doraval providers
+   ```
+
+   See [validate](/commands/validate/) and [providers](/commands/providers/) for the full matrix.
+
+   ```text
+   dora validate — Claude Plugin (claude:plugin)
+   Path:  .
+   ✓ .claude-plugin/plugin.json is valid JSON
+   ✓ .claude-plugin/ contains only plugin.json (correct layout)
+   ✓ name: "aiboomi-demo"
+   ✓ version: "0.1.0" (explicit — bump on every release to publish updates)
+   ✓ description field present
+   ✓ keywords: [example-keyword, another-keyword] — If users mention any of these keywords, your plugin will get triggered in Claude Code
+   ✓ skills/doraval/SKILL.md exists
+   ✓ README.md present
+
+   ✓ All checks passed.
+
+   dora validate — Claude LSP Servers (claude:lsp)
+   Path:  .
+
+   ✓ All checks passed.
+
+   dora validate — Claude Monitors (experimental) (claude:monitors)
+   Path:  .
+
+   ✓ All checks passed.
+   ```
+
+3. ### Set your coding agent
+
+   Run [`dora init`](/commands/init/) to wire up your journal and tell doraval which coding agent to use for on-the-fly enrichment:
+
+   ```bash
+   dora init
+   ```
+
+   ```text
+   dora init — Set up doraval, your journal, and the coding agent dora should use on the fly
+   Step 1: Journal setup
+   Journal repo (owner/name)
+   (from your previous journal setup)
+   > (saif-shines/saif-shines.md)
+   Project name (aiboomi-demo)
+   Fetching journal files from saif-shines/saif-shines.md...
+   · global.md (not found — will be created on first sync)
+   · projects/aiboomi-demo.md (not found — will be created on first sync)
+
+   ✓ Journal ready for project aiboomi-demo.
+   Coding agent (already configured)
+     Current: grok  template: -p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen  cwd_flag: (none)
+   Reconfigure / change the coding agent for on-the-fly enrichment? (y/N) (n)
+   Keeping existing agent config. You can re-run dora init later to change it.
+
+   ✓ Try: dora journal add "short decision"
+   ```
+
+   Claude Code and Grok have the deepest support today. **Cursor**, **Copilot**, **OpenCode**, and more work for scaffolding and validation — with fuller agent-driving and eval integrations coming soon. Run `doraval providers` for the current list.
+
+   Or set the agent directly:
+
+   ```bash
+   dora config set agent.command grok
+   dora config set agent.prompt_template '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen'
+   ```
+
+   Going forward, doraval uses an **LLM as a judge** to run [evals](/commands/eval/) on your own agent sessions — so you can see **subjective drift** for yourself: whether your coding agent actually followed your skill in practice, not just whether the files look correct. `validate` catches structural problems; `dora eval` and [`judge`](/commands/judge/) answer whether the skill worked when you relied on it.
+
+4. ### Capture and sync decisions
+
+   Record decisions and notes as you work. They stage locally, then sync to your journal repo on GitHub:
+
+   ```
+   Decisions & notes you make along the way
+                    │
+                    ▼
+           dora journal add "..."
+                    │
+                    ▼
+        ~/.doraval/pending/aiboomi-demo/
+                    │
+                    ▼
+           dora journal sync
+                    │
+                    ▼
+     GitHub: saif-shines/saif-shines.md
+       ├── global.md
+       └── projects/aiboomi-demo.md
+   ```
+
+   If your GitHub username is `saif-shines`, doraval uses `saif-shines/saif-shines.md` as your journal repo and stores everything there — global principles in `global.md`, project-specific entries under `projects/`.
+
+   ```bash
+   dora journal add "README.md is the most important file because it's the index of the repo"
+   ```
+
+   ```text
+   (querying your configured coding agent...)
+
+   ✓ README.md is the most important file because it's the index of the repo
+   Project: aiboomi-demo  · run dora journal sync to publish
+   Note: agent was called but returned no usable enrichment. Edit the pending file or re-run dora init.
+   ```
+
+   ```bash
+   dora journal sync
+   ```
+
+   ```text
+   dora journal sync — aiboomi-demo
+   Journal repo: saif-shines/saif-shines.md
+   Refreshing local cache from remote...
+   Found 1 pending entry
+   ✓ Successfully pushed to projects/aiboomi-demo.md
+   ✓ Cleared local pending entries
+
+   Done! 1 entry published.
+   ```
+
+   See [journal add](/commands/journal-add/) and [journal sync](/commands/journal-sync/).
+
+</Steps>

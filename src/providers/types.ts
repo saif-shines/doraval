@@ -1,6 +1,6 @@
 import type { Validator } from "../validators/types.js";
 
-export type ProviderId = "claude" | "codex" | "cursor" | "copilot";
+export type ProviderId = "claude" | "codex" | "cursor" | "copilot" | "grok";
 
 export interface ProviderContext {
   cwd: string;

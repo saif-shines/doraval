@@ -25,6 +25,8 @@ export interface JournalConfig {
   agent?: {
     command: string;
     prompt_template?: string;
+    /** Optional flag name the agent uses to set its working directory/repo (e.g. "--cwd", "-C"). If set, doraval will pass it when driving full sessions for --runs / eval. */
+    cwd_flag?: string;
   };
   eval?: Partial<EvalConfig>;
 }

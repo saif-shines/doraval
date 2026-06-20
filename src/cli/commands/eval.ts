@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { join, basename } from "path";
+import { join, basename, resolve, dirname } from "path";
 import { existsSync, readFileSync } from "fs";
 import pc from "picocolors";
 import { ui } from "../out.js";
@@ -9,12 +9,17 @@ import { runEval, type EvalResult } from "../../core/session-eval.js";
 import { readConfig, getEvalConfig, ensureDoravalDirs, getEvalsDir } from "../../core/journal-config.js";
 import { loadSkill } from "../../core/skill-validate.js";
 import { prompt } from "../prompt.js";
+import { runSkillSessions, renderBatchResults, displayVerdict } from "../../core/skill-runner.js";
 
-function renderResult(result: EvalResult, verbose: boolean): void {
-  const verdictColor = result.verdict === "PASS" ? pc.green : result.verdict === "FAIL" ? pc.red : pc.yellow;
-  const verdictSymbol = result.verdict === "PASS" ? "✓" : result.verdict === "FAIL" ? "✗" : "?";
+function renderResult(result: EvalResult, verbose: boolean, useDriftTerms = false): void {
+  const v = result.verdict;
+  const isPass = v === "PASS";
+  const isFail = v === "FAIL";
+  const displayV = displayVerdict(v, useDriftTerms);
+  const displaySymbol = isPass ? "✓" : isFail ? "✗" : "?";
+  const verdictColor = isPass ? pc.green : isFail ? pc.red : pc.yellow;
 
-  ui.write(`\n  ${verdictColor(`[${result.verdict}]`)} ${pc.bold(result.skill)}`);
+  ui.write(`\n  ${verdictColor(`[${displayV}]`)} ${pc.bold(result.skill)}`);
   ui.write(`  agent:       ${result.agent}`);
   ui.write(`  model:       ${result.model}`);
   if (result.userFamiliarity > 0) {
@@ -33,9 +38,9 @@ function renderResult(result: EvalResult, verbose: boolean): void {
       ui.write(`  ${sym} ${item.instruction}${detail}`);
     }
     const passed = result.checklist.filter((c) => c.pass).length;
-    ui.write(`\n  Result: ${passed}/${result.checklist.length}  [${verdictColor(result.verdict)}${result.verdictReason ? ` — ${result.verdictReason}` : ""}]`);
+    ui.write(`\n  Result: ${passed}/${result.checklist.length}  [${verdictColor(displayV)}${result.verdictReason ? ` — ${result.verdictReason}` : ""}]`);
   } else if (result.verdictReason) {
-    ui.write(`\n  ${verdictColor(verdictSymbol)} ${result.verdictReason}`);
+    ui.write(`\n  ${verdictColor(displaySymbol)} ${result.verdictReason}`);
   }
 }
 
@@ -91,7 +96,10 @@ function selectRecentSessions(
 export default defineCommand({
   meta: {
     name: "eval",
-    description: "Evaluate a real coding agent session against skill instructions",
+    description: "Evaluate sessions against skill instructions (or generate runs with --runs --skill)",
+  },
+  subCommands: {
+    history: () => import("./eval-history.js").then((m) => m.default),
   },
   args: {
     session: {
@@ -110,7 +118,7 @@ export default defineCommand({
     },
     ci: {
       type: "boolean",
-      description: "Exit with code 1 if any verdict is FAIL",
+      description: "Exit with code 1 if any verdict is FAIL (DRIFTS for generated runs)",
       default: false,
     },
     verbose: {
@@ -119,11 +127,36 @@ export default defineCommand({
       description: "Show full checklist reasoning",
       default: false,
     },
+    runs: {
+      type: "string",
+      description: "Generate and run N sessions for the skill (using prompts) then eval comparatively. Requires --skill. Use --workdir to control the base directory for the runs.",
+      default: "0",
+    },
+    prompt: {
+      type: "string",
+      description: "Prompt(s) to use for generated sessions (comma separated)",
+    },
+    "prompts-file": {
+      type: "string",
+      description: "File containing prompts (one per line) for generated sessions",
+    },
+    generate: {
+      type: "boolean",
+      description: "Auto-generate prompts from the skill (when using --runs)",
+      default: false,
+    },
+    real: {
+      type: "boolean",
+      description: "Force real agent CLI for generated sessions (vs faster internal)",
+      default: false,
+    },
+    workdir: {
+      type: "string",
+      description: "Base directory for generated test runs (--runs). Each run gets its own subdirectory. Use this to point the agent at a populated checkout/repo instead of an empty temp dir.",
+    },
   },
 
   async run({ args }) {
-    ui.heading("doraval eval — Session skill adherence");
-
     const config = await readConfig();
     const evalCfg = getEvalConfig(config);
 
@@ -140,6 +173,67 @@ export default defineCommand({
       ui.info("  doraval will use your configured agent (" + agentCfg.command + ").");
       ui.info("  If you want to record a specific model, run: dora config set eval.model claude-3-5-sonnet-20241022");
     }
+
+    const numRuns = parseInt(String(args.runs || "0"), 10) || 0;
+    if (numRuns > 0) {
+      if (!args.skill) {
+        ui.fail("--runs requires --skill <path-to-skill>");
+        process.exit(1);
+      }
+      let skillInput = String(args.skill);
+      // Normalize if user passed the SKILL.md file instead of the directory
+      if (skillInput.endsWith("SKILL.md") || skillInput.endsWith("/SKILL.md")) {
+        skillInput = dirname(skillInput);
+      }
+      const skillPath = resolve(skillInput);
+
+      let prompts: string[] | undefined;
+      if (args.prompt) {
+        prompts = String(args.prompt).split(",").map((p) => p.trim()).filter(Boolean);
+      } else if (args["prompts-file"]) {
+        try {
+          const content = await Bun.file(String(args["prompts-file"])).text();
+          prompts = content.split("\n").map((l) => l.trim()).filter(Boolean);
+        } catch (e: any) {
+          ui.fail(`Failed to read prompts file: ${e.message}`);
+          process.exit(1);
+        }
+      }
+
+      ui.heading("doraval eval — Generated session runs + comparative results");
+      const workdirNote = args.workdir ? ` workdir=${args.workdir}` : "";
+      const driveCmd = agentCfg?.command || 'default';
+      ui.write(`  Running ${numRuns} sessions (generate=${Boolean(args.generate)}, real=${Boolean(args.real)}${workdirNote}, command=${driveCmd})... This can take a while for complex skills.`);
+
+      const result = await runSkillSessions(skillPath, {
+        runs: numRuns,
+        prompts,
+        generate: Boolean(args.generate),
+        real: Boolean(args.real),
+        verbose: Boolean(args.verbose),
+        cwd: args.workdir ? resolve(String(args.workdir)) : undefined,
+      });
+
+      if (args.format === "json") {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else {
+        ui.heading("doraval eval — Generated session runs + comparative results");
+        for (let i = 0; i < result.runs.length; i++) {
+          const r = result.runs[i]!;
+          renderResult(r.eval, Boolean(args.verbose), true);
+        }
+        ui.blank();
+        const table = renderBatchResults(result, Boolean(args.verbose));
+        ui.write(table);
+      }
+
+      if (args.ci && result.summary.drifts > 0) {
+        process.exit(1);
+      }
+      process.exit(0);
+    }
+
+    ui.heading("doraval eval — Session skill adherence");
 
     // Resolve session path(s)
     let sessionPaths: string[] = [];
@@ -262,7 +356,7 @@ export default defineCommand({
       ui.blank();
     }
 
-    // --ci: exit 1 if any FAIL
+    // --ci: exit 1 if any FAIL (DRIFTS in generated mode)
     if (args.ci && allResults.some((r) => r.verdict === "FAIL")) {
       process.exit(1);
     }

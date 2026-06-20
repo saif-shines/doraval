@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.52",
+    version: "0.2.56",
     author: "Saif",
     repository: {
       type: "git",
@@ -1069,101 +1069,145 @@ var init_skill_drift = __esm(() => {
   ];
 });
 
-// src/cli/commands/drift.ts
-var exports_drift = {};
-__export(exports_drift, {
-  default: () => drift_default
-});
-import { resolve as resolve3 } from "path";
-var import_picocolors3, drift_default;
-var init_drift = __esm(() => {
-  init_dist();
-  init_out();
-  init_skill_validate();
-  init_skill_drift();
-  import_picocolors3 = __toESM(require_picocolors(), 1);
-  drift_default = defineCommand({
-    meta: {
-      name: "drift",
-      description: "Measure how far a skill has drifted from rubric standards"
-    },
-    args: {
-      path: {
-        type: "positional",
-        description: "Path to skill directory or plugin root",
-        required: true
-      },
-      for: {
-        type: "string",
-        description: 'Target a provider ("claude") or specific validator ("claude:skill")'
-      },
-      format: {
-        type: "string",
-        alias: "f",
-        description: "Output format (json or table)",
-        default: "table"
-      },
-      verbose: {
-        type: "boolean",
-        alias: "v",
-        description: "Show detailed diagnostics",
-        default: false
-      },
-      ci: {
-        type: "boolean",
-        description: "Machine-friendly output, non-zero exit on issues",
-        default: false
-      }
-    },
-    async run({ args }) {
-      const targetPath = args.path;
-      const fullPath = resolve3(targetPath);
-      const loaded = await loadSkill(fullPath);
-      if (!loaded.ok) {
-        if (loaded.error === "No SKILL.md found") {
-          ui.fail(`No SKILL.md found at ${targetPath}
-
-Check that the path points to a skill directory containing SKILL.md.`);
-        } else {
-          ui.fail(loaded.error);
-        }
-        process.exit(1);
-      }
-      const { model: parsed } = loaded;
-      const desc = String(parsed.data.description || "");
-      const when = String(parsed.data.when_to_use || "");
-      const { drifts, driftCount, total } = analyzeDrift({
-        description: (desc + " " + when).trim(),
-        content: parsed.content
-      });
-      if (args.format === "json") {
-        console.log(JSON.stringify({ path: targetPath, driftCount, total, drifts }, null, 2));
-      } else {
-        ui.heading("dora skill drift \u2014 Measuring rubric drift");
-        ui.info(`  Path:  ${targetPath}
-`);
-        for (const d of drifts) {
-          const icon = d.drifted ? import_picocolors3.default.yellow("\u2197") : import_picocolors3.default.green("\xB7");
-          const cat = d.drifted ? import_picocolors3.default.yellow(d.category.padEnd(10)) : import_picocolors3.default.dim(d.category.padEnd(10));
-          ui.write(`  ${icon} ${cat} ${import_picocolors3.default.white(d.detail)}`);
-        }
-        if (driftCount === 0) {
-          ui.write(`
-  ${import_picocolors3.default.green("No drift detected.")} ${import_picocolors3.default.white("Skill aligns with rubric standards.")}
-`);
-        } else {
-          ui.write(`
-  ${import_picocolors3.default.yellow(`${driftCount}/${total}`)} ${import_picocolors3.default.white("rubric areas have drifted.")}
-`);
-        }
-      }
-      if (args.ci && driftCount > 0) {
-        process.exit(1);
-      }
-      process.exit(0);
-    }
+// src/core/agent-invoke.ts
+var {spawnSync } = globalThis.Bun;
+function buildAgentArgv(template, promptText) {
+  const marker = "__DORA_PROMPT__";
+  const substituted = template.replace("{{prompt}}", marker);
+  const rawParts = substituted.split(/\s+/).filter(Boolean);
+  return rawParts.map((part) => {
+    let cleaned = part;
+    if (cleaned.startsWith('"') && cleaned.endsWith('"'))
+      cleaned = cleaned.slice(1, -1);
+    if (cleaned.startsWith("'") && cleaned.endsWith("'"))
+      cleaned = cleaned.slice(1, -1);
+    return cleaned === marker ? promptText : cleaned;
   });
-});
+}
+function extractCandidates(text) {
+  let cleaned = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
+  const candidates = [];
+  const allMatches = cleaned.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
+  const fullMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (fullMatch) {
+    try {
+      candidates.push(JSON.parse(fullMatch[0]));
+    } catch {}
+  }
+  for (const m of allMatches) {
+    try {
+      candidates.push(JSON.parse(m));
+    } catch {}
+  }
+  if (cleaned.startsWith("{") || cleaned.startsWith("[")) {
+    try {
+      const direct = JSON.parse(cleaned);
+      if (direct && typeof direct === "object")
+        candidates.push(direct);
+    } catch {}
+  }
+  const unwrapped = [];
+  for (const c of candidates) {
+    if (c.result) {
+      let inner = c.result;
+      if (typeof inner === "string") {
+        try {
+          inner = JSON.parse(inner);
+        } catch {}
+      }
+      if (inner && typeof inner === "object")
+        unwrapped.push(inner);
+    }
+    unwrapped.push(c);
+  }
+  return unwrapped;
+}
+async function invokeAgent(promptText, agentCfg, expectedKeys) {
+  const template = agentCfg.prompt_template ?? '-p "{{prompt}}" --output-format json --bare';
+  const extraArgs = buildAgentArgv(template, promptText);
+  let result;
+  try {
+    result = spawnSync([agentCfg.command, ...extraArgs], {
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env }
+    });
+  } catch (e) {
+    return null;
+  }
+  const stdout = (result.stdout ?? "").toString().trim();
+  const stderr = (result.stderr ?? "").toString().trim();
+  if (result.exitCode !== 0) {
+    return null;
+  }
+  let cleaned = stdout.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
+  const unwrapped = extractCandidates(cleaned);
+  for (const c of unwrapped) {
+    if (expectedKeys.some((k) => (k in c)))
+      return c;
+  }
+  if (unwrapped[0])
+    return unwrapped[0];
+  return null;
+}
+async function runAgentSession(promptText, agentCfg, opts = {}) {
+  const { cwd, alwaysApprove = true, stream = true } = opts;
+  const cmd = agentCfg.command || "grok";
+  let args = [];
+  const isGrok = /grok/i.test(cmd);
+  if (isGrok) {
+    args = [
+      "--no-auto-update",
+      "-p",
+      promptText,
+      "--cwd",
+      cwd || process.cwd(),
+      "--always-approve",
+      "--no-alt-screen",
+      "--output-format",
+      "plain"
+    ];
+  } else {
+    const template = agentCfg.prompt_template && !agentCfg.prompt_template.includes("output-format json") ? agentCfg.prompt_template : '-p "{{prompt}}"';
+    args = buildAgentArgv(template, promptText);
+    if (cwd && agentCfg.cwd_flag) {
+      args.push(agentCfg.cwd_flag, cwd);
+    }
+  }
+  const proc = Bun.spawn([cmd, ...args], {
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env },
+    cwd: cwd || process.cwd()
+  });
+  let stdout = "";
+  const decoder = new TextDecoder;
+  const reader = proc.stdout.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done)
+        break;
+      const text = decoder.decode(value, { stream: true });
+      stdout += text;
+      if (stream) {
+        process.stdout.write(text);
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const stderr = await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    if (stderr && !stream)
+      process.stderr.write(stderr);
+    return `ERROR (exit ${exitCode}):
+${stderr || stdout}`;
+  }
+  return stdout.trim() || "(no output)";
+}
+var init_agent_invoke = () => {};
 
 // src/core/session-parse.ts
 function extractUserText(message) {
@@ -1180,14 +1224,21 @@ function extractUserText(message) {
   }
   return null;
 }
+function safeJsonParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
 function parseSession(jsonlText) {
   const lines = jsonlText.split(`
 `).filter((l) => l.trim());
   const messages = [];
   for (const line of lines) {
-    try {
-      messages.push(JSON.parse(line));
-    } catch {}
+    const parsed = safeJsonParse(line);
+    if (parsed)
+      messages.push(parsed);
   }
   let sessionId = "";
   let sessionTitle;
@@ -1294,154 +1345,6 @@ function sanitizeSessionId(raw) {
   }
   return sanitized;
 }
-
-// src/core/session-adapters.ts
-import { existsSync as existsSync3, readdirSync, readFileSync, statSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
-function cwdToProjectHash(cwd) {
-  return cwd.replace(/\//g, "-");
-}
-function getAdapter() {
-  return ADAPTERS.find((a) => a.detect()) ?? null;
-}
-var claudeCodeAdapter, ADAPTERS;
-var init_session_adapters = __esm(() => {
-  claudeCodeAdapter = {
-    agent: "claude-code",
-    detect() {
-      return existsSync3(join(homedir(), ".claude"));
-    },
-    findLatestSession(cwd) {
-      const hash = cwdToProjectHash(cwd);
-      const dir = join(homedir(), ".claude", "projects", hash);
-      if (!existsSync3(dir))
-        return null;
-      const files = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).map((f) => ({ name: f, path: join(dir, f), mtime: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.mtime - a.mtime);
-      for (const file of files) {
-        const content = readFileSync(file.path, "utf8");
-        if (content.includes('"type":"assistant"') || content.includes('"type": "assistant"')) {
-          return file.path;
-        }
-      }
-      return files[0]?.path ?? null;
-    },
-    listRecentSessions(cwd, limit = 10) {
-      const hash = cwdToProjectHash(cwd);
-      const dir = join(homedir(), ".claude", "projects", hash);
-      if (!existsSync3(dir))
-        return [];
-      const allFiles = readdirSync(dir).filter((f) => f.endsWith(".jsonl")).map((f) => ({ name: f, path: join(dir, f), mtime: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.mtime - a.mtime);
-      const results = [];
-      for (const file of allFiles) {
-        try {
-          const text = readFileSync(file.path, "utf8");
-          if (!text.includes('"type":"assistant"') && !text.includes('"type": "assistant"')) {
-            continue;
-          }
-          const prim = parseSession(text);
-          results.push({
-            path: file.path,
-            mtime: file.mtime,
-            title: prim.sessionTitle,
-            skillCount: prim.skillsInvoked.length
-          });
-          if (results.length >= limit)
-            break;
-        } catch {}
-      }
-      return results;
-    },
-    parse(path) {
-      const text = readFileSync(path, "utf8");
-      return parseSession(text);
-    }
-  };
-  ADAPTERS = [claudeCodeAdapter];
-});
-
-// src/core/agent-invoke.ts
-var {spawnSync } = globalThis.Bun;
-function buildAgentArgv(template, promptText) {
-  const marker = "__DORA_PROMPT__";
-  const substituted = template.replace("{{prompt}}", marker);
-  const rawParts = substituted.split(/\s+/).filter(Boolean);
-  return rawParts.map((part) => {
-    let cleaned = part;
-    if (cleaned.startsWith('"') && cleaned.endsWith('"'))
-      cleaned = cleaned.slice(1, -1);
-    if (cleaned.startsWith("'") && cleaned.endsWith("'"))
-      cleaned = cleaned.slice(1, -1);
-    return cleaned === marker ? promptText : cleaned;
-  });
-}
-function extractCandidates(text) {
-  let cleaned = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
-  const candidates = [];
-  const allMatches = cleaned.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
-  const fullMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (fullMatch) {
-    try {
-      candidates.push(JSON.parse(fullMatch[0]));
-    } catch {}
-  }
-  for (const m of allMatches) {
-    try {
-      candidates.push(JSON.parse(m));
-    } catch {}
-  }
-  if (cleaned.startsWith("{") || cleaned.startsWith("[")) {
-    try {
-      const direct = JSON.parse(cleaned);
-      if (direct && typeof direct === "object")
-        candidates.push(direct);
-    } catch {}
-  }
-  const unwrapped = [];
-  for (const c of candidates) {
-    if (c.result) {
-      let inner = c.result;
-      if (typeof inner === "string") {
-        try {
-          inner = JSON.parse(inner);
-        } catch {}
-      }
-      if (inner && typeof inner === "object")
-        unwrapped.push(inner);
-    }
-    unwrapped.push(c);
-  }
-  return unwrapped;
-}
-async function invokeAgent(promptText, agentCfg, expectedKeys) {
-  const template = agentCfg.prompt_template ?? '-p "{{prompt}}" --output-format json --bare';
-  const extraArgs = buildAgentArgv(template, promptText);
-  let result;
-  try {
-    result = spawnSync([agentCfg.command, ...extraArgs], {
-      stdout: "pipe",
-      stderr: "pipe",
-      env: { ...process.env }
-    });
-  } catch (e) {
-    return null;
-  }
-  const stdout = (result.stdout ?? "").toString().trim();
-  const stderr = (result.stderr ?? "").toString().trim();
-  if (result.exitCode !== 0) {
-    return null;
-  }
-  let cleaned = stdout.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
-  const unwrapped = extractCandidates(cleaned);
-  for (const c of unwrapped) {
-    if (expectedKeys.some((k) => (k in c)))
-      return c;
-  }
-  if (unwrapped[0])
-    return unwrapped[0];
-  return null;
-}
-var init_agent_invoke = () => {};
 
 // src/core/session-eval.ts
 function toolCallSummary(call) {
@@ -1558,27 +1461,27 @@ var init_session_eval = __esm(() => {
 });
 
 // src/core/journal-config.ts
-import { existsSync as existsSync4, mkdirSync } from "fs";
-import { homedir as homedir2 } from "os";
-import { join as join2 } from "path";
+import { existsSync as existsSync3, mkdirSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 var {YAML: YAML2 } = globalThis.Bun;
 function getDoravalDir() {
-  return process.env.DORAVAL_HOME ?? join2(homedir2(), ".doraval");
+  return process.env.DORAVAL_HOME ?? join(homedir(), ".doraval");
 }
 function getConfigPath() {
-  return join2(getDoravalDir(), "config.yml");
+  return join(getDoravalDir(), "config.yml");
 }
 function getJournalsDir() {
-  return join2(getDoravalDir(), "journals");
+  return join(getDoravalDir(), "journals");
 }
 function getPendingDir() {
-  return join2(getDoravalDir(), "pending");
+  return join(getDoravalDir(), "pending");
 }
 function getPendingProjectDir(project) {
-  return join2(getPendingDir(), project);
+  return join(getPendingDir(), project);
 }
 function getEvalsDir() {
-  return join2(getDoravalDir(), "evals");
+  return join(getDoravalDir(), "evals");
 }
 function getEvalConfig(config) {
   const defaults = {
@@ -1592,14 +1495,14 @@ function getEvalConfig(config) {
 function ensureDoravalDirs() {
   const base = getDoravalDir();
   for (const dir of [base, getJournalsDir(), getPendingDir(), getEvalsDir()]) {
-    if (!existsSync4(dir)) {
+    if (!existsSync3(dir)) {
       mkdirSync(dir, { recursive: true });
     }
   }
 }
 async function readConfig() {
   const path = getConfigPath();
-  if (!existsSync4(path))
+  if (!existsSync3(path))
     return null;
   const raw = await Bun.file(path).text();
   return YAML2.parse(raw);
@@ -1638,6 +1541,650 @@ function sanitizeProjectName(name) {
 }
 var init_journal_config = () => {};
 
+// src/core/prompt-gen.ts
+async function randomPromptsForSkill(skillContent, count, agentCfg) {
+  const focusExtractors = [
+    (s) => s.match(/name:\s*["']?(.+?)["']?\n/i)?.[1],
+    (s) => s.match(/when_to_use:\s*["']?(.+?)["']?\n/i)?.[1],
+    (s) => s.match(/description:\s*["']?(.+?)["']?\n/i)?.[1]
+  ];
+  const skillFocus = focusExtractors.map((fn) => fn(skillContent)?.trim()).find(Boolean) || "the task described in the skill";
+  if (agentCfg?.command) {
+    try {
+      const genPrompt = `Given this skill (focus: ${skillFocus}), generate exactly ${count} specific, varied, realistic prompts for a coding agent.
+
+The agent will be given the full skill and told "You MUST follow this skill exactly".
+
+Generate prompts that are direct applications of this skill's purpose (e.g. "Set up Scalekit auth following the skill's exact steps and requirements").
+
+Output ONLY valid JSON: {"prompts": ["prompt1", "prompt2", ...]}
+No other text.`;
+      const res = await invokeAgent(genPrompt, agentCfg, ["prompts"]);
+      if (res && typeof res === "object") {
+        let promptList = res.prompts;
+        if (Array.isArray(promptList)) {
+          const cleaned = promptList.map((p) => String(p).trim()).filter((p) => p.length > 20 && !p.toLowerCase().includes("explore the current project") && !p.includes("result") && !p.includes("session_id"));
+          if (cleaned.length > 0) {
+            return cleaned.slice(0, count);
+          }
+        }
+      }
+    } catch {}
+  }
+  const focus = focusExtractors.map((fn) => fn(skillContent)?.trim()).find(Boolean) || "accomplish the main goal of the skill";
+  const prompts = [];
+  for (let i = 0;i < count; i++) {
+    const base = `Follow the instructions in this skill exactly to ${focus.toLowerCase()}.`;
+    prompts.push(i === 0 ? base : `${base} (variation ${i + 1})`);
+  }
+  return prompts;
+}
+var init_prompt_gen = __esm(() => {
+  init_agent_invoke();
+});
+
+// src/core/skill-runner.ts
+import { join as join2, resolve as pathResolve } from "path";
+import { homedir as homedir2 } from "os";
+import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync, readdirSync } from "fs";
+function cwdToGrokSessionDir(cwd) {
+  const encoded = cwd.split("/").map(encodeURIComponent).join("%2F");
+  return pathResolve(homedir2(), ".grok", "sessions", encoded);
+}
+function parseGrokUpdatesToPrimitives(updatesPath, sessionId, cwd) {
+  if (!existsSync4(updatesPath))
+    return null;
+  const lines = readFileSync(updatesPath, "utf8").trim().split(`
+`).filter(Boolean);
+  const toolCalls = [];
+  const userMessages = [];
+  let idx = 0;
+  for (const line of lines) {
+    const j = safeJsonParse(line);
+    if (!j)
+      continue;
+    const u = j.params?.update || {};
+    const su = u.sessionUpdate;
+    if (su === "user_message_chunk" && u.content?.text) {
+      userMessages.push(u.content.text);
+    }
+    if ((su === "tool_call" || su === "tool_call_update") && u.title) {
+      toolCalls.push({
+        name: u.title,
+        input: u.input || u.args || { title: u.title },
+        timestamp: new Date((j.timestamp || 0) * 1000).toISOString(),
+        index: idx++
+      });
+    }
+  }
+  const toolCallCounts = {};
+  for (const t of toolCalls) {
+    toolCallCounts[t.name] = (toolCallCounts[t.name] || 0) + 1;
+  }
+  return {
+    sessionId,
+    sessionTitle: `Grok session`,
+    model: "grok",
+    agent: "grok",
+    cwd,
+    toolCalls,
+    toolCallCounts,
+    skillsInvoked: [],
+    userMessages: userMessages.slice(0, 5),
+    userTurnCount: userMessages.length
+  };
+}
+async function runSkillSessions(skillDir, opts) {
+  const skill = await loadSkill(skillDir);
+  if (!skill.ok) {
+    throw new Error(`Failed to load skill: ${skill.error}`);
+  }
+  const skillContent = skill.model.content;
+  const skillName = skill.model.data.name || skillDir.split("/").pop() || "unknown-skill";
+  const config = await readConfig();
+  const agentCfg = config?.agent;
+  if (!agentCfg?.command) {
+    throw new Error("No coding agent configured. Run: doraval init");
+  }
+  const evalCfg = getEvalConfig(config);
+  let prompts = [];
+  if (opts.prompts && opts.prompts.length > 0) {
+    const supplied = opts.prompts;
+    for (let k = 0;k < opts.runs; k++) {
+      prompts.push(supplied[k % supplied.length]);
+    }
+  } else if (opts.generate) {
+    ui.write(`  Generating prompt variations using the agent...`);
+    prompts = await randomPromptsForSkill(skillContent, opts.runs, agentCfg);
+  } else {
+    prompts = [
+      "Perform the main task described by the skill on the current project.",
+      "Use the skill to analyze and improve the current directory."
+    ];
+    if (prompts.length < opts.runs) {
+      ui.write(`  Generating additional prompt variations...`);
+      const more = await randomPromptsForSkill(skillContent, opts.runs - prompts.length, agentCfg);
+      prompts = prompts.concat(more);
+    }
+    prompts = prompts.slice(0, opts.runs);
+  }
+  prompts = prompts.map((p) => String(p).trim()).filter((p) => p.length > 10 && !p.includes('"type":"result"') && !p.includes("session_id") && !p.startsWith("{"));
+  const batchId = `run-${Date.now()}-${skillName.replace(/[^a-z0-9]/gi, "-")}`;
+  const results = [];
+  const isGrok = /grok/i.test(agentCfg.command || "");
+  for (let i = 0;i < prompts.length; i++) {
+    const taskPrompt = prompts[i];
+    const fullPrompt = buildSkillPrompt(skillContent, taskPrompt, skillName);
+    const useIsolated = !!opts.cwd || isGrok || !!agentCfg.cwd_flag;
+    const runCwd = opts.cwd ? `${opts.cwd}/run-${i}` : useIsolated ? `/tmp/doraval-skill-run/${batchId}/run-${i}` : process.cwd();
+    if (useIsolated) {
+      try {
+        mkdirSync2(runCwd, { recursive: true });
+        await Bun.write(`${runCwd}/.gitkeep`, "");
+      } catch {}
+    }
+    const trace = await runAgentSession(fullPrompt, agentCfg, {
+      cwd: runCwd,
+      alwaysApprove: true,
+      stream: Boolean(opts.verbose)
+    });
+    let primitives = null;
+    if (isGrok) {
+      const grokBase = cwdToGrokSessionDir(runCwd);
+      try {
+        if (existsSync4(grokBase)) {
+          const subs = readdirSync(grokBase).filter((d) => d && !d.startsWith("."));
+          if (subs.length) {
+            subs.sort().reverse();
+            const updatesPath = pathResolve(grokBase, subs[0], "updates.jsonl");
+            const real = parseGrokUpdatesToPrimitives(updatesPath, `${batchId}-${i}`, runCwd);
+            if (real && real.toolCalls && real.toolCalls.length > 0) {
+              const augmentedCalls = [
+                {
+                  name: "Skill",
+                  input: { skill: skillName, args: taskPrompt },
+                  timestamp: real.toolCalls[0]?.timestamp || new Date().toISOString(),
+                  index: -1
+                },
+                ...real.toolCalls
+              ];
+              primitives = {
+                ...real,
+                toolCalls: augmentedCalls,
+                sessionId: `${batchId}-${i}`,
+                sessionTitle: taskPrompt,
+                skillsInvoked: [skillName]
+              };
+            }
+          }
+        }
+      } catch {}
+    }
+    if (!primitives) {
+      primitives = {
+        sessionId: `${batchId}-${i}`,
+        sessionTitle: `Run ${i + 1} for ${skillName}`,
+        model: "run-driver",
+        agent: isGrok ? "grok" : "agent",
+        cwd: runCwd,
+        toolCalls: [
+          {
+            name: "Skill",
+            input: { skill: skillName, args: taskPrompt },
+            timestamp: new Date().toISOString(),
+            index: 0
+          },
+          {
+            name: "AgentResponse",
+            input: { output: trace.slice(0, 2000) },
+            timestamp: new Date().toISOString(),
+            index: 1
+          }
+        ],
+        toolCallCounts: { Skill: 1, AgentResponse: 1 },
+        skillsInvoked: [skillName],
+        userMessages: [taskPrompt],
+        userTurnCount: 1,
+        durationMs: 0
+      };
+    }
+    const evalResult = await runEval(primitives, skillName, skillContent, agentCfg, evalCfg);
+    results.push({
+      prompt: taskPrompt,
+      trace,
+      eval: evalResult
+    });
+  }
+  const summary = {
+    total: results.length,
+    adheres: results.filter((r) => r.eval.verdict === "PASS").length,
+    drifts: results.filter((r) => r.eval.verdict === "FAIL").length,
+    unknown: results.filter((r) => r.eval.verdict === "UNKNOWN").length
+  };
+  try {
+    ensureDoravalDirs();
+    const evalsDir = getEvalsDir();
+    for (const r of results) {
+      const fname = `${r.eval.sessionId}.json`;
+      await Bun.write(join2(evalsDir, fname), JSON.stringify({ ...r.eval, _batchId: batchId, _prompt: r.prompt }, null, 2));
+    }
+  } catch {}
+  return {
+    batchId,
+    skill: skillName,
+    runs: results,
+    summary
+  };
+}
+function buildSkillPrompt(skillContent, task, skillName) {
+  return `You are a careful coding agent. You MUST follow the instructions in this skill as closely as possible.
+
+SKILL: ${skillName}
+
+${skillContent}
+
+TASK:
+${task}
+
+Instructions:
+- Strictly adhere to the skill's rules, steps, and style.
+- If the skill tells you to use certain tools, formats, or produce specific outputs, do so.
+- At the end, briefly summarize the key actions you took in service of the skill.
+- Work in the current working directory. Do not escape the provided context.
+`;
+}
+function displayVerdict(verdict, useDriftTerms = false) {
+  if (!useDriftTerms)
+    return verdict;
+  if (verdict === "PASS")
+    return "ADHERES";
+  if (verdict === "FAIL")
+    return "DRIFTS";
+  return "UNKNOWN";
+}
+function renderBatchResults(result, verbose = false) {
+  const lines = [];
+  lines.push(`
+Batch ${result.batchId} for skill: ${result.skill}`);
+  lines.push(`Summary: ${result.summary.adheres} ADHERES / ${result.summary.drifts} DRIFTS / ${result.summary.unknown} UNKNOWN (${result.summary.total} runs)
+`);
+  result.runs.forEach((r, i) => {
+    const v = r.eval.verdict;
+    const displayV = displayVerdict(v, true);
+    const color = v === "PASS" ? "\x1B[32m" : v === "FAIL" ? "\x1B[31m" : "\x1B[33m";
+    const reset = "\x1B[0m";
+    lines.push(`${i + 1}. ${color}[${displayV}]${reset} ${r.prompt.slice(0, 80)}${r.prompt.length > 80 ? "..." : ""}`);
+    if (r.eval.checklist?.length) {
+      const passed = r.eval.checklist.filter((c) => c.pass).length;
+      lines.push(`   Score: ${passed}/${r.eval.checklist.length}`);
+      if (verbose) {
+        r.eval.checklist.forEach((c) => {
+          lines.push(`     ${c.pass ? "\u2713" : "\u2717"} ${c.instruction}`);
+        });
+      }
+    }
+  });
+  return lines.join(`
+`);
+}
+var init_skill_runner = __esm(() => {
+  init_skill_validate();
+  init_agent_invoke();
+  init_session_eval();
+  init_journal_config();
+  init_prompt_gen();
+  init_out();
+});
+
+// src/cli/commands/drift.ts
+var exports_drift = {};
+__export(exports_drift, {
+  default: () => drift_default
+});
+import { resolve as resolve3, dirname } from "path";
+var import_picocolors3, drift_default;
+var init_drift = __esm(() => {
+  init_dist();
+  init_out();
+  init_skill_validate();
+  init_skill_drift();
+  init_skill_runner();
+  import_picocolors3 = __toESM(require_picocolors(), 1);
+  drift_default = defineCommand({
+    meta: {
+      name: "drift",
+      description: "Measure how far a skill has drifted (rubric analysis or by running sessions + evals)"
+    },
+    args: {
+      path: {
+        type: "positional",
+        description: "Path to skill directory or plugin root",
+        required: true
+      },
+      for: {
+        type: "string",
+        description: 'Target a provider ("claude") or specific validator ("claude:skill")'
+      },
+      format: {
+        type: "string",
+        alias: "f",
+        description: "Output format (json or table)",
+        default: "table"
+      },
+      verbose: {
+        type: "boolean",
+        alias: "v",
+        description: "Show detailed diagnostics",
+        default: false
+      },
+      ci: {
+        type: "boolean",
+        description: "Machine-friendly output, non-zero exit on issues",
+        default: false
+      },
+      runs: {
+        type: "string",
+        description: "Run N sessions with the skill using prompts and show comparative eval results (enables dynamic mode)",
+        default: "0"
+      },
+      prompt: {
+        type: "string",
+        description: "Prompt to use when running sessions (comma-separated for multiple)"
+      },
+      "prompts-file": {
+        type: "string",
+        description: "File with one prompt per line for session runs"
+      },
+      generate: {
+        type: "boolean",
+        description: "Auto-generate prompts from the skill when using --runs",
+        default: false
+      },
+      real: {
+        type: "boolean",
+        description: "Use real agent CLI (vs internal) for session runs",
+        default: false
+      }
+    },
+    async run({ args }) {
+      const targetPath = args.path;
+      let skillInput = String(targetPath);
+      if (skillInput.endsWith("SKILL.md") || skillInput.endsWith("/SKILL.md")) {
+        skillInput = dirname(skillInput);
+      }
+      const fullPath = resolve3(skillInput);
+      const loaded = await loadSkill(fullPath);
+      if (!loaded.ok) {
+        if (loaded.error === "No SKILL.md found") {
+          ui.fail(`No SKILL.md found at ${targetPath}
+
+Check that the path points to a skill directory containing SKILL.md.`);
+        } else {
+          ui.fail(loaded.error);
+        }
+        process.exit(1);
+      }
+      const numRuns = parseInt(String(args.runs || "0"), 10) || 0;
+      if (numRuns > 0) {
+        let prompts;
+        if (args.prompt) {
+          prompts = String(args.prompt).split(",").map((p) => p.trim()).filter(Boolean);
+        } else if (args["prompts-file"]) {
+          try {
+            const content = await Bun.file(String(args["prompts-file"])).text();
+            prompts = content.split(`
+`).map((l) => l.trim()).filter(Boolean);
+          } catch (e) {
+            ui.fail(`Failed to read prompts file: ${e.message}`);
+            process.exit(1);
+          }
+        }
+        const result = await runSkillSessions(fullPath, {
+          runs: numRuns,
+          prompts,
+          generate: Boolean(args.generate),
+          real: Boolean(args.real),
+          verbose: Boolean(args.verbose)
+        });
+        if (args.format === "json") {
+          process.stdout.write(JSON.stringify(result, null, 2) + `
+`);
+        } else {
+          ui.heading("dora skill drift \u2014 Session runs + comparative eval");
+          ui.info(`  Path: ${targetPath}
+`);
+          const table = renderBatchResults(result, Boolean(args.verbose));
+          ui.write(table);
+          ui.blank();
+        }
+        if (args.ci && result.summary.drifts > 0) {
+          process.exit(1);
+        }
+        process.exit(0);
+      }
+      const { model: parsed } = loaded;
+      const desc = String(parsed.data.description || "");
+      const when = String(parsed.data.when_to_use || "");
+      const { drifts, driftCount, total } = analyzeDrift({
+        description: (desc + " " + when).trim(),
+        content: parsed.content
+      });
+      if (args.format === "json") {
+        console.log(JSON.stringify({ path: targetPath, driftCount, total, drifts }, null, 2));
+      } else {
+        ui.heading("dora skill drift \u2014 Measuring rubric drift");
+        ui.info(`  Path:  ${targetPath}
+`);
+        for (const d of drifts) {
+          const icon = d.drifted ? import_picocolors3.default.yellow("\u2197") : import_picocolors3.default.green("\xB7");
+          const cat = d.drifted ? import_picocolors3.default.yellow(d.category.padEnd(10)) : import_picocolors3.default.dim(d.category.padEnd(10));
+          ui.write(`  ${icon} ${cat} ${import_picocolors3.default.white(d.detail)}`);
+        }
+        if (driftCount === 0) {
+          ui.write(`
+  ${import_picocolors3.default.green("No drift detected.")} ${import_picocolors3.default.white("Skill aligns with rubric standards.")}
+`);
+        } else {
+          ui.write(`
+  ${import_picocolors3.default.yellow(`${driftCount}/${total}`)} ${import_picocolors3.default.white("rubric areas have drifted.")}
+`);
+        }
+      }
+      if (args.ci && driftCount > 0) {
+        process.exit(1);
+      }
+      process.exit(0);
+    }
+  });
+});
+
+// src/core/session-adapters.ts
+import { existsSync as existsSync5, readdirSync as readdirSync2, readFileSync as readFileSync2, statSync } from "fs";
+import { homedir as homedir3 } from "os";
+import { join as join3 } from "path";
+function cwdToProjectHash(cwd) {
+  return cwd.replace(/\//g, "-");
+}
+function getAdapter() {
+  return ADAPTERS.find((a) => a.detect()) ?? null;
+}
+var claudeCodeAdapter, grokAdapter, ADAPTERS;
+var init_session_adapters = __esm(() => {
+  claudeCodeAdapter = {
+    agent: "claude-code",
+    detect() {
+      return existsSync5(join3(homedir3(), ".claude"));
+    },
+    findLatestSession(cwd) {
+      const hash = cwdToProjectHash(cwd);
+      const dir = join3(homedir3(), ".claude", "projects", hash);
+      if (!existsSync5(dir))
+        return null;
+      const files = readdirSync2(dir).filter((f) => f.endsWith(".jsonl")).map((f) => ({ name: f, path: join3(dir, f), mtime: statSync(join3(dir, f)).mtimeMs })).sort((a, b) => b.mtime - a.mtime);
+      for (const file of files) {
+        const content = readFileSync2(file.path, "utf8");
+        if (content.includes('"type":"assistant"') || content.includes('"type": "assistant"')) {
+          return file.path;
+        }
+      }
+      return files[0]?.path ?? null;
+    },
+    listRecentSessions(cwd, limit = 10) {
+      const hash = cwdToProjectHash(cwd);
+      const dir = join3(homedir3(), ".claude", "projects", hash);
+      if (!existsSync5(dir))
+        return [];
+      const allFiles = readdirSync2(dir).filter((f) => f.endsWith(".jsonl")).map((f) => ({ name: f, path: join3(dir, f), mtime: statSync(join3(dir, f)).mtimeMs })).sort((a, b) => b.mtime - a.mtime);
+      const results = [];
+      for (const file of allFiles) {
+        try {
+          const text = readFileSync2(file.path, "utf8");
+          if (!text.includes('"type":"assistant"') && !text.includes('"type": "assistant"')) {
+            continue;
+          }
+          const prim = parseSession(text);
+          results.push({
+            path: file.path,
+            mtime: file.mtime,
+            title: prim.sessionTitle,
+            skillCount: prim.skillsInvoked.length
+          });
+          if (results.length >= limit)
+            break;
+        } catch {}
+      }
+      return results;
+    },
+    parse(path) {
+      const text = readFileSync2(path, "utf8");
+      return parseSession(text);
+    }
+  };
+  grokAdapter = {
+    agent: "grok",
+    detect() {
+      try {
+        const { homedir: homedir4 } = __require("os");
+        const { existsSync: existsSync6 } = __require("fs");
+        const { join: join4 } = __require("path");
+        return existsSync6(join4(homedir4(), ".grok", "sessions"));
+      } catch {
+        return false;
+      }
+    },
+    findLatestSession(cwd) {
+      try {
+        const { homedir: homedir4 } = __require("os");
+        const { existsSync: existsSync6, readdirSync: readdirSync3, statSync: statSync2 } = __require("fs");
+        const { join: join4 } = __require("path");
+        const encoded = cwd.replace(/\//g, "%2F");
+        const base = join4(homedir4(), ".grok", "sessions", encoded);
+        if (!existsSync6(base))
+          return null;
+        const subs = readdirSync3(base).filter((d) => !d.startsWith("."));
+        if (subs.length === 0)
+          return null;
+        subs.sort((a, b) => {
+          const ma = statSync2(join4(base, a)).mtimeMs;
+          const mb = statSync2(join4(base, b)).mtimeMs;
+          return mb - ma;
+        });
+        const latest = subs[0];
+        const updates = join4(base, latest, "updates.jsonl");
+        if (existsSync6(updates))
+          return updates;
+        const termDir = join4(base, latest, "terminal");
+        if (existsSync6(termDir)) {
+          const logs = readdirSync3(termDir).filter((f) => f.endsWith(".log"));
+          if (logs.length)
+            return join4(termDir, logs[0]);
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    },
+    listRecentSessions(cwd, limit = 10) {
+      const res = [];
+      try {
+        const { homedir: homedir4 } = __require("os");
+        const { existsSync: existsSync6, readdirSync: readdirSync3, statSync: statSync2 } = __require("fs");
+        const { join: join4 } = __require("path");
+        const encoded = cwd.replace(/\//g, "%2F");
+        const base = join4(homedir4(), ".grok", "sessions", encoded);
+        if (!existsSync6(base))
+          return [];
+        const subs = readdirSync3(base).filter((d) => !d.startsWith("."));
+        subs.sort((a, b) => {
+          const ma = statSync2(join4(base, a)).mtimeMs;
+          const mb = statSync2(join4(base, b)).mtimeMs;
+          return mb - ma;
+        });
+        for (const sub of subs.slice(0, limit)) {
+          const updates = join4(base, sub, "updates.jsonl");
+          if (existsSync6(updates)) {
+            res.push({ path: updates, mtime: statSync2(updates).mtimeMs, title: sub, skillCount: 0 });
+          }
+        }
+      } catch {}
+      return res;
+    },
+    parse(path) {
+      const text = readFileSync2(path, "utf8");
+      if (path.endsWith("updates.jsonl")) {
+        const lines = text.split(`
+`).filter((l) => l.trim());
+        const toolCalls = [];
+        const userMessages = [];
+        let idx = 0;
+        for (const line of lines) {
+          const j = safeJsonParse(line);
+          if (!j)
+            continue;
+          const u = j.params?.update || {};
+          if (u.sessionUpdate === "user_message_chunk" && u.content?.text) {
+            userMessages.push(u.content.text);
+          }
+          if (u.sessionUpdate === "tool_call" && u.title) {
+            toolCalls.push({
+              name: u.title,
+              input: u.input || u.args || {},
+              timestamp: new Date((j.timestamp || 0) * 1000).toISOString(),
+              index: idx++
+            });
+          }
+        }
+        const counts = {};
+        for (const t of toolCalls)
+          counts[t.name] = (counts[t.name] || 0) + 1;
+        return {
+          sessionId: path.split("/").pop()?.replace(".jsonl", "") || "grok",
+          model: "grok",
+          agent: "grok",
+          cwd: process.cwd(),
+          toolCalls,
+          toolCallCounts: counts,
+          skillsInvoked: [],
+          userMessages: userMessages.slice(0, 5),
+          userTurnCount: userMessages.length
+        };
+      }
+      return {
+        sessionId: "grok-" + Date.now(),
+        model: "grok",
+        agent: "grok",
+        cwd: process.cwd(),
+        toolCalls: [{ name: "GrokResponse", input: { content: text.slice(0, 3000) }, timestamp: "", index: 0 }],
+        toolCallCounts: { GrokResponse: 1 },
+        skillsInvoked: [],
+        userMessages: [text.slice(0, 200)],
+        userTurnCount: 1
+      };
+    }
+  };
+  ADAPTERS = [claudeCodeAdapter, grokAdapter];
+});
+
 // src/cli/prompt.ts
 function prompt(label, fallback) {
   process.stderr.write(`${label} ${import_picocolors4.default.dim(`(${fallback})`)} `);
@@ -1651,18 +2198,104 @@ var init_prompt = __esm(() => {
   import_picocolors4 = __toESM(require_picocolors(), 1);
 });
 
+// src/cli/commands/eval-history.ts
+var exports_eval_history = {};
+__export(exports_eval_history, {
+  default: () => eval_history_default
+});
+import { existsSync as existsSync6, readdirSync as readdirSync3 } from "fs";
+import { join as join4 } from "path";
+var import_picocolors5, eval_history_default;
+var init_eval_history = __esm(() => {
+  init_dist();
+  init_out();
+  init_journal_config();
+  import_picocolors5 = __toESM(require_picocolors(), 1);
+  eval_history_default = defineCommand({
+    meta: {
+      name: "history",
+      description: "List stored eval results"
+    },
+    args: {
+      limit: {
+        type: "string",
+        description: "Maximum number of results to show (default: 20)",
+        default: "20"
+      },
+      skill: {
+        type: "string",
+        description: "Filter by skill name"
+      },
+      format: {
+        type: "string",
+        alias: "f",
+        description: "Output format: table (default) or json",
+        default: "table"
+      }
+    },
+    async run({ args }) {
+      const evalsDir = getEvalsDir();
+      if (!existsSync6(evalsDir)) {
+        ui.info("No eval history yet. Run: doraval eval");
+        process.exit(0);
+      }
+      const files = readdirSync3(evalsDir).filter((f) => f.endsWith(".json")).sort().reverse();
+      const limit = parseInt(String(args.limit), 10) || 20;
+      const results = [];
+      for (const file of files) {
+        if (results.length >= limit)
+          break;
+        try {
+          const raw = await Bun.file(join4(evalsDir, file)).text();
+          const parsed = JSON.parse(raw);
+          if (parsed.schemaVersion !== 1)
+            continue;
+          if (args.skill && !parsed.skill.includes(args.skill))
+            continue;
+          results.push(parsed);
+        } catch {}
+      }
+      if (results.length === 0) {
+        ui.info("No eval results found.");
+        process.exit(0);
+      }
+      if (args.format === "json") {
+        process.stdout.write(JSON.stringify(results, null, 2) + `
+`);
+      } else {
+        ui.heading("doraval eval history");
+        ui.write(`  ${"DATE".padEnd(20)} ${"SESSION TITLE".padEnd(35)} ${"SKILL".padEnd(35)} RESULT`);
+        ui.write(`  ${"-".repeat(100)}`);
+        for (const r of results) {
+          const date = r.timestamp.slice(0, 10);
+          const title = (r.sessionTitle ?? r.sessionId.slice(0, 8)).slice(0, 33).padEnd(35);
+          const skill = r.skill.slice(0, 33).padEnd(35);
+          const verdictColor = r.verdict === "PASS" ? import_picocolors5.default.green : r.verdict === "FAIL" ? import_picocolors5.default.red : import_picocolors5.default.yellow;
+          ui.write(`  ${date.padEnd(20)} ${title} ${skill} ${verdictColor(r.verdict)}`);
+        }
+        ui.blank();
+      }
+      process.exit(0);
+    }
+  });
+});
+
 // src/cli/commands/eval.ts
 var exports_eval = {};
 __export(exports_eval, {
   default: () => eval_default
 });
-import { join as join3, basename } from "path";
-import { existsSync as existsSync5, readFileSync as readFileSync2 } from "fs";
-function renderResult(result, verbose) {
-  const verdictColor = result.verdict === "PASS" ? import_picocolors5.default.green : result.verdict === "FAIL" ? import_picocolors5.default.red : import_picocolors5.default.yellow;
-  const verdictSymbol = result.verdict === "PASS" ? "\u2713" : result.verdict === "FAIL" ? "\u2717" : "?";
+import { join as join5, basename, resolve as resolve4, dirname as dirname2 } from "path";
+import { existsSync as existsSync7, readFileSync as readFileSync3 } from "fs";
+function renderResult(result, verbose, useDriftTerms = false) {
+  const v = result.verdict;
+  const isPass = v === "PASS";
+  const isFail = v === "FAIL";
+  const displayV = displayVerdict(v, useDriftTerms);
+  const displaySymbol = isPass ? "\u2713" : isFail ? "\u2717" : "?";
+  const verdictColor = isPass ? import_picocolors6.default.green : isFail ? import_picocolors6.default.red : import_picocolors6.default.yellow;
   ui.write(`
-  ${verdictColor(`[${result.verdict}]`)} ${import_picocolors5.default.bold(result.skill)}`);
+  ${verdictColor(`[${displayV}]`)} ${import_picocolors6.default.bold(result.skill)}`);
   ui.write(`  agent:       ${result.agent}`);
   ui.write(`  model:       ${result.model}`);
   if (result.userFamiliarity > 0) {
@@ -1676,16 +2309,16 @@ function renderResult(result, verbose) {
     ui.write(`
   Adherence:`);
     for (const item of result.checklist) {
-      const sym = item.pass ? import_picocolors5.default.green("\u2713") : import_picocolors5.default.red("\u2717");
-      const detail = item.detail ? `  ${import_picocolors5.default.dim(item.detail)}` : "";
+      const sym = item.pass ? import_picocolors6.default.green("\u2713") : import_picocolors6.default.red("\u2717");
+      const detail = item.detail ? `  ${import_picocolors6.default.dim(item.detail)}` : "";
       ui.write(`  ${sym} ${item.instruction}${detail}`);
     }
     const passed = result.checklist.filter((c) => c.pass).length;
     ui.write(`
-  Result: ${passed}/${result.checklist.length}  [${verdictColor(result.verdict)}${result.verdictReason ? ` \u2014 ${result.verdictReason}` : ""}]`);
+  Result: ${passed}/${result.checklist.length}  [${verdictColor(displayV)}${result.verdictReason ? ` \u2014 ${result.verdictReason}` : ""}]`);
   } else if (result.verdictReason) {
     ui.write(`
-  ${verdictColor(verdictSymbol)} ${result.verdictReason}`);
+  ${verdictColor(displaySymbol)} ${result.verdictReason}`);
   }
 }
 function selectRecentSessions(recent) {
@@ -1700,7 +2333,7 @@ function selectRecentSessions(recent) {
     const titleStr = s.title ? ` "${s.title.slice(0, 45)}"` : "";
     const skillStr = s.skillCount > 0 ? ` (${s.skillCount} skill${s.skillCount === 1 ? "" : "s"})` : "";
     const short = basename(s.path);
-    ui.write(`    ${i + 1}. ${date}${titleStr}${skillStr}  ${import_picocolors5.default.dim(short)}`);
+    ui.write(`    ${i + 1}. ${date}${titleStr}${skillStr}  ${import_picocolors6.default.dim(short)}`);
   });
   const input = prompt(`
   Select session(s) (e.g. 1,3 or 2-4 or all or latest): `, "1").trim().toLowerCase();
@@ -1733,7 +2366,7 @@ function selectRecentSessions(recent) {
   }
   return selected.size > 0 ? Array.from(selected) : [recent[0].path];
 }
-var import_picocolors5, eval_default;
+var import_picocolors6, eval_default;
 var init_eval = __esm(() => {
   init_dist();
   init_out();
@@ -1742,11 +2375,15 @@ var init_eval = __esm(() => {
   init_journal_config();
   init_skill_validate();
   init_prompt();
-  import_picocolors5 = __toESM(require_picocolors(), 1);
+  init_skill_runner();
+  import_picocolors6 = __toESM(require_picocolors(), 1);
   eval_default = defineCommand({
     meta: {
       name: "eval",
-      description: "Evaluate a real coding agent session against skill instructions"
+      description: "Evaluate sessions against skill instructions (or generate runs with --runs --skill)"
+    },
+    subCommands: {
+      history: () => Promise.resolve().then(() => (init_eval_history(), exports_eval_history)).then((m) => m.default)
     },
     args: {
       session: {
@@ -1765,7 +2402,7 @@ var init_eval = __esm(() => {
       },
       ci: {
         type: "boolean",
-        description: "Exit with code 1 if any verdict is FAIL",
+        description: "Exit with code 1 if any verdict is FAIL (DRIFTS for generated runs)",
         default: false
       },
       verbose: {
@@ -1773,10 +2410,36 @@ var init_eval = __esm(() => {
         alias: "v",
         description: "Show full checklist reasoning",
         default: false
+      },
+      runs: {
+        type: "string",
+        description: "Generate and run N sessions for the skill (using prompts) then eval comparatively. Requires --skill. Use --workdir to control the base directory for the runs.",
+        default: "0"
+      },
+      prompt: {
+        type: "string",
+        description: "Prompt(s) to use for generated sessions (comma separated)"
+      },
+      "prompts-file": {
+        type: "string",
+        description: "File containing prompts (one per line) for generated sessions"
+      },
+      generate: {
+        type: "boolean",
+        description: "Auto-generate prompts from the skill (when using --runs)",
+        default: false
+      },
+      real: {
+        type: "boolean",
+        description: "Force real agent CLI for generated sessions (vs faster internal)",
+        default: false
+      },
+      workdir: {
+        type: "string",
+        description: "Base directory for generated test runs (--runs). Each run gets its own subdirectory. Use this to point the agent at a populated checkout/repo instead of an empty temp dir."
       }
     },
     async run({ args }) {
-      ui.heading("doraval eval \u2014 Session skill adherence");
       const config = await readConfig();
       const evalCfg = getEvalConfig(config);
       const agentCfg = config?.agent;
@@ -1789,6 +2452,61 @@ var init_eval = __esm(() => {
         ui.info("  doraval will use your configured agent (" + agentCfg.command + ").");
         ui.info("  If you want to record a specific model, run: dora config set eval.model claude-3-5-sonnet-20241022");
       }
+      const numRuns = parseInt(String(args.runs || "0"), 10) || 0;
+      if (numRuns > 0) {
+        if (!args.skill) {
+          ui.fail("--runs requires --skill <path-to-skill>");
+          process.exit(1);
+        }
+        let skillInput = String(args.skill);
+        if (skillInput.endsWith("SKILL.md") || skillInput.endsWith("/SKILL.md")) {
+          skillInput = dirname2(skillInput);
+        }
+        const skillPath = resolve4(skillInput);
+        let prompts;
+        if (args.prompt) {
+          prompts = String(args.prompt).split(",").map((p) => p.trim()).filter(Boolean);
+        } else if (args["prompts-file"]) {
+          try {
+            const content = await Bun.file(String(args["prompts-file"])).text();
+            prompts = content.split(`
+`).map((l) => l.trim()).filter(Boolean);
+          } catch (e) {
+            ui.fail(`Failed to read prompts file: ${e.message}`);
+            process.exit(1);
+          }
+        }
+        ui.heading("doraval eval \u2014 Generated session runs + comparative results");
+        const workdirNote = args.workdir ? ` workdir=${args.workdir}` : "";
+        const driveCmd = agentCfg?.command || "default";
+        ui.write(`  Running ${numRuns} sessions (generate=${Boolean(args.generate)}, real=${Boolean(args.real)}${workdirNote}, command=${driveCmd})... This can take a while for complex skills.`);
+        const result = await runSkillSessions(skillPath, {
+          runs: numRuns,
+          prompts,
+          generate: Boolean(args.generate),
+          real: Boolean(args.real),
+          verbose: Boolean(args.verbose),
+          cwd: args.workdir ? resolve4(String(args.workdir)) : undefined
+        });
+        if (args.format === "json") {
+          process.stdout.write(JSON.stringify(result, null, 2) + `
+`);
+        } else {
+          ui.heading("doraval eval \u2014 Generated session runs + comparative results");
+          for (let i = 0;i < result.runs.length; i++) {
+            const r = result.runs[i];
+            renderResult(r.eval, Boolean(args.verbose), true);
+          }
+          ui.blank();
+          const table = renderBatchResults(result, Boolean(args.verbose));
+          ui.write(table);
+        }
+        if (args.ci && result.summary.drifts > 0) {
+          process.exit(1);
+        }
+        process.exit(0);
+      }
+      ui.heading("doraval eval \u2014 Session skill adherence");
       let sessionPaths = [];
       let discoveryAdapter = null;
       if (args.session) {
@@ -1822,13 +2540,13 @@ var init_eval = __esm(() => {
       }
       const allResults = [];
       for (const sessionPath of sessionPaths) {
-        ui.info(`  Session: ${import_picocolors5.default.dim(sessionPath)}`);
+        ui.info(`  Session: ${import_picocolors6.default.dim(sessionPath)}`);
         let primitives;
         try {
           if (discoveryAdapter) {
             primitives = discoveryAdapter.parse(sessionPath);
           } else {
-            const text = readFileSync2(sessionPath, "utf8");
+            const text = readFileSync3(sessionPath, "utf8");
             primitives = parseSession(text);
           }
         } catch (err) {
@@ -1849,20 +2567,20 @@ var init_eval = __esm(() => {
             continue;
           }
         }
-        ui.write(`  ${import_picocolors5.default.dim("\xB7 Sending session summary (tool calls + 5 user messages) to")} ${import_picocolors5.default.dim(evalCfg.model || "configured model")}${import_picocolors5.default.dim(". Use --verbose to inspect.")}`);
+        ui.write(`  ${import_picocolors6.default.dim("\xB7 Sending session summary (tool calls + 5 user messages) to")} ${import_picocolors6.default.dim(evalCfg.model || "configured model")}${import_picocolors6.default.dim(". Use --verbose to inspect.")}`);
         ensureDoravalDirs();
         for (const skillName of skillsToEval) {
           ui.info(`
-  Evaluating: ${import_picocolors5.default.bold(skillName)}`);
+  Evaluating: ${import_picocolors6.default.bold(skillName)}`);
           let skillContent = `Skill: ${skillName}
 (skill content not found locally \u2014 using skill name only for evaluation)`;
           const candidateDirs = [
             process.cwd(),
-            join3(process.cwd(), ".claude", "skills", skillName.split(":").pop() ?? skillName),
-            join3(process.cwd(), "skills", skillName.split(":").pop() ?? skillName)
+            join5(process.cwd(), ".claude", "skills", skillName.split(":").pop() ?? skillName),
+            join5(process.cwd(), "skills", skillName.split(":").pop() ?? skillName)
           ];
           for (const dir of candidateDirs) {
-            if (existsSync5(join3(dir, "SKILL.md"))) {
+            if (existsSync7(join5(dir, "SKILL.md"))) {
               const loaded = await loadSkill(dir);
               if (loaded.ok) {
                 skillContent = loaded.model.content;
@@ -1874,7 +2592,7 @@ var init_eval = __esm(() => {
           allResults.push(result);
           if (evalCfg.save_history) {
             const safeId = sanitizeSessionId(primitives.sessionId) || `unknown-${Date.now()}`;
-            const evalPath = join3(getEvalsDir(), `${safeId}-${Date.now()}.json`);
+            const evalPath = join5(getEvalsDir(), `${safeId}-${Date.now()}.json`);
             await Bun.write(evalPath, JSON.stringify(result, null, 2));
           }
         }
@@ -2072,15 +2790,15 @@ var exports_init = {};
 __export(exports_init, {
   default: () => init_default
 });
-import { basename as basename2, join as join4 } from "path";
-var import_picocolors6, init_default;
+import { basename as basename2, join as join6 } from "path";
+var import_picocolors7, init_default;
 var init_init = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_remote();
   init_prompt();
-  import_picocolors6 = __toESM(require_picocolors(), 1);
+  import_picocolors7 = __toESM(require_picocolors(), 1);
   init_default = defineCommand({
     meta: {
       name: "init",
@@ -2105,21 +2823,21 @@ var init_init = __esm(() => {
     },
     async run({ args }) {
       ui.write(`
-  ${import_picocolors6.default.bold(import_picocolors6.default.white("dora journal init"))} (or top-level ${import_picocolors6.default.dim(import_picocolors6.default.gray("dora init"))}) \u2014 Set up your journal
+  ${import_picocolors7.default.bold(import_picocolors7.default.white("dora journal init"))} (or top-level ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora init"))}) \u2014 Set up your journal
 `);
       const ghCheck = ensureGhCli();
       if (!ghCheck.ok) {
-        ui.write(`  ${import_picocolors6.default.red("\u2717")} ${import_picocolors6.default.white("The GitHub CLI (")}${import_picocolors6.default.bold("gh")}${import_picocolors6.default.white(") is not installed.")}
+        ui.write(`  ${import_picocolors7.default.red("\u2717")} ${import_picocolors7.default.white("The GitHub CLI (")}${import_picocolors7.default.bold("gh")}${import_picocolors7.default.white(") is not installed.")}
 `);
-        ui.write(`  doraval uses ${import_picocolors6.default.bold("gh")} to fetch and sync journal files with GitHub.
+        ui.write(`  doraval uses ${import_picocolors7.default.bold("gh")} to fetch and sync journal files with GitHub.
 `);
         ui.write(`  Install it:
 `);
-        ui.write(`    macOS:   ${import_picocolors6.default.dim("brew install gh")}`);
-        ui.write(`    Linux:   ${import_picocolors6.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-        ui.write(`    Windows: ${import_picocolors6.default.dim("winget install --id GitHub.cli")}
+        ui.write(`    macOS:   ${import_picocolors7.default.dim("brew install gh")}`);
+        ui.write(`    Linux:   ${import_picocolors7.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+        ui.write(`    Windows: ${import_picocolors7.default.dim("winget install --id GitHub.cli")}
 `);
-        ui.write(`  Then authenticate: ${import_picocolors6.default.dim("gh auth login")}
+        ui.write(`  Then authenticate: ${import_picocolors7.default.dim("gh auth login")}
 `);
         process.exit(1);
       }
@@ -2132,28 +2850,28 @@ var init_init = __esm(() => {
         if (gitOwner) {
           defaultRepo = `${gitOwner}/${gitOwner}.md`;
           if (ghLogin && ghLogin !== gitOwner) {
-            sourceNote = `  ${import_picocolors6.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
+            sourceNote = `  ${import_picocolors7.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
 `;
           } else {
-            sourceNote = `  ${import_picocolors6.default.dim("(from git remote)")}
+            sourceNote = `  ${import_picocolors7.default.dim("(from git remote)")}
 `;
           }
         } else if (ghLogin) {
           defaultRepo = `${ghLogin}/${ghLogin}.md`;
-          sourceNote = `  ${import_picocolors6.default.dim("(from your active gh account)")}
+          sourceNote = `  ${import_picocolors7.default.dim("(from your active gh account)")}
 `;
         } else {
-          ui.write(`  ${import_picocolors6.default.yellow("\u26A0")} Not logged in to GitHub. Run ${import_picocolors6.default.dim("gh auth login")} first.
+          ui.write(`  ${import_picocolors7.default.yellow("\u26A0")} Not logged in to GitHub. Run ${import_picocolors7.default.dim("gh auth login")} first.
 `);
           process.exit(1);
         }
         const existingConfig = await readConfig();
         if (existingConfig?.journal.repo) {
           defaultRepo = existingConfig.journal.repo;
-          sourceNote = `  ${import_picocolors6.default.dim("(from your previous journal setup)")}
+          sourceNote = `  ${import_picocolors7.default.dim("(from your previous journal setup)")}
 `;
         }
-        ui.write(`  Journal repo ${import_picocolors6.default.dim(import_picocolors6.default.gray("(owner/name)"))}`);
+        ui.write(`  Journal repo ${import_picocolors7.default.dim(import_picocolors7.default.gray("(owner/name)"))}`);
         if (sourceNote)
           ui.write(sourceNote);
         repo = prompt("  >", defaultRepo);
@@ -2165,13 +2883,13 @@ var init_init = __esm(() => {
       }
       project = sanitizeProjectName(project);
       if (!repoExists(repo)) {
-        ui.write(`  ${import_picocolors6.default.red("\u2717")} Repository ${import_picocolors6.default.bold(import_picocolors6.default.white(repo))} not found on GitHub.
+        ui.write(`  ${import_picocolors7.default.red("\u2717")} Repository ${import_picocolors7.default.bold(import_picocolors7.default.white(repo))} not found on GitHub.
 `);
         ui.write(`  Create it first:
 `);
-        ui.write(`    ${import_picocolors6.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
+        ui.write(`    ${import_picocolors7.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
 `);
-        ui.write(`  The repo should be private. doraval will populate it on first ${import_picocolors6.default.dim("dora journal sync")}.
+        ui.write(`  The repo should be private. doraval will populate it on first ${import_picocolors7.default.dim("dora journal sync")}.
 `);
         process.exit(1);
       }
@@ -2179,20 +2897,20 @@ var init_init = __esm(() => {
       const alreadyRegistered = existing?.journal.projects[project];
       const isRefresh = alreadyRegistered && args.refresh;
       if (alreadyRegistered && !isRefresh) {
-        ui.write(`  ${import_picocolors6.default.yellow("\u26A0")} Project ${import_picocolors6.default.bold(import_picocolors6.default.white(project))} is already registered.
+        ui.write(`  ${import_picocolors7.default.yellow("\u26A0")} Project ${import_picocolors7.default.bold(import_picocolors7.default.white(project))} is already registered.
 `);
-        ui.write(`  Repo:   ${import_picocolors6.default.gray(existing.journal.repo)}`);
+        ui.write(`  Repo:   ${import_picocolors7.default.gray(existing.journal.repo)}`);
         ui.write(`  Remote: ${existing.journal.projects[project]?.remote_path}
 `);
-        ui.write(`  To refresh local files, run: ${import_picocolors6.default.dim(import_picocolors6.default.gray(`dora journal update`))}
+        ui.write(`  To refresh local files, run: ${import_picocolors7.default.dim(import_picocolors7.default.gray(`dora journal update`))}
 ` + `  (init --refresh still works for compatibility.)
-` + `  Or remove the project from ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/config.yml"))} to fully re-initialize.
+` + `  Or remove the project from ${import_picocolors7.default.dim(import_picocolors7.default.gray("~/.doraval/config.yml"))} to fully re-initialize.
 `);
         process.exit(0);
       }
       const journalsDir = getJournalsDir();
       const remotePath = `projects/${project}.md`;
-      const localPath = join4(journalsDir, `${project}.md`);
+      const localPath = join6(journalsDir, `${project}.md`);
       const effectiveRepo = isRefresh && !args.repo ? existing.journal.repo : repo;
       const config = existing ?? {
         journal: { repo: effectiveRepo, projects: {} }
@@ -2204,16 +2922,16 @@ var init_init = __esm(() => {
       };
       ensureDoravalDirs();
       const actionLabel = isRefresh ? "Refreshing" : "Fetching";
-      ui.write(`  ${import_picocolors6.default.dim(import_picocolors6.default.gray(`${actionLabel} journal files from`))} ${import_picocolors6.default.gray(effectiveRepo)}${import_picocolors6.default.dim(import_picocolors6.default.gray("..."))}
+      ui.write(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray(`${actionLabel} journal files from`))} ${import_picocolors7.default.gray(effectiveRepo)}${import_picocolors7.default.dim(import_picocolors7.default.gray("..."))}
 `);
-      const globalDest = join4(journalsDir, "global.md");
+      const globalDest = join6(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       let wroteGlobal;
       if (!refreshGlobalRes.ok) {
         if (refreshGlobalRes.isNotFound) {
           wroteGlobal = false;
         } else {
-          ui.write(`  ${import_picocolors6.default.red("\u2717")} Failed to fetch global.md from ${effectiveRepo}:`);
+          ui.write(`  ${import_picocolors7.default.red("\u2717")} Failed to fetch global.md from ${effectiveRepo}:`);
           ui.write(refreshGlobalRes.error);
           process.exit(1);
         }
@@ -2221,9 +2939,9 @@ var init_init = __esm(() => {
         wroteGlobal = refreshGlobalRes.value;
       }
       if (wroteGlobal) {
-        ui.write(`  ${import_picocolors6.default.green("\u2713")} global.md`);
+        ui.write(`  ${import_picocolors7.default.green("\u2713")} global.md`);
       } else {
-        ui.write(`  ${import_picocolors6.default.dim("\xB7")} global.md ${import_picocolors6.default.dim("(not found \u2014 will be created on first sync)")}`);
+        ui.write(`  ${import_picocolors7.default.dim("\xB7")} global.md ${import_picocolors7.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(globalDest, `# Global Journal
 
 Cross-project principles.
@@ -2235,7 +2953,7 @@ Cross-project principles.
         if (refreshProjectRes.isNotFound) {
           wroteProject = false;
         } else {
-          ui.write(`  ${import_picocolors6.default.red("\u2717")} Failed to fetch ${remotePath} from ${effectiveRepo}:`);
+          ui.write(`  ${import_picocolors7.default.red("\u2717")} Failed to fetch ${remotePath} from ${effectiveRepo}:`);
           ui.write(refreshProjectRes.error);
           process.exit(1);
         }
@@ -2243,9 +2961,9 @@ Cross-project principles.
         wroteProject = refreshProjectRes.value;
       }
       if (wroteProject) {
-        ui.write(`  ${import_picocolors6.default.green("\u2713")} ${remotePath}`);
+        ui.write(`  ${import_picocolors7.default.green("\u2713")} ${remotePath}`);
       } else {
-        ui.write(`  ${import_picocolors6.default.dim("\xB7")} ${remotePath} ${import_picocolors6.default.dim("(not found \u2014 will be created on first sync)")}`);
+        ui.write(`  ${import_picocolors7.default.dim("\xB7")} ${remotePath} ${import_picocolors7.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(localPath, `# ${project} Journal
 
 Project-specific decisions.
@@ -2253,13 +2971,13 @@ Project-specific decisions.
       }
       await writeConfig(config);
       ui.write(`
-  ${import_picocolors6.default.green("\u2713")} Project ${import_picocolors6.default.bold(import_picocolors6.default.white(project))} registered to ${import_picocolors6.default.bold(import_picocolors6.default.white(repo))}.
+  ${import_picocolors7.default.green("\u2713")} Project ${import_picocolors7.default.bold(import_picocolors7.default.white(project))} registered to ${import_picocolors7.default.bold(import_picocolors7.default.white(repo))}.
 `);
-      ui.write(`  Config:   ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/config.yml"))}`);
-      ui.write(`  Journals: ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/journals/"))}`);
-      ui.write(`  Pending:  ${import_picocolors6.default.dim(import_picocolors6.default.gray("~/.doraval/pending/"))}
+      ui.write(`  Config:   ${import_picocolors7.default.dim(import_picocolors7.default.gray("~/.doraval/config.yml"))}`);
+      ui.write(`  Journals: ${import_picocolors7.default.dim(import_picocolors7.default.gray("~/.doraval/journals/"))}`);
+      ui.write(`  Pending:  ${import_picocolors7.default.dim(import_picocolors7.default.gray("~/.doraval/pending/"))}
 `);
-      ui.write(`  Use ${import_picocolors6.default.dim(import_picocolors6.default.gray("dora journal add"))} to propose decisions and ${import_picocolors6.default.dim(import_picocolors6.default.gray("dora journal list"))} to view them.
+      ui.write(`  Use ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal add"))} to propose decisions and ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal list"))} to view them.
 `);
       process.exit(0);
     }
@@ -2333,15 +3051,15 @@ var exports_list = {};
 __export(exports_list, {
   default: () => list_default
 });
-import { existsSync as existsSync6, readdirSync as readdirSync2 } from "fs";
-import { join as join5 } from "path";
-var import_picocolors7, list_default;
+import { existsSync as existsSync8, readdirSync as readdirSync4 } from "fs";
+import { join as join7 } from "path";
+var import_picocolors8, list_default;
 var init_list = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_parse();
-  import_picocolors7 = __toESM(require_picocolors(), 1);
+  import_picocolors8 = __toESM(require_picocolors(), 1);
   list_default = defineCommand({
     meta: {
       name: "list",
@@ -2375,15 +3093,15 @@ var init_list = __esm(() => {
         project = sanitizeProjectName(project);
       }
       if (!project) {
-        ui.write(`${import_picocolors7.default.yellow("\u26A0")} ${import_picocolors7.default.yellow("No project mapping found.")}
+        ui.write(`${import_picocolors8.default.yellow("\u26A0")} ${import_picocolors8.default.yellow("No project mapping found.")}
 
-` + `Run ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora init"))} (or ${import_picocolors7.default.dim(import_picocolors7.default.gray("doraval journal init"))}) first, or pass ${import_picocolors7.default.dim(import_picocolors7.default.gray("--project <name>"))}.`);
+` + `Run ${import_picocolors8.default.dim(import_picocolors8.default.gray("dora init"))} (or ${import_picocolors8.default.dim(import_picocolors8.default.gray("doraval journal init"))}) first, or pass ${import_picocolors8.default.dim(import_picocolors8.default.gray("--project <name>"))}.`);
         process.exit(1);
       }
       const journalRepo = config?.journal.repo ?? "(unknown)";
       const journalsDir = getJournalsDir();
-      const projectFile = join5(journalsDir, `${project}.md`);
-      const globalFile = join5(journalsDir, "global.md");
+      const projectFile = join7(journalsDir, `${project}.md`);
+      const globalFile = join7(journalsDir, "global.md");
       let raw = "";
       try {
         raw = await Bun.file(projectFile).text();
@@ -2397,10 +3115,10 @@ var init_list = __esm(() => {
       let staged = [];
       try {
         const pdir = getPendingProjectDir(project);
-        if (existsSync6(pdir)) {
-          const files = readdirSync2(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
+        if (existsSync8(pdir)) {
+          const files = readdirSync4(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
           const stagedResults = await Promise.all(files.map(async (f) => {
-            const txt = await Bun.file(join5(pdir, f)).text();
+            const txt = await Bun.file(join7(pdir, f)).text();
             const parsed = parseJournalEntries(txt);
             return parsed.map((e) => ({ ...e, _staged: true }));
           }));
@@ -2412,7 +3130,7 @@ var init_list = __esm(() => {
         return;
       }
       ui.write(`
-  ${import_picocolors7.default.bold(import_picocolors7.default.white("dora journal list"))} \u2014 ${import_picocolors7.default.white(project)}  ${import_picocolors7.default.dim(import_picocolors7.default.gray(`(from ${journalRepo})`))}
+  ${import_picocolors8.default.bold(import_picocolors8.default.white("dora journal list"))} \u2014 ${import_picocolors8.default.white(project)}  ${import_picocolors8.default.dim(import_picocolors8.default.gray(`(from ${journalRepo})`))}
 `);
       const hasStaged = staged.length > 0;
       const hasCommitted = allEntries.length > 0;
@@ -2426,46 +3144,46 @@ var init_list = __esm(() => {
       }
       if (dups.length > 0) {
         const uniqueDups = [...new Set(dups)];
-        ui.write(`  ${import_picocolors7.default.yellow("\u26A0")} ${import_picocolors7.default.yellow("Duplicate titles in this view (clean in your journal repo + update):")} ${uniqueDups.map((t) => import_picocolors7.default.yellow(`"${t}"`)).join(", ")}
+        ui.write(`  ${import_picocolors8.default.yellow("\u26A0")} ${import_picocolors8.default.yellow("Duplicate titles in this view (clean in your journal repo + update):")} ${uniqueDups.map((t) => import_picocolors8.default.yellow(`"${t}"`)).join(", ")}
 `);
       }
       if (!hasStaged && !hasCommitted) {
-        ui.write(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray("No active entries found for"))} ${import_picocolors7.default.bold(import_picocolors7.default.white(project))}.
+        ui.write(`  ${import_picocolors8.default.dim(import_picocolors8.default.gray("No active entries found for"))} ${import_picocolors8.default.bold(import_picocolors8.default.white(project))}.
 `);
-        ui.write(`  Journal repo: ${import_picocolors7.default.dim(import_picocolors7.default.gray(journalRepo))}`);
-        ui.write(`  Local file:   ${import_picocolors7.default.dim(import_picocolors7.default.gray(projectFile))}
+        ui.write(`  Journal repo: ${import_picocolors8.default.dim(import_picocolors8.default.gray(journalRepo))}`);
+        ui.write(`  Local file:   ${import_picocolors8.default.dim(import_picocolors8.default.gray(projectFile))}
 `);
-        ui.write(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray("This is normal for a freshly initialized project."))}
-` + `  Use ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal add"))} to propose decisions.
-` + `  They will be staged locally until you run ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal sync"))}.
+        ui.write(`  ${import_picocolors8.default.dim(import_picocolors8.default.gray("This is normal for a freshly initialized project."))}
+` + `  Use ${import_picocolors8.default.dim(import_picocolors8.default.gray("dora journal add"))} to propose decisions.
+` + `  They will be staged locally until you run ${import_picocolors8.default.dim(import_picocolors8.default.gray("dora journal sync"))}.
 `);
-        ui.write(`  If you expect content, try: ${import_picocolors7.default.dim(import_picocolors7.default.gray(`dora journal update`))}
+        ui.write(`  If you expect content, try: ${import_picocolors8.default.dim(import_picocolors8.default.gray(`dora journal update`))}
 `);
         return;
       }
       function printEntry(entry) {
         const pb = entry.pushback ?? 0;
-        let pbColor = import_picocolors7.default.green;
+        let pbColor = import_picocolors8.default.green;
         if (pb >= 7)
-          pbColor = import_picocolors7.default.red;
+          pbColor = import_picocolors8.default.red;
         else if (pb >= 4)
-          pbColor = import_picocolors7.default.yellow;
-        const tagsStr = (entry.tags || []).join(", ") || import_picocolors7.default.dim("(none)");
-        const statusNote = entry.status !== "active" ? import_picocolors7.default.dim(` [${entry.status}]`) : "";
-        const stagedNote = entry._staged ? import_picocolors7.default.dim(" (staged)") : "";
-        ui.write(`  ${pbColor(String(pb).padStart(2))}  ${import_picocolors7.default.bold(import_picocolors7.default.white(entry.title))}${statusNote}${stagedNote}`);
-        ui.write(`      ${import_picocolors7.default.dim(import_picocolors7.default.gray("tags:"))} ${import_picocolors7.default.gray(tagsStr)}`);
-        const by = entry.author?.startsWith("agent:") ? import_picocolors7.default.cyan(entry.author) : entry.author || "human";
-        ui.write(`      ${import_picocolors7.default.dim(import_picocolors7.default.gray("by:"))} ${import_picocolors7.default.gray(by)}  ${import_picocolors7.default.dim(import_picocolors7.default.gray("on"))} ${import_picocolors7.default.gray(entry.date)}`);
+          pbColor = import_picocolors8.default.yellow;
+        const tagsStr = (entry.tags || []).join(", ") || import_picocolors8.default.dim("(none)");
+        const statusNote = entry.status !== "active" ? import_picocolors8.default.dim(` [${entry.status}]`) : "";
+        const stagedNote = entry._staged ? import_picocolors8.default.dim(" (staged)") : "";
+        ui.write(`  ${pbColor(String(pb).padStart(2))}  ${import_picocolors8.default.bold(import_picocolors8.default.white(entry.title))}${statusNote}${stagedNote}`);
+        ui.write(`      ${import_picocolors8.default.dim(import_picocolors8.default.gray("tags:"))} ${import_picocolors8.default.gray(tagsStr)}`);
+        const by = entry.author?.startsWith("agent:") ? import_picocolors8.default.cyan(entry.author) : entry.author || "human";
+        ui.write(`      ${import_picocolors8.default.dim(import_picocolors8.default.gray("by:"))} ${import_picocolors8.default.gray(by)}  ${import_picocolors8.default.dim(import_picocolors8.default.gray("on"))} ${import_picocolors8.default.gray(entry.date)}`);
         const rat = (entry.rationale || "").replace(/\s+/g, " ").trim();
         if (rat) {
-          const preview = rat.length > 88 ? rat.slice(0, 85) + import_picocolors7.default.dim(import_picocolors7.default.gray("\u2026")) : rat;
-          ui.write(`      ${import_picocolors7.default.dim(import_picocolors7.default.gray(preview))}`);
+          const preview = rat.length > 88 ? rat.slice(0, 85) + import_picocolors8.default.dim(import_picocolors8.default.gray("\u2026")) : rat;
+          ui.write(`      ${import_picocolors8.default.dim(import_picocolors8.default.gray(preview))}`);
         }
         ui.write("");
       }
       if (hasStaged) {
-        ui.write(`  ${import_picocolors7.default.yellow("\u25CF")} ${import_picocolors7.default.bold(import_picocolors7.default.white("Staged / pending"))} (not yet in remote; run ${import_picocolors7.default.dim(import_picocolors7.default.gray("dora journal sync"))} to publish):
+        ui.write(`  ${import_picocolors8.default.yellow("\u25CF")} ${import_picocolors8.default.bold(import_picocolors8.default.white("Staged / pending"))} (not yet in remote; run ${import_picocolors8.default.dim(import_picocolors8.default.gray("dora journal sync"))} to publish):
 `);
         for (const entry of staged) {
           printEntry(entry);
@@ -2475,7 +3193,7 @@ var init_list = __esm(() => {
       }
       if (hasCommitted) {
         if (hasStaged) {
-          ui.write(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray("Committed (from local cache):"))}
+          ui.write(`  ${import_picocolors8.default.dim(import_picocolors8.default.gray("Committed (from local cache):"))}
 `);
         }
         for (const entry of allEntries) {
@@ -2483,21 +3201,84 @@ var init_list = __esm(() => {
         }
       }
       const totalShown = staged.length + allEntries.length;
-      ui.write(`  ${import_picocolors7.default.dim(import_picocolors7.default.gray(`${totalShown} entries shown from ${journalRepo}.`))}
+      ui.write(`  ${import_picocolors8.default.dim(import_picocolors8.default.gray(`${totalShown} entries shown from ${journalRepo}.`))}
 `);
       process.exit(0);
     }
   });
 });
 
+// src/core/journal-hook.ts
+import { existsSync as existsSync9 } from "fs";
+var {spawnSync: spawnSync3 } = globalThis.Bun;
+function resolveDoraBinary() {
+  for (const name of ["dora", "doraval"]) {
+    let probe = spawnSync3(["command", "-v", name], { stdout: "pipe", stderr: "pipe" });
+    if (probe.exitCode !== 0) {
+      probe = spawnSync3(["which", name], { stdout: "pipe", stderr: "pipe" });
+    }
+    if (probe.exitCode === 0) {
+      const found = new TextDecoder().decode(probe.stdout).trim().split(`
+`)[0]?.trim();
+      if (found)
+        return found;
+    }
+  }
+  const argv1 = process.argv[1];
+  if (argv1 && existsSync9(argv1))
+    return argv1;
+  return "dora";
+}
+function buildJournalHookCommand(opts) {
+  const bin = opts?.doraPath ?? resolveDoraBinary();
+  const args = ["journal", "context"];
+  if (opts?.json !== false)
+    args.push("--json");
+  if (opts?.quiet)
+    args.push("--quiet");
+  const inner = [bin, ...args].join(" ");
+  if (opts?.quiet) {
+    return `sh -c '${inner.replace(/'/g, "'\\''")} 2>/dev/null || true'`;
+  }
+  return inner;
+}
+function isJournalHookCommand(command) {
+  if (typeof command !== "string")
+    return false;
+  if (command === LEGACY_JOURNAL_HOOK_COMMAND)
+    return true;
+  return /\bjournal\s+context\b/.test(command);
+}
+function journalHookGroup(opts) {
+  return {
+    hooks: [
+      {
+        type: "command",
+        command: buildJournalHookCommand({ quiet: opts?.quiet })
+      }
+    ]
+  };
+}
+var LEGACY_JOURNAL_HOOK_COMMAND = "sh -c 'dora journal context 2>/dev/null || true'";
+var init_journal_hook = () => {};
+
 // src/cli/commands/journal/context.ts
 var exports_context = {};
 __export(exports_context, {
   generateJournalContext: () => generateJournalContext,
+  formatJournalHookJson: () => formatJournalHookJson,
   default: () => context_default
 });
-import { existsSync as existsSync7 } from "fs";
-import { join as join6, resolve as resolvePath } from "path";
+import { existsSync as existsSync10 } from "fs";
+import { join as join8, resolve as resolvePath } from "path";
+function formatJournalHookJson(contextText) {
+  return JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: "SessionStart",
+      additionalContext: contextText
+    }
+  });
+}
 function truncate(text, max = 180) {
   const clean = text.replace(/\s+/g, " ").trim();
   if (clean.length <= max)
@@ -2575,7 +3356,7 @@ function generateJournalContext(entries, project, opts = {}) {
 async function appendOrUpdateJournalBlock(target, contextText, project, useReference) {
   const absTarget = resolvePath(process.cwd(), target);
   let original = "";
-  if (existsSync7(absTarget)) {
+  if (existsSync10(absTarget)) {
     original = await Bun.file(absTarget).text();
   }
   let blockContent;
@@ -2617,22 +3398,23 @@ async function appendOrUpdateJournalBlock(target, contextText, project, useRefer
 `;
   }
   await Bun.write(absTarget, updated);
-  const action = existsSync7(absTarget) && startIdx !== -1 ? "Updated" : "Added";
+  const action = existsSync10(absTarget) && startIdx !== -1 ? "Updated" : "Added";
   ui.write(`
-  ${import_picocolors8.default.green("\u2713")} ${action} journal decisions section in ${import_picocolors8.default.white(target)}`);
+  ${import_picocolors9.default.green("\u2713")} ${action} journal decisions section in ${import_picocolors9.default.white(target)}`);
   if (useReference) {
-    ui.write(`  ${import_picocolors8.default.dim("Using @import references (full files will be loaded by Claude).")}`);
+    ui.write(`  ${import_picocolors9.default.dim("Using @import references (full files will be loaded by Claude).")}`);
   } else {
-    ui.write(`  ${import_picocolors8.default.dim("Embedded compact decisions (low noise).")}`);
+    ui.write(`  ${import_picocolors9.default.dim("Embedded compact decisions (low noise).")}`);
   }
 }
-var import_picocolors8, JOURNAL_BLOCK_START = "<!-- doraval-journal:start -->", JOURNAL_BLOCK_END = "<!-- doraval-journal:end -->", context_default;
+var import_picocolors9, JOURNAL_BLOCK_START = "<!-- doraval-journal:start -->", JOURNAL_BLOCK_END = "<!-- doraval-journal:end -->", context_default;
 var init_context = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_parse();
-  import_picocolors8 = __toESM(require_picocolors(), 1);
+  init_journal_hook();
+  import_picocolors9 = __toESM(require_picocolors(), 1);
   context_default = defineCommand({
     meta: {
       name: "context",
@@ -2672,26 +3454,29 @@ var init_context = __esm(() => {
         type: "boolean",
         description: "Print a ready-to-paste SessionStart hook snippet for hooks.json",
         default: false
+      },
+      json: {
+        type: "boolean",
+        description: "Emit Claude SessionStart hook JSON (hookSpecificOutput.additionalContext)",
+        default: false
+      },
+      quiet: {
+        type: "boolean",
+        description: "For hook use: omit plain-text output when there are no entries (still emits JSON with --json)",
+        default: false
       }
     },
     async run({ args }) {
       if (args["print-hook"]) {
-        const hookCmd = "sh -c 'dora journal context 2>/dev/null || true'";
         console.log(JSON.stringify({
-          SessionStart: [
-            {
-              hooks: [
-                {
-                  type: "command",
-                  command: hookCmd
-                }
-              ]
-            }
-          ]
+          hooks: {
+            SessionStart: [journalHookGroup()]
+          }
         }, null, 2));
-        ui.write("\nTip: Use `dora journal hook enable` to install the hook automatically.");
+        ui.write(`
+Hook command: ${buildJournalHookCommand()}`);
+        ui.write("\nTip: Use `dora journal hook enable -g` to install globally (recommended).");
         ui.write("     Use `dora journal hook disable` to remove it.");
-        ui.write("     (sh -c wrapper ensures shell features like redir work reliably.)");
         process.exit(0);
       }
       const config = await readConfig();
@@ -2704,16 +3489,16 @@ var init_context = __esm(() => {
       }
       const journalsDir = getJournalsDir();
       const entries = [];
-      const globalPath = join6(journalsDir, "global.md");
-      if (existsSync7(globalPath)) {
+      const globalPath = join8(journalsDir, "global.md");
+      if (existsSync10(globalPath)) {
         try {
           const raw = await Bun.file(globalPath).text();
           entries.push(...parseJournalEntries(raw));
         } catch {}
       }
       if (project) {
-        const projectPath = join6(journalsDir, `${project}.md`);
-        if (existsSync7(projectPath)) {
+        const projectPath = join8(journalsDir, `${project}.md`);
+        if (existsSync10(projectPath)) {
           try {
             const raw = await Bun.file(projectPath).text();
             entries.push(...parseJournalEntries(raw));
@@ -2730,9 +3515,13 @@ var init_context = __esm(() => {
       if (appendTarget && contextText) {
         await appendOrUpdateJournalBlock(appendTarget, contextText, project ?? null, !!args.reference);
       }
-      if (contextText && !appendTarget) {
+      const useJson = !!args.json;
+      const useQuiet = !!args.quiet;
+      if (useJson) {
+        console.log(formatJournalHookJson(contextText));
+      } else if (contextText && !appendTarget) {
         console.log(contextText);
-      } else if (contextText && appendTarget) {}
+      } else if (contextText && appendTarget) {} else if (!useQuiet && !appendTarget && !contextText) {}
       process.exit(0);
     }
   });
@@ -2744,23 +3533,25 @@ __export(exports_hook, {
   writeHookConfig: () => writeJson,
   removeHook: () => removeHook,
   readHookConfig: () => readJson,
+  isJournalHookCommand: () => isJournalHookCommand,
   hasHook: () => hasHook,
   getLocalHooksPath: () => getLocalHooksPath,
   getGlobalSettingsPath: () => getGlobalSettingsPath,
   default: () => hook_default,
+  buildJournalHookCommand: () => buildJournalHookCommand,
   addHook: () => addHook
 });
-import { existsSync as existsSync8, mkdirSync as mkdirSync2, unlinkSync, rmdirSync, readdirSync as readdirSync3 } from "fs";
-import { join as join7, dirname } from "path";
-import { homedir as homedir3 } from "os";
+import { existsSync as existsSync11, mkdirSync as mkdirSync3, unlinkSync, rmdirSync, readdirSync as readdirSync5 } from "fs";
+import { join as join9, dirname as dirname3 } from "path";
+import { homedir as homedir4 } from "os";
 function getGlobalSettingsPath() {
-  return join7(homedir3(), ".claude", "settings.json");
+  return join9(homedir4(), ".claude", "settings.json");
 }
 function getLocalHooksPath() {
-  return join7(process.cwd(), "hooks", "hooks.json");
+  return join9(process.cwd(), "hooks", "hooks.json");
 }
 async function readJson(file) {
-  if (!existsSync8(file))
+  if (!existsSync11(file))
     return {};
   try {
     const raw = await Bun.file(file).text();
@@ -2770,9 +3561,9 @@ async function readJson(file) {
   }
 }
 async function writeJson(file, data) {
-  const dir = dirname(file);
-  if (!existsSync8(dir)) {
-    mkdirSync2(dir, { recursive: true });
+  const dir = dirname3(file);
+  if (!existsSync11(dir)) {
+    mkdirSync3(dir, { recursive: true });
   }
   await Bun.write(file, JSON.stringify(data, null, 2) + `
 `);
@@ -2781,9 +3572,9 @@ function hasHook(config) {
   const sessionStart = config?.hooks?.SessionStart;
   if (!Array.isArray(sessionStart))
     return false;
-  return sessionStart.some((group) => Array.isArray(group?.hooks) && group.hooks.some((h) => h?.command === HOOK_COMMAND));
+  return sessionStart.some((group) => Array.isArray(group?.hooks) && group.hooks.some((h) => isJournalHookCommand(h?.command)));
 }
-async function addHook(file) {
+async function addHook(file, opts) {
   const original = await readJson(file);
   const config = JSON.parse(JSON.stringify(original));
   if (!config.hooks)
@@ -2791,15 +3582,26 @@ async function addHook(file) {
   if (!Array.isArray(config.hooks.SessionStart)) {
     config.hooks.SessionStart = [];
   }
+  const desiredCommand = buildJournalHookCommand({ quiet: opts?.quiet });
   if (hasHook(config)) {
-    return { changed: false, path: file };
+    if (!opts?.upgrade) {
+      return { changed: false, path: file };
+    }
+    config.hooks.SessionStart = config.hooks.SessionStart.map((group) => {
+      if (!group || !Array.isArray(group.hooks))
+        return group;
+      group.hooks = group.hooks.map((h) => isJournalHookCommand(h?.command) ? { ...h, command: desiredCommand } : h);
+      return group;
+    });
+    await writeJson(file, config);
+    return { changed: true, path: file };
   }
-  config.hooks.SessionStart.push(HOOK_GROUP);
+  config.hooks.SessionStart.push(journalHookGroup({ quiet: opts?.quiet }));
   await writeJson(file, config);
   return { changed: true, path: file };
 }
 async function removeHook(file) {
-  if (!existsSync8(file))
+  if (!existsSync11(file))
     return { changed: false, path: file };
   const original = await readJson(file);
   const config = JSON.parse(JSON.stringify(original));
@@ -2810,7 +3612,7 @@ async function removeHook(file) {
   config.hooks.SessionStart = config.hooks.SessionStart.map((group) => {
     if (!group || !Array.isArray(group.hooks))
       return group;
-    group.hooks = group.hooks.filter((h) => h?.command !== HOOK_COMMAND);
+    group.hooks = group.hooks.filter((h) => !isJournalHookCommand(h?.command));
     return group;
   }).filter((group) => Array.isArray(group?.hooks) && group.hooks.length > 0);
   if (config.hooks.SessionStart.length === 0) {
@@ -2822,13 +3624,13 @@ async function removeHook(file) {
   const changed = JSON.stringify(config) !== JSON.stringify(original);
   if (changed) {
     const isEmpty = !config || Object.keys(config).length === 0;
-    if (isEmpty && existsSync8(file)) {
+    if (isEmpty && existsSync11(file)) {
       try {
         unlinkSync(file);
       } catch {}
       try {
-        const dir = dirname(file);
-        if (existsSync8(dir) && readdirSync3(dir).length === 0)
+        const dir = dirname3(file);
+        if (existsSync11(dir) && readdirSync5(dir).length === 0)
           rmdirSync(dir);
       } catch {}
     } else {
@@ -2850,21 +3652,16 @@ async function printHookStatus() {
   }
   if (!localHas && !globalHas) {
     ui.info("Journal hook is not installed.");
-    ui.info("Run `dora journal hook enable` to install it.");
+    ui.info("Run `dora journal hook enable -g` to install it (recommended).");
+  } else {
+    ui.dim(`Expected command shape: ${buildJournalHookCommand()}`);
   }
 }
-var HOOK_COMMAND = "sh -c 'dora journal context 2>/dev/null || true'", HOOK_GROUP, enable, disable, status, hook_default;
+var enable, disable, status, hook_default;
 var init_hook = __esm(() => {
   init_dist();
   init_out();
-  HOOK_GROUP = {
-    hooks: [
-      {
-        type: "command",
-        command: HOOK_COMMAND
-      }
-    ]
-  };
+  init_journal_hook();
   enable = defineCommand({
     meta: {
       name: "enable",
@@ -2874,28 +3671,47 @@ var init_hook = __esm(() => {
       global: {
         type: "boolean",
         alias: "g",
-        description: "Install to global ~/.claude/settings.json (instead of project hooks/hooks.json)",
+        description: "Install to global ~/.claude/settings.json (recommended)",
+        default: false
+      },
+      quiet: {
+        type: "boolean",
+        description: "Swallow hook errors (2>/dev/null || true) \u2014 default shows failures",
+        default: false
+      },
+      upgrade: {
+        type: "boolean",
+        description: "Replace an existing journal hook with the latest command (absolute dora path + --json)",
         default: false
       }
     },
     async run({ args }) {
       const useGlobal = !!args.global;
       const target = useGlobal ? getGlobalSettingsPath() : getLocalHooksPath();
-      const result = await addHook(target);
+      const result = await addHook(target, {
+        quiet: !!args.quiet,
+        upgrade: !!args.upgrade
+      });
+      const hookCmd = buildJournalHookCommand({ quiet: !!args.quiet });
       if (result.changed) {
         ui.success(`Enabled journal hook in ${result.path}`);
+        ui.dim(`Hook command: ${hookCmd}`);
         if (useGlobal) {
-          ui.info("Installed globally \u2014 will affect all new Claude sessions (your typical setup with many plugins).");
+          ui.info("Installed globally \u2014 affects all new Claude Code sessions.");
         } else {
-          ui.info("Installed locally for this project \u2014 will affect Claude sessions started from this directory.");
-          ui.info("If your Claude hooks live in the global ~/.claude/settings.json (very common), re-run with -g/--global.");
+          ui.info("Installed in hooks/hooks.json for this project.");
+          ui.warn("Project hooks/hooks.json only loads when Claude runs from this directory with the plugin active.");
+          ui.info("For most setups, prefer: dora journal hook enable -g");
+          ui.info("Or use: dora journal context --append-to CLAUDE.md");
         }
+        ui.info(`Resolved dora binary: ${resolveDoraBinary()}`);
         ui.info("Start a new Claude session (or restart) for the hook to take effect.");
-        ui.dim("The hook runs `dora journal context` on SessionStart and injects your active decisions.");
-        ui.info("Preview what gets injected: dora journal context");
-        ui.info("Test inside Claude: ask it to list or recall your recent journal decisions.");
+        ui.dim("The hook runs `dora journal context --json` on SessionStart.");
+        ui.info("Preview plain text: dora journal context");
+        ui.info("Preview hook JSON: dora journal context --json");
       } else {
         ui.info(`Journal hook is already enabled in ${result.path}`);
+        ui.info("To migrate an older hook, run: dora journal hook enable --upgrade" + (useGlobal ? " -g" : ""));
       }
     }
   });
@@ -2958,15 +3774,15 @@ var exports_update = {};
 __export(exports_update, {
   default: () => update_default
 });
-import { existsSync as existsSync9 } from "fs";
-import { join as join8 } from "path";
-var import_picocolors9, update_default;
+import { existsSync as existsSync12 } from "fs";
+import { join as join10 } from "path";
+var import_picocolors10, update_default;
 var init_update = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_remote();
-  import_picocolors9 = __toESM(require_picocolors(), 1);
+  import_picocolors10 = __toESM(require_picocolors(), 1);
   update_default = defineCommand({
     meta: {
       name: "update",
@@ -2987,30 +3803,30 @@ var init_update = __esm(() => {
     async run({ args }) {
       const ghCheck = ensureGhCli();
       if (!ghCheck.ok) {
-        ui.write(`  ${import_picocolors9.default.red("\u2717")} ${import_picocolors9.default.white("The GitHub CLI (")}${import_picocolors9.default.bold("gh")}${import_picocolors9.default.white(") is not installed.")}
+        ui.write(`  ${import_picocolors10.default.red("\u2717")} ${import_picocolors10.default.white("The GitHub CLI (")}${import_picocolors10.default.bold("gh")}${import_picocolors10.default.white(") is not installed.")}
 `);
-        ui.write(`  doraval uses ${import_picocolors9.default.bold("gh")} to fetch and sync journal files with GitHub.
+        ui.write(`  doraval uses ${import_picocolors10.default.bold("gh")} to fetch and sync journal files with GitHub.
 `);
         ui.write(`  Install it:
 `);
-        ui.write(`    macOS:   ${import_picocolors9.default.dim("brew install gh")}`);
-        ui.write(`    Linux:   ${import_picocolors9.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-        ui.write(`    Windows: ${import_picocolors9.default.dim("winget install --id GitHub.cli")}
+        ui.write(`    macOS:   ${import_picocolors10.default.dim("brew install gh")}`);
+        ui.write(`    Linux:   ${import_picocolors10.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+        ui.write(`    Windows: ${import_picocolors10.default.dim("winget install --id GitHub.cli")}
 `);
-        ui.write(`  Then authenticate: ${import_picocolors9.default.dim("gh auth login")}
+        ui.write(`  Then authenticate: ${import_picocolors10.default.dim("gh auth login")}
 `);
         process.exit(1);
       }
       const config = await readConfig();
       if (!config?.journal.repo) {
-        ui.write(`${import_picocolors9.default.red("\u2717")} No journal repo configured. Run ${import_picocolors9.default.dim("dora init")} (or ${import_picocolors9.default.dim("doraval journal init")}) first.`);
+        ui.write(`${import_picocolors10.default.red("\u2717")} No journal repo configured. Run ${import_picocolors10.default.dim("dora init")} (or ${import_picocolors10.default.dim("doraval journal init")}) first.`);
         process.exit(1);
       }
       const journalRepo = config.journal.repo;
       ensureDoravalDirs();
       const journalsDir = getJournalsDir();
       ui.write(`
-  ${import_picocolors9.default.bold(import_picocolors9.default.white("dora journal update"))} \u2014 ${import_picocolors9.default.dim(import_picocolors9.default.gray(journalRepo))}
+  ${import_picocolors10.default.bold(import_picocolors10.default.white("dora journal update"))} \u2014 ${import_picocolors10.default.dim(import_picocolors10.default.gray(journalRepo))}
 `);
       const projectsToUpdate = [];
       if (args.all) {
@@ -3028,19 +3844,19 @@ var init_update = __esm(() => {
           try {
             projectsToUpdate.push(sanitizeProjectName(project));
           } catch {
-            ui.write(`${import_picocolors9.default.red("\u2717")} Invalid project name: ${project}`);
+            ui.write(`${import_picocolors10.default.red("\u2717")} Invalid project name: ${project}`);
             process.exit(1);
           }
         }
       }
-      const globalLocal = join8(journalsDir, "global.md");
+      const globalLocal = join10(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", globalLocal);
       let gotGlobal;
       if (!refreshGlobalRes.ok) {
         if (refreshGlobalRes.isNotFound) {
           gotGlobal = false;
         } else {
-          ui.write(`${import_picocolors9.default.red("\u2717")} Failed to fetch global.md from ${journalRepo}:`);
+          ui.write(`${import_picocolors10.default.red("\u2717")} Failed to fetch global.md from ${journalRepo}:`);
           ui.write(refreshGlobalRes.error);
           process.exit(1);
         }
@@ -3048,33 +3864,33 @@ var init_update = __esm(() => {
         gotGlobal = refreshGlobalRes.value;
       }
       if (gotGlobal) {
-        ui.write(`  ${import_picocolors9.default.green("\u2713")} global.md`);
+        ui.write(`  ${import_picocolors10.default.green("\u2713")} global.md`);
       } else {
-        ui.write(`  ${import_picocolors9.default.dim("\xB7")} global.md ${import_picocolors9.default.dim("(not present on remote)")}`);
+        ui.write(`  ${import_picocolors10.default.dim("\xB7")} global.md ${import_picocolors10.default.dim("(not present on remote)")}`);
       }
       if (projectsToUpdate.length === 0) {
         if (args.all) {
           ui.write(`
-  ${import_picocolors9.default.dim(import_picocolors9.default.gray("No projects registered."))}
+  ${import_picocolors10.default.dim(import_picocolors10.default.gray("No projects registered."))}
 `);
         } else {
           ui.write(`
-  ${import_picocolors9.default.yellow("\u26A0")} No project mapping found.
-` + `  Run ${import_picocolors9.default.dim("dora init")} or pass ${import_picocolors9.default.dim("--project <name>")} / ${import_picocolors9.default.dim("--all")}.
+  ${import_picocolors10.default.yellow("\u26A0")} No project mapping found.
+` + `  Run ${import_picocolors10.default.dim("dora init")} or pass ${import_picocolors10.default.dim("--project <name>")} / ${import_picocolors10.default.dim("--all")}.
 `);
         }
         return;
       }
       for (const project of projectsToUpdate) {
         const remotePath = `projects/${project}.md`;
-        const localPath = join8(journalsDir, `${project}.md`);
+        const localPath = join10(journalsDir, `${project}.md`);
         const refreshRes = await refreshLocalJournalFile(journalRepo, remotePath, localPath);
         let got;
         if (!refreshRes.ok) {
           if (refreshRes.isNotFound) {
             got = false;
           } else {
-            ui.write(`${import_picocolors9.default.red("\u2717")} Failed to fetch ${remotePath} from ${journalRepo}:`);
+            ui.write(`${import_picocolors10.default.red("\u2717")} Failed to fetch ${remotePath} from ${journalRepo}:`);
             ui.write(refreshRes.error);
             process.exit(1);
           }
@@ -3082,10 +3898,10 @@ var init_update = __esm(() => {
           got = refreshRes.value;
         }
         if (got) {
-          ui.write(`  ${import_picocolors9.default.green("\u2713")} ${remotePath}`);
+          ui.write(`  ${import_picocolors10.default.green("\u2713")} ${remotePath}`);
         } else {
-          ui.write(`  ${import_picocolors9.default.dim("\xB7")} ${remotePath} ${import_picocolors9.default.dim("(not present on remote \u2014 will be created on first sync)")}`);
-          if (!existsSync9(localPath)) {
+          ui.write(`  ${import_picocolors10.default.dim("\xB7")} ${remotePath} ${import_picocolors10.default.dim("(not present on remote \u2014 will be created on first sync)")}`);
+          if (!existsSync12(localPath)) {
             await Bun.write(localPath, `# ${project} Journal
 
 Project-specific decisions.
@@ -3095,7 +3911,7 @@ Project-specific decisions.
       }
       const summary = args.all && projectsToUpdate.length > 1 ? `${projectsToUpdate.length} projects + global` : projectsToUpdate.length === 1 ? projectsToUpdate[0] : "journals";
       ui.write(`
-  ${import_picocolors9.default.dim(import_picocolors9.default.gray("Local cache refreshed for"))} ${import_picocolors9.default.bold(import_picocolors9.default.white(summary))}.
+  ${import_picocolors10.default.dim(import_picocolors10.default.gray("Local cache refreshed for"))} ${import_picocolors10.default.bold(import_picocolors10.default.white(summary))}.
 `);
     }
   });
@@ -3161,19 +3977,19 @@ var exports_add = {};
 __export(exports_add, {
   default: () => add_default
 });
-import { existsSync as existsSync10 } from "fs";
-import { join as join9 } from "path";
+import { existsSync as existsSync13 } from "fs";
+import { join as join11 } from "path";
 function slugify(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "untitled";
 }
-var import_picocolors10, add_default;
+var import_picocolors11, add_default;
 var init_add = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_validate();
   init_agent_invoke();
-  import_picocolors10 = __toESM(require_picocolors(), 1);
+  import_picocolors11 = __toESM(require_picocolors(), 1);
   add_default = defineCommand({
     meta: {
       name: "add",
@@ -3248,9 +4064,9 @@ var init_add = __esm(() => {
         project = sanitizeProjectName(project);
       }
       if (!project) {
-        ui.write(`${import_picocolors10.default.yellow("\u26A0")} No project mapping found.
+        ui.write(`${import_picocolors11.default.yellow("\u26A0")} No project mapping found.
 
-` + `Run ${import_picocolors10.default.dim("dora init")} (or ${import_picocolors10.default.dim("doraval journal init")}) first, or pass ${import_picocolors10.default.dim("--project <name>")}.`);
+` + `Run ${import_picocolors11.default.dim("dora init")} (or ${import_picocolors11.default.dim("doraval journal init")}) first, or pass ${import_picocolors11.default.dim("--project <name>")}.`);
         process.exit(1);
       }
       let title;
@@ -3288,7 +4104,7 @@ var init_add = __esm(() => {
           if (parsed.date)
             date = String(parsed.date);
         } catch (e) {
-          ui.write(`${import_picocolors10.default.red("\u2717")} Failed to parse --json input: ${e.message}`);
+          ui.write(`${import_picocolors11.default.red("\u2717")} Failed to parse --json input: ${e.message}`);
           process.exit(1);
         }
       }
@@ -3297,7 +4113,7 @@ var init_add = __esm(() => {
       if (rawMdArg && !jsonInput) {
         if (rawMdArg === "-" || rawMdArg === "") {
           rawBody = (await new Response(Bun.stdin.stream()).text()).trim();
-        } else if (existsSync10(rawMdArg)) {
+        } else if (existsSync13(rawMdArg)) {
           rawBody = (await Bun.file(rawMdArg).text()).trim();
         } else {
           rawBody = rawMdArg.trim();
@@ -3312,7 +4128,7 @@ var init_add = __esm(() => {
           title = (headingMatch[1] ?? "").trim();
           rawBody = rawBody.replace(/^#+\s+(.+?)(?:\r?\n|$)/m, "").trimStart();
         } else {
-          ui.write(`${import_picocolors10.default.red("\u2717")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
+          ui.write(`${import_picocolors11.default.red("\u2717")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
           process.exit(1);
         }
       }
@@ -3352,7 +4168,7 @@ var init_add = __esm(() => {
         agentCfg = fullConfigForAgent?.agent;
         if (agentCfg) {
           attemptedAgent = true;
-          ui.write(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray("(querying your configured coding agent...)"))}`);
+          ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("(querying your configured coding agent...)"))}`);
           const scaffold = `Raw user capture (a decision, observation, or useful note that just happened): "${title}"
 
 Turn this into a clean journal entry. Infer the core decision or note even if the input is phrased as a todo or reminder. Be professional and concise.
@@ -3401,18 +4217,18 @@ If you cannot produce exactly this, output the JSON with the best you can and se
       };
       const validation = validateEntry(entry);
       if (!validation.valid) {
-        ui.write(`${import_picocolors10.default.red("\u2717")} Invalid entry:
+        ui.write(`${import_picocolors11.default.red("\u2717")} Invalid entry:
 `);
         for (const err of validation.errors) {
-          ui.write(`  ${import_picocolors10.default.red("\u2022")} ${err}`);
+          ui.write(`  ${import_picocolors11.default.red("\u2022")} ${err}`);
         }
         process.exit(1);
       }
       for (const warn of validation.warnings) {
         if ((warn.includes("not supplied") || warn.includes("empty")) && attemptedAgent) {} else if (warn.includes("not supplied") || warn.includes("empty")) {
-          ui.write(`${import_picocolors10.default.dim("\xB7")} ${warn}`);
+          ui.write(`${import_picocolors11.default.dim("\xB7")} ${warn}`);
         } else {
-          ui.write(`${import_picocolors10.default.yellow("\u26A0")} ${warn}`);
+          ui.write(`${import_picocolors11.default.yellow("\u26A0")} ${warn}`);
         }
       }
       if (!rationale) {
@@ -3432,31 +4248,31 @@ ${rationale}
 `;
       ensureDoravalDirs();
       const pendingDir = getPendingProjectDir(project);
-      if (!existsSync10(pendingDir)) {
-        await Bun.write(join9(pendingDir, ".gitkeep"), "");
+      if (!existsSync13(pendingDir)) {
+        await Bun.write(join11(pendingDir, ".gitkeep"), "");
       }
       const slug = slugify(title);
       const filename = `${date}-${slug}.md`;
-      const filePath = join9(pendingDir, filename);
+      const filePath = join11(pendingDir, filename);
       await Bun.write(filePath, content);
       ui.write(`
-  ${import_picocolors10.default.green("\u2713")} ${import_picocolors10.default.bold(import_picocolors10.default.white(title))}`);
-      ui.write(`  Project: ${import_picocolors10.default.white(project)}  \xB7 run ${import_picocolors10.default.dim(import_picocolors10.default.gray("dora journal sync"))} to publish
+  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.bold(import_picocolors11.default.white(title))}`);
+      ui.write(`  Project: ${import_picocolors11.default.white(project)}  \xB7 run ${import_picocolors11.default.dim(import_picocolors11.default.gray("dora journal sync"))} to publish
 `);
       if (args.verbose) {
-        const authorDisplay = author.startsWith("agent:") ? import_picocolors10.default.cyan(author) : author;
-        ui.write(`  Pushback: ${import_picocolors10.default.white(String(pushback))}`);
-        ui.write(`  Tags:     ${import_picocolors10.default.gray(tags.join(", ") || import_picocolors10.default.dim("(none)"))}`);
+        const authorDisplay = author.startsWith("agent:") ? import_picocolors11.default.cyan(author) : author;
+        ui.write(`  Pushback: ${import_picocolors11.default.white(String(pushback))}`);
+        ui.write(`  Tags:     ${import_picocolors11.default.gray(tags.join(", ") || import_picocolors11.default.dim("(none)"))}`);
         ui.write(`  Author:   ${authorDisplay}`);
-        ui.write(`  File:     ${import_picocolors10.default.dim(import_picocolors10.default.gray(filePath))}
+        ui.write(`  File:     ${import_picocolors11.default.dim(import_picocolors11.default.gray(filePath))}
 `);
       }
       if (isThinInput && !author.startsWith("agent:")) {
         if (attemptedAgent) {
-          ui.write(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray("Note: agent was called but returned no usable enrichment. Edit the pending file or re-run dora init."))}
+          ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Note: agent was called but returned no usable enrichment. Edit the pending file or re-run dora init."))}
 `);
         } else {
-          ui.write(`  ${import_picocolors10.default.dim(import_picocolors10.default.gray("Tip: run dora init to configure an agent for auto-enrichment."))}
+          ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Tip: run dora init to configure an agent for auto-enrichment."))}
 `);
         }
       }
@@ -3470,9 +4286,9 @@ var exports_sync = {};
 __export(exports_sync, {
   default: () => sync_default
 });
-import { readdirSync as readdirSync4, existsSync as existsSync11 } from "fs";
-import { join as join10 } from "path";
-var {spawnSync: spawnSync3 } = globalThis.Bun;
+import { readdirSync as readdirSync6, existsSync as existsSync14 } from "fs";
+import { join as join12 } from "path";
+var {spawnSync: spawnSync4 } = globalThis.Bun;
 function updateGitHubFile(repo, path, content, message, sha) {
   const payload = {
     message,
@@ -3497,28 +4313,28 @@ function updateGitHubFile(repo, path, content, message, sha) {
   }
   let result;
   try {
-    result = spawnSync3(args, {
+    result = spawnSync4(args, {
       stdout: "pipe",
       stderr: "pipe"
     });
   } catch {
-    ui.write(import_picocolors11.default.red(`Failed to update ${path} on ${repo}:`));
+    ui.write(import_picocolors12.default.red(`Failed to update ${path} on ${repo}:`));
     ui.write("GitHub CLI (gh) is not available.");
     process.exit(1);
   }
   if (result.exitCode !== 0) {
-    ui.write(import_picocolors11.default.red(`Failed to update ${path} on ${repo}:`));
+    ui.write(import_picocolors12.default.red(`Failed to update ${path} on ${repo}:`));
     ui.write(result.stderr.toString());
     process.exit(1);
   }
 }
-var import_picocolors11, sync_default;
+var import_picocolors12, sync_default;
 var init_sync = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_remote();
-  import_picocolors11 = __toESM(require_picocolors(), 1);
+  import_picocolors12 = __toESM(require_picocolors(), 1);
   sync_default = defineCommand({
     meta: {
       name: "sync",
@@ -3552,70 +4368,70 @@ var init_sync = __esm(() => {
         project = sanitizeProjectName(project);
       }
       if (!project) {
-        ui.write(`${import_picocolors11.default.yellow("\u26A0")} No project mapping found.
+        ui.write(`${import_picocolors12.default.yellow("\u26A0")} No project mapping found.
 
-` + `Run ${import_picocolors11.default.dim("dora init")} (or ${import_picocolors11.default.dim("doraval journal init")}) first, or pass ${import_picocolors11.default.dim("--project <name>")}.`);
+` + `Run ${import_picocolors12.default.dim("dora init")} (or ${import_picocolors12.default.dim("doraval journal init")}) first, or pass ${import_picocolors12.default.dim("--project <name>")}.`);
         process.exit(1);
       }
       if (!config?.journal.repo) {
-        ui.write(`${import_picocolors11.default.red("\u2717")} No journal repo configured. Run ${import_picocolors11.default.dim("dora init")} (or ${import_picocolors11.default.dim("doraval journal init")}) first.`);
+        ui.write(`${import_picocolors12.default.red("\u2717")} No journal repo configured. Run ${import_picocolors12.default.dim("dora init")} (or ${import_picocolors12.default.dim("doraval journal init")}) first.`);
         process.exit(1);
       }
       const ghCheck = ensureGhCli();
       if (!ghCheck.ok) {
-        ui.write(`  ${import_picocolors11.default.red("\u2717")} ${import_picocolors11.default.white("The GitHub CLI (")}${import_picocolors11.default.bold("gh")}${import_picocolors11.default.white(") is not installed.")}
+        ui.write(`  ${import_picocolors12.default.red("\u2717")} ${import_picocolors12.default.white("The GitHub CLI (")}${import_picocolors12.default.bold("gh")}${import_picocolors12.default.white(") is not installed.")}
 `);
-        ui.write(`  doraval uses ${import_picocolors11.default.bold("gh")} to fetch and sync journal files with GitHub.
+        ui.write(`  doraval uses ${import_picocolors12.default.bold("gh")} to fetch and sync journal files with GitHub.
 `);
         ui.write(`  Install it:
 `);
-        ui.write(`    macOS:   ${import_picocolors11.default.dim("brew install gh")}`);
-        ui.write(`    Linux:   ${import_picocolors11.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-        ui.write(`    Windows: ${import_picocolors11.default.dim("winget install --id GitHub.cli")}
+        ui.write(`    macOS:   ${import_picocolors12.default.dim("brew install gh")}`);
+        ui.write(`    Linux:   ${import_picocolors12.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+        ui.write(`    Windows: ${import_picocolors12.default.dim("winget install --id GitHub.cli")}
 `);
-        ui.write(`  Then authenticate: ${import_picocolors11.default.dim("gh auth login")}
+        ui.write(`  Then authenticate: ${import_picocolors12.default.dim("gh auth login")}
 `);
         process.exit(1);
       }
       const journalRepo = config.journal.repo;
       const pendingDir = getPendingProjectDir(project);
       ui.write(`
-  ${import_picocolors11.default.bold(import_picocolors11.default.white("dora journal sync"))} \u2014 ${import_picocolors11.default.white(project)}
+  ${import_picocolors12.default.bold(import_picocolors12.default.white("dora journal sync"))} \u2014 ${import_picocolors12.default.white(project)}
 `);
-      ui.write(`  Journal repo: ${import_picocolors11.default.dim(import_picocolors11.default.gray(journalRepo))}`);
+      ui.write(`  Journal repo: ${import_picocolors12.default.dim(import_picocolors12.default.gray(journalRepo))}`);
       ensureDoravalDirs();
       const journalsDir = getJournalsDir();
       const remoteProjectPath = `projects/${project}.md`;
-      const localProjectPath = join10(journalsDir, `${project}.md`);
-      ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Refreshing local cache from remote..."))}`);
-      const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", join10(journalsDir, "global.md"));
+      const localProjectPath = join12(journalsDir, `${project}.md`);
+      ui.write(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("Refreshing local cache from remote..."))}`);
+      const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", join12(journalsDir, "global.md"));
       if (!refreshGlobalRes.ok) {
         if (!refreshGlobalRes.isNotFound) {
-          ui.write(import_picocolors11.default.red(`Failed to fetch global.md from ${journalRepo}:`));
+          ui.write(import_picocolors12.default.red(`Failed to fetch global.md from ${journalRepo}:`));
           ui.write(refreshGlobalRes.error);
           process.exit(1);
         }
       }
       const gotGlobal = refreshGlobalRes.ok && refreshGlobalRes.value;
       if (gotGlobal) {
-        ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("\u2713 global.md"))}`);
+        ui.write(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("\u2713 global.md"))}`);
       }
       const refreshProjectCacheRes = await refreshLocalJournalFile(journalRepo, remoteProjectPath, localProjectPath);
       if (!refreshProjectCacheRes.ok) {
         if (!refreshProjectCacheRes.isNotFound) {
-          ui.write(import_picocolors11.default.red(`Failed to fetch ${remoteProjectPath} from ${journalRepo}:`));
+          ui.write(import_picocolors12.default.red(`Failed to fetch ${remoteProjectPath} from ${journalRepo}:`));
           ui.write(refreshProjectCacheRes.error);
           process.exit(1);
         }
       }
       const gotProjectCache = refreshProjectCacheRes.ok && refreshProjectCacheRes.value;
       if (gotProjectCache) {
-        ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray(`\u2713 ${remoteProjectPath}`))}`);
+        ui.write(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray(`\u2713 ${remoteProjectPath}`))}`);
       }
-      const pendingFiles = existsSync11(pendingDir) ? readdirSync4(pendingDir).filter((f) => f.endsWith(".md") && f !== ".gitkeep").sort() : [];
+      const pendingFiles = existsSync14(pendingDir) ? readdirSync6(pendingDir).filter((f) => f.endsWith(".md") && f !== ".gitkeep").sort() : [];
       if (pendingFiles.length === 0) {
         ui.write(`
-  ${import_picocolors11.default.yellow("\u26A0")} No pending entries. Local cache is now up to date.
+  ${import_picocolors12.default.yellow("\u26A0")} No pending entries. Local cache is now up to date.
 `);
         process.exit(0);
       }
@@ -3628,7 +4444,7 @@ var init_sync = __esm(() => {
       let currentFile = null;
       if (!metaRes.ok) {
         if (!metaRes.isNotFound) {
-          ui.write(import_picocolors11.default.red(`Failed to fetch ${remotePath} from ${journalRepo}:`));
+          ui.write(import_picocolors12.default.red(`Failed to fetch ${remotePath} from ${journalRepo}:`));
           ui.write(metaRes.error);
           process.exit(1);
         }
@@ -3639,14 +4455,14 @@ var init_sync = __esm(() => {
         existingContent = Buffer.from(currentFile.content, "base64").toString("utf8");
         currentSha = currentFile.sha;
         if (args.verbose)
-          ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Found existing remote file (sha: " + (currentSha?.slice(0, 7) ?? "") + "...)"))}`);
+          ui.write(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("Found existing remote file (sha: " + (currentSha?.slice(0, 7) ?? "") + "...)"))}`);
       } else {
         if (args.verbose)
-          ui.write(`  ${import_picocolors11.default.dim(import_picocolors11.default.gray("No existing file on remote \u2014 will create it"))}`);
+          ui.write(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("No existing file on remote \u2014 will create it"))}`);
       }
       let newEntries = "";
       for (const file of pendingFiles) {
-        const fullPath = join10(pendingDir, file);
+        const fullPath = join12(pendingDir, file);
         const entryContent = await Bun.file(fullPath).text();
         newEntries += `
 ` + entryContent.trim() + `
@@ -3666,119 +4482,37 @@ var init_sync = __esm(() => {
       const commitMessage = args.message || `journal: add ${pendingFiles.length} entr${pendingFiles.length === 1 ? "y" : "ies"} for ${project}`;
       if (args.verbose)
         ui.write(`
-  ${import_picocolors11.default.dim(import_picocolors11.default.gray("Pushing to remote..."))}`);
+  ${import_picocolors12.default.dim(import_picocolors12.default.gray("Pushing to remote..."))}`);
       try {
         updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
-        ui.write(`  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("Successfully pushed to")} ${import_picocolors11.default.white(remotePath)}`);
+        ui.write(`  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Successfully pushed to")} ${import_picocolors12.default.white(remotePath)}`);
       } catch (err) {
-        ui.write(`${import_picocolors11.default.red("\u2717")} ${import_picocolors11.default.white("Failed to push to GitHub.")}`);
+        ui.write(`${import_picocolors12.default.red("\u2717")} ${import_picocolors12.default.white("Failed to push to GitHub.")}`);
         process.exit(1);
       }
       for (const file of pendingFiles) {
-        const fullPath = join10(pendingDir, file);
+        const fullPath = join12(pendingDir, file);
         try {
           await Bun.file(fullPath).unlink();
         } catch {}
       }
-      ui.write(`  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("Cleared local pending entries")}`);
+      ui.write(`  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Cleared local pending entries")}`);
       try {
         const refreshRes = await refreshLocalJournalFile(journalRepo, remotePath, localProjectPath);
         if (!refreshRes.ok) {
           if (!refreshRes.isNotFound) {
-            ui.write(`  ${import_picocolors11.default.yellow("\u26A0")} Could not re-fetch updated file (you can run sync again later)`);
+            ui.write(`  ${import_picocolors12.default.yellow("\u26A0")} Could not re-fetch updated file (you can run sync again later)`);
           }
         } else if (refreshRes.value) {
           if (args.verbose)
-            ui.write(`  ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.white("Re-fetched")} ${import_picocolors11.default.white(project)}.md ${import_picocolors11.default.white("into local cache")}`);
+            ui.write(`  ${import_picocolors12.default.green("\u2713")} ${import_picocolors12.default.white("Re-fetched")} ${import_picocolors12.default.white(project)}.md ${import_picocolors12.default.white("into local cache")}`);
         }
       } catch {
-        ui.write(`  ${import_picocolors11.default.yellow("\u26A0")} Could not re-fetch updated file (you can run sync again later)`);
+        ui.write(`  ${import_picocolors12.default.yellow("\u26A0")} Could not re-fetch updated file (you can run sync again later)`);
       }
       ui.write(`
-  ${import_picocolors11.default.green("Done!")} ${import_picocolors11.default.white(pendingFiles.length + " entr" + (pendingFiles.length === 1 ? "y" : "ies") + " published.")}
+  ${import_picocolors12.default.green("Done!")} ${import_picocolors12.default.white(pendingFiles.length + " entr" + (pendingFiles.length === 1 ? "y" : "ies") + " published.")}
 `);
-      process.exit(0);
-    }
-  });
-});
-
-// src/cli/commands/eval-history.ts
-var exports_eval_history = {};
-__export(exports_eval_history, {
-  default: () => eval_history_default
-});
-import { existsSync as existsSync12, readdirSync as readdirSync5 } from "fs";
-import { join as join11 } from "path";
-var import_picocolors12, eval_history_default;
-var init_eval_history = __esm(() => {
-  init_dist();
-  init_out();
-  init_journal_config();
-  import_picocolors12 = __toESM(require_picocolors(), 1);
-  eval_history_default = defineCommand({
-    meta: {
-      name: "history",
-      description: "List stored eval results"
-    },
-    args: {
-      limit: {
-        type: "string",
-        description: "Maximum number of results to show (default: 20)",
-        default: "20"
-      },
-      skill: {
-        type: "string",
-        description: "Filter by skill name"
-      },
-      format: {
-        type: "string",
-        alias: "f",
-        description: "Output format: table (default) or json",
-        default: "table"
-      }
-    },
-    async run({ args }) {
-      const evalsDir = getEvalsDir();
-      if (!existsSync12(evalsDir)) {
-        ui.info("No eval history yet. Run: doraval eval");
-        process.exit(0);
-      }
-      const files = readdirSync5(evalsDir).filter((f) => f.endsWith(".json")).sort().reverse();
-      const limit = parseInt(String(args.limit), 10) || 20;
-      const results = [];
-      for (const file of files) {
-        if (results.length >= limit)
-          break;
-        try {
-          const raw = await Bun.file(join11(evalsDir, file)).text();
-          const parsed = JSON.parse(raw);
-          if (parsed.schemaVersion !== 1)
-            continue;
-          if (args.skill && !parsed.skill.includes(args.skill))
-            continue;
-          results.push(parsed);
-        } catch {}
-      }
-      if (results.length === 0) {
-        ui.info("No eval results found.");
-        process.exit(0);
-      }
-      if (args.format === "json") {
-        process.stdout.write(JSON.stringify(results, null, 2) + `
-`);
-      } else {
-        ui.heading("doraval eval history");
-        ui.write(`  ${"DATE".padEnd(20)} ${"SESSION TITLE".padEnd(35)} ${"SKILL".padEnd(35)} RESULT`);
-        ui.write(`  ${"-".repeat(100)}`);
-        for (const r of results) {
-          const date = r.timestamp.slice(0, 10);
-          const title = (r.sessionTitle ?? r.sessionId.slice(0, 8)).slice(0, 33).padEnd(35);
-          const skill = r.skill.slice(0, 33).padEnd(35);
-          const verdictColor = r.verdict === "PASS" ? import_picocolors12.default.green : r.verdict === "FAIL" ? import_picocolors12.default.red : import_picocolors12.default.yellow;
-          ui.write(`  ${date.padEnd(20)} ${title} ${skill} ${verdictColor(r.verdict)}`);
-        }
-        ui.blank();
-      }
       process.exit(0);
     }
   });
@@ -3926,21 +4660,31 @@ var init_spec = __esm(() => {
       skillsField: "array-of-paths",
       sourceShape: "string",
       requiresInterface: false
+    },
+    grok: {
+      id: "grok",
+      name: "Grok",
+      manifestPath: ".grok-plugin/plugin.json",
+      marketplacePath: ".grok-plugin/marketplace.json",
+      mcpFilename: ".mcp.json",
+      skillsField: "directory-string",
+      sourceShape: "string",
+      requiresInterface: false
     }
   };
   supportedProviders = Object.keys(PROVIDER_SPECS);
 });
 
 // src/cli/commands/claude/context.ts
-import { existsSync as existsSync13, readdirSync as readdirSync6 } from "fs";
-import { join as join12 } from "path";
+import { existsSync as existsSync15, readdirSync as readdirSync7 } from "fs";
+import { join as join13 } from "path";
 function detectContext(cwd = process.cwd()) {
   const claudeSpec = getProviderSpec("claude");
-  const hasClaudeDir = existsSync13(join12(cwd, ".claude"));
-  const hasPluginManifest = existsSync13(join12(cwd, claudeSpec.manifestPath));
+  const hasClaudeDir = existsSync15(join13(cwd, ".claude"));
+  const hasPluginManifest = existsSync15(join13(cwd, claudeSpec.manifestPath));
   let looseSkillFiles = [];
   try {
-    const files = readdirSync6(cwd);
+    const files = readdirSync7(cwd);
     looseSkillFiles = files.filter((f) => {
       if (!f.endsWith(".md") || f.startsWith("."))
         return false;
@@ -3970,8 +4714,8 @@ __export(exports_new, {
   default: () => new_default,
   decidePath: () => decidePath
 });
-import { join as join13, basename as basename3, dirname as dirname2 } from "path";
-import { mkdirSync as mkdirSync3, writeFileSync, existsSync as existsSync14 } from "fs";
+import { join as join14, basename as basename3, dirname as dirname4 } from "path";
+import { mkdirSync as mkdirSync4, writeFileSync, existsSync as existsSync16 } from "fs";
 function decidePath(ctx, intent, providedName) {
   const rawName = providedName || "";
   let decisionPath = "standalone";
@@ -3985,7 +4729,7 @@ function decidePath(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join13(ctx.cwd, rawName);
+      targetDir = join14(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -3995,7 +4739,7 @@ function decidePath(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join13(ctx.cwd, rawName);
+      targetDir = join14(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -4003,7 +4747,7 @@ function decidePath(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join13(ctx.cwd, rawName);
+      targetDir = join14(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -4011,25 +4755,25 @@ function decidePath(ctx, intent, providedName) {
 }
 function scaffold(decision, ctx, migrateContent) {
   const { targetDir, path, shouldCreateDir } = decision;
-  if (existsSync14(targetDir) && shouldCreateDir) {
+  if (existsSync16(targetDir) && shouldCreateDir) {
     ui.fail("Target already exists");
     process.exit(1);
   }
   if (shouldCreateDir) {
-    mkdirSync3(targetDir, { recursive: true });
+    mkdirSync4(targetDir, { recursive: true });
   }
   if (path === "plugin") {
     const pluginName = basename3(targetDir);
     const claudeSpec = getProviderSpec("claude");
-    const claudeManifestDir = dirname2(claudeSpec.manifestPath);
+    const claudeManifestDir = dirname4(claudeSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       description: "Scaffolded by doraval claude new",
       version: "0.1.0",
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync3(join13(targetDir, claudeManifestDir), { recursive: true });
-    writeFileSync(join13(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    mkdirSync4(join14(targetDir, claudeManifestDir), { recursive: true });
+    writeFileSync(join14(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
     const marketplaceJson = {
       name: pluginName,
       version: "0.1.0",
@@ -4040,9 +4784,9 @@ function scaffold(decision, ctx, migrateContent) {
       license: "MIT",
       keywords: ["claude-code", "skills", "plugin"]
     };
-    writeFileSync(join13(targetDir, "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync(join14(targetDir, "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync3(join13(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync4(join14(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -4066,19 +4810,19 @@ When you need to check a skill or plugin:
 
 Always run \`doraval validate\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
     }
-    writeFileSync(join13(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join13(targetDir, "README.md");
-    if (!existsSync14(readmePath)) {
+    writeFileSync(join14(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join14(targetDir, "README.md");
+    if (!existsSync16(readmePath)) {
       writeFileSync(readmePath, "# " + pluginName + `
 
 Claude Code plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync3(join13(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
+    mkdirSync4(join14(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter.`;
-    writeFileSync(join13(targetDir, ".claude", "skills", "my-skill", "SKILL.md"), `---
+    writeFileSync(join14(targetDir, ".claude", "skills", "my-skill", "SKILL.md"), `---
 name: my-skill
 description: Starter
 ---
@@ -4158,8 +4902,8 @@ var exports_bump = {};
 __export(exports_bump, {
   default: () => bump_default
 });
-import { resolve as resolve4, join as join14, dirname as dirname3, relative } from "path";
-import { existsSync as existsSync15, readFileSync as readFileSync3, writeFileSync as writeFileSync2, readdirSync as readdirSync7, statSync as statSync2 } from "fs";
+import { resolve as resolve5, join as join15, dirname as dirname5, relative } from "path";
+import { existsSync as existsSync17, readFileSync as readFileSync4, writeFileSync as writeFileSync2, readdirSync as readdirSync8, statSync as statSync2 } from "fs";
 function bumpVersion(current, type) {
   if (/^\d+\.\d+\.\d+$/.test(type))
     return type;
@@ -4179,7 +4923,7 @@ function bumpVersion(current, type) {
 }
 function readJson2(p) {
   try {
-    const content = readFileSync3(p, "utf8");
+    const content = readFileSync4(p, "utf8");
     return JSON.parse(content);
   } catch {
     return null;
@@ -4237,12 +4981,12 @@ function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
     return results;
   let entries;
   try {
-    entries = readdirSync7(dir);
+    entries = readdirSync8(dir);
   } catch {
     return results;
   }
   for (const entry of entries) {
-    const full = join14(dir, entry);
+    const full = join15(dir, entry);
     let st;
     try {
       st = statSync2(full);
@@ -4254,7 +4998,7 @@ function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
       results.push(...sub);
     } else if (st.isFile()) {
       if (entry === "plugin.json") {
-        const parentDir = dirname3(full);
+        const parentDir = dirname5(full);
         const parentName = parentDir.split(/[/\\]/).pop();
         if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin" || parentName === ".github") {
           results.push({
@@ -4314,8 +5058,8 @@ var init_bump = __esm(() => {
         process.exit(1);
       }
       const isKnownType = ["patch", "minor", "major"].includes(rawType) || /^\d+\.\d+\.\d+$/.test(rawType);
-      const maybePath = resolve4(rawType);
-      const looksLikeDir = existsSync15(maybePath) || rawType === "." || rawType.startsWith("./") || rawType.startsWith("../");
+      const maybePath = resolve5(rawType);
+      const looksLikeDir = existsSync17(maybePath) || rawType === "." || rawType.startsWith("./") || rawType.startsWith("../");
       if (!isKnownType && looksLikeDir) {
         targetPath = rawType;
         rawType = "patch";
@@ -4323,8 +5067,8 @@ var init_bump = __esm(() => {
         ui.fail(`Unknown bump type "${rawType}". Use patch | minor | major | 1.2.3`);
         process.exit(1);
       }
-      const root = resolve4(targetPath);
-      if (!existsSync15(root)) {
+      const root = resolve5(targetPath);
+      if (!existsSync17(root)) {
         ui.fail(`Path does not exist: ${root}`);
         process.exit(1);
       }
@@ -4415,16 +5159,16 @@ var init_bump = __esm(() => {
 });
 
 // src/cli/commands/codex/context.ts
-import { existsSync as existsSync16, readdirSync as readdirSync8 } from "fs";
-import { join as join15 } from "path";
+import { existsSync as existsSync18, readdirSync as readdirSync9 } from "fs";
+import { join as join16 } from "path";
 function detectContext2(cwd = process.cwd()) {
   const codexSpec = getProviderSpec("codex");
-  const hasCodexDir = existsSync16(join15(cwd, ".codex"));
-  const hasPluginManifest = existsSync16(join15(cwd, codexSpec.manifestPath));
-  const hasMarketplace = existsSync16(join15(cwd, ".agents", "plugins", "marketplace.json")) || existsSync16(join15(cwd, codexSpec.manifestPath));
+  const hasCodexDir = existsSync18(join16(cwd, ".codex"));
+  const hasPluginManifest = existsSync18(join16(cwd, codexSpec.manifestPath));
+  const hasMarketplace = existsSync18(join16(cwd, ".agents", "plugins", "marketplace.json")) || existsSync18(join16(cwd, codexSpec.manifestPath));
   let looseSkillFiles = [];
   try {
-    const files = readdirSync8(cwd);
+    const files = readdirSync9(cwd);
     looseSkillFiles = files.filter((f) => {
       if (!f.endsWith(".md") || f.startsWith("."))
         return false;
@@ -4455,8 +5199,8 @@ __export(exports_new2, {
   default: () => new_default2,
   decidePath: () => decidePath2
 });
-import { join as join16, basename as basename4, dirname as dirname4 } from "path";
-import { mkdirSync as mkdirSync4, writeFileSync as writeFileSync3, existsSync as existsSync17 } from "fs";
+import { join as join17, basename as basename4, dirname as dirname6 } from "path";
+import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync3, existsSync as existsSync19 } from "fs";
 function decidePath2(ctx, intent, providedName) {
   const rawName = providedName || "";
   let decisionPath = "standalone";
@@ -4470,7 +5214,7 @@ function decidePath2(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join16(ctx.cwd, rawName);
+      targetDir = join17(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -4480,7 +5224,7 @@ function decidePath2(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join16(ctx.cwd, rawName);
+      targetDir = join17(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -4488,7 +5232,7 @@ function decidePath2(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join16(ctx.cwd, rawName);
+      targetDir = join17(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -4496,17 +5240,17 @@ function decidePath2(ctx, intent, providedName) {
 }
 function scaffold2(decision, ctx, migrateContent) {
   const { targetDir, path, shouldCreateDir } = decision;
-  if (existsSync17(targetDir) && shouldCreateDir) {
+  if (existsSync19(targetDir) && shouldCreateDir) {
     ui.fail("Target already exists");
     process.exit(1);
   }
   if (shouldCreateDir) {
-    mkdirSync4(targetDir, { recursive: true });
+    mkdirSync5(targetDir, { recursive: true });
   }
   if (path === "plugin") {
     const pluginName = basename4(targetDir);
     const codexSpec = getProviderSpec("codex");
-    const codexManifestDir = dirname4(codexSpec.manifestPath);
+    const codexManifestDir = dirname6(codexSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
@@ -4519,10 +5263,10 @@ function scaffold2(decision, ctx, migrateContent) {
       },
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync4(join16(targetDir, codexManifestDir), { recursive: true });
-    writeFileSync3(join16(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-    const marketplaceDir = dirname4(codexSpec.marketplacePath);
-    mkdirSync4(join16(targetDir, marketplaceDir), { recursive: true });
+    mkdirSync5(join17(targetDir, codexManifestDir), { recursive: true });
+    writeFileSync3(join17(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname6(codexSpec.marketplacePath);
+    mkdirSync5(join17(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: "local",
       interface: {
@@ -4543,9 +5287,9 @@ function scaffold2(decision, ctx, migrateContent) {
         }
       ]
     };
-    writeFileSync3(join16(targetDir, codexSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync3(join17(targetDir, codexSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync4(join16(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync5(join17(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -4576,19 +5320,19 @@ To test in Codex:
 3. Open the plugin directory, select your local marketplace, and enable the plugin.
 4. Invoke the demo with /${pluginName}:doraval`;
     }
-    writeFileSync3(join16(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join16(targetDir, "README.md");
-    if (!existsSync17(readmePath)) {
+    writeFileSync3(join17(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join17(targetDir, "README.md");
+    if (!existsSync19(readmePath)) {
       writeFileSync3(readmePath, "# " + pluginName + `
 
 Codex plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync4(join16(targetDir, "skills", "doraval"), { recursive: true });
+    mkdirSync5(join17(targetDir, "skills", "doraval"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter for Codex.`;
-    writeFileSync3(join16(targetDir, "skills", "doraval", "SKILL.md"), `---
+    writeFileSync3(join17(targetDir, "skills", "doraval", "SKILL.md"), `---
 name: doraval
 description: Starter (local skill)
 ---
@@ -4664,14 +5408,14 @@ var init_new2 = __esm(() => {
 });
 
 // src/cli/commands/cursor/context.ts
-import { existsSync as existsSync18, readdirSync as readdirSync9 } from "fs";
-import { join as join17 } from "path";
+import { existsSync as existsSync20, readdirSync as readdirSync10 } from "fs";
+import { join as join18 } from "path";
 function detectContext3(cwd = process.cwd()) {
-  const hasCursorDir = existsSync18(join17(cwd, ".cursor"));
-  const hasPluginManifest = existsSync18(join17(cwd, ".cursor-plugin", "plugin.json"));
+  const hasCursorDir = existsSync20(join18(cwd, ".cursor"));
+  const hasPluginManifest = existsSync20(join18(cwd, ".cursor-plugin", "plugin.json"));
   let looseSkillFiles = [];
   try {
-    const files = readdirSync9(cwd);
+    const files = readdirSync10(cwd);
     looseSkillFiles = files.filter((f) => {
       if (!f.endsWith(".md") || f.startsWith("."))
         return false;
@@ -4699,8 +5443,8 @@ __export(exports_new3, {
   default: () => new_default3,
   decidePath: () => decidePath3
 });
-import { join as join18, basename as basename5, dirname as dirname5 } from "path";
-import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync4, existsSync as existsSync19 } from "fs";
+import { join as join19, basename as basename5, dirname as dirname7 } from "path";
+import { mkdirSync as mkdirSync6, writeFileSync as writeFileSync4, existsSync as existsSync21 } from "fs";
 function decidePath3(ctx, intent, providedName) {
   const rawName = providedName || "";
   let decisionPath = "standalone";
@@ -4714,7 +5458,7 @@ function decidePath3(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join18(ctx.cwd, rawName);
+      targetDir = join19(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -4724,7 +5468,7 @@ function decidePath3(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join18(ctx.cwd, rawName);
+      targetDir = join19(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -4732,7 +5476,7 @@ function decidePath3(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join18(ctx.cwd, rawName);
+      targetDir = join19(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -4740,17 +5484,17 @@ function decidePath3(ctx, intent, providedName) {
 }
 function scaffold3(decision, ctx, migrateContent) {
   const { targetDir, path, shouldCreateDir } = decision;
-  if (existsSync19(targetDir) && shouldCreateDir) {
+  if (existsSync21(targetDir) && shouldCreateDir) {
     ui.fail("Target already exists");
     process.exit(1);
   }
   if (shouldCreateDir) {
-    mkdirSync5(targetDir, { recursive: true });
+    mkdirSync6(targetDir, { recursive: true });
   }
   if (path === "plugin") {
     const pluginName = basename5(targetDir);
     const cursorSpec = getProviderSpec("cursor");
-    const cursorManifestDir = dirname5(cursorSpec.manifestPath);
+    const cursorManifestDir = dirname7(cursorSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
@@ -4759,10 +5503,10 @@ function scaffold3(decision, ctx, migrateContent) {
       displayName: pluginName,
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync5(join18(targetDir, cursorManifestDir), { recursive: true });
-    writeFileSync4(join18(targetDir, cursorSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-    const marketplaceDir = dirname5(cursorSpec.marketplacePath);
-    mkdirSync5(join18(targetDir, marketplaceDir), { recursive: true });
+    mkdirSync6(join19(targetDir, cursorManifestDir), { recursive: true });
+    writeFileSync4(join19(targetDir, cursorSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname7(cursorSpec.marketplacePath);
+    mkdirSync6(join19(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: pluginName,
       version: "0.1.0",
@@ -4773,9 +5517,9 @@ function scaffold3(decision, ctx, migrateContent) {
       license: "MIT",
       keywords: ["cursor", "skills", "plugin"]
     };
-    writeFileSync4(join18(targetDir, cursorSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync4(join19(targetDir, cursorSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync5(join18(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync6(join19(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -4804,19 +5548,19 @@ To test in Cursor:
 1. Open the plugin directory or add via marketplace.
 2. The demo skill will be available.`;
     }
-    writeFileSync4(join18(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join18(targetDir, "README.md");
-    if (!existsSync19(readmePath)) {
+    writeFileSync4(join19(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join19(targetDir, "README.md");
+    if (!existsSync21(readmePath)) {
       writeFileSync4(readmePath, "# " + pluginName + `
 
 Cursor plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync5(join18(targetDir, "skills", "doraval"), { recursive: true });
+    mkdirSync6(join19(targetDir, "skills", "doraval"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter for Cursor.`;
-    writeFileSync4(join18(targetDir, "skills", "doraval", "SKILL.md"), `---
+    writeFileSync4(join19(targetDir, "skills", "doraval", "SKILL.md"), `---
 name: doraval
 description: Starter (local skill)
 ---
@@ -4891,14 +5635,14 @@ var init_new3 = __esm(() => {
 });
 
 // src/cli/commands/copilot/context.ts
-import { existsSync as existsSync20, readdirSync as readdirSync10 } from "fs";
-import { join as join19 } from "path";
+import { existsSync as existsSync22, readdirSync as readdirSync11 } from "fs";
+import { join as join20 } from "path";
 function detectContext4(cwd = process.cwd()) {
-  const hasGithubDir = existsSync20(join19(cwd, ".github"));
-  const hasPluginManifest = existsSync20(join19(cwd, ".github", "plugin", "plugin.json"));
+  const hasGithubDir = existsSync22(join20(cwd, ".github"));
+  const hasPluginManifest = existsSync22(join20(cwd, ".github", "plugin", "plugin.json"));
   let looseSkillFiles = [];
   try {
-    const files = readdirSync10(cwd);
+    const files = readdirSync11(cwd);
     looseSkillFiles = files.filter((f) => {
       if (!f.endsWith(".md") || f.startsWith("."))
         return false;
@@ -4926,8 +5670,8 @@ __export(exports_new4, {
   default: () => new_default4,
   decidePath: () => decidePath4
 });
-import { join as join20, basename as basename6, dirname as dirname6 } from "path";
-import { mkdirSync as mkdirSync6, writeFileSync as writeFileSync5, existsSync as existsSync21 } from "fs";
+import { join as join21, basename as basename6, dirname as dirname8 } from "path";
+import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync5, existsSync as existsSync23 } from "fs";
 function decidePath4(ctx, intent, providedName) {
   const rawName = providedName || "";
   let decisionPath = "standalone";
@@ -4941,7 +5685,7 @@ function decidePath4(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join20(ctx.cwd, rawName);
+      targetDir = join21(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -4951,7 +5695,7 @@ function decidePath4(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join20(ctx.cwd, rawName);
+      targetDir = join21(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -4959,7 +5703,7 @@ function decidePath4(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join20(ctx.cwd, rawName);
+      targetDir = join21(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -4967,17 +5711,17 @@ function decidePath4(ctx, intent, providedName) {
 }
 function scaffold4(decision, ctx, migrateContent) {
   const { targetDir, path, shouldCreateDir } = decision;
-  if (existsSync21(targetDir) && shouldCreateDir) {
+  if (existsSync23(targetDir) && shouldCreateDir) {
     ui.fail("Target already exists");
     process.exit(1);
   }
   if (shouldCreateDir) {
-    mkdirSync6(targetDir, { recursive: true });
+    mkdirSync7(targetDir, { recursive: true });
   }
   if (path === "plugin") {
     const pluginName = basename6(targetDir);
     const copilotSpec = getProviderSpec("copilot");
-    const copilotManifestDir = dirname6(copilotSpec.manifestPath);
+    const copilotManifestDir = dirname8(copilotSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
@@ -4986,10 +5730,10 @@ function scaffold4(decision, ctx, migrateContent) {
       displayName: pluginName,
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync6(join20(targetDir, copilotManifestDir), { recursive: true });
-    writeFileSync5(join20(targetDir, copilotSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-    const marketplaceDir = dirname6(copilotSpec.marketplacePath);
-    mkdirSync6(join20(targetDir, marketplaceDir), { recursive: true });
+    mkdirSync7(join21(targetDir, copilotManifestDir), { recursive: true });
+    writeFileSync5(join21(targetDir, copilotSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname8(copilotSpec.marketplacePath);
+    mkdirSync7(join21(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: "local",
       plugins: [
@@ -5002,9 +5746,9 @@ function scaffold4(decision, ctx, migrateContent) {
         }
       ]
     };
-    writeFileSync5(join20(targetDir, copilotSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync5(join21(targetDir, copilotSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync6(join20(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync7(join21(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -5033,19 +5777,19 @@ To test in Copilot:
 1. Configure the .github/plugin as local source.
 2. Restart/reload and invoke the skill.`;
     }
-    writeFileSync5(join20(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join20(targetDir, "README.md");
-    if (!existsSync21(readmePath)) {
+    writeFileSync5(join21(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join21(targetDir, "README.md");
+    if (!existsSync23(readmePath)) {
       writeFileSync5(readmePath, "# " + pluginName + `
 
 Copilot plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync6(join20(targetDir, "skills", "doraval"), { recursive: true });
+    mkdirSync7(join21(targetDir, "skills", "doraval"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter for Copilot.`;
-    writeFileSync5(join20(targetDir, "skills", "doraval", "SKILL.md"), `---
+    writeFileSync5(join21(targetDir, "skills", "doraval", "SKILL.md"), `---
 name: doraval
 description: Starter (local skill)
 ---
@@ -5124,8 +5868,8 @@ var exports_ui = {};
 __export(exports_ui, {
   default: () => ui_default
 });
-import { existsSync as existsSync22, readdirSync as readdirSync11, writeFileSync as writeFileSync6, unlinkSync as unlinkSync2, readFileSync as readFileSync4 } from "fs";
-import { join as join21 } from "path";
+import { existsSync as existsSync24, readdirSync as readdirSync12, writeFileSync as writeFileSync6, unlinkSync as unlinkSync2, readFileSync as readFileSync5 } from "fs";
+import { join as join22 } from "path";
 import { spawn } from "child_process";
 function slugify2(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "untitled";
@@ -5133,8 +5877,8 @@ function slugify2(title) {
 async function loadAllEntries(project) {
   const journalsDir = getJournalsDir();
   const entries = [];
-  const globalPath = join21(journalsDir, "global.md");
-  if (existsSync22(globalPath)) {
+  const globalPath = join22(journalsDir, "global.md");
+  if (existsSync24(globalPath)) {
     try {
       const raw = await Bun.file(globalPath).text();
       const parsed = parseJournalEntries(raw);
@@ -5142,8 +5886,8 @@ async function loadAllEntries(project) {
     } catch {}
   }
   if (project) {
-    const projPath = join21(journalsDir, `${project}.md`);
-    if (existsSync22(projPath)) {
+    const projPath = join22(journalsDir, `${project}.md`);
+    if (existsSync24(projPath)) {
       try {
         const raw = await Bun.file(projPath).text();
         const parsed = parseJournalEntries(raw);
@@ -5154,10 +5898,10 @@ async function loadAllEntries(project) {
   const staged = [];
   try {
     const pdir = project ? getPendingProjectDir(project) : null;
-    if (pdir && existsSync22(pdir)) {
-      const files = readdirSync11(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
+    if (pdir && existsSync24(pdir)) {
+      const files = readdirSync12(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
       for (const f of files) {
-        const txt = await Bun.file(join21(pdir, f)).text();
+        const txt = await Bun.file(join22(pdir, f)).text();
         const parsed = parseJournalEntries(txt);
         parsed.forEach((e) => {
           e._staged = true;
@@ -5173,13 +5917,13 @@ async function loadAllEntries(project) {
 async function writePendingEntry(project, input) {
   ensureDoravalDirs();
   const pendingDir = getPendingProjectDir(project);
-  if (!existsSync22(pendingDir)) {
-    await Bun.write(join21(pendingDir, ".gitkeep"), "");
+  if (!existsSync24(pendingDir)) {
+    await Bun.write(join22(pendingDir, ".gitkeep"), "");
   }
   const date = new Date().toISOString().split("T")[0];
   const slug = slugify2(input.title);
   const filename = `${date}-${slug}.md`;
-  const filePath = join21(pendingDir, filename);
+  const filePath = join22(pendingDir, filename);
   const content = `## ${input.title}
 
 \`\`\`yaml
@@ -5197,9 +5941,9 @@ ${input.rationale}
 }
 async function loadEvals(limit = 30) {
   const dir = getEvalsDir();
-  if (!existsSync22(dir))
+  if (!existsSync24(dir))
     return [];
-  let files = readdirSync11(dir).filter((f) => f.endsWith(".json")).map((f) => ({ name: f, path: join21(dir, f) }));
+  let files = readdirSync12(dir).filter((f) => f.endsWith(".json")).map((f) => ({ name: f, path: join22(dir, f) }));
   files.sort((a, b) => b.name.localeCompare(a.name));
   const results = [];
   for (const f of files.slice(0, limit)) {
@@ -5235,10 +5979,10 @@ async function killPort(port) {
 }
 function readPid(p) {
   const file = getPidFile(p);
-  if (!existsSync22(file))
+  if (!existsSync24(file))
     return null;
   try {
-    const raw = readFileSync4(file, "utf8").trim();
+    const raw = readFileSync5(file, "utf8").trim();
     const pid = parseInt(raw, 10);
     if (isNaN(pid))
       return null;
@@ -5271,7 +6015,7 @@ async function getDashboardHtml() {
     return `<!doctype html><meta charset="utf-8"><body style="font-family:monospace;background:#111;color:#ddd;padding:2rem"><h1>doraval ui</h1><p>Dashboard HTML missing.</p><pre>${String(err)}</pre></body>`;
   }
 }
-var import_picocolors18, DEFAULT_PORT = 3737, getPidFile = (p) => join21(getDoravalDir(), `ui.${p}.pid`), ui_default;
+var import_picocolors18, DEFAULT_PORT = 3737, getPidFile = (p) => join22(getDoravalDir(), `ui.${p}.pid`), ui_default;
 var init_ui = __esm(() => {
   init_out();
   init_journal_config();
@@ -5415,8 +6159,8 @@ var init_ui = __esm(() => {
                 return Response.json({ error: "filename required" }, { status: 400 });
               }
               const pdir = getPendingProjectDir(project);
-              const filePath = join21(pdir, filename);
-              if (existsSync22(filePath)) {
+              const filePath = join22(pdir, filename);
+              if (existsSync24(filePath)) {
                 try {
                   await Bun.file(filePath).unlink();
                 } catch {}
@@ -5481,8 +6225,8 @@ var init_ui = __esm(() => {
 });
 
 // src/validators/claude/skill.ts
-import { existsSync as existsSync23 } from "fs";
-import { resolve as resolve5 } from "path";
+import { existsSync as existsSync25 } from "fs";
+import { resolve as resolve6 } from "path";
 var claudeSkillValidator;
 var init_skill = __esm(() => {
   init_skill_validate();
@@ -5492,7 +6236,7 @@ var init_skill = __esm(() => {
     name: "Claude Skill",
     description: "Validates SKILL.md per current Claude Code spec: frontmatter (name/description relaxed to recommended; directory name usually provides the /command), body, supporting files, dynamic injection (!`cmd`), substitutions ($ARGUMENTS, ${CLAUDE_*}), and advanced fields (allowed-tools, context, disable-model-invocation, when_to_use, etc.)",
     detect(dir) {
-      return existsSync23(resolve5(dir, "SKILL.md"));
+      return existsSync25(resolve6(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -5510,8 +6254,8 @@ var init_skill = __esm(() => {
 });
 
 // src/validators/claude/plugin.ts
-import { existsSync as existsSync24, readdirSync as readdirSync12 } from "fs";
-import { resolve as resolve6, join as join22 } from "path";
+import { existsSync as existsSync26, readdirSync as readdirSync13 } from "fs";
+import { resolve as resolve7, join as join23 } from "path";
 function levenshtein(a, b) {
   if (a === b)
     return 0;
@@ -5603,21 +6347,21 @@ var init_plugin = __esm(() => {
     name: "Claude Plugin",
     description: "Validates .claude-plugin/plugin.json manifest (complete schema per Plugins reference), component path rules (replace vs augment), .claude-plugin/ purity, default dirs, single-root-skill layout, unrecognized fields + suggestions, and structure",
     detect(dir) {
-      return existsSync24(resolve6(dir, ".claude-plugin", "plugin.json"));
+      return existsSync26(resolve7(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const manifestPath = resolve6(dir, ".claude-plugin", "plugin.json");
-      const dotClaudePluginDir = resolve6(dir, ".claude-plugin");
+      const manifestPath = resolve7(dir, ".claude-plugin", "plugin.json");
+      const dotClaudePluginDir = resolve7(dir, ".claude-plugin");
       let manifest;
       try {
         const raw = await Bun.file(manifestPath).text();
         manifest = JSON.parse(raw);
         passes.push(".claude-plugin/plugin.json is valid JSON");
       } catch (err) {
-        if (!existsSync24(manifestPath)) {
+        if (!existsSync26(manifestPath)) {
           errors.push(`.claude-plugin/plugin.json is missing (looked for ${manifestPath})`);
           warnings.push("Hint: Run `doraval claude new` (or `dora claude new`) to scaffold a new Claude plugin in this directory.");
         } else {
@@ -5626,7 +6370,7 @@ var init_plugin = __esm(() => {
         return { errors, warnings, passes };
       }
       try {
-        const entries = readdirSync12(dotClaudePluginDir);
+        const entries = readdirSync13(dotClaudePluginDir);
         const unexpected = entries.filter((e) => e !== "plugin.json");
         if (unexpected.length > 0) {
           for (const e of unexpected) {
@@ -5713,7 +6457,7 @@ var init_plugin = __esm(() => {
               errors.push(`${field}: path "${s}" must start with "./"`);
             } else if (s.includes("..")) {
               errors.push(`${field}: path "${s}" must not use ".." (paths are confined to the plugin tree after cache copy)`);
-            } else if (existsSync24(resolve6(dir, s))) {
+            } else if (existsSync26(resolve7(dir, s))) {
               passes.push(`${field}: path "${s}" exists`);
             } else {
               warnings.push(`${field}: path "${s}" does not exist on disk`);
@@ -5762,12 +6506,12 @@ var init_plugin = __esm(() => {
       if (Array.isArray(manifest.dependencies)) {
         passes.push(`dependencies: declares ${manifest.dependencies.length} plugin dependency/ies`);
       }
-      const skillsDir = resolve6(dir, "skills");
-      if (existsSync24(skillsDir)) {
-        const entries = readdirSync12(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      const skillsDir = resolve7(dir, "skills");
+      if (existsSync26(skillsDir)) {
+        const entries = readdirSync13(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join22(skillsDir, e.name, "SKILL.md");
-          if (existsSync24(md)) {
+          const md = join23(skillsDir, e.name, "SKILL.md");
+          if (existsSync26(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
             errors.push(`skills/${e.name}/ is missing SKILL.md`);
@@ -5777,9 +6521,9 @@ var init_plugin = __esm(() => {
           warnings.push('Default skills/ dir co-exists with manifest "skills" \u2014 manifest path is authoritative; default folder ignored for loading');
         }
       }
-      const commandsDir = resolve6(dir, "commands");
-      if (existsSync24(commandsDir)) {
-        const mds = readdirSync12(commandsDir).filter((f) => f.endsWith(".md"));
+      const commandsDir = resolve7(dir, "commands");
+      if (existsSync26(commandsDir)) {
+        const mds = readdirSync13(commandsDir).filter((f) => f.endsWith(".md"));
         if (mds.length) {
           passes.push(`commands/ has ${mds.length} .md file(s)`);
         }
@@ -5787,9 +6531,9 @@ var init_plugin = __esm(() => {
           warnings.push('commands/ co-exists with manifest "commands" \u2014 manifest replaces default (dir ignored)');
         }
       }
-      const agentsDir = resolve6(dir, "agents");
-      if (existsSync24(agentsDir)) {
-        const mds = readdirSync12(agentsDir).filter((f) => f.endsWith(".md"));
+      const agentsDir = resolve7(dir, "agents");
+      if (existsSync26(agentsDir)) {
+        const mds = readdirSync13(agentsDir).filter((f) => f.endsWith(".md"));
         if (mds.length) {
           passes.push(`agents/ has ${mds.length} .md file(s)`);
         }
@@ -5797,30 +6541,30 @@ var init_plugin = __esm(() => {
           warnings.push('agents/ co-exists with manifest "agents" \u2014 manifest replaces default (dir ignored)');
         }
       }
-      if (existsSync24(resolve6(dir, "output-styles"))) {
+      if (existsSync26(resolve7(dir, "output-styles"))) {
         passes.push("output-styles/ directory present");
         if (manifest.outputStyles)
           warnings.push("output-styles/ co-exists with manifest outputStyles \u2014 manifest wins");
       }
-      if (existsSync24(resolve6(dir, "themes")))
+      if (existsSync26(resolve7(dir, "themes")))
         passes.push("themes/ present (experimental)");
-      if (existsSync24(resolve6(dir, "monitors")) || manifest.experimental?.monitors) {
+      if (existsSync26(resolve7(dir, "monitors")) || manifest.experimental?.monitors) {
         passes.push("monitors config present (experimental)");
       }
-      if (existsSync24(resolve6(dir, "bin")))
+      if (existsSync26(resolve7(dir, "bin")))
         passes.push("bin/ present (adds executables to Bash tool $PATH)");
-      if (existsSync24(resolve6(dir, "settings.json")))
+      if (existsSync26(resolve7(dir, "settings.json")))
         passes.push("settings.json present (plugin defaults for agent/statusline)");
-      if (existsSync24(resolve6(dir, "README.md")))
+      if (existsSync26(resolve7(dir, "README.md")))
         passes.push("README.md present");
-      if (existsSync24(resolve6(dir, ".mcp.json")))
+      if (existsSync26(resolve7(dir, ".mcp.json")))
         passes.push(".mcp.json present (validated by claude:mcp)");
-      if (existsSync24(resolve6(dir, ".lsp.json")))
+      if (existsSync26(resolve7(dir, ".lsp.json")))
         passes.push(".lsp.json present (validated by claude:lsp when registered)");
-      if (existsSync24(resolve6(dir, "hooks/hooks.json")) || existsSync24(resolve6(dir, "hooks.json"))) {
+      if (existsSync26(resolve7(dir, "hooks/hooks.json")) || existsSync26(resolve7(dir, "hooks.json"))) {
         passes.push("hooks config present (validated by claude:hooks)");
       }
-      if (existsSync24(resolve6(dir, "SKILL.md")) && !existsSync24(skillsDir) && manifest.skills === undefined) {
+      if (existsSync26(resolve7(dir, "SKILL.md")) && !existsSync26(skillsDir) && manifest.skills === undefined) {
         passes.push('Root SKILL.md detected \u2014 plugin will be treated as a single-skill plugin (prefer frontmatter "name" for stable /command)');
       }
       return { errors, warnings, passes };
@@ -5829,8 +6573,8 @@ var init_plugin = __esm(() => {
 });
 
 // src/validators/claude/marketplace.ts
-import { existsSync as existsSync25, readdirSync as readdirSync13 } from "fs";
-import { resolve as resolve7, join as join23 } from "path";
+import { existsSync as existsSync27, readdirSync as readdirSync14 } from "fs";
+import { resolve as resolve8, join as join24 } from "path";
 var claudeMarketplaceValidator;
 var init_marketplace = __esm(() => {
   claudeMarketplaceValidator = {
@@ -5839,18 +6583,18 @@ var init_marketplace = __esm(() => {
     name: "Claude Plugin Marketplace",
     description: "Validates .claude-plugin/marketplace.json or plugins/ marketplace layouts (plugins array with sources)",
     detect(dir) {
-      if (existsSync25(resolve7(dir, ".claude-plugin", "marketplace.json")))
+      if (existsSync27(resolve8(dir, ".claude-plugin", "marketplace.json")))
         return true;
-      const pluginsDir = resolve7(dir, "plugins");
-      if (!existsSync25(pluginsDir))
+      const pluginsDir = resolve8(dir, "plugins");
+      if (!existsSync27(pluginsDir))
         return false;
       try {
-        const entries = readdirSync13(pluginsDir, { withFileTypes: true });
+        const entries = readdirSync14(pluginsDir, { withFileTypes: true });
         for (const entry of entries) {
           if (!entry.isDirectory())
             continue;
-          const hasSkills = existsSync25(join23(pluginsDir, entry.name, "skills"));
-          const hasManifest = existsSync25(join23(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
+          const hasSkills = existsSync27(join24(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync27(join24(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
           if (hasSkills || hasManifest)
             return true;
         }
@@ -5861,10 +6605,10 @@ var init_marketplace = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const claudeMktPath = resolve7(dir, ".claude-plugin", "marketplace.json");
-      const hasClaudeMkt = existsSync25(claudeMktPath);
-      const pluginsDir = resolve7(dir, "plugins");
-      const hasPluginsDirLayout = existsSync25(pluginsDir);
+      const claudeMktPath = resolve8(dir, ".claude-plugin", "marketplace.json");
+      const hasClaudeMkt = existsSync27(claudeMktPath);
+      const pluginsDir = resolve8(dir, "plugins");
+      const hasPluginsDirLayout = existsSync27(pluginsDir);
       if (!hasClaudeMkt && !hasPluginsDirLayout) {
         errors.push("Missing .claude-plugin/marketplace.json or plugins/ directory");
         return { errors, warnings, passes };
@@ -5908,10 +6652,10 @@ var init_marketplace = __esm(() => {
           if (p.source) {
             const src = String(p.source);
             passes.push(`plugins[${i}].source: "${src}"`);
-            const srcDir = resolve7(dir, src);
-            if (existsSync25(srcDir)) {
-              const hasManifest = existsSync25(resolve7(srcDir, ".claude-plugin", "plugin.json"));
-              const hasSkills = existsSync25(resolve7(srcDir, "skills"));
+            const srcDir = resolve8(dir, src);
+            if (existsSync27(srcDir)) {
+              const hasManifest = existsSync27(resolve8(srcDir, ".claude-plugin", "plugin.json"));
+              const hasSkills = existsSync27(resolve8(srcDir, "skills"));
               if (hasManifest || hasSkills) {
                 passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
               } else {
@@ -5927,12 +6671,12 @@ var init_marketplace = __esm(() => {
             passes.push(`plugins[${i}].category: "${p.category}"`);
           }
         }
-        if (existsSync25(resolve7(dir, "README.md"))) {
+        if (existsSync27(resolve8(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
         }
-        if (existsSync25(resolve7(dir, "LICENSE"))) {
+        if (existsSync27(resolve8(dir, "LICENSE"))) {
           passes.push("LICENSE exists at marketplace root");
         } else {
           warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -5941,27 +6685,27 @@ var init_marketplace = __esm(() => {
       }
       if (hasPluginsDirLayout) {
         passes.push("plugins/ directory exists");
-        const pluginEntries = readdirSync13(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        const pluginEntries = readdirSync14(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         if (pluginEntries.length === 0) {
           errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
           return { errors, warnings, passes };
         }
         passes.push(`${pluginEntries.length} plugin(s) found`);
-        if (existsSync25(resolve7(dir, "README.md"))) {
+        if (existsSync27(resolve8(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
         }
-        if (existsSync25(resolve7(dir, "LICENSE"))) {
+        if (existsSync27(resolve8(dir, "LICENSE"))) {
           passes.push("LICENSE exists at marketplace root");
         } else {
           warnings.push("No LICENSE at marketplace root \u2014 recommended");
         }
         for (const plugin of pluginEntries) {
-          const pluginPath = join23(pluginsDir, plugin.name);
-          const hasSkills = existsSync25(join23(pluginPath, "skills"));
-          const hasManifest = existsSync25(join23(pluginPath, ".claude-plugin", "plugin.json"));
-          const hasReadme = existsSync25(join23(pluginPath, "README.md"));
+          const pluginPath = join24(pluginsDir, plugin.name);
+          const hasSkills = existsSync27(join24(pluginPath, "skills"));
+          const hasManifest = existsSync27(join24(pluginPath, ".claude-plugin", "plugin.json"));
+          const hasReadme = existsSync27(join24(pluginPath, "README.md"));
           if (hasManifest || hasSkills) {
             passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
           } else {
@@ -5979,8 +6723,15 @@ var init_marketplace = __esm(() => {
 });
 
 // src/validators/claude/hooks.ts
-import { existsSync as existsSync26 } from "fs";
-import { resolve as resolve8 } from "path";
+import { existsSync as existsSync28 } from "fs";
+import { resolve as resolve9 } from "path";
+function normalizeHooksConfig(config) {
+  const keys = Object.keys(config);
+  if (keys.length === 1 && keys[0] === "hooks" && config.hooks && typeof config.hooks === "object" && !Array.isArray(config.hooks)) {
+    return config.hooks;
+  }
+  return config;
+}
 var KNOWN_EVENTS, claudeHooksValidator;
 var init_hooks = __esm(() => {
   KNOWN_EVENTS = [
@@ -6021,18 +6772,22 @@ var init_hooks = __esm(() => {
     name: "Claude Hooks",
     description: "Validates hooks/hooks.json (or root hooks.json): all lifecycle events per Plugins reference, hook group structure (matcher + hooks[]), supported hook types (command, http, mcp_tool, prompt, agent)",
     detect(dir) {
-      return existsSync26(resolve8(dir, "hooks", "hooks.json")) || existsSync26(resolve8(dir, "hooks.json"));
+      return existsSync28(resolve9(dir, "hooks", "hooks.json")) || existsSync28(resolve9(dir, "hooks.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const hooksPath = existsSync26(resolve8(dir, "hooks", "hooks.json")) ? resolve8(dir, "hooks", "hooks.json") : resolve8(dir, "hooks.json");
+      const hooksPath = existsSync28(resolve9(dir, "hooks", "hooks.json")) ? resolve9(dir, "hooks", "hooks.json") : resolve9(dir, "hooks.json");
       let config;
       try {
         const raw = await Bun.file(hooksPath).text();
-        config = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        config = normalizeHooksConfig(parsed);
         passes.push("hooks.json is valid JSON");
+        if (parsed !== config && Object.keys(parsed).length === 1 && "hooks" in parsed) {
+          passes.push('Uses nested "hooks" object (plugin/settings layout)');
+        }
       } catch {
         errors.push("hooks.json is missing or invalid JSON");
         return { errors, warnings, passes };
@@ -6093,8 +6848,8 @@ var init_hooks = __esm(() => {
 });
 
 // src/validators/claude/mcp.ts
-import { existsSync as existsSync27 } from "fs";
-import { resolve as resolve9 } from "path";
+import { existsSync as existsSync29 } from "fs";
+import { resolve as resolve10 } from "path";
 var claudeMcpValidator;
 var init_mcp = __esm(() => {
   claudeMcpValidator = {
@@ -6103,13 +6858,13 @@ var init_mcp = __esm(() => {
     name: "Claude MCP Config",
     description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, ${CLAUDE_PLUGIN_ROOT} etc. substitutions per Plugins reference",
     detect(dir) {
-      return existsSync27(resolve9(dir, ".mcp.json"));
+      return existsSync29(resolve10(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const mcpPath = resolve9(dir, ".mcp.json");
+      const mcpPath = resolve10(dir, ".mcp.json");
       let config;
       try {
         const raw = await Bun.file(mcpPath).text();
@@ -6163,8 +6918,8 @@ var init_mcp = __esm(() => {
 });
 
 // src/validators/claude/subagent.ts
-import { existsSync as existsSync28, readdirSync as readdirSync14 } from "fs";
-import { resolve as resolve10, join as join24 } from "path";
+import { existsSync as existsSync30, readdirSync as readdirSync15 } from "fs";
+import { resolve as resolve11, join as join25 } from "path";
 var claudeSubagentValidator;
 var init_subagent = __esm(() => {
   init_frontmatter();
@@ -6174,11 +6929,11 @@ var init_subagent = __esm(() => {
     name: "Claude Subagents",
     description: "Validates agents/*.md (plugin subagents): frontmatter per spec (name, description, model, effort, maxTurns, tools, disallowedTools, skills, memory, background, isolation=worktree), body; warns on disallowed fields (hooks, mcpServers, permissionMode) for security",
     detect(dir) {
-      const agentsDir = resolve10(dir, "agents");
-      if (!existsSync28(agentsDir))
+      const agentsDir = resolve11(dir, "agents");
+      if (!existsSync30(agentsDir))
         return false;
       try {
-        return readdirSync14(agentsDir).some((f) => f.endsWith(".md"));
+        return readdirSync15(agentsDir).some((f) => f.endsWith(".md"));
       } catch {
         return false;
       }
@@ -6187,8 +6942,8 @@ var init_subagent = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const agentsDir = resolve10(dir, "agents");
-      const mdFiles = readdirSync14(agentsDir).filter((f) => f.endsWith(".md"));
+      const agentsDir = resolve11(dir, "agents");
+      const mdFiles = readdirSync15(agentsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("agents/ directory has no .md files");
         return { errors, warnings, passes };
@@ -6209,7 +6964,7 @@ var init_subagent = __esm(() => {
       ]);
       const DISALLOWED = new Set(["hooks", "mcpServers", "permissionMode"]);
       for (const file of mdFiles) {
-        const filePath = join24(agentsDir, file);
+        const filePath = join25(agentsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
@@ -6255,8 +7010,8 @@ var init_subagent = __esm(() => {
 });
 
 // src/validators/claude/command.ts
-import { existsSync as existsSync29, readdirSync as readdirSync15 } from "fs";
-import { resolve as resolve11, join as join25 } from "path";
+import { existsSync as existsSync31, readdirSync as readdirSync16 } from "fs";
+import { resolve as resolve12, join as join26 } from "path";
 var claudeCommandValidator;
 var init_command = __esm(() => {
   init_frontmatter();
@@ -6266,11 +7021,11 @@ var init_command = __esm(() => {
     name: "Claude Commands",
     description: "Validates commands/ (or legacy .claude/commands/) .md files: frontmatter (including rich skill fields), description, body",
     detect(dir) {
-      const commandsDir = resolve11(dir, "commands");
-      if (!existsSync29(commandsDir))
+      const commandsDir = resolve12(dir, "commands");
+      if (!existsSync31(commandsDir))
         return false;
       try {
-        return readdirSync15(commandsDir).some((f) => f.endsWith(".md"));
+        return readdirSync16(commandsDir).some((f) => f.endsWith(".md"));
       } catch {
         return false;
       }
@@ -6279,15 +7034,15 @@ var init_command = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const commandsDir = resolve11(dir, "commands");
-      const mdFiles = readdirSync15(commandsDir).filter((f) => f.endsWith(".md"));
+      const commandsDir = resolve12(dir, "commands");
+      const mdFiles = readdirSync16(commandsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("commands/ directory has no .md files");
         return { errors, warnings, passes };
       }
       passes.push(`${mdFiles.length} command definition(s) found`);
       for (const file of mdFiles) {
-        const filePath = join25(commandsDir, file);
+        const filePath = join26(commandsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
@@ -6316,8 +7071,8 @@ var init_command = __esm(() => {
 });
 
 // src/validators/claude/memory.ts
-import { existsSync as existsSync30 } from "fs";
-import { resolve as resolve12 } from "path";
+import { existsSync as existsSync32 } from "fs";
+import { resolve as resolve13 } from "path";
 var claudeMemoryValidator;
 var init_memory = __esm(() => {
   claudeMemoryValidator = {
@@ -6326,13 +7081,13 @@ var init_memory = __esm(() => {
     name: "Claude CLAUDE.md",
     description: "Validates CLAUDE.md: non-empty, length recommendations, @path imports",
     detect(dir) {
-      return existsSync30(resolve12(dir, "CLAUDE.md"));
+      return existsSync32(resolve13(dir, "CLAUDE.md"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const filePath = resolve12(dir, "CLAUDE.md");
+      const filePath = resolve13(dir, "CLAUDE.md");
       const raw = await Bun.file(filePath).text();
       if (!raw.trim()) {
         errors.push("CLAUDE.md is empty");
@@ -6350,8 +7105,8 @@ var init_memory = __esm(() => {
       let match;
       while ((match = importRegex.exec(raw)) !== null) {
         const importPath = match[1];
-        const resolvedImport = resolve12(dir, importPath);
-        if (existsSync30(resolvedImport)) {
+        const resolvedImport = resolve13(dir, importPath);
+        if (existsSync32(resolvedImport)) {
           passes.push(`@import "${importPath}" exists`);
         } else {
           warnings.push(`@import "${importPath}" \u2014 file not found at ${resolvedImport}`);
@@ -6363,8 +7118,8 @@ var init_memory = __esm(() => {
 });
 
 // src/validators/claude/lsp.ts
-import { existsSync as existsSync31 } from "fs";
-import { resolve as resolve13 } from "path";
+import { existsSync as existsSync33 } from "fs";
+import { resolve as resolve14 } from "path";
 var claudeLspValidator;
 var init_lsp = __esm(() => {
   claudeLspValidator = {
@@ -6373,15 +7128,15 @@ var init_lsp = __esm(() => {
     name: "Claude LSP Servers",
     description: "Validates .lsp.json (or plugin.json lspServers): language server configs with required command + extensionToLanguage; optional transport, env, settings, diagnostics etc. (binaries installed separately)",
     detect(dir) {
-      return existsSync31(resolve13(dir, ".lsp.json")) || existsSync31(resolve13(dir, ".claude-plugin", "plugin.json"));
+      return existsSync33(resolve14(dir, ".lsp.json")) || existsSync33(resolve14(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
       let cfg = null;
-      const lspPath = resolve13(dir, ".lsp.json");
-      if (existsSync31(lspPath)) {
+      const lspPath = resolve14(dir, ".lsp.json");
+      if (existsSync33(lspPath)) {
         try {
           cfg = JSON.parse(await Bun.file(lspPath).text());
           passes.push(".lsp.json is valid JSON");
@@ -6390,8 +7145,8 @@ var init_lsp = __esm(() => {
           return { errors, warnings, passes };
         }
       } else {
-        const manifestPath = resolve13(dir, ".claude-plugin", "plugin.json");
-        if (existsSync31(manifestPath)) {
+        const manifestPath = resolve14(dir, ".claude-plugin", "plugin.json");
+        if (existsSync33(manifestPath)) {
           try {
             const m = JSON.parse(await Bun.file(manifestPath).text());
             if (m && m.lspServers && typeof m.lspServers === "object") {
@@ -6402,7 +7157,7 @@ var init_lsp = __esm(() => {
         }
       }
       if (!cfg) {
-        if (!existsSync31(lspPath)) {
+        if (!existsSync33(lspPath)) {
           return { errors, warnings, passes };
         }
       }
@@ -6431,8 +7186,8 @@ var init_lsp = __esm(() => {
 });
 
 // src/validators/claude/monitors.ts
-import { existsSync as existsSync32 } from "fs";
-import { resolve as resolve14 } from "path";
+import { existsSync as existsSync34 } from "fs";
+import { resolve as resolve15 } from "path";
 var claudeMonitorsValidator;
 var init_monitors = __esm(() => {
   claudeMonitorsValidator = {
@@ -6441,7 +7196,7 @@ var init_monitors = __esm(() => {
     name: "Claude Monitors (experimental)",
     description: "Validates monitors/monitors.json (or experimental.monitors): array of {name, command, description, when?}; commands support ${CLAUDE_PLUGIN_*} subs. Monitors run only in interactive CLI sessions.",
     detect(dir) {
-      return existsSync32(resolve14(dir, "monitors", "monitors.json")) || existsSync32(resolve14(dir, "monitors.json")) || existsSync32(resolve14(dir, ".claude-plugin", "plugin.json"));
+      return existsSync34(resolve15(dir, "monitors", "monitors.json")) || existsSync34(resolve15(dir, "monitors.json")) || existsSync34(resolve15(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -6449,11 +7204,11 @@ var init_monitors = __esm(() => {
       const passes = [];
       let arr = null;
       const candidates = [
-        resolve14(dir, "monitors", "monitors.json"),
-        resolve14(dir, "monitors.json")
+        resolve15(dir, "monitors", "monitors.json"),
+        resolve15(dir, "monitors.json")
       ];
       for (const p of candidates) {
-        if (existsSync32(p)) {
+        if (existsSync34(p)) {
           try {
             const parsed = JSON.parse(await Bun.file(p).text());
             if (Array.isArray(parsed)) {
@@ -6468,8 +7223,8 @@ var init_monitors = __esm(() => {
         }
       }
       if (!arr) {
-        const mp = resolve14(dir, ".claude-plugin", "plugin.json");
-        if (existsSync32(mp)) {
+        const mp = resolve15(dir, ".claude-plugin", "plugin.json");
+        if (existsSync34(mp)) {
           try {
             const m = JSON.parse(await Bun.file(mp).text());
             const exp = m?.experimental;
@@ -6522,8 +7277,8 @@ var init_monitors = __esm(() => {
 });
 
 // src/validators/codex/plugin.ts
-import { existsSync as existsSync33, readdirSync as readdirSync16 } from "fs";
-import { resolve as resolve15, join as join26 } from "path";
+import { existsSync as existsSync35, readdirSync as readdirSync17 } from "fs";
+import { resolve as resolve16, join as join27 } from "path";
 var NAME_REGEX3, codexPluginValidator;
 var init_plugin2 = __esm(() => {
   NAME_REGEX3 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -6533,13 +7288,13 @@ var init_plugin2 = __esm(() => {
     name: "Codex Plugin",
     description: "Validates .codex-plugin/plugin.json manifest (requires interface block and skills as directory string per Codex packaging)",
     detect(dir) {
-      return existsSync33(resolve15(dir, ".codex-plugin", "plugin.json"));
+      return existsSync35(resolve16(dir, ".codex-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const manifestPath = resolve15(dir, ".codex-plugin", "plugin.json");
+      const manifestPath = resolve16(dir, ".codex-plugin", "plugin.json");
       let manifest;
       try {
         const raw = await Bun.file(manifestPath).text();
@@ -6613,12 +7368,12 @@ var init_plugin2 = __esm(() => {
       } else {
         warnings.push('Missing "keywords" (recommended \u2014 if users mention any of these, your plugin will get triggered in Codex)');
       }
-      const skillsDir = resolve15(dir, "skills");
-      if (existsSync33(skillsDir)) {
-        const entries = readdirSync16(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      const skillsDir = resolve16(dir, "skills");
+      if (existsSync35(skillsDir)) {
+        const entries = readdirSync17(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join26(skillsDir, e.name, "SKILL.md");
-          if (existsSync33(md)) {
+          const md = join27(skillsDir, e.name, "SKILL.md");
+          if (existsSync35(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
             errors.push(`skills/${e.name}/ is missing SKILL.md`);
@@ -6636,8 +7391,8 @@ var init_plugin2 = __esm(() => {
 });
 
 // src/validators/codex/marketplace.ts
-import { existsSync as existsSync34 } from "fs";
-import { resolve as resolve16 } from "path";
+import { existsSync as existsSync36 } from "fs";
+import { resolve as resolve17 } from "path";
 var codexMarketplaceValidator;
 var init_marketplace2 = __esm(() => {
   codexMarketplaceValidator = {
@@ -6646,9 +7401,9 @@ var init_marketplace2 = __esm(() => {
     name: "Codex Plugin Marketplace",
     description: "Validates .agents/plugins/marketplace.json (Codex convention: object source + policy blocks)",
     detect(dir) {
-      if (existsSync34(resolve16(dir, ".agents", "plugins", "marketplace.json")))
+      if (existsSync36(resolve17(dir, ".agents", "plugins", "marketplace.json")))
         return true;
-      if (existsSync34(resolve16(dir, ".agents", "plugins", "marketplace.json")))
+      if (existsSync36(resolve17(dir, ".agents", "plugins", "marketplace.json")))
         return true;
       return false;
     },
@@ -6656,8 +7411,8 @@ var init_marketplace2 = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const marketplacePath = resolve16(dir, ".agents", "plugins", "marketplace.json");
-      if (!existsSync34(marketplacePath)) {
+      const marketplacePath = resolve17(dir, ".agents", "plugins", "marketplace.json");
+      if (!existsSync36(marketplacePath)) {
         errors.push("Missing .agents/plugins/marketplace.json");
         return { errors, warnings, passes };
       }
@@ -6732,12 +7487,12 @@ var init_marketplace2 = __esm(() => {
           passes.push(`plugins[${i}].category: "${p.category}"`);
         }
       }
-      if (existsSync34(resolve16(dir, "README.md"))) {
+      if (existsSync36(resolve17(dir, "README.md"))) {
         passes.push("README.md exists at marketplace root");
       } else {
         warnings.push("No README.md at marketplace root \u2014 recommended");
       }
-      if (existsSync34(resolve16(dir, "LICENSE"))) {
+      if (existsSync36(resolve17(dir, "LICENSE"))) {
         passes.push("LICENSE exists at marketplace root");
       } else {
         warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -6748,8 +7503,8 @@ var init_marketplace2 = __esm(() => {
 });
 
 // src/validators/codex/mcp.ts
-import { existsSync as existsSync35 } from "fs";
-import { resolve as resolve17 } from "path";
+import { existsSync as existsSync37 } from "fs";
+import { resolve as resolve18 } from "path";
 var codexMcpValidator;
 var init_mcp2 = __esm(() => {
   codexMcpValidator = {
@@ -6758,13 +7513,13 @@ var init_mcp2 = __esm(() => {
     name: "Codex MCP Config",
     description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, substitutions per Codex MCP support",
     detect(dir) {
-      return existsSync35(resolve17(dir, ".mcp.json"));
+      return existsSync37(resolve18(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const mcpPath = resolve17(dir, ".mcp.json");
+      const mcpPath = resolve18(dir, ".mcp.json");
       let config;
       try {
         const raw = await Bun.file(mcpPath).text();
@@ -6818,8 +7573,8 @@ var init_mcp2 = __esm(() => {
 });
 
 // src/validators/codex/skill.ts
-import { existsSync as existsSync36 } from "fs";
-import { resolve as resolve18 } from "path";
+import { existsSync as existsSync38 } from "fs";
+import { resolve as resolve19 } from "path";
 var codexSkillValidator;
 var init_skill2 = __esm(() => {
   init_skill_validate();
@@ -6829,7 +7584,7 @@ var init_skill2 = __esm(() => {
     name: "Codex Skill",
     description: "Validates SKILL.md (shared format): frontmatter (name/description), body, supporting files, substitutions. Codex uses the same SKILL.md spec as other providers.",
     detect(dir) {
-      return existsSync36(resolve18(dir, "SKILL.md"));
+      return existsSync38(resolve19(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -6847,8 +7602,8 @@ var init_skill2 = __esm(() => {
 });
 
 // src/validators/cursor/plugin.ts
-import { existsSync as existsSync37, readdirSync as readdirSync18 } from "fs";
-import { resolve as resolve19, join as join28 } from "path";
+import { existsSync as existsSync39, readdirSync as readdirSync19 } from "fs";
+import { resolve as resolve20, join as join29 } from "path";
 var NAME_REGEX4, cursorPluginValidator;
 var init_plugin3 = __esm(() => {
   NAME_REGEX4 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -6858,13 +7613,13 @@ var init_plugin3 = __esm(() => {
     name: "Cursor Plugin",
     description: "Validates .cursor-plugin/plugin.json manifest (skills as directory string; mcpServers support)",
     detect(dir) {
-      return existsSync37(resolve19(dir, ".cursor-plugin", "plugin.json"));
+      return existsSync39(resolve20(dir, ".cursor-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const manifestPath = resolve19(dir, ".cursor-plugin", "plugin.json");
+      const manifestPath = resolve20(dir, ".cursor-plugin", "plugin.json");
       let manifest;
       try {
         const raw = await Bun.file(manifestPath).text();
@@ -6944,12 +7699,12 @@ var init_plugin3 = __esm(() => {
       } else {
         warnings.push('Missing "keywords" (recommended \u2014 if users mention any of these, your plugin will get triggered in Cursor)');
       }
-      const skillsDir = resolve19(dir, "skills");
-      if (existsSync37(skillsDir)) {
-        const entries = readdirSync18(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      const skillsDir = resolve20(dir, "skills");
+      if (existsSync39(skillsDir)) {
+        const entries = readdirSync19(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join28(skillsDir, e.name, "SKILL.md");
-          if (existsSync37(md)) {
+          const md = join29(skillsDir, e.name, "SKILL.md");
+          if (existsSync39(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
             errors.push(`skills/${e.name}/ is missing SKILL.md`);
@@ -6959,8 +7714,8 @@ var init_plugin3 = __esm(() => {
       if (typeof manifest.mcpServers === "string") {
         const mcpRef = manifest.mcpServers;
         if (mcpRef.startsWith("./") || mcpRef.startsWith("../")) {
-          const mcpPath = resolve19(dir, mcpRef);
-          if (existsSync37(mcpPath)) {
+          const mcpPath = resolve20(dir, mcpRef);
+          if (existsSync39(mcpPath)) {
             passes.push(`mcpServers file exists at ${mcpRef}`);
           } else {
             warnings.push(`mcpServers path "${mcpRef}" does not exist on disk`);
@@ -6990,8 +7745,8 @@ var init_plugin3 = __esm(() => {
 });
 
 // src/validators/cursor/marketplace.ts
-import { existsSync as existsSync38, readdirSync as readdirSync19 } from "fs";
-import { resolve as resolve20, join as join29 } from "path";
+import { existsSync as existsSync40, readdirSync as readdirSync20 } from "fs";
+import { resolve as resolve21, join as join30 } from "path";
 var cursorMarketplaceValidator;
 var init_marketplace3 = __esm(() => {
   cursorMarketplaceValidator = {
@@ -7000,18 +7755,18 @@ var init_marketplace3 = __esm(() => {
     name: "Cursor Plugin Marketplace",
     description: "Validates .cursor-plugin/marketplace.json (string sources + metadata.pluginRoot)",
     detect(dir) {
-      if (existsSync38(resolve20(dir, ".cursor-plugin", "marketplace.json")))
+      if (existsSync40(resolve21(dir, ".cursor-plugin", "marketplace.json")))
         return true;
-      const pluginsDir = resolve20(dir, "plugins");
-      if (!existsSync38(pluginsDir))
+      const pluginsDir = resolve21(dir, "plugins");
+      if (!existsSync40(pluginsDir))
         return false;
       try {
-        const entries = readdirSync19(pluginsDir, { withFileTypes: true });
+        const entries = readdirSync20(pluginsDir, { withFileTypes: true });
         for (const entry of entries) {
           if (!entry.isDirectory())
             continue;
-          const hasSkills = existsSync38(join29(pluginsDir, entry.name, "skills"));
-          const hasManifest = existsSync38(join29(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
+          const hasSkills = existsSync40(join30(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync40(join30(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
           if (hasSkills || hasManifest)
             return true;
         }
@@ -7022,10 +7777,10 @@ var init_marketplace3 = __esm(() => {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const cursorMktPath = resolve20(dir, ".cursor-plugin", "marketplace.json");
-      const hasCursorMkt = existsSync38(cursorMktPath);
-      const pluginsDir = resolve20(dir, "plugins");
-      const hasPluginsDirLayout = existsSync38(pluginsDir);
+      const cursorMktPath = resolve21(dir, ".cursor-plugin", "marketplace.json");
+      const hasCursorMkt = existsSync40(cursorMktPath);
+      const pluginsDir = resolve21(dir, "plugins");
+      const hasPluginsDirLayout = existsSync40(pluginsDir);
       if (!hasCursorMkt && !hasPluginsDirLayout) {
         errors.push("Missing .cursor-plugin/marketplace.json or plugins/ directory");
         return { errors, warnings, passes };
@@ -7078,10 +7833,10 @@ var init_marketplace3 = __esm(() => {
           if (p.source !== undefined) {
             const src = String(p.source);
             passes.push(`plugins[${i}].source: "${src}"`);
-            const srcDir = resolve20(dir, pluginRoot, src);
-            if (existsSync38(srcDir)) {
-              const hasManifest = existsSync38(resolve20(srcDir, ".cursor-plugin", "plugin.json"));
-              const hasSkills = existsSync38(resolve20(srcDir, "skills"));
+            const srcDir = resolve21(dir, pluginRoot, src);
+            if (existsSync40(srcDir)) {
+              const hasManifest = existsSync40(resolve21(srcDir, ".cursor-plugin", "plugin.json"));
+              const hasSkills = existsSync40(resolve21(srcDir, "skills"));
               if (hasManifest || hasSkills) {
                 passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
               } else {
@@ -7091,8 +7846,8 @@ var init_marketplace3 = __esm(() => {
               warnings.push(`plugins[${i}].source path "${src}" (under ${pluginRoot}) does not exist`);
             }
           } else {
-            const implicitSrc = resolve20(dir, pluginRoot, p.name || "");
-            if (p.name && existsSync38(implicitSrc)) {
+            const implicitSrc = resolve21(dir, pluginRoot, p.name || "");
+            if (p.name && existsSync40(implicitSrc)) {
               passes.push(`plugins[${i}]: implicit source via name under ${pluginRoot}`);
             } else {
               warnings.push(`plugins[${i}]: missing "source" (and no implicit dir)`);
@@ -7107,12 +7862,12 @@ var init_marketplace3 = __esm(() => {
             passes.push(`plugins[${i}].homepage present`);
           }
         }
-        if (existsSync38(resolve20(dir, "README.md"))) {
+        if (existsSync40(resolve21(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
         }
-        if (existsSync38(resolve20(dir, "LICENSE"))) {
+        if (existsSync40(resolve21(dir, "LICENSE"))) {
           passes.push("LICENSE exists at marketplace root");
         } else {
           warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -7121,21 +7876,21 @@ var init_marketplace3 = __esm(() => {
       }
       if (hasPluginsDirLayout) {
         passes.push("plugins/ directory exists");
-        const pluginEntries = readdirSync19(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        const pluginEntries = readdirSync20(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         if (pluginEntries.length === 0) {
           errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
           return { errors, warnings, passes };
         }
         passes.push(`${pluginEntries.length} plugin(s) found`);
-        if (existsSync38(resolve20(dir, "README.md"))) {
+        if (existsSync40(resolve21(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended");
         }
         for (const plugin of pluginEntries) {
-          const pluginPath = join29(pluginsDir, plugin.name);
-          const hasSkills = existsSync38(join29(pluginPath, "skills"));
-          const hasManifest = existsSync38(join29(pluginPath, ".cursor-plugin", "plugin.json"));
+          const pluginPath = join30(pluginsDir, plugin.name);
+          const hasSkills = existsSync40(join30(pluginPath, "skills"));
+          const hasManifest = existsSync40(join30(pluginPath, ".cursor-plugin", "plugin.json"));
           if (hasManifest || hasSkills) {
             passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
           }
@@ -7148,8 +7903,8 @@ var init_marketplace3 = __esm(() => {
 });
 
 // src/validators/cursor/mcp.ts
-import { existsSync as existsSync39 } from "fs";
-import { resolve as resolve21 } from "path";
+import { existsSync as existsSync41 } from "fs";
+import { resolve as resolve22 } from "path";
 var cursorMcpValidator;
 var init_mcp3 = __esm(() => {
   cursorMcpValidator = {
@@ -7158,13 +7913,13 @@ var init_mcp3 = __esm(() => {
     name: "Cursor MCP Config",
     description: "Validates mcp.json (Cursor uses no leading dot; supports mcpServers wrapper or direct server map)",
     detect(dir) {
-      return existsSync39(resolve21(dir, "mcp.json"));
+      return existsSync41(resolve22(dir, "mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const mcpPath = resolve21(dir, "mcp.json");
+      const mcpPath = resolve22(dir, "mcp.json");
       let rawConfig;
       try {
         const raw = await Bun.file(mcpPath).text();
@@ -7224,8 +7979,8 @@ var init_mcp3 = __esm(() => {
 });
 
 // src/validators/cursor/skill.ts
-import { existsSync as existsSync40 } from "fs";
-import { resolve as resolve22 } from "path";
+import { existsSync as existsSync42 } from "fs";
+import { resolve as resolve23 } from "path";
 var cursorSkillValidator;
 var init_skill3 = __esm(() => {
   init_skill_validate();
@@ -7235,7 +7990,7 @@ var init_skill3 = __esm(() => {
     name: "Cursor Skill",
     description: "Validates SKILL.md (shared format): frontmatter (name/description), body, supporting files, substitutions. Cursor uses the same SKILL.md spec as other providers.",
     detect(dir) {
-      return existsSync40(resolve22(dir, "SKILL.md"));
+      return existsSync42(resolve23(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -7253,8 +8008,8 @@ var init_skill3 = __esm(() => {
 });
 
 // src/validators/copilot/plugin.ts
-import { existsSync as existsSync41 } from "fs";
-import { resolve as resolve23 } from "path";
+import { existsSync as existsSync43 } from "fs";
+import { resolve as resolve24 } from "path";
 var NAME_REGEX5, copilotPluginValidator;
 var init_plugin4 = __esm(() => {
   NAME_REGEX5 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -7264,13 +8019,13 @@ var init_plugin4 = __esm(() => {
     name: "Copilot Plugin",
     description: "Validates .github/plugin/plugin.json (skills as array of paths, mcpServers support)",
     detect(dir) {
-      return existsSync41(resolve23(dir, ".github", "plugin", "plugin.json"));
+      return existsSync43(resolve24(dir, ".github", "plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const manifestPath = resolve23(dir, ".github", "plugin", "plugin.json");
+      const manifestPath = resolve24(dir, ".github", "plugin", "plugin.json");
       let manifest;
       try {
         const raw = await Bun.file(manifestPath).text();
@@ -7305,11 +8060,11 @@ var init_plugin4 = __esm(() => {
           if (!p.startsWith("./") && !p.startsWith("../")) {
             warnings.push(`skills[${i}]: "${p}" should be relative (./ or ../)`);
           }
-          const skillDir = resolve23(dir, p);
-          const skillMd = resolve23(skillDir, "SKILL.md");
-          if (existsSync41(skillMd)) {
+          const skillDir = resolve24(dir, p);
+          const skillMd = resolve24(skillDir, "SKILL.md");
+          if (existsSync43(skillMd)) {
             passes.push(`skills[${i}]: ${p}/SKILL.md exists`);
-          } else if (existsSync41(skillDir)) {
+          } else if (existsSync43(skillDir)) {
             warnings.push(`skills[${i}]: directory exists but no SKILL.md inside`);
           } else {
             warnings.push(`skills[${i}]: path "${p}" does not exist`);
@@ -7320,8 +8075,8 @@ var init_plugin4 = __esm(() => {
         if (typeof manifest.mcpServers === "string") {
           passes.push(`mcpServers: "${manifest.mcpServers}"`);
           const mcpRef = String(manifest.mcpServers);
-          const mcpPath = resolve23(dir, mcpRef);
-          if (existsSync41(mcpPath)) {
+          const mcpPath = resolve24(dir, mcpRef);
+          if (existsSync43(mcpPath)) {
             passes.push(`mcpServers file exists at ${mcpRef}`);
           } else {
             warnings.push(`mcpServers path "${mcpRef}" does not exist on disk`);
@@ -7381,8 +8136,8 @@ var init_plugin4 = __esm(() => {
 });
 
 // src/validators/copilot/marketplace.ts
-import { existsSync as existsSync42 } from "fs";
-import { resolve as resolve24 } from "path";
+import { existsSync as existsSync44 } from "fs";
+import { resolve as resolve25 } from "path";
 var copilotMarketplaceValidator;
 var init_marketplace4 = __esm(() => {
   copilotMarketplaceValidator = {
@@ -7391,13 +8146,13 @@ var init_marketplace4 = __esm(() => {
     name: "Copilot Plugin Marketplace",
     description: "Validates .github/plugin/marketplace.json (string sources)",
     detect(dir) {
-      return existsSync42(resolve24(dir, ".github", "plugin", "marketplace.json"));
+      return existsSync44(resolve25(dir, ".github", "plugin", "marketplace.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const mktPath = resolve24(dir, ".github", "plugin", "marketplace.json");
+      const mktPath = resolve25(dir, ".github", "plugin", "marketplace.json");
       let mkt;
       try {
         const raw = await Bun.file(mktPath).text();
@@ -7440,10 +8195,10 @@ var init_marketplace4 = __esm(() => {
         if (p.source) {
           const src = String(p.source);
           passes.push(`plugins[${i}].source: "${src}"`);
-          const srcDir = resolve24(dir, src);
-          if (existsSync42(srcDir)) {
-            const hasManifest = existsSync42(resolve24(srcDir, ".github", "plugin", "plugin.json"));
-            const hasSkills = existsSync42(resolve24(srcDir, "skills"));
+          const srcDir = resolve25(dir, src);
+          if (existsSync44(srcDir)) {
+            const hasManifest = existsSync44(resolve25(srcDir, ".github", "plugin", "plugin.json"));
+            const hasSkills = existsSync44(resolve25(srcDir, "skills"));
             if (hasManifest || hasSkills) {
               passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
             } else {
@@ -7460,12 +8215,12 @@ var init_marketplace4 = __esm(() => {
         if (p.version)
           passes.push(`plugins[${i}].version: "${p.version}"`);
       }
-      if (existsSync42(resolve24(dir, "README.md"))) {
+      if (existsSync44(resolve25(dir, "README.md"))) {
         passes.push("README.md exists at marketplace root");
       } else {
         warnings.push("No README.md at marketplace root \u2014 recommended");
       }
-      if (existsSync42(resolve24(dir, "LICENSE"))) {
+      if (existsSync44(resolve25(dir, "LICENSE"))) {
         passes.push("LICENSE exists at marketplace root");
       } else {
         warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -7476,8 +8231,8 @@ var init_marketplace4 = __esm(() => {
 });
 
 // src/validators/copilot/mcp.ts
-import { existsSync as existsSync43 } from "fs";
-import { resolve as resolve25 } from "path";
+import { existsSync as existsSync45 } from "fs";
+import { resolve as resolve26 } from "path";
 var copilotMcpValidator;
 var init_mcp4 = __esm(() => {
   copilotMcpValidator = {
@@ -7486,13 +8241,13 @@ var init_mcp4 = __esm(() => {
     name: "Copilot MCP Config",
     description: "Validates .mcp.json (referenced via mcpServers in manifest). Supports stdio and http servers.",
     detect(dir) {
-      return existsSync43(resolve25(dir, ".mcp.json"));
+      return existsSync45(resolve26(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const mcpPath = resolve25(dir, ".mcp.json");
+      const mcpPath = resolve26(dir, ".mcp.json");
       let rawConfig;
       try {
         const raw = await Bun.file(mcpPath).text();
@@ -7552,8 +8307,8 @@ var init_mcp4 = __esm(() => {
 });
 
 // src/validators/copilot/skill.ts
-import { existsSync as existsSync44 } from "fs";
-import { resolve as resolve26 } from "path";
+import { existsSync as existsSync46 } from "fs";
+import { resolve as resolve27 } from "path";
 var copilotSkillValidator;
 var init_skill4 = __esm(() => {
   init_skill_validate();
@@ -7563,7 +8318,7 @@ var init_skill4 = __esm(() => {
     name: "Copilot Skill",
     description: "Validates SKILL.md (shared format). Copilot supports skills referenced via array paths in the manifest.",
     detect(dir) {
-      return existsSync44(resolve26(dir, "SKILL.md"));
+      return existsSync46(resolve27(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -7581,7 +8336,7 @@ var init_skill4 = __esm(() => {
 });
 
 // src/providers/index.ts
-var claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter, adapters;
+var claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter, grokAdapter2, adapters;
 var init_providers = __esm(() => {
   init_skill();
   init_plugin();
@@ -7688,7 +8443,21 @@ var init_providers = __esm(() => {
       throw new Error("Scaffold via adapter not yet implemented");
     }
   };
-  adapters = [claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter];
+  grokAdapter2 = {
+    id: "grok",
+    name: "Grok",
+    manifestPath: ".grok-plugin/plugin.json",
+    marketplacePath: ".grok-plugin/marketplace.json",
+    mcpFilename: ".mcp.json",
+    validators: [],
+    detectContext(dir) {
+      return { cwd: dir };
+    },
+    async scaffold(decision, ctx) {
+      throw new Error("Scaffold via adapter not yet implemented for grok");
+    }
+  };
+  adapters = [claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter, grokAdapter2];
 });
 
 // src/validators/index.ts
@@ -7729,9 +8498,9 @@ var init_validators = __esm(() => {
 });
 
 // src/core/remote.ts
-import { spawnSync as spawnSync4 } from "child_process";
+import { spawnSync as spawnSync5 } from "child_process";
 import { mkdtempSync, rmSync } from "fs";
-import { join as join31 } from "path";
+import { join as join32 } from "path";
 import { tmpdir } from "os";
 function parseRemoteUrl(input) {
   if (input.startsWith(".") || input.startsWith("/") || input.startsWith("~")) {
@@ -7761,7 +8530,7 @@ function isGhAvailable() {
   if (ghAvailable !== null)
     return ghAvailable;
   try {
-    const result = spawnSync4("gh", ["auth", "status"], {
+    const result = spawnSync5("gh", ["auth", "status"], {
       stdio: "pipe",
       timeout: 5000
     });
@@ -7780,7 +8549,7 @@ function hasGitCli() {
   if (gitAvailable !== null)
     return gitAvailable;
   try {
-    const result = spawnSync4("git", ["--version"], {
+    const result = spawnSync5("git", ["--version"], {
       stdio: "pipe",
       timeout: 5000
     });
@@ -7796,7 +8565,7 @@ function hasGitCli() {
   }
 }
 async function cloneToTemp(parsed) {
-  const tmpDir = mkdtempSync(join31(tmpdir(), "dora-"));
+  const tmpDir = mkdtempSync(join32(tmpdir(), "dora-"));
   const cleanup = () => {
     try {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -7816,7 +8585,7 @@ async function cloneToTemp(parsed) {
     ghArgs.push("--depth", "1");
     if (parsed.ref)
       ghArgs.push("--branch", parsed.ref);
-    const gh = spawnSync4("gh", ghArgs, { stdio: "pipe", timeout: 60000 });
+    const gh = spawnSync5("gh", ghArgs, { stdio: "pipe", timeout: 60000 });
     if (gh.status === 0) {
       return { dir: tmpDir, cleanup: wrappedCleanup };
     }
@@ -7829,7 +8598,7 @@ async function cloneToTemp(parsed) {
   if (parsed.ref)
     gitArgs.push("--branch", parsed.ref);
   gitArgs.push(parsed.gitUrl, tmpDir);
-  const git = spawnSync4("git", gitArgs, { stdio: "pipe", timeout: 60000 });
+  const git = spawnSync5("git", gitArgs, { stdio: "pipe", timeout: 60000 });
   if (git.status !== 0 || git.error) {
     wrappedCleanup();
     if (git.error && /ENOENT|not found/i.test(String(git.error))) {
@@ -7851,8 +8620,8 @@ var exports_validate_top = {};
 __export(exports_validate_top, {
   default: () => validate_top_default
 });
-import { existsSync as existsSync46 } from "fs";
-import { resolve as resolve27 } from "path";
+import { existsSync as existsSync48 } from "fs";
+import { resolve as resolve28 } from "path";
 var import_picocolors19, validate_top_default;
 var init_validate_top = __esm(() => {
   init_dist();
@@ -7907,21 +8676,21 @@ var init_validate_top = __esm(() => {
   Cloning ${import_picocolors19.default.dim(args.path)}...`);
         try {
           const result = await cloneToTemp(remote);
-          fullPath = remote.subpath ? resolve27(result.dir, remote.subpath) : result.dir;
+          fullPath = remote.subpath ? resolve28(result.dir, remote.subpath) : result.dir;
           cleanup = result.cleanup;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           ui.fail(msg);
           process.exit(1);
         }
-        if (!existsSync46(fullPath)) {
+        if (!existsSync48(fullPath)) {
           cleanup();
           ui.fail(`Subdirectory not found in repo: ${remote.subpath}`);
           process.exit(1);
         }
       } else {
-        fullPath = resolve27(args.path);
-        if (!existsSync46(fullPath)) {
+        fullPath = resolve28(args.path);
+        if (!existsSync48(fullPath)) {
           ui.fail(`Path not found: ${args.path}
 
 Check that the path is correct and the directory exists.`);
@@ -8016,8 +8785,8 @@ var exports_init2 = {};
 __export(exports_init2, {
   default: () => init_default2
 });
-import { basename as basename7, join as join32 } from "path";
-var {spawnSync: spawnSync5 } = globalThis.Bun;
+import { basename as basename7, join as join33 } from "path";
+var {spawnSync: spawnSync6 } = globalThis.Bun;
 var import_picocolors20, init_default2;
 var init_init2 = __esm(() => {
   init_dist();
@@ -8131,7 +8900,7 @@ var init_init2 = __esm(() => {
       }
       const journalsDir = getJournalsDir();
       const remotePath = `projects/${project}.md`;
-      const localPath = join32(journalsDir, `${project}.md`);
+      const localPath = join33(journalsDir, `${project}.md`);
       const effectiveRepo = isRefresh && !args.repo ? existing.journal.repo : repo;
       const config = existing ?? {
         journal: { repo: effectiveRepo, projects: {} }
@@ -8144,7 +8913,7 @@ var init_init2 = __esm(() => {
       ensureDoravalDirs();
       ui.write(`  ${import_picocolors20.default.dim(import_picocolors20.default.gray("Fetching journal files from"))} ${import_picocolors20.default.gray(effectiveRepo)}${import_picocolors20.default.dim(import_picocolors20.default.gray("..."))}
 `);
-      const globalDest = join32(journalsDir, "global.md");
+      const globalDest = join33(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       let wroteGlobal;
       if (!refreshGlobalRes.ok) {
@@ -8197,7 +8966,7 @@ Project-specific decisions.
       if (existingAgent?.command) {
         ui.write(`  ${import_picocolors20.default.bold(import_picocolors20.default.white("Coding agent (already configured)"))}
 `);
-        ui.write(`    Current: ${import_picocolors20.default.dim(import_picocolors20.default.gray(existingAgent.command))}  template: ${import_picocolors20.default.dim(import_picocolors20.default.gray(existingAgent.prompt_template || "(default)"))}
+        ui.write(`    Current: ${import_picocolors20.default.dim(import_picocolors20.default.gray(existingAgent.command))}  template: ${import_picocolors20.default.dim(import_picocolors20.default.gray(existingAgent.prompt_template || "(default)"))}  cwd_flag: ${import_picocolors20.default.dim(import_picocolors20.default.gray(existingAgent.cwd_flag || "(none)"))}
 `);
         const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
         if (!/^y/i.test(String(change))) {
@@ -8221,14 +8990,15 @@ Project-specific decisions.
 `);
       }
       const common = [
-        { name: "claude", template: '-p "{{prompt}}" --output-format json' },
-        { name: "cursor", template: "" }
+        { name: "claude", template: '-p "{{prompt}}" --output-format json', cwd_flag: "--cwd" },
+        { name: "grok", template: '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen', cwd_flag: "--cwd" },
+        { name: "cursor", template: "", cwd_flag: "" }
       ];
       let detected = "";
       for (const c of common) {
-        let probe = spawnSync5(["command", "-v", c.name], { stdout: "pipe", stderr: "pipe" });
+        let probe = spawnSync6(["command", "-v", c.name], { stdout: "pipe", stderr: "pipe" });
         if (probe.exitCode !== 0) {
-          probe = spawnSync5(["which", c.name], { stdout: "pipe", stderr: "pipe" });
+          probe = spawnSync6(["which", c.name], { stdout: "pipe", stderr: "pipe" });
         }
         if (probe.exitCode === 0) {
           detected = c.name;
@@ -8241,10 +9011,17 @@ Project-specific decisions.
       let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}" --output-format json' : '-p "{{prompt}}" --output-format json';
       ui.info(`  Prompt template (use {{prompt}} placeholder):`);
       template = prompt("  ", template);
+      const detectedCommon = common.find((c) => c.name === detected);
+      let cwdFlag = detectedCommon?.cwd_flag ?? "";
+      if (detected) {
+        ui.info(`  Cwd flag (flag your agent uses to set working directory/repo, e.g. --cwd or -C; blank = rely on process cwd only):`);
+        cwdFlag = prompt("  ", cwdFlag);
+      }
       const finalConfig = await readConfig() || { journal: { repo: effectiveRepo, projects: {} } };
       finalConfig.agent = {
         command: agentCmd,
-        prompt_template: template
+        prompt_template: template,
+        ...cwdFlag ? { cwd_flag: cwdFlag } : {}
       };
       await writeConfig(finalConfig);
       ui.write(`
@@ -8285,8 +9062,8 @@ Project-specific decisions.
 });
 
 // src/core/update.ts
-import { resolve as resolve28 } from "path";
-import { homedir as homedir4 } from "os";
+import { resolve as resolve29 } from "path";
+import { homedir as homedir5 } from "os";
 function normalizePath(p) {
   return p.replace(/\\/g, "/").replace(/\/+$/, "");
 }
@@ -8464,14 +9241,14 @@ async function readMarker() {
 async function writeMarker(marker) {
   try {
     const { mkdir, writeFile } = await import("fs/promises");
-    const { dirname: dirname8 } = await import("path");
-    await mkdir(dirname8(MARKER_PATH), { recursive: true });
+    const { dirname: dirname10 } = await import("path");
+    await mkdir(dirname10(MARKER_PATH), { recursive: true });
     await writeFile(MARKER_PATH, JSON.stringify(marker, null, 2));
   } catch {}
 }
 var MARKER_PATH;
 var init_update2 = __esm(() => {
-  MARKER_PATH = resolve28(homedir4(), ".doraval", "install.json");
+  MARKER_PATH = resolve29(homedir5(), ".doraval", "install.json");
 });
 
 // src/cli/commands/update.ts
@@ -8479,17 +9256,17 @@ var exports_update2 = {};
 __export(exports_update2, {
   default: () => update_default2
 });
-import { spawnSync as spawnSync6 } from "child_process";
-import { homedir as homedir5 } from "os";
+import { spawnSync as spawnSync7 } from "child_process";
+import { homedir as homedir6 } from "os";
 import { fileURLToPath } from "url";
 import { realpath, access } from "fs/promises";
 async function confirmUpdate() {
   const { createInterface } = await import("readline");
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve29) => {
+  return new Promise((resolve30) => {
     rl.question("Update now? (y/N) ", (answer) => {
       rl.close();
-      resolve29(answer.toLowerCase().startsWith("y"));
+      resolve30(answer.toLowerCase().startsWith("y"));
     });
   });
 }
@@ -8526,7 +9303,7 @@ var init_update3 = __esm(() => {
         entrypoint,
         argv: process.argv,
         env: process.env,
-        homeDir: homedir5(),
+        homeDir: homedir6(),
         realpath: (p) => realpath(p),
         exists: async (p) => {
           try {
@@ -8537,7 +9314,7 @@ var init_update3 = __esm(() => {
           }
         },
         run: async (cmd2, args2) => {
-          const res = spawnSync6(cmd2, args2, { encoding: "utf8" });
+          const res = spawnSync7(cmd2, args2, { encoding: "utf8" });
           return { ok: res.status === 0, stdout: res.stdout || "" };
         },
         readMarker
@@ -8583,7 +9360,7 @@ var init_update3 = __esm(() => {
       const cmd = buildUpgradeCommand(method);
       ui.info(`Running: ${cmd.join(" ")}
 `);
-      const result = spawnSync6(cmd[0], cmd.slice(1), { stdio: "inherit" });
+      const result = spawnSync7(cmd[0], cmd.slice(1), { stdio: "inherit" });
       if (result.status === 0) {
         ui.success(`Successfully updated to ${latestInfo.version}.`);
         ui.info("You may need to restart your shell to pick up the new version.");
@@ -8816,7 +9593,7 @@ var import_picocolors22 = __toESM(require_picocolors(), 1);
 var skill = defineCommand({
   meta: {
     name: "skill",
-    description: "Validate, measure drift, and judge AI agent skills"
+    description: "Validate, measure drift, run sessions with prompts, and judge AI agent skills"
   },
   subCommands: {
     validate: () => Promise.resolve().then(() => (init_validate(), exports_validate)).then((m) => m.default),
@@ -8849,19 +9626,6 @@ var journal = defineCommand({
     if (cliArgs[0] === "journal" && cliArgs.length > 1)
       return;
     showUsage(journal);
-  }
-});
-var evalCmd = defineCommand({
-  meta: {
-    name: "eval",
-    description: "Evaluate a coding agent session against skill instructions"
-  },
-  subCommands: {
-    history: () => Promise.resolve().then(() => (init_eval_history(), exports_eval_history)).then((m) => m.default)
-  },
-  async run(ctx) {
-    const evalMain = await Promise.resolve().then(() => (init_eval(), exports_eval)).then((m) => m.default);
-    return evalMain.run?.(ctx);
   }
 });
 var config = () => Promise.resolve().then(() => (init_config(), exports_config)).then((m) => m.default);
@@ -8992,7 +9756,7 @@ var main = defineCommand({
     completion: () => Promise.resolve().then(() => (init_completion(), exports_completion)).then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
-    eval: () => Promise.resolve(evalCmd),
+    eval: () => Promise.resolve().then(() => (init_eval(), exports_eval)).then((m) => m.default),
     config,
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),

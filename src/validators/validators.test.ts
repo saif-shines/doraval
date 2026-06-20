@@ -247,6 +247,16 @@ describe("claude:hooks", () => {
     expect(result.errors).toEqual([]);
     expect(result.passes).toContain('Event "PreToolUse" is a known lifecycle event');
   });
+
+  test("validates nested plugin hooks layout", async () => {
+    const result = await claudeHooksValidator.validate(
+      resolve(fixtures, "hooks-plugin"),
+      { format: "table", verbose: false, ci: false }
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.passes).toContain('Uses nested "hooks" object (plugin/settings layout)');
+    expect(result.passes).toContain('Event "SessionStart" is a known lifecycle event');
+  });
 });
 
 // ── MCP validator ────────────────────────────────────────────────

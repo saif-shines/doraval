@@ -101,3 +101,84 @@ export async function invokeAgent(
 
   return null;
 }
+
+/**
+ * Runs the agent in "full session" mode for test/skill exercise runs.
+ * Unlike invokeAgent (which forces JSON for judges), this aims to let the
+ * agent perform real work following a skill + task.
+ *
+ * Returns the full stdout text (the "trace" or response).
+ * Grok gets special headless flags (including --cwd for session isolation + updates.jsonl capture).
+ * Other agents rely on the cwd passed to Bun.spawn; put agent-specific flags in prompt_template.
+ */
+export async function runAgentSession(
+  promptText: string,
+  agentCfg: AgentConfig,
+  opts: { cwd?: string; alwaysApprove?: boolean; stream?: boolean } = {}
+): Promise<string> {
+  const { cwd, alwaysApprove = true, stream = true } = opts;
+  const cmd = agentCfg.command || "grok";
+
+  let args: string[] = [];
+
+  const isGrok = /grok/i.test(cmd);
+  if (isGrok) {
+    // Use exact flags from Grok docs for headless scripting + real persisted session
+    args = [
+      "--no-auto-update",
+      "-p", promptText,
+      "--cwd", cwd || process.cwd(),
+      "--always-approve",
+      "--no-alt-screen",
+      "--output-format", "plain",
+    ];
+  } else {
+    // Fallback for other agents: use a non-JSON template if provided, else basic -p
+    const template = agentCfg.prompt_template && !agentCfg.prompt_template.includes("output-format json")
+      ? agentCfg.prompt_template
+      : '-p "{{prompt}}"';
+    args = buildAgentArgv(template, promptText);
+    // If the agent declares a cwd_flag (e.g. "--cwd" or "-C"), pass the run directory so the *agent*
+    // knows which repo/dir is the current project (in addition to the spawn cwd).
+    // This is needed because many agent CLIs key their sessions, indexing, and context off the
+    // explicit project directory, not just process PWD.
+    if (cwd && agentCfg.cwd_flag) {
+      args.push(agentCfg.cwd_flag, cwd);
+    }
+    // We intentionally do not default to --cwd or --always-approve for unknown agents.
+  }
+
+  const proc = Bun.spawn([cmd, ...args], {
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env },
+    cwd: cwd || process.cwd(),
+  });
+
+  let stdout = "";
+  const decoder = new TextDecoder();
+  const reader = proc.stdout.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      stdout += text;
+      if (stream) {
+        process.stdout.write(text);
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const stderr = await new Response(proc.stderr).text();
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    if (stderr && !stream) process.stderr.write(stderr);
+    return `ERROR (exit ${exitCode}):\n${stderr || stdout}`;
+  }
+
+  return stdout.trim() || "(no output)";
+}

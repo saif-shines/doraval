@@ -10,6 +10,19 @@ import {
   sanitizeProjectName,
 } from "../../../core/journal-config.js";
 import { parseJournalEntries, type JournalEntry } from "../../../core/journal-parse.js";
+import {
+  buildJournalHookCommand,
+  journalHookGroup,
+} from "../../../core/journal-hook.js";
+
+export function formatJournalHookJson(contextText: string): string {
+  return JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: "SessionStart",
+      additionalContext: contextText,
+    },
+  });
+}
 
 export interface ContextOptions {
   minPushback?: number;
@@ -213,26 +226,34 @@ export default defineCommand({
       description: "Print a ready-to-paste SessionStart hook snippet for hooks.json",
       default: false,
     },
+    json: {
+      type: "boolean",
+      description: "Emit Claude SessionStart hook JSON (hookSpecificOutput.additionalContext)",
+      default: false,
+    },
+    quiet: {
+      type: "boolean",
+      description: "For hook use: omit plain-text output when there are no entries (still emits JSON with --json)",
+      default: false,
+    },
   },
 
   async run({ args }) {
     if (args["print-hook"]) {
-      const hookCmd = "sh -c 'dora journal context 2>/dev/null || true'";
-      console.log(JSON.stringify({
-        SessionStart: [
+      console.log(
+        JSON.stringify(
           {
-            hooks: [
-              {
-                type: "command",
-                command: hookCmd,
-              },
-            ],
+            hooks: {
+              SessionStart: [journalHookGroup()],
+            },
           },
-        ],
-      }, null, 2));
-      ui.write("\nTip: Use `dora journal hook enable` to install the hook automatically.");
+          null,
+          2
+        )
+      );
+      ui.write(`\nHook command: ${buildJournalHookCommand()}`);
+      ui.write("\nTip: Use `dora journal hook enable -g` to install globally (recommended).");
       ui.write("     Use `dora journal hook disable` to remove it.");
-      ui.write("     (sh -c wrapper ensures shell features like redir work reliably.)");
       process.exit(0);
     }
 
@@ -293,15 +314,17 @@ export default defineCommand({
       );
     }
 
-    // Write payload to stdout unless we are only doing an append (keeps hooks/piping working).
-    // When appending we still allow stdout if the user wants (e.g. | cat).
-    if (contextText && !appendTarget) {
+    const useJson = !!args.json;
+    const useQuiet = !!args.quiet;
+
+    if (useJson) {
+      console.log(formatJournalHookJson(contextText));
+    } else if (contextText && !appendTarget) {
       console.log(contextText);
     } else if (contextText && appendTarget) {
-      // When appending, still emit to stdout so `dora journal context --append-to X | ...` works if desired.
-      // But for normal append UX, the success message above is the main feedback.
-      // Uncomment next line if you always want the block echoed:
-      // console.log(contextText);
+      // When appending, stdout is optional; success message above is the main feedback.
+    } else if (!useQuiet && !appendTarget && !contextText) {
+      // No entries — stay silent for hooks and piping unless caller asked for noise.
     }
 
     // Always succeed for hook / automation safety.

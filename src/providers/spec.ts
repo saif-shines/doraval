@@ -48,6 +48,16 @@ export const PROVIDER_SPECS = {
     sourceShape: "string",
     requiresInterface: false,
   },
+  grok: {
+    id: "grok" as const,
+    name: "Grok",
+    manifestPath: ".grok-plugin/plugin.json",
+    marketplacePath: ".grok-plugin/marketplace.json",
+    mcpFilename: ".mcp.json",
+    skillsField: "directory-string",
+    sourceShape: "string",
+    requiresInterface: false,
+  },
 } as const;
 
 export type ProviderSpec = (typeof PROVIDER_SPECS)[ProviderId];
