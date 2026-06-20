@@ -145,7 +145,7 @@ describe("sanitizeSessionId", () => {
   });
 
   test("sanitized id produces path inside evals dir", () => {
-    const evalsDir = "/tmp/doraval-evals";
+    const evalsDir = resolve("/tmp/doraval-evals");
     const bad = "../../escape";
     const safe = sanitizeSessionId(bad);
     const p = join(evalsDir, `${safe}-123.json`);
