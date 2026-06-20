@@ -1,6 +1,6 @@
 {
   "name": "@hacksmith/doraval",
-  "version": "0.2.36",
+  "version": "0.2.37",
   "license": "MIT",
   "description": "The context engineering toolkit for coding agents",
   "exports": "./src/cli/index.ts"
