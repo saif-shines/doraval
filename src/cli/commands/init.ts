@@ -45,6 +45,7 @@ export default defineCommand({
 
   async run({ args }) {
     ui.heading("dora init — Set up doraval, your journal, and the coding agent dora should use on the fly");
+    ui.write(`  ${pc.bold(pc.white("Step 1: Journal setup"))}\n`);
 
     const ghCheck = ensureGhCli();
     if (!ghCheck.ok) {
@@ -197,7 +198,7 @@ export default defineCommand({
       }
       ui.blank();
     } else {
-      ui.write(`  ${pc.bold(pc.white("Coding agent for journal add"))}\n`);
+      ui.write(`\n  ${pc.bold(pc.white("Step 2: Coding agent for journal add"))}\n`);
       ui.info(`  When configured, ${pc.dim(pc.gray("dora journal add \"..\""))} will use your agent to enrich entries with tags and rationale automatically.\n`);
     }
 
