@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.51",
+    version: "0.2.52",
     author: "Saif",
     repository: {
       type: "git",

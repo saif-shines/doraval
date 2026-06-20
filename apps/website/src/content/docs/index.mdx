@@ -23,41 +23,66 @@ hero:
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-<div class="story-arc">
+<div class="home-intro">
 
-<div class="story-panel story-scene">
-<span class="story-label">The scene</span>
-<p><strong>If you're a senior engineer</strong> and 10 new engineers join your team, you hand them a skill so they can get something done — onboard, set up a repo, no matter their experience, familiarity, model, or coding agent.</p>
-</div>
+**If you're a senior engineer** and 10 new engineers join your team, you hand them a skill so they can get something done — onboard, set up a repo, no matter their experience, familiarity, model, or coding agent.
 
-<div class="story-panel story-evidence">
-<span class="story-label">First-attempt success rate</span>
-<p class="story-evidence-lead">Most people don't succeed on the first try. The gap closes slowly.</p>
-<div class="story-stats" role="list" aria-label="Onboarding success over time">
-<div class="story-stat" role="listitem"><span class="story-stat-num">3/10</span><span class="story-stat-desc">first attempt</span></div>
-<div class="story-stat" role="listitem"><span class="story-stat-num">4/10</span><span class="story-stat-desc">in a few hours</span></div>
-<div class="story-stat" role="listitem"><span class="story-stat-num">7/10</span><span class="story-stat-desc">in a day</span></div>
-<div class="story-stat" role="listitem"><span class="story-stat-num">10/10</span><span class="story-stat-desc">in a few days</span></div>
-</div>
-</div>
+Only 3/10 succeed on the first attempt. 4/10 in a few hours. 7/10 in a day. 10/10 take a few days.
 
-<div class="story-panel story-villain">
-<span class="story-label">The question</span>
-<p class="story-question"><strong>How do we left-shift that success?</strong></p>
-<p class="story-answer">Make the first attempt work for almost everyone.</p>
-</div>
+**How do we left-shift that success?** Make the first attempt work for almost everyone.
 
-<div class="story-panel story-category">
-<span class="story-label">Same problem, wider reach</span>
-<p>The same problem hits when you publish AI resources as a company (Resend, dev tools, etc.): <strong>how well do community members succeed on day one?</strong></p>
-</div>
+---
 
-<div class="story-panel story-guide">
-<span class="story-label">For orchestrators</span>
-<p>doraval exists for <strong>coding agent orchestrators</strong> — the people who design, validate, and scale context for teams of agents and humans.</p>
-</div>
+The same problem hits when you publish AI resources as a company (Resend, dev tools, etc.): how well do community members succeed on day one?
+
+doraval exists for **coding agent orchestrators** — the people who design, validate, and scale context for teams of agents and humans.
 
 </div>
+
+## Installation
+
+Install globally for repeated local use.
+
+<Tabs>
+  <TabItem label="macOS (Homebrew)">
+    ```bash
+    brew tap saif-shines/tap
+    brew install doraval
+    ```
+
+    Verify:
+
+    ```bash
+    doraval --help
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    Global install:
+
+    ```bash
+    npm install -g @hacksmith/doraval
+    ```
+
+    Or run without installing:
+
+    ```bash
+    npx @hacksmith/doraval validate .
+    ```
+  </TabItem>
+  <TabItem label="Bun">
+    Global install:
+
+    ```bash
+    bun add -g @hacksmith/doraval
+    ```
+
+    Or run without installing:
+
+    ```bash
+    bunx @hacksmith/doraval validate .
+    ```
+  </TabItem>
+</Tabs>
 
 ## The orchestrator problems doraval solves
 
@@ -116,48 +141,3 @@ npx @hacksmith/doraval ui
 ```bash
 npx @hacksmith/doraval init
 ```
-
-## Installation
-
-Install globally for repeated local use.
-
-<Tabs>
-  <TabItem label="macOS (Homebrew)">
-    ```bash
-    brew tap saif-shines/tap
-    brew install doraval
-    ```
-
-    Verify:
-
-    ```bash
-    doraval --help
-    ```
-  </TabItem>
-  <TabItem label="npm">
-    Global install:
-
-    ```bash
-    npm install -g @hacksmith/doraval
-    ```
-
-    Or run without installing:
-
-    ```bash
-    npx @hacksmith/doraval validate .
-    ```
-  </TabItem>
-  <TabItem label="Bun">
-    Global install:
-
-    ```bash
-    bun add -g @hacksmith/doraval
-    ```
-
-    Or run without installing:
-
-    ```bash
-    bunx @hacksmith/doraval validate .
-    ```
-  </TabItem>
-</Tabs>

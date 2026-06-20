@@ -402,6 +402,16 @@
     var(--sl-color-bg) !important;
 }
 
+/* Home intro — larger, more readable opening paragraphs, full content width */
+.home-intro {
+  max-width: none;
+}
+
+.home-intro p {
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
 /* Final !important hammer — guarantees Doraemon blue wins over any late theme rules */
 :root,
 :root[data-theme='dark'] {
