@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.49",
+    version: "0.2.50",
     author: "Saif",
     repository: {
       type: "git",
@@ -1947,12 +1947,25 @@ var init_judge = __esm(() => {
 
 // src/core/journal-remote.ts
 var {spawnSync: spawnSync2 } = globalThis.Bun;
+function tryGh(args) {
+  try {
+    const result = spawnSync2(["gh", ...args], { stdout: "pipe", stderr: "pipe" });
+    return { ok: true, result };
+  } catch {
+    return { ok: false };
+  }
+}
+function tryGit(args) {
+  try {
+    const result = spawnSync2(["git", ...args], { stdout: "pipe", stderr: "pipe" });
+    return { ok: true, result };
+  } catch {
+    return { ok: false };
+  }
+}
 function hasGhCli() {
-  const result = spawnSync2(["gh", "--version"], {
-    stdout: "pipe",
-    stderr: "pipe"
-  });
-  return result.exitCode === 0;
+  const r = tryGh(["--version"]);
+  return r.ok && r.result.exitCode === 0;
 }
 function ensureGhCli() {
   if (hasGhCli())
@@ -1960,7 +1973,11 @@ function ensureGhCli() {
   return { ok: false, error: "GH_CLI_MISSING" };
 }
 function fetchRemoteJournalFile(repo, path) {
-  const result = spawnSync2(["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"], { stdout: "pipe", stderr: "pipe" });
+  const r = tryGh(["api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"]);
+  if (!r.ok) {
+    return { ok: false, error: "The GitHub CLI (gh) is not installed. Run `gh --version` to verify." };
+  }
+  const result = r.result;
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();
     if (stderr.includes("404") || stderr.includes("Not Found")) {
@@ -2000,7 +2017,11 @@ async function refreshLocalJournalFile(repo, remotePath, localPath) {
   return { ok: true, value: true };
 }
 function getRemoteJournalFileMeta(repo, path) {
-  const result = spawnSync2(["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"], { stdout: "pipe", stderr: "pipe" });
+  const r = tryGh(["api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"]);
+  if (!r.ok) {
+    return { ok: false, error: "The GitHub CLI (gh) is not installed. Run `gh --version` to verify." };
+  }
+  const result = r.result;
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();
     if (stderr.includes("404") || stderr.includes("Not Found")) {
@@ -2016,10 +2037,10 @@ function getRemoteJournalFileMeta(repo, path) {
   }
 }
 function getGitRemoteOwner() {
-  const result = spawnSync2(["git", "config", "--get", "remote.origin.url"], {
-    stdout: "pipe",
-    stderr: "pipe"
-  });
+  const r = tryGit(["config", "--get", "remote.origin.url"]);
+  if (!r.ok)
+    return null;
+  const result = r.result;
   if (result.exitCode !== 0)
     return null;
   const url = result.stdout.toString().trim();
@@ -2029,16 +2050,19 @@ function getGitRemoteOwner() {
   return match ? match[1] : null;
 }
 function ghUser() {
-  const result = spawnSync2(["gh", "api", "user", "--jq", ".login"], {
-    stdout: "pipe",
-    stderr: "pipe"
-  });
+  const r = tryGh(["api", "user", "--jq", ".login"]);
+  if (!r.ok)
+    return null;
+  const result = r.result;
   if (result.exitCode !== 0)
     return null;
   return result.stdout.toString().trim() || null;
 }
 function repoExists(repo) {
-  const result = spawnSync2(["gh", "api", `repos/${repo}`, "--jq", ".full_name"], { stdout: "pipe", stderr: "pipe" });
+  const r = tryGh(["api", `repos/${repo}`, "--jq", ".full_name"]);
+  if (!r.ok)
+    return false;
+  const result = r.result;
   return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
 }
 var init_journal_remote = () => {};
@@ -3471,10 +3495,17 @@ function updateGitHubFile(repo, path, content, message, sha) {
   if (sha) {
     args.push("-f", `sha=${sha}`);
   }
-  const result = spawnSync3(args, {
-    stdout: "pipe",
-    stderr: "pipe"
-  });
+  let result;
+  try {
+    result = spawnSync3(args, {
+      stdout: "pipe",
+      stderr: "pipe"
+    });
+  } catch {
+    ui.write(import_picocolors11.default.red(`Failed to update ${path} on ${repo}:`));
+    ui.write("GitHub CLI (gh) is not available.");
+    process.exit(1);
+  }
   if (result.exitCode !== 0) {
     ui.write(import_picocolors11.default.red(`Failed to update ${path} on ${repo}:`));
     ui.write(result.stderr.toString());
@@ -7729,12 +7760,40 @@ function parseRemoteUrl(input) {
 function isGhAvailable() {
   if (ghAvailable !== null)
     return ghAvailable;
-  const result = spawnSync4("gh", ["auth", "status"], {
-    stdio: "pipe",
-    timeout: 5000
-  });
-  ghAvailable = result.status === 0;
-  return ghAvailable;
+  try {
+    const result = spawnSync4("gh", ["auth", "status"], {
+      stdio: "pipe",
+      timeout: 5000
+    });
+    if (result.error) {
+      ghAvailable = false;
+      return false;
+    }
+    ghAvailable = result.status === 0;
+    return ghAvailable;
+  } catch {
+    ghAvailable = false;
+    return false;
+  }
+}
+function hasGitCli() {
+  if (gitAvailable !== null)
+    return gitAvailable;
+  try {
+    const result = spawnSync4("git", ["--version"], {
+      stdio: "pipe",
+      timeout: 5000
+    });
+    if (result.error) {
+      gitAvailable = false;
+      return false;
+    }
+    gitAvailable = result.status === 0;
+    return gitAvailable;
+  } catch {
+    gitAvailable = false;
+    return false;
+  }
 }
 async function cloneToTemp(parsed) {
   const tmpDir = mkdtempSync(join31(tmpdir(), "dora-"));
@@ -7762,19 +7821,26 @@ async function cloneToTemp(parsed) {
       return { dir: tmpDir, cleanup: wrappedCleanup };
     }
   }
+  if (!hasGitCli()) {
+    wrappedCleanup();
+    throw new Error("git is not installed. Install git to clone remote repositories for validation.");
+  }
   const gitArgs = ["clone", "--depth", "1"];
   if (parsed.ref)
     gitArgs.push("--branch", parsed.ref);
   gitArgs.push(parsed.gitUrl, tmpDir);
   const git = spawnSync4("git", gitArgs, { stdio: "pipe", timeout: 60000 });
-  if (git.status !== 0) {
+  if (git.status !== 0 || git.error) {
     wrappedCleanup();
-    const stderr = git.stderr?.toString().trim() || "unknown error";
+    if (git.error && /ENOENT|not found/i.test(String(git.error))) {
+      throw new Error("git is not installed. Install git to clone remote repositories for validation.");
+    }
+    const stderr = git.stderr?.toString().trim() || git.error?.message || "unknown error";
     throw new Error(`Failed to clone ${parsed.original}: ${stderr}`);
   }
   return { dir: tmpDir, cleanup: wrappedCleanup };
 }
-var GITHUB_RE, GENERIC_GIT_RE, ghAvailable = null;
+var GITHUB_RE, GENERIC_GIT_RE, ghAvailable = null, gitAvailable = null;
 var init_remote = __esm(() => {
   GITHUB_RE = /^(?:https?:\/\/)?github\.com\/([^/]+\/[^/]+?)(?:\.git)?(?:\/(?:tree|blob)\/([^/]+)(?:\/(.+))?)?$/;
   GENERIC_GIT_RE = /^https?:\/\/[^/]+\/[^/]+\/[^/]+/;
@@ -7832,6 +7898,11 @@ var init_validate_top = __esm(() => {
       let fullPath;
       let cleanup;
       if (remote) {
+        if (!hasGitCli()) {
+          ui.fail("git is not installed. Remote validation requires git to clone the repository.");
+          ui.info("  Install git and try again.");
+          process.exit(1);
+        }
         ui.info(`
   Cloning ${import_picocolors19.default.dim(args.path)}...`);
         try {

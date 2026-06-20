@@ -9,12 +9,32 @@ export type RemoteResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: string; isNotFound?: boolean };
 
+function tryGh(args: string[]) {
+  try {
+    const result = spawnSync(["gh", ...args], { stdout: "pipe", stderr: "pipe" });
+    return { ok: true as const, result };
+  } catch {
+    return { ok: false as const };
+  }
+}
+
+function tryGit(args: string[]) {
+  try {
+    const result = spawnSync(["git", ...args], { stdout: "pipe", stderr: "pipe" });
+    return { ok: true as const, result };
+  } catch {
+    return { ok: false as const };
+  }
+}
+
 export function hasGhCli(): boolean {
-  const result = spawnSync(["gh", "--version"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return result.exitCode === 0;
+  const r = tryGh(["--version"]);
+  return r.ok && r.result.exitCode === 0;
+}
+
+export function hasGitCli(): boolean {
+  const r = tryGit(["--version"]);
+  return r.ok && r.result.exitCode === 0;
 }
 
 export function ensureGhCli(): RemoteResult<true> {
@@ -24,11 +44,11 @@ export function ensureGhCli(): RemoteResult<true> {
 }
 
 export function fetchRemoteJournalFile(repo: string, path: string): RemoteResult<RemoteJournalFile> {
-  const result = spawnSync(
-    ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-
+  const r = tryGh(["api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"]);
+  if (!r.ok) {
+    return { ok: false, error: "The GitHub CLI (gh) is not installed. Run `gh --version` to verify." };
+  }
+  const result = r.result;
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();
     if (stderr.includes("404") || stderr.includes("Not Found")) {
@@ -84,10 +104,11 @@ export function getRemoteJournalFileMeta(
   repo: string,
   path: string
 ): RemoteResult<{ sha?: string; content: string; encoding?: string }> {
-  const result = spawnSync(
-    ["gh", "api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
+  const r = tryGh(["api", `repos/${repo}/contents/${path}`, "--jq", "{sha, content, encoding}"]);
+  if (!r.ok) {
+    return { ok: false, error: "The GitHub CLI (gh) is not installed. Run `gh --version` to verify." };
+  }
+  const result = r.result;
 
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();
@@ -106,10 +127,9 @@ export function getRemoteJournalFileMeta(
 }
 
 export function getGitRemoteOwner(): string | null {
-  const result = spawnSync(["git", "config", "--get", "remote.origin.url"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const r = tryGit(["config", "--get", "remote.origin.url"]);
+  if (!r.ok) return null;
+  const result = r.result;
   if (result.exitCode !== 0) return null;
 
   const url = result.stdout.toString().trim();
@@ -120,18 +140,16 @@ export function getGitRemoteOwner(): string | null {
 }
 
 export function ghUser(): string | null {
-  const result = spawnSync(["gh", "api", "user", "--jq", ".login"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const r = tryGh(["api", "user", "--jq", ".login"]);
+  if (!r.ok) return null;
+  const result = r.result;
   if (result.exitCode !== 0) return null;
   return result.stdout.toString().trim() || null;
 }
 
 export function repoExists(repo: string): boolean {
-  const result = spawnSync(
-    ["gh", "api", `repos/${repo}`, "--jq", ".full_name"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
+  const r = tryGh(["api", `repos/${repo}`, "--jq", ".full_name"]);
+  if (!r.ok) return false;
+  const result = r.result;
   return result.exitCode === 0 && result.stdout.toString().trim().length > 0;
 }

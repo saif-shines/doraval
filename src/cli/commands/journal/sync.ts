@@ -48,10 +48,17 @@ function updateGitHubFile(
     args.push("-f", `sha=${sha}`);
   }
 
-  const result = spawnSync(args, {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  let result;
+  try {
+    result = spawnSync(args, {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+  } catch {
+    ui.write(pc.red(`Failed to update ${path} on ${repo}:`));
+    ui.write("GitHub CLI (gh) is not available.");
+    process.exit(1);
+  }
 
   if (result.exitCode !== 0) {
     ui.write(pc.red(`Failed to update ${path} on ${repo}:`));

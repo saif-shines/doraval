@@ -67,12 +67,42 @@ let ghAvailable: boolean | null = null;
 
 function isGhAvailable(): boolean {
   if (ghAvailable !== null) return ghAvailable;
-  const result = spawnSync("gh", ["auth", "status"], {
-    stdio: "pipe",
-    timeout: 5000,
-  });
-  ghAvailable = result.status === 0;
-  return ghAvailable;
+  try {
+    const result = spawnSync("gh", ["auth", "status"], {
+      stdio: "pipe",
+      timeout: 5000,
+    });
+    if (result.error) {
+      ghAvailable = false;
+      return false;
+    }
+    ghAvailable = result.status === 0;
+    return ghAvailable;
+  } catch {
+    ghAvailable = false;
+    return false;
+  }
+}
+
+let gitAvailable: boolean | null = null;
+
+export function hasGitCli(): boolean {
+  if (gitAvailable !== null) return gitAvailable;
+  try {
+    const result = spawnSync("git", ["--version"], {
+      stdio: "pipe",
+      timeout: 5000,
+    });
+    if (result.error) {
+      gitAvailable = false;
+      return false;
+    }
+    gitAvailable = result.status === 0;
+    return gitAvailable;
+  } catch {
+    gitAvailable = false;
+    return false;
+  }
 }
 
 /**
@@ -119,14 +149,22 @@ export async function cloneToTemp(
   }
 
   // git clone fallback
+  if (!hasGitCli()) {
+    wrappedCleanup();
+    throw new Error("git is not installed. Install git to clone remote repositories for validation.");
+  }
+
   const gitArgs = ["clone", "--depth", "1"];
   if (parsed.ref) gitArgs.push("--branch", parsed.ref);
   gitArgs.push(parsed.gitUrl, tmpDir);
 
   const git = spawnSync("git", gitArgs, { stdio: "pipe", timeout: 60000 });
-  if (git.status !== 0) {
+  if (git.status !== 0 || git.error) {
     wrappedCleanup();
-    const stderr = git.stderr?.toString().trim() || "unknown error";
+    if (git.error && /ENOENT|not found/i.test(String(git.error))) {
+      throw new Error("git is not installed. Install git to clone remote repositories for validation.");
+    }
+    const stderr = git.stderr?.toString().trim() || git.error?.message || "unknown error";
     throw new Error(`Failed to clone ${parsed.original}: ${stderr}`);
   }
 

@@ -5,7 +5,7 @@ import pc from "picocolors";
 import { ui } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
-import { parseRemoteUrl, cloneToTemp } from "../../core/remote.js";
+import { parseRemoteUrl, cloneToTemp, hasGitCli } from "../../core/remote.js";
 
 export default defineCommand({
   meta: {
@@ -48,6 +48,11 @@ export default defineCommand({
     let cleanup: (() => void) | undefined;
 
     if (remote) {
+      if (!hasGitCli()) {
+        ui.fail("git is not installed. Remote validation requires git to clone the repository.");
+        ui.info("  Install git and try again.");
+        process.exit(1);
+      }
       ui.info(`\n  Cloning ${pc.dim(args.path)}...`);
       try {
         const result = await cloneToTemp(remote);
