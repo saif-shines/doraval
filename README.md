@@ -147,7 +147,7 @@ doraval eval history
 
 `eval` uses an LLM judge (via your configured agent) to produce a per-skill `PASS`/`FAIL` with a dynamic checklist, user familiarity score, and closure information (1-shot vs multi-turn vs incomplete).
 
-Requires `doraval init` first. See the [full docs](https://thehacksmith.dev/commands/eval/).
+Requires `doraval init` first. See the [full docs](https://doraval.thehacksmith.dev/commands/eval/).
 
 ### `journal` — Decision memory
 
@@ -203,7 +203,7 @@ Claude Code, Cursor, Codex, and Copilot CLI validators and scaffolding built in.
 
 ## Links
 
-- [Docs](https://thehacksmith.dev)
+- [Docs](https://doraval.thehacksmith.dev)
 - [JSR package](https://jsr.io/@hacksmith/doraval)
 - [npm package](https://www.npmjs.com/package/@hacksmith/doraval)
 - [GitHub Releases](https://github.com/saif-shines/doraval/releases)

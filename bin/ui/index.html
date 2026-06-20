@@ -118,40 +118,140 @@
     .accent {
       color: #60a5fa;
     }
+
+    /* Sidebar navigation */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 200px;
+      background: #0a0a0a;
+      border-right: 1px solid #18181b;
+      display: flex;
+      flex-direction: column;
+      z-index: 40;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      font-size: 13px;
+      color: #71717a;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+      white-space: nowrap;
+      background: transparent;
+      border-top: none;
+      border-right: none;
+      border-bottom: none;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item:hover {
+      color: #d4d4d8;
+      background: #18181b;
+    }
+    .nav-item.active {
+      color: #e4e4e7;
+      background: #18181b;
+      border-left-color: #60a5fa;
+    }
+    .nav-icon {
+      font-size: 14px;
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: #3f3f46;
+      padding: 12px 16px 4px;
+      text-transform: uppercase;
+    }
+    .nav-divider {
+      height: 1px;
+      background: #18181b;
+      margin: 6px 0;
+    }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-200">
-  <div class="max-w-5xl mx-auto p-8">
+<body class="bg-zinc-950 text-zinc-200 flex">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <!-- Brand -->
+    <div class="flex items-center gap-3 px-4 py-4 border-b border-zinc-900">
+      <div class="text-lg">🌀</div>
+      <div>
+        <div class="text-sm font-semibold tracking-tight text-zinc-200">dora</div>
+        <div id="sidebar-project" class="text-[10px] text-zinc-500 font-mono truncate max-w-[130px]"></div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <div class="flex-1 overflow-y-auto py-2">
+      <div class="nav-section-label">Views</div>
+      <button class="nav-item active" id="nav-capture" onclick="scrollToSection('section-capture')">
+        <span class="nav-icon">✏️</span>Capture
+      </button>
+      <button class="nav-item" id="nav-journal" onclick="scrollToSection('section-journal')">
+        <span class="nav-icon">🗒️</span>Journal
+      </button>
+      <button class="nav-item" id="nav-context" onclick="scrollToSection('section-context')">
+        <span class="nav-icon">👁️</span>Context
+      </button>
+      <button class="nav-item" id="nav-hooks" onclick="scrollToSection('section-hooks')">
+        <span class="nav-icon">🔗</span>Hooks
+      </button>
+      <button class="nav-item" id="nav-evals" onclick="scrollToSection('section-evals')">
+        <span class="nav-icon">📊</span>Evals
+      </button>
+
+      <div class="nav-divider"></div>
+      <div class="nav-section-label">Actions</div>
+      <button class="nav-item" onclick="doAction('sync')">
+        <span class="nav-icon">↑</span>Sync to remote
+      </button>
+      <button class="nav-item" onclick="doAction('update')">
+        <span class="nav-icon">↓</span>Pull latest
+      </button>
+      <button class="nav-item" onclick="doAction('open-dir')">
+        <span class="nav-icon">📁</span>Open data dir
+      </button>
+      <button class="nav-item" onclick="refreshAll()">
+        <span class="nav-icon">↺</span>Refresh
+      </button>
+    </div>
+
+    <!-- Footer link -->
+    <div class="border-t border-zinc-900 px-4 py-3">
+      <a href="https://github.com/saif-shines/doraval" target="_blank"
+         class="text-[11px] text-zinc-600 hover:text-zinc-400 transition">
+        GitHub ↗
+      </a>
+    </div>
+  </nav>
+
+  <div class="flex-1 min-w-0 ml-[200px] p-8 max-w-[calc(100vw-200px)]">
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
-      <div class="flex items-center gap-4">
-        <div class="flex items-center justify-center w-9 h-9 rounded-2xl bg-zinc-900 border border-zinc-800 text-xl">
-          🌀
-        </div>
-        <div>
-          <div class="font-semibold tracking-tighter text-2xl">dora</div>
-          <div class="text-[10px] text-zinc-500 -mt-1 tracking-[1px] font-mono">LOCAL DASHBOARD</div>
-        </div>
+      <div>
+        <div class="font-semibold tracking-tighter text-xl text-zinc-200">Local dashboard</div>
+        <div class="text-[10px] text-zinc-500 mt-0.5 font-mono">quick capture &amp; review — CLI for heavy lifting</div>
       </div>
-      
-      <div class="flex items-center gap-2 text-sm">
-        <div id="project-badge" class="px-3.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium"></div>
-        
-        <button onclick="refreshAll()" 
-                class="px-4 py-1.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium active:scale-[0.97] transition flex items-center gap-1.5">
-          <span>Refresh</span>
-        </button>
-        
-        <button onclick="window.open('https://github.com/saif-shines/doraval','_blank')" 
-                class="px-4 py-1.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium active:scale-[0.97] transition">
-          GitHub
-        </button>
-      </div>
+      <div id="project-badge" class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium"></div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
       <!-- Capture -->
-      <div class="lg:col-span-2 section">
+      <div id="section-capture" class="lg:col-span-2 section">
         <div class="flex items-baseline justify-between mb-4">
           <div>
             <div class="text-sm font-semibold tracking-tight">Capture decision</div>
@@ -206,7 +306,7 @@
       </div>
 
       <!-- What agents see -->
-      <div class="lg:col-span-3 section">
+      <div id="section-context" class="lg:col-span-3 section">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <div class="text-sm font-semibold tracking-tight">What agents will see</div>
@@ -221,21 +321,23 @@
           <button onclick="copyContext()" 
                   class="text-xs px-3 py-1 rounded-xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Copy</button>
         </div>
-        <pre id="context" class="context bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-zinc-300 text-[13px] overflow-auto max-h-[220px] leading-relaxed"></pre>
+        <pre id="context" class="context bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-zinc-300 text-[13px] overflow-auto max-h-[220px] leading-relaxed"><span class="text-zinc-600 animate-pulse">Loading context...</span></pre>
         <div id="agent-note" class="mt-2 text-[10px] text-zinc-500 px-1">Exact output from <span class="font-mono">dora journal context</span>. Injected via startup hook for the selected agent.</div>
       </div>
 
       <!-- Hooks -->
-      <div class="lg:col-span-2 section">
+      <div id="section-hooks" class="lg:col-span-2 section">
         <div class="text-sm font-semibold tracking-tight mb-3">Journal hooks</div>
-        <div id="hooks" class="space-y-2 text-sm"></div>
+        <div id="hooks" class="space-y-2 text-sm">
+          <div class="text-zinc-600 text-xs py-2 animate-pulse">Loading...</div>
+        </div>
         <div class="mt-4 text-[10px] text-zinc-500 leading-snug">
           Same as <span class="font-mono text-zinc-400">dora journal hook</span>. Restart Claude after toggling.
         </div>
       </div>
 
       <!-- Journal -->
-      <div class="lg:col-span-3 section">
+      <div id="section-journal" class="lg:col-span-3 section">
         <div class="flex items-center justify-between mb-4">
           <div class="text-sm font-semibold tracking-tight">Journal entries</div>
           <div class="flex items-center gap-2">
@@ -245,12 +347,14 @@
             <div class="text-[10px] text-zinc-500 tabular-nums" id="entry-count"></div>
           </div>
         </div>
-        <div id="entries" class="space-y-2 text-sm max-h-[340px] overflow-auto pr-2 -mr-1"></div>
+        <div id="entries" class="space-y-2 text-sm max-h-[340px] overflow-auto pr-2 -mr-1">
+          <div class="text-zinc-600 text-xs py-3 animate-pulse">Loading...</div>
+        </div>
       </div>
     </div>
 
     <!-- Evals / Skill Learnings -->
-    <div class="lg:col-span-5 section">
+    <div id="section-evals" class="lg:col-span-5 section">
       <div class="flex items-center justify-between mb-3">
         <div>
           <div class="text-sm font-semibold tracking-tight">Skill adherence learnings</div>
@@ -265,28 +369,12 @@
                   class="px-3 py-1 text-xs rounded-xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Refresh</button>
         </div>
       </div>
-      <div id="evals" class="space-y-1.5 text-sm max-h-[260px] overflow-auto pr-1 -mr-1"></div>
+      <div id="evals" class="space-y-1.5 text-sm max-h-[260px] overflow-auto pr-1 -mr-1">
+        <div class="text-zinc-600 text-xs py-2 animate-pulse">Loading...</div>
+      </div>
       <div class="mt-2 text-[10px] text-zinc-500">Click a row for full checklist. Run <span class="font-mono">dora eval</span> from the terminal to generate more.</div>
     </div>
 
-    <!-- Footer actions -->
-    <div class="mt-8 flex items-center gap-2 text-sm">
-      <button onclick="doAction('sync')" 
-              class="px-4 py-2 rounded-2xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.975] transition text-sm">
-        Sync to remote
-      </button>
-      <button onclick="doAction('update')" 
-              class="px-4 py-2 rounded-2xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.975] transition text-sm">
-        Pull latest
-      </button>
-      <button onclick="doAction('open-dir')" 
-              class="px-4 py-2 rounded-2xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.975] transition text-sm">
-        Open data dir
-      </button>
-      
-      <div class="flex-1"></div>
-      <div class="text-xs text-zinc-500">CLI is best for heavy lifting. This is for quick capture &amp; review. Data location depends on DORAVAL_HOME.</div>
-    </div>
   </div>
 
   <!-- Modal -->
@@ -362,6 +450,8 @@ async function loadStatus() {
   const s = await fetchJSON('/api/status');
   currentProject = s.project;
   setProjectBadge(currentProject);
+  const sidebarProject = document.getElementById('sidebar-project');
+  if (sidebarProject) sidebarProject.textContent = currentProject || 'no project';
 }
 
 async function loadContext() {
@@ -708,10 +798,13 @@ function showEvalModal(e) {
 
 async function doAction(name) {
   if (name === 'open-dir') {
-    const s = await fetchJSON('/api/status');
-    const root = s.doravalRoot || s.doravalDir || '~/.doraval';
-    showToast('Data directory: ' + root);
-    // optionally try to open, but browser security limits it
+    try {
+      const res = await fetchJSON('/api/open-dir', { method: 'POST' });
+      showToast('Opening ' + (res.path || 'data dir…'));
+    } catch {
+      const s = await fetchJSON('/api/status').catch(() => ({}));
+      showToast('Data dir: ' + (s.doravalRoot || s.doravalDir || '~/.doraval'));
+    }
     return;
   }
   if (name === 'sync' || name === 'update') {
@@ -842,9 +935,51 @@ function setupCaptureKeys() {
   setTimeout(() => title.focus(), 300);
 }
 
+// --- Sidebar navigation ---
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setActiveNav(id);
+}
+
+function setActiveNav(sectionId) {
+  const map = {
+    'section-capture': 'nav-capture',
+    'section-journal': 'nav-journal',
+    'section-context': 'nav-context',
+    'section-hooks': 'nav-hooks',
+    'section-evals': 'nav-evals',
+  };
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navId = map[sectionId];
+  if (navId) {
+    const navEl = document.getElementById(navId);
+    if (navEl) navEl.classList.add('active');
+  }
+}
+
+function setupSidebarObserver() {
+  const sections = ['section-capture', 'section-journal', 'section-context', 'section-hooks', 'section-evals'];
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        setActiveNav(entry.target.id);
+        break;
+      }
+    }
+  }, { threshold: 0.2 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+}
+
 async function boot() {
   setupSlider();
   setupCaptureKeys();
+  setupSidebarObserver();
 
   await loadStatus();
   await Promise.all([loadContext(), loadEntries(), loadHooks(), loadEvals()]);
@@ -876,8 +1011,16 @@ window.doAction = doAction;
 window.closeModal = closeModal;
 window.clearForm = clearForm;
 window.updateAgentPreview = updateAgentPreview;
+window.scrollToSection = scrollToSection;
 
-boot().catch(console.error);
+boot().catch((err) => {
+  const bodies = ['entries', 'context', 'evals', 'hooks'];
+  bodies.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div class="text-red-400/70 text-xs py-2">Could not load — is the dora server still running?</div>';
+  });
+  console.error(err);
+});
 </script>
 </body>
 </html>

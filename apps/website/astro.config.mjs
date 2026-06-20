@@ -3,7 +3,7 @@ import starlight from "@astrojs/starlight";
 import starlightThemeTerminal from "starlight-theme-terminal";
 
 export default defineConfig({
-  site: "https://thehacksmith.dev",
+  site: "https://doraval.thehacksmith.dev",
   image: {
     service: passthroughImageService(),
   },

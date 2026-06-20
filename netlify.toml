@@ -2,3 +2,26 @@
   command = "bun install && bun run site:build"
   publish = "apps/website/dist"
 
+[build.environment]
+  # Ensure Bun is used
+  BUN_VERSION = "1.2"
+
+# Domain redirects: doraval.thehacksmith.dev is the canonical domain
+[[redirects]]
+  from = "https://thehacksmith.dev/*"
+  to = "https://doraval.thehacksmith.dev/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.thehacksmith.dev/*"
+  to = "https://doraval.thehacksmith.dev/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.doraval.thehacksmith.dev/*"
+  to = "https://doraval.thehacksmith.dev/:splat"
+  status = 301
+  force = true
+
