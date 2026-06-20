@@ -1,7 +1,6 @@
 import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { join } from "path";
-import { spawnSync } from "bun";
 import pc from "picocolors";
 import { ui } from "../../out.js";
 import {
@@ -13,158 +12,8 @@ import {
 } from "../../../core/journal-config.js";
 import { validateEntry } from "../../../core/journal-validate.js";
 import type { JournalEntry } from "../../../core/journal-parse.js";
+import { invokeAgent } from "../../../core/agent-invoke.js";
 
-/**
- * Pure helper: turn a template string containing {{prompt}} and a (possibly multiline) prompt
- * into a proper argv array for spawn, keeping the prompt text as a *single* argument.
- *
- * Example template: '-p "{{prompt}}" --output-format json'
- * The quotes in the template are only for shell users; we strip them here.
- */
-export function buildAgentArgv(template: string, promptText: string): string[] {
-  const marker = '__DORA_PROMPT__';
-  const substituted = template.replace('{{prompt}}', marker);
-  const rawParts = substituted.split(/\s+/).filter(Boolean);
-
-  return rawParts.map(part => {
-    // First strip any shell-style quotes that were around the {{prompt}} in the template
-    let cleaned = part;
-    if (cleaned.startsWith('"') && cleaned.endsWith('"')) cleaned = cleaned.slice(1, -1);
-    if (cleaned.startsWith("'") && cleaned.endsWith("'")) cleaned = cleaned.slice(1, -1);
-
-    if (cleaned === marker) {
-      return promptText; // emit the full (multiline) prompt as a single argv element
-    }
-    return cleaned;
-  });
-}
-
-/**
- * Invoke the pre-configured coding agent (from `dora init`) with a scaffold prompt
- * and return the parsed JSON (or null on any failure).
- * This is the "on the fly" enrichment for minimal `journal add "title"`.
- * Tags (not scope) are used for categorization of both decisions and general notes.
- */
-async function invokeConfiguredAgentForEntry(decisionText: string, agentCfg: any): Promise<Partial<JournalEntry> | null> {
-  if (!agentCfg || !agentCfg.command) return null;
-
-  const scaffold = `Raw user capture (a decision, observation, or useful note that just happened): "${decisionText}"
-
-Turn this into a clean journal entry. Infer the core decision or note even if the input is phrased as a todo or reminder. Be professional and concise.
-
-**CRITICAL INSTRUCTIONS (follow exactly):**
-- Output *ONLY* a single valid JSON object. Nothing before it, nothing after it, no markdown fences, no explanations, no extra text.
-- The JSON must have exactly these keys (use the suggested values as starting point but improve them):
-{
-  "title": "Short, scannable, professional title (past tense or present perfect, max ~80 chars)",
-  "pushback": 4,
-  "tags": ["cli", "ux"],
-  "rationale": "2-5 sentences explaining context and implications (or the note content).",
-  "author": "agent:claude-code"
-}
-
-If you cannot produce exactly this, output the JSON with the best you can and set "author" to "agent:claude-code" anyway.`;
-
-  // Template example stored by dora init: '-p "{{prompt}}" --output-format json'
-  const template = agentCfg.prompt_template || '-p "{{prompt}}" --output-format json';
-  const extraArgs = buildAgentArgv(template, scaffold);
-
-  // Print a short version of what we are about to run (the full prompt is huge)
-  const shortTemplate = (agentCfg.prompt_template || '-p "{{prompt}}" --output-format json').slice(0, 80);
-  ui.write(`  ${pc.dim(`→ ${agentCfg.command} ${shortTemplate}...`)}`);
-
-  try {
-    const result = spawnSync([agentCfg.command, ...extraArgs], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-
-    const stdout = result.stdout.toString().trim();
-    const stderr = result.stderr.toString().trim();
-
-    if (result.exitCode !== 0) {
-      ui.write(`  ${pc.yellow("⚠")} Configured agent (${agentCfg.command}) exited with code ${result.exitCode}. Falling back to defaults.`);
-      if (stderr) ui.write(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 800)}`);
-      if (stdout) ui.write(`    ${pc.dim("stdout:")}\n${stdout.slice(0, 400)}`);
-      return null;
-    }
-
-    // Smart extraction:
-    // - Some "claude" binaries (full agent runners) wrap everything in a metadata object:
-    //   { type: "result", result: "{\"title\":..., \"rationale\":...}", ... }
-    // - The model itself may also return extra text. We look for the JSON that actually
-    //   contains our expected fields.
-    let candidates: any[] = [];
-
-    // Try the whole stdout first
-    let jsonMatch = stdout.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        candidates.push(JSON.parse(jsonMatch[0]));
-      } catch {}
-    }
-
-    // Also try every top-level JSON-looking blob (in case there are multiple)
-    const allMatches = stdout.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) || [];
-    for (const m of allMatches) {
-      try {
-        const p = JSON.parse(m);
-        candidates.push(p);
-      } catch {}
-    }
-
-    let parsed: any = null;
-
-    // Prefer any object that looks like our entry (has title or rationale at top level)
-    for (const c of candidates) {
-      if (c && typeof c === "object" && (c.title || c.rationale)) {
-        parsed = c;
-        break;
-      }
-    }
-
-    // Special case for common agent-runner wrapper: { ..., result: "JSON string or object" }
-    if (!parsed) {
-      for (const c of candidates) {
-        if (c && typeof c === "object" && c.result) {
-          let inner = c.result;
-          if (typeof inner === "string") {
-            try { inner = JSON.parse(inner); } catch {}
-          }
-          if (inner && typeof inner === "object" && (inner.title || inner.rationale)) {
-            parsed = inner;
-            break;
-          }
-        }
-      }
-    }
-
-    if (!parsed) {
-      // Fallback to the first parsed blob if nothing better was found
-      parsed = candidates[0] || null;
-    }
-
-    if (!parsed || typeof parsed !== "object") {
-      ui.write(`  ${pc.yellow("⚠")} Agent produced output but no usable JSON was found. Falling back.`);
-      ui.write(`    ${pc.dim("stdout (first 700 chars):")}\n${stdout.slice(0, 700)}`);
-      if (stderr) ui.write(`    ${pc.dim("stderr:")}\n${stderr.slice(0, 500)}`);
-      return null;
-    }
-
-    // Final shape check
-    if (!parsed.title && !parsed.rationale) {
-      ui.write(`  ${pc.yellow("⚠")} Agent returned JSON without expected fields (title/rationale). Using defaults.`);
-      ui.write(`    ${pc.dim("parsed keys:")} ${Object.keys(parsed).join(", ")}`);
-      ui.write(`    ${pc.dim("stdout (truncated):")}\n${stdout.slice(0, 600)}`);
-      return null;
-    }
-
-    return parsed;
-  } catch (e) {
-    ui.write(`  ${pc.yellow("⚠")} Failed to invoke configured agent (${agentCfg.command}): ${(e as Error).message}. Using defaults.`);
-    return null;
-  }
-}
 
 function slugify(title: string): string {
   return title
@@ -378,7 +227,23 @@ export default defineCommand({
       if (agentCfg) {
         attemptedAgent = true;
         ui.write(`  ${pc.dim(pc.gray("(querying your configured coding agent...)"))}`);
-        const agentResult = await invokeConfiguredAgentForEntry(title, agentCfg);
+        const scaffold = `Raw user capture (a decision, observation, or useful note that just happened): "${title}"
+
+Turn this into a clean journal entry. Infer the core decision or note even if the input is phrased as a todo or reminder. Be professional and concise.
+
+**CRITICAL INSTRUCTIONS (follow exactly):**
+- Output *ONLY* a single valid JSON object. Nothing before it, nothing after it, no markdown fences, no explanations, no extra text.
+- The JSON must have exactly these keys (use the suggested values as starting point but improve them):
+{
+  "title": "Short, scannable, professional title (past tense or present perfect, max ~80 chars)",
+  "pushback": 4,
+  "tags": ["cli", "ux"],
+  "rationale": "2-5 sentences explaining context and implications (or the note content).",
+  "author": "agent:claude-code"
+}
+
+If you cannot produce exactly this, output the JSON with the best you can and set "author" to "agent:claude-code" anyway.`;
+        const agentResult = await invokeAgent(scaffold, agentCfg, ["title", "rationale"]);
         if (agentResult) {
           if (agentResult.title) title = String(agentResult.title).trim();
           if (typeof agentResult.pushback === "number") pushback = agentResult.pushback;

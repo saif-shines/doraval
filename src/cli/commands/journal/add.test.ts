@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildAgentArgv } from "./add.js";
+import { buildAgentArgv } from "../../../core/agent-invoke.js";
 
 describe("buildAgentArgv (for on-the-fly agent enrichment)", () => {
   test("keeps the full multiline prompt as a single argv element", () => {
