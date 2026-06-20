@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
 **doraval** is the context engineering toolkit for coding agent orchestrators.
 
 If you're a senior engineer handing skills to new team members, a company publishing resources to the community, or someone who wants agents (and humans) to succeed on the first attempt instead of after days of debugging — this is for you.
@@ -16,6 +18,48 @@ If you're a senior engineer handing skills to new team members, a company publis
 - Want to use your context window (and your agents') more effectively?
 
 doraval helps you **left-shift success** by making the context you engineer reliable from the first attempt.
+
+## How it fits together
+
+```
+  Context you engineer (skills, plugins, decisions)
+                        │
+                        ▼
+                 ┌─────────────┐
+                 │   doraval   │  validate · providers · journal · init
+                 └─────────────┘
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+   FOR CONTEXT DISTRIBUTORS    FOR CONTEXT ORCHESTRATORS
+          │                           │
+   Devtool company              Expert engineer
+   ships React skills           tuning their own agent
+   to the community                    │
+          │                           ▼
+   Senior engineer               You succeed on
+   onboarding 10 juniors          first try
+          │
+          ▼
+   Others pick up the skill
+   and succeed on first try
+   (community or juniors)
+```
+
+Pick the quickstart that matches your job:
+
+<CardGrid>
+  <Card title="Context Distributors" icon="rocket">
+    Ship skills to your community or onboard juniors. Scaffold a plugin, validate before you publish, and measure subjective drift for your users.
+
+    [Start distributor quickstart →](/get-started/quickstart-distributors/)
+  </Card>
+  <Card title="Context Orchestrators" icon="setting">
+    Tune context for your own coding agent. Scaffold skills, validate, journal decisions, and inject them on every session.
+
+    [Start orchestrator quickstart →](/get-started/quickstart-orchestrators/)
+  </Card>
+</CardGrid>
 
 ## Why this matters for orchestrators
 

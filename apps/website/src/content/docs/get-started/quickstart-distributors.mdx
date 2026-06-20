@@ -1,0 +1,101 @@
+---
+title: "Quickstart: Context Distributors"
+description: Ship skills to your community or team and validate before they fail on first try.
+sidebar:
+  order: 3
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+You distribute context to others — a devtool company publishing skills to the community, or a senior engineer onboarding juniors.
+
+- You're a **devtool company publishing React skills to the community** and need those resources to work reliably for everyone.
+- You're a **senior engineer onboarding 10 juniors** and need them to succeed with your team's skills on the first try.
+
+This quickstart assumes you have doraval installed. If you haven't yet, see [Installation](/get-started/installation/).
+
+<Steps>
+
+1. ### Scaffold a distributable plugin
+
+   Create a plugin package you can ship to the community or hand to juniors:
+
+   ```bash
+   doraval claude new --yes --intent distribute aiboomi-demo
+   ```
+
+   Pick the agent you target (`doraval cursor new`, `doraval codex new`, etc.) if your audience does not use Claude Code. See [`claude new`](/commands/claude-new/).
+
+   :::note
+   You can run this yourself, or have a coding agent run it on your behalf as the context distributor.
+   :::
+
+2. ### Validate before you ship
+
+   `dora validate` auto-detects what you scaffolded and runs every check that applies — skills, plugins, hooks, MCP servers, subagents, memory files, and more. It catches broken manifests, missing `SKILL.md` files, bad frontmatter, and packaging mistakes **before** your community or juniors waste a session debugging context that was wrong from the start.
+
+   Run it for **every coding agent** your audience uses. Target a provider with `--for`, or inspect one validator at a time:
+
+   ```bash
+   dora validate .
+   dora validate . --for claude:plugin
+   dora validate . --for cursor:plugin
+   doraval providers
+   ```
+
+   See [validate](/commands/validate/) and [providers](/commands/providers/) for the full matrix.
+
+   ```text
+   dora validate — Claude Plugin (claude:plugin)
+   Path:  .
+   ✓ .claude-plugin/plugin.json is valid JSON
+   ✓ .claude-plugin/ contains only plugin.json (correct layout)
+   ✓ name: "aiboomi-demo"
+   ✓ version: "0.1.0" (explicit — bump on every release to publish updates)
+   ✓ description field present
+   ✓ keywords: [example-keyword, another-keyword] — If users mention any of these keywords, your plugin will get triggered in Claude Code
+   ✓ skills/doraval/SKILL.md exists
+   ✓ README.md present
+
+   ✓ All checks passed.
+
+   dora validate — Claude LSP Servers (claude:lsp)
+   Path:  .
+
+   ✓ All checks passed.
+
+   dora validate — Claude Monitors (experimental) (claude:monitors)
+   Path:  .
+
+   ✓ All checks passed.
+   ```
+
+3. ### Set your coding agent
+
+   Tell doraval which agent runs on your behalf — for scaffolding, validation, journal enrichment, and eval. Run [`doraval init`](/commands/init/) once (it detects `claude` or `grok` if installed), or set keys directly.
+
+   Claude Code and Grok have the deepest support today. **Cursor**, **Copilot**, **OpenCode**, and more work for scaffolding and validation — with fuller agent-driving and eval integrations coming soon. Run `doraval providers` for the current list.
+
+   **Claude Code**
+
+   ```bash
+   dora config set agent.command claude
+   dora config set agent.prompt_template '-p "{{prompt}}" --output-format json'
+   dora config set agent.cwd_flag --cwd
+   ```
+
+   **Grok**
+
+   ```bash
+   dora config set agent.command grok
+   dora config set agent.prompt_template '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen'
+   dora config set agent.cwd_flag --cwd
+   ```
+
+   Verify with `dora config get agent`. Re-run `dora init` anytime to change it.
+
+   Going forward, doraval uses an **LLM as a judge** to run [evals](/commands/eval/) on real agent sessions — so you can see **subjective drift**: whether juniors or community users actually followed your skill in practice, not just whether the packaging validated. `validate` catches structural problems; `dora eval` and [`judge`](/commands/judge/) answer whether the skill worked in a real session.
+
+</Steps>
+
+This quickstart covers just a few features — evals, drift checks, provider scaffolding for Cursor and Copilot, and more are on the way.

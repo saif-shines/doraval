@@ -4,6 +4,9 @@ import starlightThemeTerminal from "starlight-theme-terminal";
 
 export default defineConfig({
   site: "https://doraval.thehacksmith.dev",
+  redirects: {
+    "/get-started/quickstart": "/get-started/",
+  },
   image: {
     service: passthroughImageService(),
   },
@@ -35,7 +38,8 @@ export default defineConfig({
           items: [
             "get-started",
             "get-started/installation",
-            "get-started/quickstart",
+            "get-started/quickstart-distributors",
+            "get-started/quickstart-orchestrators",
           ],
         },
         {
