@@ -4,13 +4,18 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>dora • local dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
-            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+            sans: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+            mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+            serif: ['"DM Serif Display"', 'Georgia', 'serif'],
           }
         }
       }
@@ -18,27 +23,46 @@
   </script>
   <style>
     :root { color-scheme: dark; }
-    
-    body { 
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.018;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 128px 128px;
     }
     
-    .mono, pre, code, .font-mono { 
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+    body {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-size: 13px;
     }
 
-    .section { 
-      @apply bg-zinc-900/70 border border-zinc-800/60 rounded-3xl p-6 backdrop-blur-sm; 
+    .mono, pre, code, .font-mono {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    }
+
+    .serif-display {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-weight: 400;
+    }
+
+    .section {
+      @apply bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-6 backdrop-blur-sm;
       transition: border-color 150ms ease, box-shadow 150ms ease;
     }
     .section:hover {
-      border-color: #27272a;
+      border-color: #3f3f46;
     }
 
     .entry {
       @apply border-l-[3px] pl-4 py-2.5;
       transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1),
                   background-color 150ms ease;
+      border-radius: 0 6px 6px 0;
     }
     @media (hover: hover) and (pointer: fine) {
       .entry:hover {
@@ -138,7 +162,7 @@
 
     /* Playful but restrained accent */
     .accent {
-      color: #60a5fa;
+      color: #d4a257;
     }
 
     /* Sidebar navigation */
@@ -182,7 +206,7 @@
     .nav-item.active {
       color: #e4e4e7;
       background: #18181b;
-      border-left-color: #60a5fa;
+      border-left-color: #d4a257;
     }
     .nav-icon {
       font-size: 14px;
@@ -191,10 +215,10 @@
       flex-shrink: 0;
     }
     .nav-section-label {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      color: #3f3f46;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: #52525b;
       padding: 12px 16px 4px;
       text-transform: uppercase;
     }
@@ -216,11 +240,11 @@
   <!-- Sidebar -->
   <nav class="sidebar">
     <!-- Brand -->
-    <div class="flex items-center gap-3 px-4 py-4 border-b border-zinc-900">
-      <div class="text-lg">🌀</div>
+    <div class="flex items-center gap-3 px-4 py-5 border-b border-zinc-900">
+      <div class="text-xl">🌀</div>
       <div>
-        <div class="text-sm font-semibold tracking-tight text-zinc-200">dora</div>
-        <div id="sidebar-project" class="text-[10px] text-zinc-500 font-mono truncate max-w-[130px]"></div>
+        <div class="serif-display text-lg text-zinc-100 leading-none">dora</div>
+        <div id="sidebar-project" class="text-[10px] text-zinc-500 font-mono truncate max-w-[130px] mt-1"></div>
       </div>
     </div>
 
@@ -272,7 +296,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
       <div>
-        <div class="font-semibold tracking-tighter text-xl text-zinc-200">Local dashboard</div>
+        <div class="serif-display text-2xl text-zinc-100 tracking-tight">Local dashboard</div>
         <div class="text-[10px] text-zinc-500 mt-0.5 font-mono">quick capture &amp; review — CLI for heavy lifting</div>
       </div>
       <div id="project-badge" class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium"></div>
@@ -283,7 +307,7 @@
       <div id="section-capture" class="lg:col-span-2 section">
         <div class="flex items-baseline justify-between mb-4">
           <div>
-            <div class="text-sm font-semibold tracking-tight">Capture decision</div>
+            <div class="serif-display text-base tracking-tight text-zinc-100">Capture decision</div>
             <div class="text-[10px] text-zinc-500 mt-0.5">Add to your journal</div>
           </div>
           <button onclick="clearForm()" 
@@ -293,7 +317,7 @@
         <div class="space-y-4">
           <div>
             <input id="title" 
-                   class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-2xl px-4 py-3 text-[15px] placeholder:text-zinc-600"
+                   class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-lg px-4 py-3 text-[15px] placeholder:text-zinc-600"
                    placeholder="What did you decide?">
           </div>
 
@@ -306,7 +330,7 @@
             
             <div class="relative">
               <input id="pushback" type="range" min="1" max="10" step="1" value="4" 
-                     class="w-full accent-blue-400 cursor-pointer">
+                     class="w-full cursor-pointer" style="accent-color: #d4a257;">
               <div class="flex justify-between text-[10px] mt-1.5 px-0.5 text-zinc-500">
                 <div class="text-emerald-400/90">gentle nudge</div>
                 <div class="text-yellow-400/90">real friction</div>
@@ -316,17 +340,17 @@
           </div>
 
           <input id="tags" 
-                 class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-2xl px-4 py-2.5 text-sm placeholder:text-zinc-600"
+                 class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-lg px-4 py-2.5 text-sm placeholder:text-zinc-600"
                  placeholder="tags: architecture, naming, cli">
 
           <div>
             <textarea id="rationale" rows="2" 
-                      class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-2xl px-4 py-3 text-sm placeholder:text-zinc-600 resize-y"
+                      class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-lg px-4 py-3 text-sm placeholder:text-zinc-600 resize-y"
                       placeholder="Why does this matter? (helps future you and agents)"></textarea>
           </div>
 
           <button onclick="addDecision()" 
-                  class="w-full py-3 rounded-2xl bg-white hover:bg-zinc-100 active:scale-[0.975] text-black font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2 transition">
+                  class="w-full py-3 rounded-lg bg-white hover:bg-zinc-100 active:scale-[0.975] text-black font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2 transition">
             Add to pending
             <span class="text-xs font-normal opacity-50">⌘⏎</span>
           </button>
@@ -338,7 +362,7 @@
       <div id="section-context" class="lg:col-span-3 section">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
-            <div class="text-sm font-semibold tracking-tight">What agents will see</div>
+            <div class="serif-display text-base tracking-tight text-zinc-100">What agents will see</div>
             <select id="agent-select" onchange="updateAgentPreview()" class="text-xs bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-0.5 focus:outline-none">
               <option value="claude">Claude (SessionStart)</option>
               <option value="cursor">Cursor (workspaceOpen)</option>
@@ -350,13 +374,13 @@
           <button onclick="copyContext()" 
                   class="text-xs px-3 py-1 rounded-xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Copy</button>
         </div>
-        <pre id="context" class="context bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-zinc-300 text-[13px] overflow-auto max-h-[220px] leading-relaxed"><span class="text-zinc-600 animate-pulse">Loading context...</span></pre>
+        <pre id="context" class="context bg-zinc-950 border border-zinc-800 rounded-lg p-5 text-zinc-300 text-[13px] overflow-auto max-h-[220px] leading-relaxed"><span class="text-zinc-600 animate-pulse">Loading context...</span></pre>
         <div id="agent-note" class="mt-2 text-[10px] text-zinc-500 px-1">Exact output from <span class="font-mono">dora journal context</span>. Injected via startup hook for the selected agent.</div>
       </div>
 
       <!-- Hooks -->
       <div id="section-hooks" class="lg:col-span-2 section">
-        <div class="text-sm font-semibold tracking-tight mb-3">Journal hooks</div>
+        <div class="serif-display text-base tracking-tight text-zinc-100 mb-3">Journal hooks</div>
         <div id="hooks" class="space-y-2 text-sm">
           <div class="text-zinc-600 text-xs py-2 animate-pulse">Loading...</div>
         </div>
@@ -368,7 +392,7 @@
       <!-- Journal -->
       <div id="section-journal" class="lg:col-span-3 section">
         <div class="flex items-center justify-between mb-4">
-          <div class="text-sm font-semibold tracking-tight">Journal entries</div>
+          <div class="serif-display text-base tracking-tight text-zinc-100">Journal entries</div>
           <div class="flex items-center gap-2">
             <input id="search" oninput="filterEntries()" 
                    class="bg-zinc-950 border border-zinc-800 text-xs rounded-2xl px-3 py-1.5 placeholder:text-zinc-600 w-44 focus:outline-none focus:border-zinc-600" 
@@ -386,7 +410,7 @@
     <div id="section-evals" class="lg:col-span-5 section">
       <div class="flex items-center justify-between mb-3">
         <div>
-          <div class="text-sm font-semibold tracking-tight">Skill adherence learnings</div>
+          <div class="serif-display text-base tracking-tight text-zinc-100">Skill adherence learnings</div>
           <div class="text-[10px] text-zinc-500 mt-0.5">From <span class="font-mono">dora eval</span> (respects DORAVAL_HOME) • last 25</div>
         </div>
         <div class="flex items-center gap-2">
@@ -408,7 +432,7 @@
 
   <!-- Modal -->
   <div id="modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm items-center justify-center z-50 p-4" onclick="if (event.target.id === 'modal') closeModal()">
-    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl modal" onclick="event.stopImmediatePropagation()">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg shadow-2xl modal" onclick="event.stopImmediatePropagation()">
       <div class="p-6">
         <div class="flex justify-between items-start">
           <div id="modal-pb" class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold tracking-wider"></div>
