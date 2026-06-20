@@ -86,6 +86,7 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
         shortDescription: "Scaffolded starter plugin",
         category: "Productivity",
       },
+      keywords: ["example-keyword", "another-keyword"],
     };
     mkdirSync(join(targetDir, codexManifestDir), { recursive: true });
     writeFileSync(join(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
@@ -223,6 +224,9 @@ export default defineCommand({
     }
     ui.info(`  Test (local): restart Codex, select your marketplace in the plugin directory`);
     ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+    if (decision.path === "plugin") {
+      ui.info(`  Keywords: keywords array added for discovery — run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
+    }
     if (decision.path === "plugin" && decision.migrateExisting) {
       ui.info("  (Existing content migrated where confirmed.)");
     }

@@ -32,6 +32,8 @@ dora validate . --for claude:plugin   # just the plugin validator
 
 ## Available validators
 
+doraval supports validators for multiple coding agents. Use `--for <provider>` or `--for <provider>:validator` to target them.
+
 ### Claude
 
 | Validator | Detects | What it checks |
@@ -46,6 +48,18 @@ dora validate . --for claude:plugin   # just the plugin validator
 | `claude:subagent` | `agents/*.md` | Supported frontmatter (name/desc/model/effort/maxTurns/tools/disallowedTools/skills/memory/background/isolation=worktree), disallowed security fields (hooks/mcpServers/permissionMode) are errors, non-empty body |
 | `claude:command` | `commands/*.md` | Frontmatter, body, advanced fields |
 | `claude:memory` | `CLAUDE.md` | Non-empty, length limit, @path import resolution |
+
+### Other providers
+
+- **Codex, Cursor, Copilot**: Support for plugin and skill validation is available via `--for codex:plugin`, `--for cursor:skill`, etc. Plugin manifests include `keywords` for discovery. Run `doraval providers` to see full details per provider.
+
+Keywords in a plugin manifest help agents discover your plugin:
+
+```bash
+dora validate . --for cursor:plugin
+# ...
+✓ keywords: [foo, bar-baz] — If users mention any of these keywords, your plugin will get triggered in Cursor
+```
 
 ## Remote URLs
 

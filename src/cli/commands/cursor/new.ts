@@ -82,6 +82,7 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
       description: "Scaffolded by doraval cursor new",
       skills: "./skills/",
       displayName: pluginName,
+      keywords: ["example-keyword", "another-keyword"],
     };
     mkdirSync(join(targetDir, cursorManifestDir), { recursive: true });
     writeFileSync(join(targetDir, cursorSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
@@ -198,6 +199,9 @@ export default defineCommand({
     }
     ui.info(`  Test (local): add the plugin dir in Cursor settings or use local skills`);
     ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+    if (decision.path === "plugin") {
+      ui.info(`  Keywords: keywords array added for discovery — run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
+    }
     if (decision.path === "plugin" && decision.migrateExisting) {
       ui.info("  (Existing content migrated where confirmed.)");
     }

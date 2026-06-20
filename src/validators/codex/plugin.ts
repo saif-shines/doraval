@@ -105,6 +105,16 @@ export const codexPluginValidator: Validator = {
       warnings.push('Missing "description" (recommended)');
     }
 
+    if (manifest.keywords !== undefined) {
+      if (Array.isArray(manifest.keywords)) {
+        passes.push(`keywords: [${manifest.keywords.join(", ")}] — If users mention any of these keywords, your plugin will get triggered in Codex`);
+      } else {
+        errors.push("keywords must be an array of strings");
+      }
+    } else {
+      warnings.push('Missing "keywords" (recommended — if users mention any of these, your plugin will get triggered in Codex)');
+    }
+
     // Check on-disk skills/ if present
     const skillsDir = resolve(dir, "skills");
     if (existsSync(skillsDir)) {

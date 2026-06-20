@@ -40,12 +40,14 @@ export default defineConfig({
             "commands/validate",
             "commands/drift",
             "commands/judge",
+            "commands/providers",
           ],
         },
         {
           label: "Scaffold for agents",
           items: [
-            { label: "claude new (codex new)", link: "/commands/claude-new/" }
+            { label: "claude / codex / cursor / copilot new", link: "/commands/claude-new/" },
+            "commands/init",
           ],
         },
         {
@@ -59,8 +61,9 @@ export default defineConfig({
           ],
         },
         {
-          label: "Keep doraval current",
+          label: "CLI reference",
           items: [
+            "commands/completion",
             { label: "update", link: "/commands/update/" },
           ],
         },

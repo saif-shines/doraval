@@ -26,8 +26,11 @@ Manual review doesn't scale. doraval automates these checks across every artifac
 | Command | What it does | Speed |
 |---------|-------------|-------|
 | `validate` | Auto-detect and validate all agent config in a directory | Instant |
+| `init` | One-time setup for doraval + journal + coding agent | Instant |
 | `update` | Update doraval to the latest version (Homebrew, npm, or Bun) | Instant |
-| `claude new` / `codex new` | Interactive wizard to scaffold skills or plugins following official packaging rules | Instant |
+| `providers` | List supported providers and packaging details (including keyword discovery) | Instant |
+| `completion` | Generate shell completion scripts (bash, zsh, fish) | Instant |
+| `claude new` / `codex new` / `cursor new` / `copilot new` | Interactive wizard to scaffold skills or plugins following official packaging rules | Instant |
 | `skill validate` | Structural correctness for a single skill | Instant |
 | `skill drift` | Rubric deviation — 6 categories of quality drift | Instant |
 | `skill judge` | AI-driven qualitative assessment via LLM | *(coming soon)* |
@@ -49,6 +52,7 @@ More examples:
 ```bash
 npx @hacksmith/doraval validate https://github.com/obra/superpowers   # remote repo
 npx @hacksmith/doraval validate . --for claude:plugin                  # specific validator
+npx @hacksmith/doraval providers                                       # list providers + keyword support
 npx @hacksmith/doraval skill drift ./my-skill/                         # rubric drift
 ```
 
@@ -58,6 +62,10 @@ Start with `doraval init` — the recommended one-time setup for doraval + your 
 
 Keep doraval current with `doraval update` (see the [update command](/commands/update/)).
 
-Scaffold new skills or plugins with the interactive wizard: `doraval claude new` or `doraval codex new` (see [claude new](/commands/claude-new/)).
+List providers and their keyword discovery support with `doraval providers`.
+
+Scaffold new skills or plugins with the interactive wizard: `doraval claude new`, `doraval codex new`, `doraval cursor new`, or `doraval copilot new` (see [claude new](/commands/claude-new/)).
+
+Generate shell completions with `doraval completion bash|zsh|fish`.
 
 `doraval journal` provides a separate system for recording project decisions and principles with pushback (see [Agent Journal](/concepts/agent-journal)). It is completely optional and lives outside your project directories.

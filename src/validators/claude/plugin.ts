@@ -132,8 +132,13 @@ export const claudePluginValidator: Validator = {
       const raw = await Bun.file(manifestPath).text();
       manifest = JSON.parse(raw) as PluginManifest;
       passes.push(".claude-plugin/plugin.json is valid JSON");
-    } catch {
-      errors.push(".claude-plugin/plugin.json is missing or invalid JSON");
+    } catch (err: any) {
+      if (!existsSync(manifestPath)) {
+        errors.push(`.claude-plugin/plugin.json is missing (looked for ${manifestPath})`);
+        warnings.push('Hint: Run `doraval claude new` (or `dora claude new`) to scaffold a new Claude plugin in this directory.');
+      } else {
+        errors.push(`.claude-plugin/plugin.json is invalid JSON (${err.message})`);
+      }
       return { errors, warnings, passes };
     }
 
@@ -206,10 +211,12 @@ export const claudePluginValidator: Validator = {
     }
     if (manifest.keywords !== undefined) {
       if (Array.isArray(manifest.keywords)) {
-        passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+        passes.push(`keywords: [${manifest.keywords.join(", ")}] — If users mention any of these keywords, your plugin will get triggered in Claude Code`);
       } else {
         errors.push("keywords must be an array of strings");
       }
+    } else {
+      warnings.push('Missing "keywords" (recommended — if users mention any of these, your plugin will get triggered in Claude Code)');
     }
     if (manifest.defaultEnabled !== undefined) {
       passes.push(`defaultEnabled: ${manifest.defaultEnabled}`);

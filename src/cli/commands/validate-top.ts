@@ -11,7 +11,7 @@ export default defineCommand({
   meta: {
     name: "validate",
     description:
-      "Auto-detect project type and run matching validators. Accepts a local path or a Git URL (e.g. https://github.com/owner/repo)",
+      "Auto-detect project type and run matching validators. Accepts a local path or a Git URL (e.g. https://github.com/owner/repo). Use --for <provider>:plugin to see keyword trigger messages.",
   },
   args: {
     path: {

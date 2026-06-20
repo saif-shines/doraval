@@ -7,7 +7,7 @@ sidebar:
 
 `doraval claude new` is a context-aware wizard that detects your current directory, asks about your intent using the official standalone vs. plugin table, picks a smart default, and scaffolds the minimal correct structure.
 
-The same surface exists as `doraval codex new` for Codex users.
+The same interactive surface exists for `doraval codex new`, `doraval cursor new`, and `doraval copilot new`. See `doraval providers` for the exact manifest locations per agent.
 
 ```bash
 doraval claude new
@@ -73,6 +73,8 @@ Use when you intend to share, version, or publish.
 ```bash
 doraval claude new [name] [options]
 doraval codex new [name] [options]
+doraval cursor new [name] [options]
+doraval copilot new [name] [options]
 ```
 
 `name` is optional. When omitted (or `.` or the current dir basename), it scaffolds in place or as a sibling depending on intent and detection.

@@ -8,7 +8,7 @@ import { loadSkill, OPTIONAL_DIRS, validateSkillModel } from "../../core/skill-v
 export default defineCommand({
   meta: {
     name: "validate",
-    description: "Validate structure and schema of a skill or plugin",
+    description: "Validate structure and schema of a skill or plugin (keywords in plugin.json help agent discovery)",
   },
   args: {
     path: {

@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.30",
+    version: "0.2.33",
     author: "Saif",
     repository: {
       type: "git",
@@ -906,7 +906,7 @@ var init_validate = __esm(() => {
   validate_default = defineCommand({
     meta: {
       name: "validate",
-      description: "Validate structure and schema of a skill or plugin"
+      description: "Validate structure and schema of a skill or plugin (keywords in plugin.json help agent discovery)"
     },
     args: {
       path: {
@@ -2807,7 +2807,8 @@ function scaffold(decision, ctx, migrateContent) {
     const pluginJson = {
       name: pluginName,
       description: "Scaffolded by doraval claude new",
-      version: "0.1.0"
+      version: "0.1.0",
+      keywords: ["example-keyword", "another-keyword"]
     };
     mkdirSync2(join8(targetDir, claudeManifestDir), { recursive: true });
     writeFileSync(join8(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
@@ -2923,6 +2924,9 @@ var init_new = __esm(() => {
       }
       ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
       ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Keywords: keywords array added for discovery \u2014 run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
+      }
       if (decision.path === "plugin" && decision.migrateExisting) {
         ui.info("  (Existing content migrated where confirmed.)");
       }
@@ -3294,7 +3298,8 @@ function scaffold2(decision, ctx, migrateContent) {
         displayName: pluginName,
         shortDescription: "Scaffolded starter plugin",
         category: "Productivity"
-      }
+      },
+      keywords: ["example-keyword", "another-keyword"]
     };
     mkdirSync3(join11(targetDir, codexManifestDir), { recursive: true });
     writeFileSync3(join11(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
@@ -3429,6 +3434,465 @@ var init_new2 = __esm(() => {
       }
       ui.info(`  Test (local): restart Codex, select your marketplace in the plugin directory`);
       ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Keywords: keywords array added for discovery \u2014 run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
+      }
+      if (decision.path === "plugin" && decision.migrateExisting) {
+        ui.info("  (Existing content migrated where confirmed.)");
+      }
+      process.exit(0);
+    }
+  });
+});
+
+// src/cli/commands/cursor/context.ts
+import { existsSync as existsSync13, readdirSync as readdirSync6 } from "fs";
+import { join as join12 } from "path";
+function detectContext3(cwd = process.cwd()) {
+  const hasCursorDir = existsSync13(join12(cwd, ".cursor"));
+  const hasPluginManifest = existsSync13(join12(cwd, ".cursor-plugin", "plugin.json"));
+  let looseSkillFiles = [];
+  try {
+    const files = readdirSync6(cwd);
+    looseSkillFiles = files.filter((f) => {
+      if (!f.endsWith(".md") || f.startsWith("."))
+        return false;
+      const lower = f.toLowerCase();
+      if (lower === "readme.md" || lower === "changelog.md" || lower === "license.md" || lower.includes("contributing"))
+        return false;
+      return lower.includes("skill") || lower === "skill.md";
+    });
+  } catch {}
+  const isEmpty = !hasCursorDir && !hasPluginManifest && looseSkillFiles.length === 0;
+  return {
+    cwd,
+    hasCursorDir,
+    hasPluginManifest,
+    looseSkillFiles,
+    isEmpty
+  };
+}
+var init_context3 = () => {};
+
+// src/cli/commands/cursor/new.ts
+var exports_new3 = {};
+__export(exports_new3, {
+  scaffold: () => scaffold3,
+  default: () => new_default3,
+  decidePath: () => decidePath3
+});
+import { join as join13, basename as basename4, dirname as dirname4 } from "path";
+import { mkdirSync as mkdirSync4, writeFileSync as writeFileSync4, existsSync as existsSync14 } from "fs";
+function decidePath3(ctx, intent, providedName) {
+  const rawName = providedName || "";
+  let decisionPath = "standalone";
+  let targetDir = ctx.cwd;
+  let shouldCreateDir = false;
+  let migrateExisting = false;
+  const useCurrentDirAsRoot = rawName === "." || rawName === basename4(ctx.cwd) || !rawName;
+  if (intent === "distribute" || intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasPluginManifest) {
+    decisionPath = "plugin";
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join13(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+    migrateExisting = ctx.looseSkillFiles.length > 0;
+  } else if (intent === "self-later" && !ctx.hasPluginManifest) {
+    decisionPath = "plugin";
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join13(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+  } else if (decisionPath === "standalone") {
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join13(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+  }
+  return { path: decisionPath, targetDir, shouldCreateDir, migrateExisting };
+}
+function scaffold3(decision, ctx, migrateContent) {
+  const { targetDir, path, shouldCreateDir } = decision;
+  if (existsSync14(targetDir) && shouldCreateDir) {
+    ui.fail("Target already exists");
+    process.exit(1);
+  }
+  if (shouldCreateDir) {
+    mkdirSync4(targetDir, { recursive: true });
+  }
+  if (path === "plugin") {
+    const pluginName = basename4(targetDir);
+    const cursorSpec = getProviderSpec("cursor");
+    const cursorManifestDir = dirname4(cursorSpec.manifestPath);
+    const pluginJson = {
+      name: pluginName,
+      version: "0.1.0",
+      description: "Scaffolded by doraval cursor new",
+      skills: "./skills/",
+      displayName: pluginName,
+      keywords: ["example-keyword", "another-keyword"]
+    };
+    mkdirSync4(join13(targetDir, cursorManifestDir), { recursive: true });
+    writeFileSync4(join13(targetDir, cursorSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname4(cursorSpec.marketplacePath);
+    mkdirSync4(join13(targetDir, marketplaceDir), { recursive: true });
+    const marketplaceJson = {
+      name: pluginName,
+      version: "0.1.0",
+      description: "Scaffolded by doraval cursor new",
+      author: { name: "" },
+      homepage: "",
+      repository: "",
+      license: "MIT",
+      keywords: ["cursor", "skills", "plugin"]
+    };
+    writeFileSync4(join13(targetDir, cursorSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    const demoSkillName = "doraval";
+    mkdirSync4(join13(targetDir, "skills", demoSkillName), { recursive: true });
+    let skillContent;
+    if (migrateContent) {
+      skillContent = migrateContent;
+    } else {
+      skillContent = `---
+name: ${demoSkillName}
+description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents (works for Cursor too).
+---
+
+# Use Doraval (Cursor edition)
+
+Doraval is the context engineering toolkit.
+
+When you need to check a skill or Cursor plugin:
+
+- Validate the current directory: \`doraval validate .\`
+- Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
+- Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
+- Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
+
+Always run \`doraval validate\` before sharing or publishing a plugin.
+
+This skill demonstrates a complete, self-referential example of using doraval inside a generated Cursor plugin.
+
+To test in Cursor:
+1. Open the plugin directory or add via marketplace.
+2. The demo skill will be available.`;
+    }
+    writeFileSync4(join13(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join13(targetDir, "README.md");
+    if (!existsSync14(readmePath)) {
+      writeFileSync4(readmePath, "# " + pluginName + `
+
+Cursor plugin scaffolded by doraval.`);
+    }
+  } else {
+    mkdirSync4(join13(targetDir, "skills", "doraval"), { recursive: true });
+    const skillBody = migrateContent || `# My Skill
+
+Basic starter for Cursor.`;
+    writeFileSync4(join13(targetDir, "skills", "doraval", "SKILL.md"), `---
+name: doraval
+description: Starter (local skill)
+---
+
+${skillBody}`);
+  }
+}
+var import_picocolors13, new_default3;
+var init_new3 = __esm(() => {
+  init_dist();
+  init_out();
+  init_context3();
+  init_prompt();
+  init_spec();
+  import_picocolors13 = __toESM(require_picocolors(), 1);
+  new_default3 = defineCommand({
+    meta: {
+      name: "new",
+      description: "Create a new skill or plugin following Cursor packaging rules"
+    },
+    args: {
+      name: {
+        type: "positional",
+        description: "Optional name for the skill or plugin",
+        required: false
+      },
+      yes: {
+        type: "boolean",
+        description: "Skip interactive prompts (use defaults and flags)",
+        default: false
+      },
+      intent: {
+        type: "string",
+        description: 'Intent: "self" | "self-later" | "distribute"',
+        required: false
+      }
+    },
+    run({ args }) {
+      ui.heading("doraval cursor new \u2014 Context-aware scaffolding");
+      const ctx = detectContext3();
+      let intent = args.intent || "self-later";
+      if (!args.yes) {
+        const ans = prompt("  Intent (self | self-later | distribute)", intent);
+        intent = ans || intent;
+      }
+      const decision = decidePath3(ctx, intent, args.name);
+      ui.info(`  Decision: path=${decision.path}, target=${decision.targetDir}`);
+      let migrateContent;
+      if (decision.migrateExisting && !args.yes) {
+        migrateContent = "Content from your existing SKILL.md (user-confirmed).";
+      }
+      scaffold3(decision, ctx, migrateContent);
+      ui.write(`
+  ${import_picocolors13.default.green("\u2713")} Created ${decision.path} at ${import_picocolors13.default.bold(decision.targetDir)}`);
+      const cmdName = decision.path === "plugin" ? `/${basename4(decision.targetDir)}:doraval` : "/doraval (local skill)";
+      ui.info(`  Command: ${cmdName}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Cursor manifest: .cursor-plugin/plugin.json`);
+        ui.info(`  Marketplace catalog: .cursor-plugin/marketplace.json`);
+      }
+      ui.info(`  Test (local): add the plugin dir in Cursor settings or use local skills`);
+      ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Keywords: keywords array added for discovery \u2014 run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
+      }
+      if (decision.path === "plugin" && decision.migrateExisting) {
+        ui.info("  (Existing content migrated where confirmed.)");
+      }
+      process.exit(0);
+    }
+  });
+});
+
+// src/cli/commands/copilot/context.ts
+import { existsSync as existsSync15, readdirSync as readdirSync7 } from "fs";
+import { join as join14 } from "path";
+function detectContext4(cwd = process.cwd()) {
+  const hasGithubDir = existsSync15(join14(cwd, ".github"));
+  const hasPluginManifest = existsSync15(join14(cwd, ".github", "plugin", "plugin.json"));
+  let looseSkillFiles = [];
+  try {
+    const files = readdirSync7(cwd);
+    looseSkillFiles = files.filter((f) => {
+      if (!f.endsWith(".md") || f.startsWith("."))
+        return false;
+      const lower = f.toLowerCase();
+      if (lower === "readme.md" || lower === "changelog.md" || lower === "license.md" || lower.includes("contributing"))
+        return false;
+      return lower.includes("skill") || lower === "skill.md";
+    });
+  } catch {}
+  const isEmpty = !hasGithubDir && !hasPluginManifest && looseSkillFiles.length === 0;
+  return {
+    cwd,
+    hasGithubDir,
+    hasPluginManifest,
+    looseSkillFiles,
+    isEmpty
+  };
+}
+var init_context4 = () => {};
+
+// src/cli/commands/copilot/new.ts
+var exports_new4 = {};
+__export(exports_new4, {
+  scaffold: () => scaffold4,
+  default: () => new_default4,
+  decidePath: () => decidePath4
+});
+import { join as join15, basename as basename5, dirname as dirname5 } from "path";
+import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync5, existsSync as existsSync16 } from "fs";
+function decidePath4(ctx, intent, providedName) {
+  const rawName = providedName || "";
+  let decisionPath = "standalone";
+  let targetDir = ctx.cwd;
+  let shouldCreateDir = false;
+  let migrateExisting = false;
+  const useCurrentDirAsRoot = rawName === "." || rawName === basename5(ctx.cwd) || !rawName;
+  if (intent === "distribute" || intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasPluginManifest) {
+    decisionPath = "plugin";
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join15(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+    migrateExisting = ctx.looseSkillFiles.length > 0;
+  } else if (intent === "self-later" && !ctx.hasPluginManifest) {
+    decisionPath = "plugin";
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join15(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+  } else if (decisionPath === "standalone") {
+    if (useCurrentDirAsRoot) {
+      targetDir = ctx.cwd;
+      shouldCreateDir = false;
+    } else {
+      targetDir = join15(ctx.cwd, rawName);
+      shouldCreateDir = true;
+    }
+  }
+  return { path: decisionPath, targetDir, shouldCreateDir, migrateExisting };
+}
+function scaffold4(decision, ctx, migrateContent) {
+  const { targetDir, path, shouldCreateDir } = decision;
+  if (existsSync16(targetDir) && shouldCreateDir) {
+    ui.fail("Target already exists");
+    process.exit(1);
+  }
+  if (shouldCreateDir) {
+    mkdirSync5(targetDir, { recursive: true });
+  }
+  if (path === "plugin") {
+    const pluginName = basename5(targetDir);
+    const copilotSpec = getProviderSpec("copilot");
+    const copilotManifestDir = dirname5(copilotSpec.manifestPath);
+    const pluginJson = {
+      name: pluginName,
+      version: "0.1.0",
+      description: "Scaffolded by doraval copilot new",
+      skills: ["./skills/doraval"],
+      displayName: pluginName,
+      keywords: ["example-keyword", "another-keyword"]
+    };
+    mkdirSync5(join15(targetDir, copilotManifestDir), { recursive: true });
+    writeFileSync5(join15(targetDir, copilotSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname5(copilotSpec.marketplacePath);
+    mkdirSync5(join15(targetDir, marketplaceDir), { recursive: true });
+    const marketplaceJson = {
+      name: "local",
+      plugins: [
+        {
+          name: pluginName,
+          source: {
+            source: "local",
+            path: "."
+          }
+        }
+      ]
+    };
+    writeFileSync5(join15(targetDir, copilotSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    const demoSkillName = "doraval";
+    mkdirSync5(join15(targetDir, "skills", demoSkillName), { recursive: true });
+    let skillContent;
+    if (migrateContent) {
+      skillContent = migrateContent;
+    } else {
+      skillContent = `---
+name: ${demoSkillName}
+description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents (works for Copilot too).
+---
+
+# Use Doraval (Copilot edition)
+
+Doraval is the context engineering toolkit.
+
+When you need to check a skill or Copilot plugin:
+
+- Validate the current directory: \`doraval validate .\`
+- Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
+- Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
+- Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
+
+Always run \`doraval validate\` before sharing or publishing a plugin.
+
+This skill demonstrates a complete, self-referential example of using doraval inside a generated Copilot plugin.
+
+To test in Copilot:
+1. Configure the .github/plugin as local source.
+2. Restart/reload and invoke the skill.`;
+    }
+    writeFileSync5(join15(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join15(targetDir, "README.md");
+    if (!existsSync16(readmePath)) {
+      writeFileSync5(readmePath, "# " + pluginName + `
+
+Copilot plugin scaffolded by doraval.`);
+    }
+  } else {
+    mkdirSync5(join15(targetDir, "skills", "doraval"), { recursive: true });
+    const skillBody = migrateContent || `# My Skill
+
+Basic starter for Copilot.`;
+    writeFileSync5(join15(targetDir, "skills", "doraval", "SKILL.md"), `---
+name: doraval
+description: Starter (local skill)
+---
+
+${skillBody}`);
+  }
+}
+var import_picocolors14, new_default4;
+var init_new4 = __esm(() => {
+  init_dist();
+  init_out();
+  init_context4();
+  init_prompt();
+  init_spec();
+  import_picocolors14 = __toESM(require_picocolors(), 1);
+  new_default4 = defineCommand({
+    meta: {
+      name: "new",
+      description: "Create a new skill or plugin following Copilot packaging rules"
+    },
+    args: {
+      name: {
+        type: "positional",
+        description: "Optional name for the skill or plugin",
+        required: false
+      },
+      yes: {
+        type: "boolean",
+        description: "Skip interactive prompts (use defaults and flags)",
+        default: false
+      },
+      intent: {
+        type: "string",
+        description: 'Intent: "self" | "self-later" | "distribute"',
+        required: false
+      }
+    },
+    run({ args }) {
+      ui.heading("doraval copilot new \u2014 Context-aware scaffolding");
+      const ctx = detectContext4();
+      let intent = args.intent || "self-later";
+      if (!args.yes) {
+        const ans = prompt("  Intent (self | self-later | distribute)", intent);
+        intent = ans || intent;
+      }
+      const decision = decidePath4(ctx, intent, args.name);
+      ui.info(`  Decision: path=${decision.path}, target=${decision.targetDir}`);
+      let migrateContent;
+      if (decision.migrateExisting && !args.yes) {
+        migrateContent = "Content from your existing SKILL.md (user-confirmed).";
+      }
+      scaffold4(decision, ctx, migrateContent);
+      ui.write(`
+  ${import_picocolors14.default.green("\u2713")} Created ${decision.path} at ${import_picocolors14.default.bold(decision.targetDir)}`);
+      const cmdName = decision.path === "plugin" ? `/${basename5(decision.targetDir)}:doraval` : "/doraval (local skill)";
+      ui.info(`  Command: ${cmdName}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Copilot manifest: .github/plugin/plugin.json`);
+        ui.info(`  Marketplace catalog: .github/plugin/marketplace.json`);
+      }
+      ui.info(`  Test (local): configure local plugin source in Copilot and reload`);
+      ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+      if (decision.path === "plugin") {
+        ui.info(`  Keywords: keywords array added for discovery \u2014 run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
+      }
       if (decision.path === "plugin" && decision.migrateExisting) {
         ui.info("  (Existing content migrated where confirmed.)");
       }
@@ -3438,7 +3902,7 @@ var init_new2 = __esm(() => {
 });
 
 // src/validators/claude/skill.ts
-import { existsSync as existsSync13 } from "fs";
+import { existsSync as existsSync17 } from "fs";
 import { resolve as resolve5 } from "path";
 var claudeSkillValidator;
 var init_skill = __esm(() => {
@@ -3449,7 +3913,7 @@ var init_skill = __esm(() => {
     name: "Claude Skill",
     description: "Validates SKILL.md per current Claude Code spec: frontmatter (name/description relaxed to recommended; directory name usually provides the /command), body, supporting files, dynamic injection (!`cmd`), substitutions ($ARGUMENTS, ${CLAUDE_*}), and advanced fields (allowed-tools, context, disable-model-invocation, when_to_use, etc.)",
     detect(dir) {
-      return existsSync13(resolve5(dir, "SKILL.md"));
+      return existsSync17(resolve5(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -3467,8 +3931,8 @@ var init_skill = __esm(() => {
 });
 
 // src/validators/claude/plugin.ts
-import { existsSync as existsSync14, readdirSync as readdirSync6 } from "fs";
-import { resolve as resolve6, join as join12 } from "path";
+import { existsSync as existsSync18, readdirSync as readdirSync8 } from "fs";
+import { resolve as resolve6, join as join16 } from "path";
 function levenshtein(a, b) {
   if (a === b)
     return 0;
@@ -3560,7 +4024,7 @@ var init_plugin = __esm(() => {
     name: "Claude Plugin",
     description: "Validates .claude-plugin/plugin.json manifest (complete schema per Plugins reference), component path rules (replace vs augment), .claude-plugin/ purity, default dirs, single-root-skill layout, unrecognized fields + suggestions, and structure",
     detect(dir) {
-      return existsSync14(resolve6(dir, ".claude-plugin", "plugin.json"));
+      return existsSync18(resolve6(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -3578,7 +4042,7 @@ var init_plugin = __esm(() => {
         return { errors, warnings, passes };
       }
       try {
-        const entries = readdirSync6(dotClaudePluginDir);
+        const entries = readdirSync8(dotClaudePluginDir);
         const unexpected = entries.filter((e) => e !== "plugin.json");
         if (unexpected.length > 0) {
           for (const e of unexpected) {
@@ -3634,10 +4098,12 @@ var init_plugin = __esm(() => {
       }
       if (manifest.keywords !== undefined) {
         if (Array.isArray(manifest.keywords)) {
-          passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+          passes.push(`keywords: [${manifest.keywords.join(", ")}] \u2014 If users mention any of these keywords, your plugin will get triggered in Claude Code`);
         } else {
           errors.push("keywords must be an array of strings");
         }
+      } else {
+        warnings.push('Missing "keywords" (recommended \u2014 if users mention any of these, your plugin will get triggered in Claude Code)');
       }
       if (manifest.defaultEnabled !== undefined) {
         passes.push(`defaultEnabled: ${manifest.defaultEnabled}`);
@@ -3663,7 +4129,7 @@ var init_plugin = __esm(() => {
               errors.push(`${field}: path "${s}" must start with "./"`);
             } else if (s.includes("..")) {
               errors.push(`${field}: path "${s}" must not use ".." (paths are confined to the plugin tree after cache copy)`);
-            } else if (existsSync14(resolve6(dir, s))) {
+            } else if (existsSync18(resolve6(dir, s))) {
               passes.push(`${field}: path "${s}" exists`);
             } else {
               warnings.push(`${field}: path "${s}" does not exist on disk`);
@@ -3713,11 +4179,11 @@ var init_plugin = __esm(() => {
         passes.push(`dependencies: declares ${manifest.dependencies.length} plugin dependency/ies`);
       }
       const skillsDir = resolve6(dir, "skills");
-      if (existsSync14(skillsDir)) {
-        const entries = readdirSync6(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      if (existsSync18(skillsDir)) {
+        const entries = readdirSync8(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join12(skillsDir, e.name, "SKILL.md");
-          if (existsSync14(md)) {
+          const md = join16(skillsDir, e.name, "SKILL.md");
+          if (existsSync18(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
             errors.push(`skills/${e.name}/ is missing SKILL.md`);
@@ -3728,8 +4194,8 @@ var init_plugin = __esm(() => {
         }
       }
       const commandsDir = resolve6(dir, "commands");
-      if (existsSync14(commandsDir)) {
-        const mds = readdirSync6(commandsDir).filter((f) => f.endsWith(".md"));
+      if (existsSync18(commandsDir)) {
+        const mds = readdirSync8(commandsDir).filter((f) => f.endsWith(".md"));
         if (mds.length) {
           passes.push(`commands/ has ${mds.length} .md file(s)`);
         }
@@ -3738,8 +4204,8 @@ var init_plugin = __esm(() => {
         }
       }
       const agentsDir = resolve6(dir, "agents");
-      if (existsSync14(agentsDir)) {
-        const mds = readdirSync6(agentsDir).filter((f) => f.endsWith(".md"));
+      if (existsSync18(agentsDir)) {
+        const mds = readdirSync8(agentsDir).filter((f) => f.endsWith(".md"));
         if (mds.length) {
           passes.push(`agents/ has ${mds.length} .md file(s)`);
         }
@@ -3747,30 +4213,30 @@ var init_plugin = __esm(() => {
           warnings.push('agents/ co-exists with manifest "agents" \u2014 manifest replaces default (dir ignored)');
         }
       }
-      if (existsSync14(resolve6(dir, "output-styles"))) {
+      if (existsSync18(resolve6(dir, "output-styles"))) {
         passes.push("output-styles/ directory present");
         if (manifest.outputStyles)
           warnings.push("output-styles/ co-exists with manifest outputStyles \u2014 manifest wins");
       }
-      if (existsSync14(resolve6(dir, "themes")))
+      if (existsSync18(resolve6(dir, "themes")))
         passes.push("themes/ present (experimental)");
-      if (existsSync14(resolve6(dir, "monitors")) || manifest.experimental?.monitors) {
+      if (existsSync18(resolve6(dir, "monitors")) || manifest.experimental?.monitors) {
         passes.push("monitors config present (experimental)");
       }
-      if (existsSync14(resolve6(dir, "bin")))
+      if (existsSync18(resolve6(dir, "bin")))
         passes.push("bin/ present (adds executables to Bash tool $PATH)");
-      if (existsSync14(resolve6(dir, "settings.json")))
+      if (existsSync18(resolve6(dir, "settings.json")))
         passes.push("settings.json present (plugin defaults for agent/statusline)");
-      if (existsSync14(resolve6(dir, "README.md")))
+      if (existsSync18(resolve6(dir, "README.md")))
         passes.push("README.md present");
-      if (existsSync14(resolve6(dir, ".mcp.json")))
+      if (existsSync18(resolve6(dir, ".mcp.json")))
         passes.push(".mcp.json present (validated by claude:mcp)");
-      if (existsSync14(resolve6(dir, ".lsp.json")))
+      if (existsSync18(resolve6(dir, ".lsp.json")))
         passes.push(".lsp.json present (validated by claude:lsp when registered)");
-      if (existsSync14(resolve6(dir, "hooks/hooks.json")) || existsSync14(resolve6(dir, "hooks.json"))) {
+      if (existsSync18(resolve6(dir, "hooks/hooks.json")) || existsSync18(resolve6(dir, "hooks.json"))) {
         passes.push("hooks config present (validated by claude:hooks)");
       }
-      if (existsSync14(resolve6(dir, "SKILL.md")) && !existsSync14(skillsDir) && manifest.skills === undefined) {
+      if (existsSync18(resolve6(dir, "SKILL.md")) && !existsSync18(skillsDir) && manifest.skills === undefined) {
         passes.push('Root SKILL.md detected \u2014 plugin will be treated as a single-skill plugin (prefer frontmatter "name" for stable /command)');
       }
       return { errors, warnings, passes };
@@ -3779,8 +4245,8 @@ var init_plugin = __esm(() => {
 });
 
 // src/validators/claude/marketplace.ts
-import { existsSync as existsSync15, readdirSync as readdirSync7 } from "fs";
-import { resolve as resolve7, join as join13 } from "path";
+import { existsSync as existsSync19, readdirSync as readdirSync9 } from "fs";
+import { resolve as resolve7, join as join17 } from "path";
 var claudeMarketplaceValidator;
 var init_marketplace = __esm(() => {
   claudeMarketplaceValidator = {
@@ -3789,18 +4255,18 @@ var init_marketplace = __esm(() => {
     name: "Claude Plugin Marketplace",
     description: "Validates .claude-plugin/marketplace.json or plugins/ marketplace layouts (plugins array with sources)",
     detect(dir) {
-      if (existsSync15(resolve7(dir, ".claude-plugin", "marketplace.json")))
+      if (existsSync19(resolve7(dir, ".claude-plugin", "marketplace.json")))
         return true;
       const pluginsDir = resolve7(dir, "plugins");
-      if (!existsSync15(pluginsDir))
+      if (!existsSync19(pluginsDir))
         return false;
       try {
-        const entries = readdirSync7(pluginsDir, { withFileTypes: true });
+        const entries = readdirSync9(pluginsDir, { withFileTypes: true });
         for (const entry of entries) {
           if (!entry.isDirectory())
             continue;
-          const hasSkills = existsSync15(join13(pluginsDir, entry.name, "skills"));
-          const hasManifest = existsSync15(join13(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
+          const hasSkills = existsSync19(join17(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync19(join17(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
           if (hasSkills || hasManifest)
             return true;
         }
@@ -3812,9 +4278,9 @@ var init_marketplace = __esm(() => {
       const warnings = [];
       const passes = [];
       const claudeMktPath = resolve7(dir, ".claude-plugin", "marketplace.json");
-      const hasClaudeMkt = existsSync15(claudeMktPath);
+      const hasClaudeMkt = existsSync19(claudeMktPath);
       const pluginsDir = resolve7(dir, "plugins");
-      const hasPluginsDirLayout = existsSync15(pluginsDir);
+      const hasPluginsDirLayout = existsSync19(pluginsDir);
       if (!hasClaudeMkt && !hasPluginsDirLayout) {
         errors.push("Missing .claude-plugin/marketplace.json or plugins/ directory");
         return { errors, warnings, passes };
@@ -3859,9 +4325,9 @@ var init_marketplace = __esm(() => {
             const src = String(p.source);
             passes.push(`plugins[${i}].source: "${src}"`);
             const srcDir = resolve7(dir, src);
-            if (existsSync15(srcDir)) {
-              const hasManifest = existsSync15(resolve7(srcDir, ".claude-plugin", "plugin.json"));
-              const hasSkills = existsSync15(resolve7(srcDir, "skills"));
+            if (existsSync19(srcDir)) {
+              const hasManifest = existsSync19(resolve7(srcDir, ".claude-plugin", "plugin.json"));
+              const hasSkills = existsSync19(resolve7(srcDir, "skills"));
               if (hasManifest || hasSkills) {
                 passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
               } else {
@@ -3877,12 +4343,12 @@ var init_marketplace = __esm(() => {
             passes.push(`plugins[${i}].category: "${p.category}"`);
           }
         }
-        if (existsSync15(resolve7(dir, "README.md"))) {
+        if (existsSync19(resolve7(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
         }
-        if (existsSync15(resolve7(dir, "LICENSE"))) {
+        if (existsSync19(resolve7(dir, "LICENSE"))) {
           passes.push("LICENSE exists at marketplace root");
         } else {
           warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -3891,27 +4357,27 @@ var init_marketplace = __esm(() => {
       }
       if (hasPluginsDirLayout) {
         passes.push("plugins/ directory exists");
-        const pluginEntries = readdirSync7(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        const pluginEntries = readdirSync9(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         if (pluginEntries.length === 0) {
           errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
           return { errors, warnings, passes };
         }
         passes.push(`${pluginEntries.length} plugin(s) found`);
-        if (existsSync15(resolve7(dir, "README.md"))) {
+        if (existsSync19(resolve7(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
         }
-        if (existsSync15(resolve7(dir, "LICENSE"))) {
+        if (existsSync19(resolve7(dir, "LICENSE"))) {
           passes.push("LICENSE exists at marketplace root");
         } else {
           warnings.push("No LICENSE at marketplace root \u2014 recommended");
         }
         for (const plugin of pluginEntries) {
-          const pluginPath = join13(pluginsDir, plugin.name);
-          const hasSkills = existsSync15(join13(pluginPath, "skills"));
-          const hasManifest = existsSync15(join13(pluginPath, ".claude-plugin", "plugin.json"));
-          const hasReadme = existsSync15(join13(pluginPath, "README.md"));
+          const pluginPath = join17(pluginsDir, plugin.name);
+          const hasSkills = existsSync19(join17(pluginPath, "skills"));
+          const hasManifest = existsSync19(join17(pluginPath, ".claude-plugin", "plugin.json"));
+          const hasReadme = existsSync19(join17(pluginPath, "README.md"));
           if (hasManifest || hasSkills) {
             passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
           } else {
@@ -3929,7 +4395,7 @@ var init_marketplace = __esm(() => {
 });
 
 // src/validators/claude/hooks.ts
-import { existsSync as existsSync16 } from "fs";
+import { existsSync as existsSync20 } from "fs";
 import { resolve as resolve8 } from "path";
 var KNOWN_EVENTS, claudeHooksValidator;
 var init_hooks = __esm(() => {
@@ -3971,13 +4437,13 @@ var init_hooks = __esm(() => {
     name: "Claude Hooks",
     description: "Validates hooks/hooks.json (or root hooks.json): all lifecycle events per Plugins reference, hook group structure (matcher + hooks[]), supported hook types (command, http, mcp_tool, prompt, agent)",
     detect(dir) {
-      return existsSync16(resolve8(dir, "hooks", "hooks.json")) || existsSync16(resolve8(dir, "hooks.json"));
+      return existsSync20(resolve8(dir, "hooks", "hooks.json")) || existsSync20(resolve8(dir, "hooks.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
       const warnings = [];
       const passes = [];
-      const hooksPath = existsSync16(resolve8(dir, "hooks", "hooks.json")) ? resolve8(dir, "hooks", "hooks.json") : resolve8(dir, "hooks.json");
+      const hooksPath = existsSync20(resolve8(dir, "hooks", "hooks.json")) ? resolve8(dir, "hooks", "hooks.json") : resolve8(dir, "hooks.json");
       let config;
       try {
         const raw = await Bun.file(hooksPath).text();
@@ -4043,7 +4509,7 @@ var init_hooks = __esm(() => {
 });
 
 // src/validators/claude/mcp.ts
-import { existsSync as existsSync17 } from "fs";
+import { existsSync as existsSync21 } from "fs";
 import { resolve as resolve9 } from "path";
 var claudeMcpValidator;
 var init_mcp = __esm(() => {
@@ -4053,7 +4519,7 @@ var init_mcp = __esm(() => {
     name: "Claude MCP Config",
     description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, ${CLAUDE_PLUGIN_ROOT} etc. substitutions per Plugins reference",
     detect(dir) {
-      return existsSync17(resolve9(dir, ".mcp.json"));
+      return existsSync21(resolve9(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4113,8 +4579,8 @@ var init_mcp = __esm(() => {
 });
 
 // src/validators/claude/subagent.ts
-import { existsSync as existsSync18, readdirSync as readdirSync8 } from "fs";
-import { resolve as resolve10, join as join14 } from "path";
+import { existsSync as existsSync22, readdirSync as readdirSync10 } from "fs";
+import { resolve as resolve10, join as join18 } from "path";
 var claudeSubagentValidator;
 var init_subagent = __esm(() => {
   init_frontmatter();
@@ -4125,10 +4591,10 @@ var init_subagent = __esm(() => {
     description: "Validates agents/*.md (plugin subagents): frontmatter per spec (name, description, model, effort, maxTurns, tools, disallowedTools, skills, memory, background, isolation=worktree), body; warns on disallowed fields (hooks, mcpServers, permissionMode) for security",
     detect(dir) {
       const agentsDir = resolve10(dir, "agents");
-      if (!existsSync18(agentsDir))
+      if (!existsSync22(agentsDir))
         return false;
       try {
-        return readdirSync8(agentsDir).some((f) => f.endsWith(".md"));
+        return readdirSync10(agentsDir).some((f) => f.endsWith(".md"));
       } catch {
         return false;
       }
@@ -4138,7 +4604,7 @@ var init_subagent = __esm(() => {
       const warnings = [];
       const passes = [];
       const agentsDir = resolve10(dir, "agents");
-      const mdFiles = readdirSync8(agentsDir).filter((f) => f.endsWith(".md"));
+      const mdFiles = readdirSync10(agentsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("agents/ directory has no .md files");
         return { errors, warnings, passes };
@@ -4159,7 +4625,7 @@ var init_subagent = __esm(() => {
       ]);
       const DISALLOWED = new Set(["hooks", "mcpServers", "permissionMode"]);
       for (const file of mdFiles) {
-        const filePath = join14(agentsDir, file);
+        const filePath = join18(agentsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
@@ -4205,8 +4671,8 @@ var init_subagent = __esm(() => {
 });
 
 // src/validators/claude/command.ts
-import { existsSync as existsSync19, readdirSync as readdirSync9 } from "fs";
-import { resolve as resolve11, join as join15 } from "path";
+import { existsSync as existsSync23, readdirSync as readdirSync11 } from "fs";
+import { resolve as resolve11, join as join19 } from "path";
 var claudeCommandValidator;
 var init_command = __esm(() => {
   init_frontmatter();
@@ -4217,10 +4683,10 @@ var init_command = __esm(() => {
     description: "Validates commands/ (or legacy .claude/commands/) .md files: frontmatter (including rich skill fields), description, body",
     detect(dir) {
       const commandsDir = resolve11(dir, "commands");
-      if (!existsSync19(commandsDir))
+      if (!existsSync23(commandsDir))
         return false;
       try {
-        return readdirSync9(commandsDir).some((f) => f.endsWith(".md"));
+        return readdirSync11(commandsDir).some((f) => f.endsWith(".md"));
       } catch {
         return false;
       }
@@ -4230,14 +4696,14 @@ var init_command = __esm(() => {
       const warnings = [];
       const passes = [];
       const commandsDir = resolve11(dir, "commands");
-      const mdFiles = readdirSync9(commandsDir).filter((f) => f.endsWith(".md"));
+      const mdFiles = readdirSync11(commandsDir).filter((f) => f.endsWith(".md"));
       if (mdFiles.length === 0) {
         errors.push("commands/ directory has no .md files");
         return { errors, warnings, passes };
       }
       passes.push(`${mdFiles.length} command definition(s) found`);
       for (const file of mdFiles) {
-        const filePath = join15(commandsDir, file);
+        const filePath = join19(commandsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
@@ -4266,7 +4732,7 @@ var init_command = __esm(() => {
 });
 
 // src/validators/claude/memory.ts
-import { existsSync as existsSync20 } from "fs";
+import { existsSync as existsSync24 } from "fs";
 import { resolve as resolve12 } from "path";
 var claudeMemoryValidator;
 var init_memory = __esm(() => {
@@ -4276,7 +4742,7 @@ var init_memory = __esm(() => {
     name: "Claude CLAUDE.md",
     description: "Validates CLAUDE.md: non-empty, length recommendations, @path imports",
     detect(dir) {
-      return existsSync20(resolve12(dir, "CLAUDE.md"));
+      return existsSync24(resolve12(dir, "CLAUDE.md"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4301,7 +4767,7 @@ var init_memory = __esm(() => {
       while ((match = importRegex.exec(raw)) !== null) {
         const importPath = match[1];
         const resolvedImport = resolve12(dir, importPath);
-        if (existsSync20(resolvedImport)) {
+        if (existsSync24(resolvedImport)) {
           passes.push(`@import "${importPath}" exists`);
         } else {
           warnings.push(`@import "${importPath}" \u2014 file not found at ${resolvedImport}`);
@@ -4313,7 +4779,7 @@ var init_memory = __esm(() => {
 });
 
 // src/validators/claude/lsp.ts
-import { existsSync as existsSync21 } from "fs";
+import { existsSync as existsSync25 } from "fs";
 import { resolve as resolve13 } from "path";
 var claudeLspValidator;
 var init_lsp = __esm(() => {
@@ -4323,7 +4789,7 @@ var init_lsp = __esm(() => {
     name: "Claude LSP Servers",
     description: "Validates .lsp.json (or plugin.json lspServers): language server configs with required command + extensionToLanguage; optional transport, env, settings, diagnostics etc. (binaries installed separately)",
     detect(dir) {
-      return existsSync21(resolve13(dir, ".lsp.json")) || existsSync21(resolve13(dir, ".claude-plugin", "plugin.json"));
+      return existsSync25(resolve13(dir, ".lsp.json")) || existsSync25(resolve13(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4331,7 +4797,7 @@ var init_lsp = __esm(() => {
       const passes = [];
       let cfg = null;
       const lspPath = resolve13(dir, ".lsp.json");
-      if (existsSync21(lspPath)) {
+      if (existsSync25(lspPath)) {
         try {
           cfg = JSON.parse(await Bun.file(lspPath).text());
           passes.push(".lsp.json is valid JSON");
@@ -4341,7 +4807,7 @@ var init_lsp = __esm(() => {
         }
       } else {
         const manifestPath = resolve13(dir, ".claude-plugin", "plugin.json");
-        if (existsSync21(manifestPath)) {
+        if (existsSync25(manifestPath)) {
           try {
             const m = JSON.parse(await Bun.file(manifestPath).text());
             if (m && m.lspServers && typeof m.lspServers === "object") {
@@ -4352,7 +4818,7 @@ var init_lsp = __esm(() => {
         }
       }
       if (!cfg) {
-        if (!existsSync21(lspPath)) {
+        if (!existsSync25(lspPath)) {
           return { errors, warnings, passes };
         }
       }
@@ -4381,7 +4847,7 @@ var init_lsp = __esm(() => {
 });
 
 // src/validators/claude/monitors.ts
-import { existsSync as existsSync22 } from "fs";
+import { existsSync as existsSync26 } from "fs";
 import { resolve as resolve14 } from "path";
 var claudeMonitorsValidator;
 var init_monitors = __esm(() => {
@@ -4391,7 +4857,7 @@ var init_monitors = __esm(() => {
     name: "Claude Monitors (experimental)",
     description: "Validates monitors/monitors.json (or experimental.monitors): array of {name, command, description, when?}; commands support ${CLAUDE_PLUGIN_*} subs. Monitors run only in interactive CLI sessions.",
     detect(dir) {
-      return existsSync22(resolve14(dir, "monitors", "monitors.json")) || existsSync22(resolve14(dir, "monitors.json")) || existsSync22(resolve14(dir, ".claude-plugin", "plugin.json"));
+      return existsSync26(resolve14(dir, "monitors", "monitors.json")) || existsSync26(resolve14(dir, "monitors.json")) || existsSync26(resolve14(dir, ".claude-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4403,7 +4869,7 @@ var init_monitors = __esm(() => {
         resolve14(dir, "monitors.json")
       ];
       for (const p of candidates) {
-        if (existsSync22(p)) {
+        if (existsSync26(p)) {
           try {
             const parsed = JSON.parse(await Bun.file(p).text());
             if (Array.isArray(parsed)) {
@@ -4419,7 +4885,7 @@ var init_monitors = __esm(() => {
       }
       if (!arr) {
         const mp = resolve14(dir, ".claude-plugin", "plugin.json");
-        if (existsSync22(mp)) {
+        if (existsSync26(mp)) {
           try {
             const m = JSON.parse(await Bun.file(mp).text());
             const exp = m?.experimental;
@@ -4472,8 +4938,8 @@ var init_monitors = __esm(() => {
 });
 
 // src/validators/codex/plugin.ts
-import { existsSync as existsSync23, readdirSync as readdirSync10 } from "fs";
-import { resolve as resolve15, join as join16 } from "path";
+import { existsSync as existsSync27, readdirSync as readdirSync12 } from "fs";
+import { resolve as resolve15, join as join20 } from "path";
 var NAME_REGEX3, codexPluginValidator;
 var init_plugin2 = __esm(() => {
   NAME_REGEX3 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -4483,7 +4949,7 @@ var init_plugin2 = __esm(() => {
     name: "Codex Plugin",
     description: "Validates .codex-plugin/plugin.json manifest (requires interface block and skills as directory string per Codex packaging)",
     detect(dir) {
-      return existsSync23(resolve15(dir, ".codex-plugin", "plugin.json"));
+      return existsSync27(resolve15(dir, ".codex-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4554,12 +5020,21 @@ var init_plugin2 = __esm(() => {
       } else {
         warnings.push('Missing "description" (recommended)');
       }
+      if (manifest.keywords !== undefined) {
+        if (Array.isArray(manifest.keywords)) {
+          passes.push(`keywords: [${manifest.keywords.join(", ")}] \u2014 If users mention any of these keywords, your plugin will get triggered in Codex`);
+        } else {
+          errors.push("keywords must be an array of strings");
+        }
+      } else {
+        warnings.push('Missing "keywords" (recommended \u2014 if users mention any of these, your plugin will get triggered in Codex)');
+      }
       const skillsDir = resolve15(dir, "skills");
-      if (existsSync23(skillsDir)) {
-        const entries = readdirSync10(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      if (existsSync27(skillsDir)) {
+        const entries = readdirSync12(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join16(skillsDir, e.name, "SKILL.md");
-          if (existsSync23(md)) {
+          const md = join20(skillsDir, e.name, "SKILL.md");
+          if (existsSync27(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
             errors.push(`skills/${e.name}/ is missing SKILL.md`);
@@ -4577,7 +5052,7 @@ var init_plugin2 = __esm(() => {
 });
 
 // src/validators/codex/marketplace.ts
-import { existsSync as existsSync24 } from "fs";
+import { existsSync as existsSync28 } from "fs";
 import { resolve as resolve16 } from "path";
 var codexMarketplaceValidator;
 var init_marketplace2 = __esm(() => {
@@ -4587,9 +5062,9 @@ var init_marketplace2 = __esm(() => {
     name: "Codex Plugin Marketplace",
     description: "Validates .agents/plugins/marketplace.json (Codex convention: object source + policy blocks)",
     detect(dir) {
-      if (existsSync24(resolve16(dir, ".agents", "plugins", "marketplace.json")))
+      if (existsSync28(resolve16(dir, ".agents", "plugins", "marketplace.json")))
         return true;
-      if (existsSync24(resolve16(dir, ".agents", "plugins", "marketplace.json")))
+      if (existsSync28(resolve16(dir, ".agents", "plugins", "marketplace.json")))
         return true;
       return false;
     },
@@ -4598,7 +5073,7 @@ var init_marketplace2 = __esm(() => {
       const warnings = [];
       const passes = [];
       const marketplacePath = resolve16(dir, ".agents", "plugins", "marketplace.json");
-      if (!existsSync24(marketplacePath)) {
+      if (!existsSync28(marketplacePath)) {
         errors.push("Missing .agents/plugins/marketplace.json");
         return { errors, warnings, passes };
       }
@@ -4673,12 +5148,12 @@ var init_marketplace2 = __esm(() => {
           passes.push(`plugins[${i}].category: "${p.category}"`);
         }
       }
-      if (existsSync24(resolve16(dir, "README.md"))) {
+      if (existsSync28(resolve16(dir, "README.md"))) {
         passes.push("README.md exists at marketplace root");
       } else {
         warnings.push("No README.md at marketplace root \u2014 recommended");
       }
-      if (existsSync24(resolve16(dir, "LICENSE"))) {
+      if (existsSync28(resolve16(dir, "LICENSE"))) {
         passes.push("LICENSE exists at marketplace root");
       } else {
         warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -4689,7 +5164,7 @@ var init_marketplace2 = __esm(() => {
 });
 
 // src/validators/codex/mcp.ts
-import { existsSync as existsSync25 } from "fs";
+import { existsSync as existsSync29 } from "fs";
 import { resolve as resolve17 } from "path";
 var codexMcpValidator;
 var init_mcp2 = __esm(() => {
@@ -4699,7 +5174,7 @@ var init_mcp2 = __esm(() => {
     name: "Codex MCP Config",
     description: "Validates .mcp.json (or inline via plugin.json mcpServers): server entries (stdio: command+args, or url), env, cwd, substitutions per Codex MCP support",
     detect(dir) {
-      return existsSync25(resolve17(dir, ".mcp.json"));
+      return existsSync29(resolve17(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4759,7 +5234,7 @@ var init_mcp2 = __esm(() => {
 });
 
 // src/validators/codex/skill.ts
-import { existsSync as existsSync26 } from "fs";
+import { existsSync as existsSync30 } from "fs";
 import { resolve as resolve18 } from "path";
 var codexSkillValidator;
 var init_skill2 = __esm(() => {
@@ -4770,7 +5245,7 @@ var init_skill2 = __esm(() => {
     name: "Codex Skill",
     description: "Validates SKILL.md (shared format): frontmatter (name/description), body, supporting files, substitutions. Codex uses the same SKILL.md spec as other providers.",
     detect(dir) {
-      return existsSync26(resolve18(dir, "SKILL.md"));
+      return existsSync30(resolve18(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -4788,8 +5263,8 @@ var init_skill2 = __esm(() => {
 });
 
 // src/validators/cursor/plugin.ts
-import { existsSync as existsSync27, readdirSync as readdirSync12 } from "fs";
-import { resolve as resolve19, join as join18 } from "path";
+import { existsSync as existsSync31, readdirSync as readdirSync14 } from "fs";
+import { resolve as resolve19, join as join22 } from "path";
 var NAME_REGEX4, cursorPluginValidator;
 var init_plugin3 = __esm(() => {
   NAME_REGEX4 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -4799,7 +5274,7 @@ var init_plugin3 = __esm(() => {
     name: "Cursor Plugin",
     description: "Validates .cursor-plugin/plugin.json manifest (skills as directory string; mcpServers support)",
     detect(dir) {
-      return existsSync27(resolve19(dir, ".cursor-plugin", "plugin.json"));
+      return existsSync31(resolve19(dir, ".cursor-plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -4876,15 +5351,21 @@ var init_plugin3 = __esm(() => {
         passes.push("homepage present");
       if (manifest.repository)
         passes.push("repository present");
-      if (Array.isArray(manifest.keywords)) {
-        passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+      if (manifest.keywords !== undefined) {
+        if (Array.isArray(manifest.keywords)) {
+          passes.push(`keywords: [${manifest.keywords.join(", ")}] \u2014 If users mention any of these keywords, your plugin will get triggered in Cursor`);
+        } else {
+          errors.push("keywords must be an array of strings");
+        }
+      } else {
+        warnings.push('Missing "keywords" (recommended \u2014 if users mention any of these, your plugin will get triggered in Cursor)');
       }
       const skillsDir = resolve19(dir, "skills");
-      if (existsSync27(skillsDir)) {
-        const entries = readdirSync12(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+      if (existsSync31(skillsDir)) {
+        const entries = readdirSync14(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join18(skillsDir, e.name, "SKILL.md");
-          if (existsSync27(md)) {
+          const md = join22(skillsDir, e.name, "SKILL.md");
+          if (existsSync31(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
             errors.push(`skills/${e.name}/ is missing SKILL.md`);
@@ -4895,7 +5376,7 @@ var init_plugin3 = __esm(() => {
         const mcpRef = manifest.mcpServers;
         if (mcpRef.startsWith("./") || mcpRef.startsWith("../")) {
           const mcpPath = resolve19(dir, mcpRef);
-          if (existsSync27(mcpPath)) {
+          if (existsSync31(mcpPath)) {
             passes.push(`mcpServers file exists at ${mcpRef}`);
           } else {
             warnings.push(`mcpServers path "${mcpRef}" does not exist on disk`);
@@ -4925,8 +5406,8 @@ var init_plugin3 = __esm(() => {
 });
 
 // src/validators/cursor/marketplace.ts
-import { existsSync as existsSync28, readdirSync as readdirSync13 } from "fs";
-import { resolve as resolve20, join as join19 } from "path";
+import { existsSync as existsSync32, readdirSync as readdirSync15 } from "fs";
+import { resolve as resolve20, join as join23 } from "path";
 var cursorMarketplaceValidator;
 var init_marketplace3 = __esm(() => {
   cursorMarketplaceValidator = {
@@ -4935,18 +5416,18 @@ var init_marketplace3 = __esm(() => {
     name: "Cursor Plugin Marketplace",
     description: "Validates .cursor-plugin/marketplace.json (string sources + metadata.pluginRoot)",
     detect(dir) {
-      if (existsSync28(resolve20(dir, ".cursor-plugin", "marketplace.json")))
+      if (existsSync32(resolve20(dir, ".cursor-plugin", "marketplace.json")))
         return true;
       const pluginsDir = resolve20(dir, "plugins");
-      if (!existsSync28(pluginsDir))
+      if (!existsSync32(pluginsDir))
         return false;
       try {
-        const entries = readdirSync13(pluginsDir, { withFileTypes: true });
+        const entries = readdirSync15(pluginsDir, { withFileTypes: true });
         for (const entry of entries) {
           if (!entry.isDirectory())
             continue;
-          const hasSkills = existsSync28(join19(pluginsDir, entry.name, "skills"));
-          const hasManifest = existsSync28(join19(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
+          const hasSkills = existsSync32(join23(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync32(join23(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
           if (hasSkills || hasManifest)
             return true;
         }
@@ -4958,9 +5439,9 @@ var init_marketplace3 = __esm(() => {
       const warnings = [];
       const passes = [];
       const cursorMktPath = resolve20(dir, ".cursor-plugin", "marketplace.json");
-      const hasCursorMkt = existsSync28(cursorMktPath);
+      const hasCursorMkt = existsSync32(cursorMktPath);
       const pluginsDir = resolve20(dir, "plugins");
-      const hasPluginsDirLayout = existsSync28(pluginsDir);
+      const hasPluginsDirLayout = existsSync32(pluginsDir);
       if (!hasCursorMkt && !hasPluginsDirLayout) {
         errors.push("Missing .cursor-plugin/marketplace.json or plugins/ directory");
         return { errors, warnings, passes };
@@ -5014,9 +5495,9 @@ var init_marketplace3 = __esm(() => {
             const src = String(p.source);
             passes.push(`plugins[${i}].source: "${src}"`);
             const srcDir = resolve20(dir, pluginRoot, src);
-            if (existsSync28(srcDir)) {
-              const hasManifest = existsSync28(resolve20(srcDir, ".cursor-plugin", "plugin.json"));
-              const hasSkills = existsSync28(resolve20(srcDir, "skills"));
+            if (existsSync32(srcDir)) {
+              const hasManifest = existsSync32(resolve20(srcDir, ".cursor-plugin", "plugin.json"));
+              const hasSkills = existsSync32(resolve20(srcDir, "skills"));
               if (hasManifest || hasSkills) {
                 passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
               } else {
@@ -5027,7 +5508,7 @@ var init_marketplace3 = __esm(() => {
             }
           } else {
             const implicitSrc = resolve20(dir, pluginRoot, p.name || "");
-            if (p.name && existsSync28(implicitSrc)) {
+            if (p.name && existsSync32(implicitSrc)) {
               passes.push(`plugins[${i}]: implicit source via name under ${pluginRoot}`);
             } else {
               warnings.push(`plugins[${i}]: missing "source" (and no implicit dir)`);
@@ -5042,12 +5523,12 @@ var init_marketplace3 = __esm(() => {
             passes.push(`plugins[${i}].homepage present`);
           }
         }
-        if (existsSync28(resolve20(dir, "README.md"))) {
+        if (existsSync32(resolve20(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended for discoverability");
         }
-        if (existsSync28(resolve20(dir, "LICENSE"))) {
+        if (existsSync32(resolve20(dir, "LICENSE"))) {
           passes.push("LICENSE exists at marketplace root");
         } else {
           warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -5056,21 +5537,21 @@ var init_marketplace3 = __esm(() => {
       }
       if (hasPluginsDirLayout) {
         passes.push("plugins/ directory exists");
-        const pluginEntries = readdirSync13(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
+        const pluginEntries = readdirSync15(pluginsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         if (pluginEntries.length === 0) {
           errors.push("plugins/ directory is empty \u2014 expected at least one plugin");
           return { errors, warnings, passes };
         }
         passes.push(`${pluginEntries.length} plugin(s) found`);
-        if (existsSync28(resolve20(dir, "README.md"))) {
+        if (existsSync32(resolve20(dir, "README.md"))) {
           passes.push("README.md exists at marketplace root");
         } else {
           warnings.push("No README.md at marketplace root \u2014 recommended");
         }
         for (const plugin of pluginEntries) {
-          const pluginPath = join19(pluginsDir, plugin.name);
-          const hasSkills = existsSync28(join19(pluginPath, "skills"));
-          const hasManifest = existsSync28(join19(pluginPath, ".cursor-plugin", "plugin.json"));
+          const pluginPath = join23(pluginsDir, plugin.name);
+          const hasSkills = existsSync32(join23(pluginPath, "skills"));
+          const hasManifest = existsSync32(join23(pluginPath, ".cursor-plugin", "plugin.json"));
           if (hasManifest || hasSkills) {
             passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
           }
@@ -5083,7 +5564,7 @@ var init_marketplace3 = __esm(() => {
 });
 
 // src/validators/cursor/mcp.ts
-import { existsSync as existsSync29 } from "fs";
+import { existsSync as existsSync33 } from "fs";
 import { resolve as resolve21 } from "path";
 var cursorMcpValidator;
 var init_mcp3 = __esm(() => {
@@ -5093,7 +5574,7 @@ var init_mcp3 = __esm(() => {
     name: "Cursor MCP Config",
     description: "Validates mcp.json (Cursor uses no leading dot; supports mcpServers wrapper or direct server map)",
     detect(dir) {
-      return existsSync29(resolve21(dir, "mcp.json"));
+      return existsSync33(resolve21(dir, "mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -5159,7 +5640,7 @@ var init_mcp3 = __esm(() => {
 });
 
 // src/validators/cursor/skill.ts
-import { existsSync as existsSync30 } from "fs";
+import { existsSync as existsSync34 } from "fs";
 import { resolve as resolve22 } from "path";
 var cursorSkillValidator;
 var init_skill3 = __esm(() => {
@@ -5170,7 +5651,7 @@ var init_skill3 = __esm(() => {
     name: "Cursor Skill",
     description: "Validates SKILL.md (shared format): frontmatter (name/description), body, supporting files, substitutions. Cursor uses the same SKILL.md spec as other providers.",
     detect(dir) {
-      return existsSync30(resolve22(dir, "SKILL.md"));
+      return existsSync34(resolve22(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -5188,7 +5669,7 @@ var init_skill3 = __esm(() => {
 });
 
 // src/validators/copilot/plugin.ts
-import { existsSync as existsSync31 } from "fs";
+import { existsSync as existsSync35 } from "fs";
 import { resolve as resolve23 } from "path";
 var NAME_REGEX5, copilotPluginValidator;
 var init_plugin4 = __esm(() => {
@@ -5199,7 +5680,7 @@ var init_plugin4 = __esm(() => {
     name: "Copilot Plugin",
     description: "Validates .github/plugin/plugin.json (skills as array of paths, mcpServers support)",
     detect(dir) {
-      return existsSync31(resolve23(dir, ".github", "plugin", "plugin.json"));
+      return existsSync35(resolve23(dir, ".github", "plugin", "plugin.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -5242,9 +5723,9 @@ var init_plugin4 = __esm(() => {
           }
           const skillDir = resolve23(dir, p);
           const skillMd = resolve23(skillDir, "SKILL.md");
-          if (existsSync31(skillMd)) {
+          if (existsSync35(skillMd)) {
             passes.push(`skills[${i}]: ${p}/SKILL.md exists`);
-          } else if (existsSync31(skillDir)) {
+          } else if (existsSync35(skillDir)) {
             warnings.push(`skills[${i}]: directory exists but no SKILL.md inside`);
           } else {
             warnings.push(`skills[${i}]: path "${p}" does not exist`);
@@ -5256,7 +5737,7 @@ var init_plugin4 = __esm(() => {
           passes.push(`mcpServers: "${manifest.mcpServers}"`);
           const mcpRef = String(manifest.mcpServers);
           const mcpPath = resolve23(dir, mcpRef);
-          if (existsSync31(mcpPath)) {
+          if (existsSync35(mcpPath)) {
             passes.push(`mcpServers file exists at ${mcpRef}`);
           } else {
             warnings.push(`mcpServers path "${mcpRef}" does not exist on disk`);
@@ -5285,8 +5766,14 @@ var init_plugin4 = __esm(() => {
         passes.push("homepage present");
       if (manifest.repository)
         passes.push("repository present");
-      if (Array.isArray(manifest.keywords)) {
-        passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+      if (manifest.keywords !== undefined) {
+        if (Array.isArray(manifest.keywords)) {
+          passes.push(`keywords: [${manifest.keywords.join(", ")}] \u2014 If users mention any of these keywords, your plugin will get triggered in Copilot CLI`);
+        } else {
+          errors.push("keywords must be an array of strings");
+        }
+      } else {
+        warnings.push('Missing "keywords" (recommended \u2014 if users mention any of these, your plugin will get triggered in Copilot CLI)');
       }
       const known = new Set([
         "name",
@@ -5310,7 +5797,7 @@ var init_plugin4 = __esm(() => {
 });
 
 // src/validators/copilot/marketplace.ts
-import { existsSync as existsSync32 } from "fs";
+import { existsSync as existsSync36 } from "fs";
 import { resolve as resolve24 } from "path";
 var copilotMarketplaceValidator;
 var init_marketplace4 = __esm(() => {
@@ -5320,7 +5807,7 @@ var init_marketplace4 = __esm(() => {
     name: "Copilot Plugin Marketplace",
     description: "Validates .github/plugin/marketplace.json (string sources)",
     detect(dir) {
-      return existsSync32(resolve24(dir, ".github", "plugin", "marketplace.json"));
+      return existsSync36(resolve24(dir, ".github", "plugin", "marketplace.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -5370,9 +5857,9 @@ var init_marketplace4 = __esm(() => {
           const src = String(p.source);
           passes.push(`plugins[${i}].source: "${src}"`);
           const srcDir = resolve24(dir, src);
-          if (existsSync32(srcDir)) {
-            const hasManifest = existsSync32(resolve24(srcDir, ".github", "plugin", "plugin.json"));
-            const hasSkills = existsSync32(resolve24(srcDir, "skills"));
+          if (existsSync36(srcDir)) {
+            const hasManifest = existsSync36(resolve24(srcDir, ".github", "plugin", "plugin.json"));
+            const hasSkills = existsSync36(resolve24(srcDir, "skills"));
             if (hasManifest || hasSkills) {
               passes.push(`plugins[${i}]: source exists (${hasManifest ? "manifest" : "skills/"})`);
             } else {
@@ -5389,12 +5876,12 @@ var init_marketplace4 = __esm(() => {
         if (p.version)
           passes.push(`plugins[${i}].version: "${p.version}"`);
       }
-      if (existsSync32(resolve24(dir, "README.md"))) {
+      if (existsSync36(resolve24(dir, "README.md"))) {
         passes.push("README.md exists at marketplace root");
       } else {
         warnings.push("No README.md at marketplace root \u2014 recommended");
       }
-      if (existsSync32(resolve24(dir, "LICENSE"))) {
+      if (existsSync36(resolve24(dir, "LICENSE"))) {
         passes.push("LICENSE exists at marketplace root");
       } else {
         warnings.push("No LICENSE at marketplace root \u2014 recommended");
@@ -5405,7 +5892,7 @@ var init_marketplace4 = __esm(() => {
 });
 
 // src/validators/copilot/mcp.ts
-import { existsSync as existsSync33 } from "fs";
+import { existsSync as existsSync37 } from "fs";
 import { resolve as resolve25 } from "path";
 var copilotMcpValidator;
 var init_mcp4 = __esm(() => {
@@ -5415,7 +5902,7 @@ var init_mcp4 = __esm(() => {
     name: "Copilot MCP Config",
     description: "Validates .mcp.json (referenced via mcpServers in manifest). Supports stdio and http servers.",
     detect(dir) {
-      return existsSync33(resolve25(dir, ".mcp.json"));
+      return existsSync37(resolve25(dir, ".mcp.json"));
     },
     async validate(dir, _opts) {
       const errors = [];
@@ -5481,7 +5968,7 @@ var init_mcp4 = __esm(() => {
 });
 
 // src/validators/copilot/skill.ts
-import { existsSync as existsSync34 } from "fs";
+import { existsSync as existsSync38 } from "fs";
 import { resolve as resolve26 } from "path";
 var copilotSkillValidator;
 var init_skill4 = __esm(() => {
@@ -5492,7 +5979,7 @@ var init_skill4 = __esm(() => {
     name: "Copilot Skill",
     description: "Validates SKILL.md (shared format). Copilot supports skills referenced via array paths in the manifest.",
     detect(dir) {
-      return existsSync34(resolve26(dir, "SKILL.md"));
+      return existsSync38(resolve26(dir, "SKILL.md"));
     },
     async validate(dir, _opts) {
       const loaded = await loadSkill(dir);
@@ -5660,7 +6147,7 @@ var init_validators = __esm(() => {
 // src/core/remote.ts
 import { spawnSync as spawnSync4 } from "child_process";
 import { mkdtempSync, rmSync } from "fs";
-import { join as join21 } from "path";
+import { join as join25 } from "path";
 import { tmpdir } from "os";
 function parseRemoteUrl(input) {
   if (input.startsWith(".") || input.startsWith("/") || input.startsWith("~")) {
@@ -5697,7 +6184,7 @@ function isGhAvailable() {
   return ghAvailable;
 }
 async function cloneToTemp(parsed) {
-  const tmpDir = mkdtempSync(join21(tmpdir(), "dora-"));
+  const tmpDir = mkdtempSync(join25(tmpdir(), "dora-"));
   const cleanup = () => {
     try {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -5745,19 +6232,19 @@ var exports_validate_top = {};
 __export(exports_validate_top, {
   default: () => validate_top_default
 });
-import { existsSync as existsSync36 } from "fs";
+import { existsSync as existsSync40 } from "fs";
 import { resolve as resolve27 } from "path";
-var import_picocolors13, validate_top_default;
+var import_picocolors15, validate_top_default;
 var init_validate_top = __esm(() => {
   init_dist();
   init_out();
   init_validators();
   init_remote();
-  import_picocolors13 = __toESM(require_picocolors(), 1);
+  import_picocolors15 = __toESM(require_picocolors(), 1);
   validate_top_default = defineCommand({
     meta: {
       name: "validate",
-      description: "Auto-detect project type and run matching validators. Accepts a local path or a Git URL (e.g. https://github.com/owner/repo)"
+      description: "Auto-detect project type and run matching validators. Accepts a local path or a Git URL (e.g. https://github.com/owner/repo). Use --for <provider>:plugin to see keyword trigger messages."
     },
     args: {
       path: {
@@ -5793,7 +6280,7 @@ var init_validate_top = __esm(() => {
       let cleanup;
       if (remote) {
         ui.info(`
-  Cloning ${import_picocolors13.default.dim(args.path)}...`);
+  Cloning ${import_picocolors15.default.dim(args.path)}...`);
         try {
           const result = await cloneToTemp(remote);
           fullPath = remote.subpath ? resolve27(result.dir, remote.subpath) : result.dir;
@@ -5803,14 +6290,14 @@ var init_validate_top = __esm(() => {
           ui.fail(msg);
           process.exit(1);
         }
-        if (!existsSync36(fullPath)) {
+        if (!existsSync40(fullPath)) {
           cleanup();
           ui.fail(`Subdirectory not found in repo: ${remote.subpath}`);
           process.exit(1);
         }
       } else {
         fullPath = resolve27(args.path);
-        if (!existsSync36(fullPath)) {
+        if (!existsSync40(fullPath)) {
           ui.fail(`Path not found: ${args.path}
 
 Check that the path is correct and the directory exists.`);
@@ -5841,13 +6328,13 @@ Check that the path is correct and the directory exists.`);
 ` + `Available providers:
 ` + providers.map((p) => {
             const pvs = validators.filter((v) => v.provider === p);
-            return `  ${import_picocolors13.default.bold(p)}
-` + pvs.map((v) => `    \u2022 ${import_picocolors13.default.dim(v.id)} \u2014 ${v.description}`).join(`
+            return `  ${import_picocolors15.default.bold(p)}
+` + pvs.map((v) => `    \u2022 ${import_picocolors15.default.dim(v.id)} \u2014 ${v.description}`).join(`
 `);
           }).join(`
 `) + `
 
-Use ${import_picocolors13.default.dim("--for <provider>")} or ${import_picocolors13.default.dim("--for <provider:type>")} to target explicitly.`);
+Use ${import_picocolors15.default.dim("--for <provider>")} or ${import_picocolors15.default.dim("--for <provider:type>")} to target explicitly.`);
           process.exit(1);
         }
         const allResults = [];
@@ -5868,7 +6355,7 @@ Use ${import_picocolors13.default.dim("--for <provider>")} or ${import_picocolor
         } else {
           for (const { id, name, result } of allResults) {
             ui.write(`
-  ${import_picocolors13.default.bold("dora validate")} \u2014 ${import_picocolors13.default.white(name)} ${import_picocolors13.default.dim(`(${id})`)}
+  ${import_picocolors15.default.bold("dora validate")} \u2014 ${import_picocolors15.default.white(name)} ${import_picocolors15.default.dim(`(${id})`)}
 `);
             ui.info(`  Path:  ${args.path}
 `);
@@ -5883,7 +6370,7 @@ Use ${import_picocolors13.default.dim("--for <provider>")} or ${import_picocolor
             }
             if (result.errors.length === 0 && result.warnings.length === 0) {
               ui.write(`
-  ${import_picocolors13.default.green("\u2713")} ${import_picocolors13.default.white("All checks passed.")}
+  ${import_picocolors15.default.green("\u2713")} ${import_picocolors15.default.white("All checks passed.")}
 `);
             } else {
               ui.info(`
@@ -5905,16 +6392,16 @@ var exports_init2 = {};
 __export(exports_init2, {
   default: () => init_default2
 });
-import { basename as basename4, join as join22 } from "path";
+import { basename as basename6, join as join26 } from "path";
 var {spawnSync: spawnSync5 } = globalThis.Bun;
-var import_picocolors14, init_default2;
+var import_picocolors16, init_default2;
 var init_init2 = __esm(() => {
   init_dist();
   init_out();
   init_journal_config();
   init_journal_remote();
   init_prompt();
-  import_picocolors14 = __toESM(require_picocolors(), 1);
+  import_picocolors16 = __toESM(require_picocolors(), 1);
   init_default2 = defineCommand({
     meta: {
       name: "init",
@@ -5941,17 +6428,17 @@ var init_init2 = __esm(() => {
       ui.heading("dora init \u2014 Set up doraval, your journal, and the coding agent dora should use on the fly");
       const ghCheck = ensureGhCli();
       if (!ghCheck.ok) {
-        ui.write(`  ${import_picocolors14.default.red("\u2717")} ${import_picocolors14.default.white("The GitHub CLI (")}${import_picocolors14.default.bold("gh")}${import_picocolors14.default.white(") is not installed.")}
+        ui.write(`  ${import_picocolors16.default.red("\u2717")} ${import_picocolors16.default.white("The GitHub CLI (")}${import_picocolors16.default.bold("gh")}${import_picocolors16.default.white(") is not installed.")}
 `);
-        ui.info(`  doraval uses ${import_picocolors14.default.bold("gh")} to fetch and sync journal files with GitHub.
+        ui.info(`  doraval uses ${import_picocolors16.default.bold("gh")} to fetch and sync journal files with GitHub.
 `);
         ui.info(`  Install it:
 `);
-        ui.info(`    macOS:   ${import_picocolors14.default.dim("brew install gh")}`);
-        ui.info(`    Linux:   ${import_picocolors14.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
-        ui.info(`    Windows: ${import_picocolors14.default.dim("winget install --id GitHub.cli")}
+        ui.info(`    macOS:   ${import_picocolors16.default.dim("brew install gh")}`);
+        ui.info(`    Linux:   ${import_picocolors16.default.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
+        ui.info(`    Windows: ${import_picocolors16.default.dim("winget install --id GitHub.cli")}
 `);
-        ui.info(`  Then authenticate: ${import_picocolors14.default.dim("gh auth login")}
+        ui.info(`  Then authenticate: ${import_picocolors16.default.dim("gh auth login")}
 `);
         process.exit(1);
       }
@@ -5964,44 +6451,44 @@ var init_init2 = __esm(() => {
         if (gitOwner) {
           defaultRepo = `${gitOwner}/${gitOwner}.md`;
           if (ghLogin && ghLogin !== gitOwner) {
-            sourceNote = `  ${import_picocolors14.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
+            sourceNote = `  ${import_picocolors16.default.dim("(from git remote; your active gh account is " + ghLogin + ")")}
 `;
           } else {
-            sourceNote = `  ${import_picocolors14.default.dim("(from git remote)")}
+            sourceNote = `  ${import_picocolors16.default.dim("(from git remote)")}
 `;
           }
         } else if (ghLogin) {
           defaultRepo = `${ghLogin}/${ghLogin}.md`;
-          sourceNote = `  ${import_picocolors14.default.dim("(from your active gh account)")}
+          sourceNote = `  ${import_picocolors16.default.dim("(from your active gh account)")}
 `;
         } else {
-          ui.warn(`Not logged in to GitHub. Run ${import_picocolors14.default.dim("gh auth login")} first.
+          ui.warn(`Not logged in to GitHub. Run ${import_picocolors16.default.dim("gh auth login")} first.
 `);
           process.exit(1);
         }
         const existingConfig = await readConfig();
         if (existingConfig?.journal.repo) {
           defaultRepo = existingConfig.journal.repo;
-          sourceNote = `  ${import_picocolors14.default.dim("(from your previous journal setup)")}
+          sourceNote = `  ${import_picocolors16.default.dim("(from your previous journal setup)")}
 `;
         }
-        ui.info(`  Journal repo ${import_picocolors14.default.dim("(owner/name)")}`);
+        ui.info(`  Journal repo ${import_picocolors16.default.dim("(owner/name)")}`);
         if (sourceNote)
           ui.write(sourceNote);
         repo = prompt("  >", defaultRepo);
       }
       let project = args.project || process.env.DORAVAL_PROJECT;
       if (!project) {
-        const defaultProject = basename4(process.cwd());
+        const defaultProject = basename6(process.cwd());
         project = prompt("  Project name", defaultProject);
       }
       project = sanitizeProjectName(project);
       if (!repoExists(repo)) {
-        ui.write(`  ${import_picocolors14.default.red("\u2717")} ${import_picocolors14.default.white("Repository")} ${import_picocolors14.default.bold(repo)} ${import_picocolors14.default.white("not found on GitHub.")}
+        ui.write(`  ${import_picocolors16.default.red("\u2717")} ${import_picocolors16.default.white("Repository")} ${import_picocolors16.default.bold(repo)} ${import_picocolors16.default.white("not found on GitHub.")}
 `);
         ui.info(`  Create it first:
 `);
-        ui.info(`    ${import_picocolors14.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
+        ui.info(`    ${import_picocolors16.default.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}
 `);
         process.exit(1);
       }
@@ -6009,16 +6496,16 @@ var init_init2 = __esm(() => {
       const alreadyRegistered = existing?.journal.projects[project];
       const isRefresh = alreadyRegistered && args.refresh;
       if (alreadyRegistered && !isRefresh) {
-        ui.write(`  ${import_picocolors14.default.yellow("\u26A0")} ${import_picocolors14.default.white("Project")} ${import_picocolors14.default.bold(project)} ${import_picocolors14.default.white("is already registered.")}
+        ui.write(`  ${import_picocolors16.default.yellow("\u26A0")} ${import_picocolors16.default.white("Project")} ${import_picocolors16.default.bold(project)} ${import_picocolors16.default.white("is already registered.")}
 `);
         ui.info(`  Repo:   ${existing.journal.repo}
 `);
-        ui.info(`  To refresh journal files, use ${import_picocolors14.default.dim("dora journal update")} (or ${import_picocolors14.default.dim("dora init --refresh")}).
+        ui.info(`  To refresh journal files, use ${import_picocolors16.default.dim("dora journal update")} (or ${import_picocolors16.default.dim("dora init --refresh")}).
 `);
       }
       const journalsDir = getJournalsDir();
       const remotePath = `projects/${project}.md`;
-      const localPath = join22(journalsDir, `${project}.md`);
+      const localPath = join26(journalsDir, `${project}.md`);
       const effectiveRepo = isRefresh && !args.repo ? existing.journal.repo : repo;
       const config = existing ?? {
         journal: { repo: effectiveRepo, projects: {} }
@@ -6029,9 +6516,9 @@ var init_init2 = __esm(() => {
         local_path: localPath
       };
       ensureDoravalDirs();
-      ui.write(`  ${import_picocolors14.default.dim(import_picocolors14.default.gray("Fetching journal files from"))} ${import_picocolors14.default.gray(effectiveRepo)}${import_picocolors14.default.dim(import_picocolors14.default.gray("..."))}
+      ui.write(`  ${import_picocolors16.default.dim(import_picocolors16.default.gray("Fetching journal files from"))} ${import_picocolors16.default.gray(effectiveRepo)}${import_picocolors16.default.dim(import_picocolors16.default.gray("..."))}
 `);
-      const globalDest = join22(journalsDir, "global.md");
+      const globalDest = join26(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       let wroteGlobal;
       if (!refreshGlobalRes.ok) {
@@ -6048,7 +6535,7 @@ var init_init2 = __esm(() => {
       if (wroteGlobal) {
         ui.success("global.md");
       } else {
-        ui.write(`  ${import_picocolors14.default.dim("\xB7")} global.md ${import_picocolors14.default.dim("(not found \u2014 will be created on first sync)")}`);
+        ui.write(`  ${import_picocolors16.default.dim("\xB7")} global.md ${import_picocolors16.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(globalDest, `# Global Journal
 
 Cross-project principles.
@@ -6070,7 +6557,7 @@ Cross-project principles.
       if (wroteProject) {
         ui.success(remotePath);
       } else {
-        ui.write(`  ${import_picocolors14.default.dim("\xB7")} ${remotePath} ${import_picocolors14.default.dim("(not found \u2014 will be created on first sync)")}`);
+        ui.write(`  ${import_picocolors16.default.dim("\xB7")} ${remotePath} ${import_picocolors16.default.dim("(not found \u2014 will be created on first sync)")}`);
         await Bun.write(localPath, `# ${project} Journal
 
 Project-specific decisions.
@@ -6078,13 +6565,13 @@ Project-specific decisions.
       }
       await writeConfig(config);
       ui.write(`
-  ${import_picocolors14.default.green("\u2713")} ${import_picocolors14.default.white("Journal ready for project")} ${import_picocolors14.default.bold(import_picocolors14.default.white(project))}.
+  ${import_picocolors16.default.green("\u2713")} ${import_picocolors16.default.white("Journal ready for project")} ${import_picocolors16.default.bold(import_picocolors16.default.white(project))}.
 `);
       const existingAgent = (await readConfig())?.agent;
       if (existingAgent?.command) {
-        ui.write(`  ${import_picocolors14.default.bold(import_picocolors14.default.white("Coding agent (already configured)"))}
+        ui.write(`  ${import_picocolors16.default.bold(import_picocolors16.default.white("Coding agent (already configured)"))}
 `);
-        ui.write(`    Current: ${import_picocolors14.default.dim(import_picocolors14.default.gray(existingAgent.command))}  template: ${import_picocolors14.default.dim(import_picocolors14.default.gray(existingAgent.prompt_template || "(default)"))}
+        ui.write(`    Current: ${import_picocolors16.default.dim(import_picocolors16.default.gray(existingAgent.command))}  template: ${import_picocolors16.default.dim(import_picocolors16.default.gray(existingAgent.prompt_template || "(default)"))}
 `);
         const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
         if (!/^y/i.test(String(change))) {
@@ -6094,16 +6581,16 @@ Project-specific decisions.
           if (existingAgent)
             cfg.agent = existingAgent;
           await writeConfig(cfg);
-          ui.write(`  ${import_picocolors14.default.green("\u2713")} ${import_picocolors14.default.white("Try:")} ${import_picocolors14.default.dim(import_picocolors14.default.gray('dora journal add "short decision"'))}
+          ui.write(`  ${import_picocolors16.default.green("\u2713")} ${import_picocolors16.default.white("Try:")} ${import_picocolors16.default.dim(import_picocolors16.default.gray('dora journal add "short decision"'))}
 `);
           process.exit(0);
           return;
         }
         ui.blank();
       } else {
-        ui.write(`  ${import_picocolors14.default.bold(import_picocolors14.default.white("Coding agent for journal add"))}
+        ui.write(`  ${import_picocolors16.default.bold(import_picocolors16.default.white("Coding agent for journal add"))}
 `);
-        ui.info(`  When configured, ${import_picocolors14.default.dim(import_picocolors14.default.gray('dora journal add ".."'))} will use your agent to enrich entries with tags and rationale automatically.
+        ui.info(`  When configured, ${import_picocolors16.default.dim(import_picocolors16.default.gray('dora journal add ".."'))} will use your agent to enrich entries with tags and rationale automatically.
 `);
       }
       const common = [
@@ -6122,7 +6609,7 @@ Project-specific decisions.
         }
       }
       let agentCmd = detected || "claude";
-      ui.write(`  Detected / default agent command: ${import_picocolors14.default.dim(import_picocolors14.default.gray(agentCmd))}`);
+      ui.write(`  Detected / default agent command: ${import_picocolors16.default.dim(import_picocolors16.default.gray(agentCmd))}`);
       agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
       let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}" --output-format json' : '-p "{{prompt}}" --output-format json';
       ui.info(`  Prompt template (use {{prompt}} placeholder):`);
@@ -6134,11 +6621,11 @@ Project-specific decisions.
       };
       await writeConfig(finalConfig);
       ui.write(`
-  ${import_picocolors14.default.green("\u2713")} ${import_picocolors14.default.white("Agent configured.")}
+  ${import_picocolors16.default.green("\u2713")} ${import_picocolors16.default.white("Agent configured.")}
 `);
-      ui.info(`  Re-run ${import_picocolors14.default.dim(import_picocolors14.default.gray("dora init"))} anytime to change it.
+      ui.info(`  Re-run ${import_picocolors16.default.dim(import_picocolors16.default.gray("dora init"))} anytime to change it.
 `);
-      ui.info(`  Next: ${import_picocolors14.default.dim(import_picocolors14.default.gray('dora journal add ".."'))}, ${import_picocolors14.default.dim(import_picocolors14.default.gray("dora journal list"))}, or ${import_picocolors14.default.dim(import_picocolors14.default.gray("dora journal update"))}.
+      ui.info(`  Next: ${import_picocolors16.default.dim(import_picocolors16.default.gray('dora journal add ".."'))}, ${import_picocolors16.default.dim(import_picocolors16.default.gray("dora journal list"))}, or ${import_picocolors16.default.dim(import_picocolors16.default.gray("dora journal update"))}.
 `);
       process.exit(0);
     }
@@ -6325,8 +6812,8 @@ async function readMarker() {
 async function writeMarker(marker) {
   try {
     const { mkdir, writeFile } = await import("fs/promises");
-    const { dirname: dirname5 } = await import("path");
-    await mkdir(dirname5(MARKER_PATH), { recursive: true });
+    const { dirname: dirname7 } = await import("path");
+    await mkdir(dirname7(MARKER_PATH), { recursive: true });
     await writeFile(MARKER_PATH, JSON.stringify(marker, null, 2));
   } catch {}
 }
@@ -6478,16 +6965,16 @@ var exports_providers = {};
 __export(exports_providers, {
   default: () => providers_default
 });
-var import_picocolors15, providers_default;
+var import_picocolors17, providers_default;
 var init_providers2 = __esm(() => {
   init_dist();
   init_out();
   init_spec();
-  import_picocolors15 = __toESM(require_picocolors(), 1);
+  import_picocolors17 = __toESM(require_picocolors(), 1);
   providers_default = defineCommand({
     meta: {
       name: "providers",
-      description: "List supported providers and their packaging details"
+      description: "List supported providers and their packaging details (including keyword discovery)"
     },
     args: {
       json: {
@@ -6508,14 +6995,130 @@ var init_providers2 = __esm(() => {
       for (const id of supportedProviders) {
         const spec = getProviderSpec(id);
         ui.write(`
-  ${import_picocolors15.default.bold(id)} \u2014 ${spec.name}`);
+  ${import_picocolors17.default.bold(id)} \u2014 ${spec.name}`);
         ui.info(`  Manifest: ${spec.manifestPath}`);
         ui.info(`  Marketplace: ${spec.marketplacePath}`);
         ui.info(`  MCP: ${spec.mcpFilename}`);
-        ui.info(`  Example: doraval validate . --for ${id}`);
+        ui.info(`  Keywords in plugin.json: supported \u2014 If users mention any of these keywords, your plugin will get triggered`);
+        ui.info(`  Example: doraval validate . --for ${id}:plugin`);
       }
       ui.write(`
   Use --json for machine-readable output.`);
+      ui.write(`  Tip: Add a "keywords" array to your plugin manifest for better agent discovery.`);
+      process.exit(0);
+    }
+  });
+});
+
+// src/cli/commands/completion.ts
+var exports_completion = {};
+__export(exports_completion, {
+  default: () => completion_default
+});
+var commands, subCommands, completion_default;
+var init_completion = __esm(() => {
+  init_dist();
+  commands = [
+    "validate",
+    "init",
+    "bump",
+    "update",
+    "providers",
+    "skill",
+    "journal",
+    "claude",
+    "codex",
+    "cursor",
+    "copilot"
+  ];
+  subCommands = {
+    skill: ["validate", "drift", "judge"],
+    journal: ["init", "list", "update", "add", "sync"],
+    claude: ["new", "bump"],
+    codex: ["new", "bump"],
+    cursor: ["new", "bump"],
+    copilot: ["new", "bump"]
+  };
+  completion_default = defineCommand({
+    meta: {
+      name: "completion",
+      description: "Generate shell completion scripts (bash, zsh, fish)"
+    },
+    args: {
+      shell: {
+        type: "positional",
+        description: "Shell to generate completion for (bash | zsh | fish)",
+        required: true
+      }
+    },
+    run({ args }) {
+      const shell = String(args.shell).toLowerCase();
+      if (shell === "bash") {
+        console.log(`# doraval bash completion
+_doraval_completions() {
+  local cur prev
+  COMPREPLY=()
+  cur="\${COMP_WORDS[COMP_CWORD]}"
+  prev="\${COMP_WORDS[COMP_CWORD-1]}"
+
+  if [ $COMP_CWORD -eq 1 ]; then
+    COMPREPLY=( $(compgen -W "${commands.join(" ")}" -- "$cur") )
+  elif [ $COMP_CWORD -eq 2 ]; then
+    case "$prev" in
+      skill) COMPREPLY=( $(compgen -W "${subCommands.skill.join(" ")}" -- "$cur") ) ;;
+      journal) COMPREPLY=( $(compgen -W "${subCommands.journal.join(" ")}" -- "$cur") ) ;;
+      claude|codex|cursor|copilot) COMPREPLY=( $(compgen -W "${subCommands.claude.join(" ")}" -- "$cur") ) ;;
+    esac
+  fi
+}
+complete -F _doraval_completions doraval
+`);
+      } else if (shell === "zsh") {
+        console.log(`# doraval zsh completion
+#compdef doraval
+
+_doraval() {
+  local -a commands sub
+  commands=(validate init bump update providers skill journal claude codex cursor copilot)
+  _arguments -C \\
+    '1: :->cmd' \\
+    '*::arg:->args'
+
+  case $state in
+    cmd)
+      _describe 'command' commands
+      ;;
+    args)
+      case $words[1] in
+        skill)
+          _describe 'subcommand' (validate drift judge)
+          ;;
+        journal)
+          _describe 'subcommand' (init list update add sync)
+          ;;
+        claude|codex|cursor|copilot)
+          _describe 'subcommand' (new bump)
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_doraval "$@"
+`);
+      } else if (shell === "fish") {
+        console.log(`# doraval fish completion
+complete -c doraval -f
+complete -c doraval -n '__fish_use_subcommand' -a 'validate init bump update providers skill journal claude codex cursor copilot'
+
+complete -c doraval -n '__fish_seen_subcommand_from skill' -a 'validate drift judge'
+complete -c doraval -n '__fish_seen_subcommand_from journal' -a 'init list update add sync'
+complete -c doraval -n '__fish_seen_subcommand_from claude codex cursor copilot' -a 'new bump'
+`);
+      } else {
+        console.error(`Unsupported shell: ${shell}. Supported: bash, zsh, fish`);
+        process.exit(1);
+      }
       process.exit(0);
     }
   });
@@ -6524,7 +7127,7 @@ var init_providers2 = __esm(() => {
 // src/cli/index.ts
 init_dist();
 var import__package = __toESM(require_package(), 1);
-var import_picocolors16 = __toESM(require_picocolors(), 1);
+var import_picocolors18 = __toESM(require_picocolors(), 1);
 var skill = defineCommand({
   meta: {
     name: "skill",
@@ -6581,6 +7184,32 @@ var codex = defineCommand({
     showUsage(codex);
   }
 });
+var cursor = defineCommand({
+  meta: {
+    name: "cursor",
+    description: "Cursor-specific commands (packaging, scaffolding, distribution)"
+  },
+  subCommands: {
+    new: () => Promise.resolve().then(() => (init_new3(), exports_new3)).then((m) => m.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
+  },
+  run() {
+    showUsage(cursor);
+  }
+});
+var copilot = defineCommand({
+  meta: {
+    name: "copilot",
+    description: "Copilot CLI-specific commands (packaging, scaffolding, distribution)"
+  },
+  subCommands: {
+    new: () => Promise.resolve().then(() => (init_new4(), exports_new4)).then((m) => m.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
+  },
+  run() {
+    showUsage(copilot);
+  }
+});
 var doraemonArt = `
 \u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2880\u28E0\u28E4\u28F4\u28F6\u28F6\u28F6\u28F6\u28F6\u2836\u28F6\u28E4\u28E4\u28C0\u2800\u2800\u2800\u2800\u2800\u2800 
 \u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2880\u28E4\u28FE\u28FF\u28FF\u28FF\u2801\u2800\u2880\u2808\u28BF\u2880\u28C0\u2800\u2839\u28FF\u28FF\u28FF\u28E6\u28C4\u2800\u2800\u2800 
@@ -6605,14 +7234,17 @@ var main = defineCommand({
     bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default),
     update: () => Promise.resolve().then(() => (init_update3(), exports_update2)).then((m) => m.default),
     providers: () => Promise.resolve().then(() => (init_providers2(), exports_providers)).then((m) => m.default),
+    completion: () => Promise.resolve().then(() => (init_completion(), exports_completion)).then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     claude: () => Promise.resolve(claude),
-    codex: () => Promise.resolve(codex)
+    codex: () => Promise.resolve(codex),
+    cursor: () => Promise.resolve(cursor),
+    copilot: () => Promise.resolve(copilot)
   },
   run() {
     console.log(`
-` + import_picocolors16.default.blue(doraemonArt) + `
+` + import_picocolors18.default.blue(doraemonArt) + `
 `);
     showUsage(main);
   }

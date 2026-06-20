@@ -37,10 +37,18 @@ if (!match) {
 const version = match[1];
 const tag = `v${version}`;
 
+// Show recent commits that will feed into release notes
+const recent = spawnSync("git", ["log", "--pretty=format:* %s", "-10"], { encoding: "utf8" });
+if (recent.stdout.trim()) {
+  console.log("\nRecent commits (these will be included in the GitHub release notes):");
+  console.log(recent.stdout);
+}
+
 run("git", ["add", "package.json", "jsr.json", "apps/website/package.json"]);
-run("git", ["commit", "-m", `chore: bump version to ${version}`]);
+run("git", ["commit", "-m", `chore(release): ${version}`]);
 run("git", ["tag", tag]);
 run("git", ["push"]);
 run("git", ["push", "origin", tag]);
 
 console.log(`\nReleased ${tag} — CI pipeline triggered.`);
+console.log("A GitHub Release will be created with the list of recent changes as notes + compiled binaries attached.");

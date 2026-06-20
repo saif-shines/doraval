@@ -116,8 +116,14 @@ export const cursorPluginValidator: Validator = {
     if (manifest.license) passes.push(`license: "${manifest.license}"`);
     if (manifest.homepage) passes.push("homepage present");
     if (manifest.repository) passes.push("repository present");
-    if (Array.isArray(manifest.keywords)) {
-      passes.push(`keywords: [${manifest.keywords.join(", ")}]`);
+    if (manifest.keywords !== undefined) {
+      if (Array.isArray(manifest.keywords)) {
+        passes.push(`keywords: [${manifest.keywords.join(", ")}] — If users mention any of these keywords, your plugin will get triggered in Cursor`);
+      } else {
+        errors.push("keywords must be an array of strings");
+      }
+    } else {
+      warnings.push('Missing "keywords" (recommended — if users mention any of these, your plugin will get triggered in Cursor)');
     }
 
     // Check on-disk skills/

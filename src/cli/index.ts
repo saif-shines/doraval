@@ -125,6 +125,7 @@ const main = defineCommand({
     bump: () => import("./commands/bump.js").then((m) => m.default),
     update: () => import("./commands/update.js").then((m) => m.default),
     providers: () => import("./commands/providers.js").then((m) => m.default),
+    completion: () => import("./commands/completion.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     claude: () => Promise.resolve(claude),

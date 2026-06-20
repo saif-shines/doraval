@@ -6,7 +6,7 @@ import { supportedProviders, getProviderSpec } from "../../providers/spec.js";
 export default defineCommand({
   meta: {
     name: "providers",
-    description: "List supported providers and their packaging details",
+    description: "List supported providers and their packaging details (including keyword discovery)",
   },
   args: {
     json: {
@@ -36,10 +36,12 @@ export default defineCommand({
       ui.info(`  Manifest: ${spec.manifestPath}`);
       ui.info(`  Marketplace: ${spec.marketplacePath}`);
       ui.info(`  MCP: ${spec.mcpFilename}`);
-      ui.info(`  Example: doraval validate . --for ${id}`);
+      ui.info(`  Keywords in plugin.json: supported — If users mention any of these keywords, your plugin will get triggered`);
+      ui.info(`  Example: doraval validate . --for ${id}:plugin`);
     }
 
     ui.write(`\n  Use --json for machine-readable output.`);
+    ui.write(`  Tip: Add a "keywords" array to your plugin manifest for better agent discovery.`);
     process.exit(0);
   },
 });

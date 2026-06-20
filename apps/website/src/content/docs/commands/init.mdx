@@ -1,0 +1,63 @@
+---
+title: init
+description: One-time setup for doraval, your journal, and the coding agent.
+sidebar:
+  order: 3
+---
+
+Set up doraval together with the Agent Journal and configure which coding agent doraval should use when enriching journal entries.
+
+## Usage
+
+```bash
+doraval init [options]
+```
+
+## What it does
+
+`init` performs several one-time steps:
+
+- Ensures the GitHub CLI (`gh`) is available and authenticated.
+- Prompts for (or accepts via flags/env) your journal repository.
+- Prompts for a project name (defaults to the current directory).
+- Configures a coding agent command and prompt template so that `doraval journal add` can automatically enrich entries with tags and rationale.
+- Creates local cache directories under `~/.doraval/`.
+- Fetches the relevant journal files from GitHub.
+
+## Options
+
+| Flag           | Description                                                                 |
+|----------------|-----------------------------------------------------------------------------|
+| `-r, --repo`   | Journal repository (owner/name). Smart default from git remote or gh account. Env: `DORAVAL_JOURNAL_REPO` |
+| `-p, --project`| Project name (defaults to basename of current directory)                    |
+| `--refresh`    | Re-fetch journal files even if the project is already registered            |
+
+## Non-interactive usage
+
+```bash
+doraval journal init --repo yourname/yourname.md --project my-project
+```
+
+Or with environment variables:
+
+```bash
+DORAVAL_JOURNAL_REPO=yourname/yourname.md \
+DORAVAL_PROJECT=my-project \
+doraval init
+```
+
+## After init
+
+Use the journal commands to work with your decisions:
+
+- `doraval journal list`
+- `doraval journal add "..."` (can use the configured agent to help)
+- `doraval journal update`
+- `doraval journal sync`
+
+See the [Agent Journal](/concepts/agent-journal/) concept page for the broader picture.
+
+## See also
+
+- [journal init](/commands/journal-init/) — lower-level journal-only setup
+- [Agent Journal](/concepts/agent-journal/)

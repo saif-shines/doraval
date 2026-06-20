@@ -79,6 +79,7 @@ export function scaffold(decision: Decision, ctx: any, migrateContent?: string) 
       name: pluginName,
       description: "Scaffolded by doraval claude new",
       version: "0.1.0",
+      keywords: ["example-keyword", "another-keyword"],
     };
     mkdirSync(join(targetDir, claudeManifestDir), { recursive: true });
     writeFileSync(join(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
@@ -192,6 +193,9 @@ export default defineCommand({
     }
     ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
     ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+    if (decision.path === "plugin") {
+      ui.info(`  Keywords: keywords array added for discovery — run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
+    }
     if (decision.path === "plugin" && decision.migrateExisting) {
       ui.info("  (Existing content migrated where confirmed.)");
     }
