@@ -10,6 +10,13 @@ export interface ProjectMapping {
   local_path: string;
 }
 
+export interface EvalConfig {
+  model: string;
+  api_key?: string;
+  max_tool_calls: number;
+  save_history: boolean;
+}
+
 export interface JournalConfig {
   journal: {
     repo: string;
@@ -19,6 +26,7 @@ export interface JournalConfig {
     command: string;
     prompt_template?: string;
   };
+  eval?: Partial<EvalConfig>;
 }
 
 // ── Paths ──────────────────────────────────────────────────────────
@@ -43,11 +51,25 @@ export function getPendingProjectDir(project: string): string {
   return join(getPendingDir(), project);
 }
 
+export function getEvalsDir(): string {
+  return join(getDoravalDir(), "evals");
+}
+
+export function getEvalConfig(config: JournalConfig | null): EvalConfig {
+  const defaults: EvalConfig = {
+    model: "",
+    api_key: undefined,
+    max_tool_calls: 200,
+    save_history: true,
+  };
+  return { ...defaults, ...(config?.eval ?? {}) };
+}
+
 // ── Ensure dirs ────────────────────────────────────────────────────
 
 export function ensureDoravalDirs(): void {
   const base = getDoravalDir();
-  for (const dir of [base, getJournalsDir(), getPendingDir()]) {
+  for (const dir of [base, getJournalsDir(), getPendingDir(), getEvalsDir()]) {
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
