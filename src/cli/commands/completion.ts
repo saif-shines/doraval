@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 
 const commands = [
   "validate", "init", "bump", "update", "providers",
-  "skill", "journal",
+  "skill", "journal", "ui",
   "claude", "codex", "cursor", "copilot"
 ];
 
@@ -58,7 +58,7 @@ complete -F _doraval_completions doraval
 
 _doraval() {
   local -a commands sub
-  commands=(validate init bump update providers skill journal claude codex cursor copilot)
+  commands=(validate init bump update providers skill journal ui claude codex cursor copilot)
   _arguments -C \\
     '1: :->cmd' \\
     '*::arg:->args'
@@ -91,7 +91,7 @@ _doraval "$@"
     } else if (shell === "fish") {
       console.log(`# doraval fish completion
 complete -c doraval -f
-complete -c doraval -n '__fish_use_subcommand' -a 'validate init bump update providers skill journal claude codex cursor copilot'
+complete -c doraval -n '__fish_use_subcommand' -a 'validate init bump update providers skill journal ui claude codex cursor copilot'
 
 complete -c doraval -n '__fish_seen_subcommand_from skill' -a 'validate drift judge'
 complete -c doraval -n '__fish_seen_subcommand_from journal' -a 'init list context hook update add sync'

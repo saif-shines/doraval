@@ -38,7 +38,7 @@ export function validateEntry(entry: Partial<JournalEntry>): ValidationResult {
     warnings.push("tags not supplied or empty (will use [] when staging via journal add; consider canonical tags)");
   } else {
     const invalidTags = entry.tags.filter(
-      (s) => !CANONICAL_TAGS.includes(s as any)
+      (s) => !CANONICAL_TAGS.includes(s as (typeof CANONICAL_TAGS)[number])
     );
     if (invalidTags.length > 0) {
       warnings.push(
@@ -57,7 +57,7 @@ export function validateEntry(entry: Partial<JournalEntry>): ValidationResult {
     errors.push("date is required");
   }
 
-  if (!entry.status || !VALID_STATUSES.includes(entry.status as any)) {
+  if (!entry.status || !VALID_STATUSES.includes(entry.status as (typeof VALID_STATUSES)[number])) {
     errors.push(`status must be one of: ${VALID_STATUSES.join(", ")}`);
   }
 

@@ -19,7 +19,7 @@ export default defineCommand({
     if (args.json) {
       console.log(JSON.stringify(
         supportedProviders.map((id) => {
-          const spec = getProviderSpec(id as any);
+          const spec = getProviderSpec(id);
           return { ...spec, id };
         }),
         null,
@@ -31,7 +31,7 @@ export default defineCommand({
     ui.heading("doraval providers — Supported platforms");
 
     for (const id of supportedProviders) {
-      const spec = getProviderSpec(id as any);
+      const spec = getProviderSpec(id);
       ui.write(`\n  ${pc.bold(id)} — ${spec.name}`);
       ui.info(`  Manifest: ${spec.manifestPath}`);
       ui.info(`  Marketplace: ${spec.marketplacePath}`);

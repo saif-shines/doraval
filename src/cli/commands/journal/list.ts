@@ -80,19 +80,19 @@ export default defineCommand({
 
     // Load any locally staged (pending) entries so that "add" then immediate "list"
     // shows the fresh capture (including agent-enriched title/author) without requiring sync first.
-    const staged: Array<JournalEntry & { _staged?: boolean }> = [];
+    let staged: Array<JournalEntry & { _staged: true }> = [];
     try {
       const pdir = getPendingProjectDir(project);
       if (existsSync(pdir)) {
         const files = readdirSync(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
-        for (const f of files) {
-          const txt = await Bun.file(join(pdir, f)).text();
-          const parsed = parseJournalEntries(txt);
-          for (const e of parsed) {
-            (e as any)._staged = true;
-            staged.push(e);
-          }
-        }
+        const stagedResults = await Promise.all(
+          files.map(async (f) => {
+            const txt = await Bun.file(join(pdir, f)).text();
+            const parsed = parseJournalEntries(txt);
+            return parsed.map((e) => ({ ...e, _staged: true as const }));
+          })
+        );
+        staged = stagedResults.flat();
       }
     } catch {
       // best effort; don't block list on pending problems

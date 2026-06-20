@@ -39,7 +39,7 @@ export function resolveFor(
       ...allValidators.map((v) => v.provider),
       ...supportedProviders,
     ])];
-    if (!knownProviders.includes(forFlag as any)) {
+    if (!knownProviders.includes(forFlag as (typeof knownProviders)[number])) {
       return { matched: [], error: `Unknown provider: "${forFlag}"\n\nAvailable providers: ${knownProviders.join(", ")}` };
     }
     // Provider is known (e.g. codex) but has no validators yet

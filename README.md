@@ -168,7 +168,7 @@ Exits with code `1` when errors are found. Pipe `--format json` output to `jq` o
 
 ## Providers
 
-Claude Code validators built in. Cursor, Codex, and Windsurf coming next.
+Claude Code, Cursor, Codex, and Copilot CLI validators and scaffolding built in. OpenCode support is experimental.
 
 ## Links
 
