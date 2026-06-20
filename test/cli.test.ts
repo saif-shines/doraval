@@ -179,7 +179,7 @@ describe("doraval CLI", () => {
   });
 
   describe("skill judge", () => {
-    test("stub exits 2 with not-implemented message", () => {
+    test("delegates to eval (exits 2 when no model configured)", () => {
       const skillDir = fixturePath("minimal-good");
       const { exitCode, stdout, stderr } = runDoraval([
         "skill",
@@ -188,7 +188,8 @@ describe("doraval CLI", () => {
       ]);
 
       expect(exitCode).toBe(2);
-      expect(stdout + stderr).toContain("Not yet implemented");
+      // Now delegates to doraval eval; will fail on missing eval config rather than stub
+      expect((stdout + stderr).toLowerCase()).toContain("eval");
     });
   });
 

@@ -2,6 +2,7 @@
 import { defineCommand, runMain, showUsage } from "citty";
 import pkg from "../../package.json" with { type: "json" };
 import pc from "picocolors";
+import { ui as uiHelper } from "./out.js";
 
 const skill = defineCommand({
   meta: {
@@ -46,6 +47,34 @@ const journal = defineCommand({
     const cliArgs = process.argv.slice(2);
     if (cliArgs[0] === "journal" && cliArgs.length > 1) return;
     showUsage(journal);
+  },
+});
+
+const evalCmd = defineCommand({
+  meta: {
+    name: "eval",
+    description: "Evaluate a coding agent session against skill instructions",
+  },
+  subCommands: {
+    history: () => import("./commands/eval-history.js").then((m) => m.default),
+  },
+  async run(ctx) {
+    const evalMain = await import("./commands/eval.js").then((m) => m.default);
+    return evalMain.run?.(ctx);
+  },
+});
+
+const config = defineCommand({
+  meta: {
+    name: "config",
+    description: "Get or set doraval configuration",
+  },
+  subCommands: {
+    set: () => import("./commands/config.js").then((m) => m.default),
+    get: () => import("./commands/config.js").then((m) => m.default),
+  },
+  run() {
+    uiHelper.info("Usage: doraval config set <key> <value>  |  doraval config get [key]");
   },
 });
 
@@ -182,6 +211,8 @@ const main = defineCommand({
     completion: () => import("./commands/completion.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
+    eval: () => Promise.resolve(evalCmd),
+    config: () => Promise.resolve(config),
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),
     cursor: () => Promise.resolve(cursor),

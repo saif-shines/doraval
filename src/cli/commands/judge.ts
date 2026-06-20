@@ -4,17 +4,13 @@ import { ui } from "../out.js";
 export default defineCommand({
   meta: {
     name: "judge",
-    description: "AI-driven qualitative assessment of a skill",
+    description: "Evaluate the latest session for a skill (alias for eval --skill)",
   },
   args: {
     path: {
       type: "positional",
-      description: "Path to skill directory",
+      description: "Path to skill directory or skill name",
       required: true,
-    },
-    for: {
-      type: "string",
-      description: 'Target a provider ("claude") or specific validator ("claude:skill")',
     },
     format: {
       type: "string",
@@ -22,20 +18,29 @@ export default defineCommand({
       description: "Output format (json or table)",
       default: "table",
     },
+    ci: {
+      type: "boolean",
+      description: "Exit non-zero if FAIL",
+      default: false,
+    },
     verbose: {
       type: "boolean",
       alias: "v",
-      description: "Show detailed diagnostics",
+      description: "Show full checklist",
       default: false,
     },
   },
 
   async run({ args }) {
-    ui.heading("doraval skill judge — AI-driven assessment");
-    ui.info(`  Path:  ${args.path}\n`);
-    ui.warn(
-      "Not yet implemented. This command will send the skill to an LLM for qualitative review (clarity, completeness, effectiveness).\n"
-    );
-    process.exit(2);
+    // Delegate to eval with --skill
+    const evalCmd = await import("./eval.js").then((m) => m.default);
+    // Reconstruct argv-like context for the eval command
+    const newArgs = {
+      ...args,
+      skill: args.path,
+      session: undefined,
+    };
+    // @ts-expect-error - citty context shape
+    return evalCmd.run?.({ args: newArgs });
   },
 });
