@@ -406,6 +406,21 @@ export default {
           return Response.json({ evals });
         }
 
+        if (url.pathname === "/api/open-dir" && req.method === "POST") {
+          const dir = getDoravalDir();
+          try {
+            const opener = process.platform === "darwin"
+              ? "open"
+              : process.platform === "win32"
+                ? "explorer"
+                : "xdg-open";
+            Bun.spawn([opener, dir], { stdout: "ignore", stderr: "ignore" });
+          } catch {
+            // best effort — opener may not be available
+          }
+          return Response.json({ ok: true, path: dir });
+        }
+
         // Fallback 404 for API
         if (url.pathname.startsWith("/api/")) {
           return Response.json({ error: "Not found" }, { status: 404 });
