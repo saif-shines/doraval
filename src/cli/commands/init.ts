@@ -235,6 +235,37 @@ export default defineCommand({
 
     ui.write(`\n  ${pc.green("✓")} ${pc.white("Agent configured.")}\n`);
     ui.info(`  Re-run ${pc.dim(pc.gray("dora init"))} anytime to change it.\n`);
+
+    // ── Eval setup ──────────────────────────────────────────────────────────────
+    ui.write(`\n  ${pc.bold("Step 3: Eval configuration (doraval eval)")}\n`);
+
+    const apiKeyFromEnv = !!process.env.ANTHROPIC_API_KEY;
+    if (apiKeyFromEnv) {
+      ui.success("ANTHROPIC_API_KEY found in environment — will be used for eval.");
+    } else {
+      ui.warn("ANTHROPIC_API_KEY not set. Set it before running doraval eval.");
+    }
+
+    const evalModelAnswer = await prompt(
+      `  Which model should doraval eval use? ${pc.dim("(e.g. claude-sonnet-4-6, press Enter to skip)")} `,
+      ""
+    );
+
+    if (evalModelAnswer.trim()) {
+      const updatedConfig2 = await readConfig();
+      if (updatedConfig2) {
+        (updatedConfig2 as Record<string, unknown>).eval = {
+          model: evalModelAnswer.trim(),
+          max_tool_calls: 200,
+          save_history: true,
+        };
+        await writeConfig(updatedConfig2 as Parameters<typeof writeConfig>[0]);
+        ui.success(`eval.model set to ${evalModelAnswer.trim()}`);
+      }
+    } else {
+      ui.dim("  Skipped. Run: doraval config set eval.model <model-name>");
+    }
+
     ui.info(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))}, ${pc.dim(pc.gray("dora journal list"))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);
 
     process.exit(0);
