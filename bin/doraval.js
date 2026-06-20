@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.40",
+    version: "0.2.42",
     author: "Saif",
     repository: {
       type: "git",
@@ -4407,6 +4407,7 @@ async function loadAllEntries(project) {
         parsed.forEach((e) => {
           e._staged = true;
           e._source = "staged";
+          e._filename = f;
           staged.push(e);
         });
       }
@@ -4563,6 +4564,25 @@ var init_ui = __esm(() => {
             const { committed, staged } = await loadAllEntries(project || null);
             return Response.json({ ok: true, committed, staged });
           }
+          if (url2.pathname === "/api/delete-staged" && req.method === "POST") {
+            if (!project) {
+              return Response.json({ error: "No project" }, { status: 400 });
+            }
+            const body = await req.json().catch(() => ({}));
+            const filename = body.filename;
+            if (!filename) {
+              return Response.json({ error: "filename required" }, { status: 400 });
+            }
+            const pdir = getPendingProjectDir(project);
+            const filePath = join18(pdir, filename);
+            if (existsSync19(filePath)) {
+              try {
+                await Bun.file(filePath).unlink();
+              } catch {}
+              return Response.json({ ok: true });
+            }
+            return Response.json({ error: "not found" }, { status: 404 });
+          }
           if (url2.pathname.startsWith("/api/")) {
             return Response.json({ error: "Not found" }, { status: 404 });
           }
@@ -4571,7 +4591,7 @@ var init_ui = __esm(() => {
       });
       const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${server.port}`;
       const msg = `
-  ${import_picocolors16.default.blue("\u25C9")}  doraval local dashboard
+  ${import_picocolors16.default.blue("\u25C9")}  dora local dashboard
   ${import_picocolors16.default.dim("Project:")} ${project ? import_picocolors16.default.white(project) : import_picocolors16.default.yellow("none (run dora init)")}
   ${import_picocolors16.default.dim("URL:")}     ${import_picocolors16.default.underline(import_picocolors16.default.cyan(url))}
 

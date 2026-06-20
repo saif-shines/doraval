@@ -63,6 +63,7 @@ export default defineConfig({
         {
           label: "CLI reference",
           items: [
+            "commands/ui",
             "commands/completion",
             { label: "update", link: "/commands/update/" },
           ],

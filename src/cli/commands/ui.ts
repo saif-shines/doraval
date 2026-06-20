@@ -91,6 +91,7 @@ async function loadAllEntries(project: string | null) {
         parsed.forEach((e) => {
           (e as any)._staged = true;
           (e as any)._source = "staged";
+          (e as any)._filename = f;
           staged.push(e);
         });
       }
@@ -275,6 +276,24 @@ export default {
           return Response.json({ ok: true, committed, staged });
         }
 
+        if (url.pathname === "/api/delete-staged" && req.method === "POST") {
+          if (!project) {
+            return Response.json({ error: "No project" }, { status: 400 });
+          }
+          const body = await req.json().catch(() => ({}));
+          const filename = body.filename;
+          if (!filename) {
+            return Response.json({ error: "filename required" }, { status: 400 });
+          }
+          const pdir = getPendingProjectDir(project);
+          const filePath = join(pdir, filename);
+          if (existsSync(filePath)) {
+            try { await Bun.file(filePath).unlink(); } catch {}
+            return Response.json({ ok: true });
+          }
+          return Response.json({ error: "not found" }, { status: 404 });
+        }
+
         // Fallback 404 for API
         if (url.pathname.startsWith("/api/")) {
           return Response.json({ error: "Not found" }, { status: 404 });
@@ -288,7 +307,7 @@ export default {
 
     // All human messages to stderr (preserve stdout hygiene for any future piping)
     const msg = `
-  ${pc.blue("◉")}  doraval local dashboard
+  ${pc.blue("◉")}  dora local dashboard
   ${pc.dim("Project:")} ${project ? pc.white(project) : pc.yellow("none (run dora init)")}
   ${pc.dim("URL:")}     ${pc.underline(pc.cyan(url))}
 

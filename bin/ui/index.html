@@ -5,119 +5,337 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>dora • local dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
   <style>
     :root { color-scheme: dark; }
-    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .section { @apply bg-zinc-900 border border-zinc-800 rounded-2xl p-5; }
-    .entry { @apply border-l-4 pl-3 py-1.5; }
+    
+    body { 
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    }
+    
+    .mono, pre, code, .font-mono { 
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+    }
+
+    .section { 
+      @apply bg-zinc-900/70 border border-zinc-800/60 rounded-3xl p-6 backdrop-blur-sm; 
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .section:hover {
+      border-color: #27272a;
+    }
+
+    .entry { 
+      @apply border-l-[3px] pl-4 py-2.5 transition-all duration-150; 
+    }
+    .entry:hover {
+      transform: translateX(1px);
+    }
+
     .pb-strong { border-color: #f87171; }
     .pb-friction { border-color: #facc15; }
     .pb-nudge { border-color: #4ade80; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
     .push { font-variant-numeric: tabular-nums; }
-    pre.context { white-space: pre-wrap; font-size: 13px; line-height: 1.45; }
-    .staged { background: #27251f; }
+
+    pre.context { 
+      white-space: pre-wrap; 
+      font-size: 13px; 
+      line-height: 1.5; 
+    }
+
+    .staged { 
+      background: #27251f; 
+      border-color: #854d0e !important;
+    }
+
+    /* Emil-inspired polish */
+    input, textarea, button {
+      transition: all 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #52525b;
+      box-shadow: 0 0 0 3px rgba(63, 66, 71, 0.2);
+    }
+
+    .btn-primary {
+      transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), 
+                  background-color 150ms ease;
+    }
+    .btn-primary:active {
+      transform: scale(0.975);
+    }
+
+    .card-hover {
+      transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), 
+                  box-shadow 180ms ease,
+                  border-color 150ms ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    .modal {
+      animation: modalEnter 180ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+    }
+
+    @keyframes modalEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.96) translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .toast {
+      animation: toastEnter 160ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .subtle-scale {
+      transition: transform 100ms ease;
+    }
+    .subtle-scale:active {
+      transform: scale(0.97);
+    }
+
+    /* Playful but restrained accent */
+    .accent {
+      color: #60a5fa;
+    }
   </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-  <div class="max-w-6xl mx-auto p-6">
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <div class="text-2xl">🐱</div>
+  <div class="max-w-5xl mx-auto p-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center gap-4">
+        <div class="flex items-center justify-center w-9 h-9 rounded-2xl bg-zinc-900 border border-zinc-800 text-xl">
+          🌀
+        </div>
         <div>
-          <div class="font-semibold tracking-tight text-xl">doraval</div>
-          <div class="text-xs text-zinc-500 -mt-0.5">local dashboard</div>
+          <div class="font-semibold tracking-tighter text-2xl">dora</div>
+          <div class="text-[10px] text-zinc-500 -mt-1 tracking-[1px] font-mono">LOCAL DASHBOARD</div>
         </div>
       </div>
-      <div class="flex items-center gap-3 text-sm">
-        <div id="project-badge" class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs"></div>
-        <button onclick="refreshAll()" class="px-3 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">Refresh</button>
-        <button onclick="window.open('https://github.com/saif-shines/doraval','_blank')" class="px-3 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs">GitHub</button>
+      
+      <div class="flex items-center gap-2 text-sm">
+        <div id="project-badge" class="px-3.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-medium"></div>
+        
+        <button onclick="refreshAll()" 
+                class="px-4 py-1.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium active:scale-[0.97] transition flex items-center gap-1.5">
+          <span>Refresh</span>
+        </button>
+        
+        <button onclick="window.open('https://github.com/saif-shines/doraval','_blank')" 
+                class="px-4 py-1.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium active:scale-[0.97] transition">
+          GitHub
+        </button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
       <!-- Capture -->
       <div class="lg:col-span-2 section">
-        <div class="uppercase text-xs tracking-[1px] text-zinc-500 mb-2">Capture decision</div>
-        <div class="space-y-3">
-          <input id="title" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700" placeholder="Title (e.g. Prefer pure functions for new code)">
-          
+        <div class="flex items-baseline justify-between mb-4">
           <div>
-            <div class="flex justify-between text-xs mb-1.5 text-zinc-400">
-              <div>Pushback</div>
-              <div id="pb-value" class="push font-medium">4</div>
+            <div class="text-sm font-semibold tracking-tight">Capture decision</div>
+            <div class="text-[10px] text-zinc-500 mt-0.5">Add to your journal</div>
+          </div>
+          <button onclick="clearForm()" 
+                  class="text-[10px] text-zinc-500 hover:text-zinc-300 px-2 py-0.5 rounded-lg hover:bg-zinc-950 transition">clear</button>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <input id="title" 
+                   class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-2xl px-4 py-3 text-[15px] placeholder:text-zinc-600"
+                   placeholder="What did you decide?">
+          </div>
+
+          <!-- Playful pushback control -->
+          <div>
+            <div class="flex items-center justify-between text-xs mb-2 px-0.5">
+              <div class="text-zinc-400">How strongly do you feel?</div>
+              <div id="pb-value" class="push font-semibold tabular-nums text-base">4</div>
             </div>
-            <input id="pushback" type="range" min="1" max="10" step="1" value="4" class="w-full accent-zinc-400">
-            <div class="flex justify-between text-[10px] text-zinc-500 mt-0.5">
-              <div>Nudge</div><div>Friction</div><div>Strong</div>
+            
+            <div class="relative">
+              <input id="pushback" type="range" min="1" max="10" step="1" value="4" 
+                     class="w-full accent-blue-400 cursor-pointer">
+              <div class="flex justify-between text-[10px] mt-1.5 px-0.5 text-zinc-500">
+                <div class="text-emerald-400/90">gentle nudge</div>
+                <div class="text-yellow-400/90">real friction</div>
+                <div class="text-red-400/90">non-negotiable</div>
+              </div>
             </div>
           </div>
 
-          <input id="tags" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700" placeholder="tags (comma separated) e.g. architecture,cli">
+          <input id="tags" 
+                 class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-2xl px-4 py-2.5 text-sm placeholder:text-zinc-600"
+                 placeholder="tags: architecture, naming, cli">
 
-          <textarea id="rationale" rows="3" class="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-2 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700" placeholder="Why does this matter? (optional but recommended)"></textarea>
+          <div>
+            <textarea id="rationale" rows="2" 
+                      class="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 rounded-2xl px-4 py-3 text-sm placeholder:text-zinc-600 resize-y"
+                      placeholder="Why does this matter? (helps future you and agents)"></textarea>
+          </div>
 
           <button onclick="addDecision()" 
-                  class="w-full py-2.5 rounded-2xl bg-white text-black font-medium text-sm active:scale-[0.985] transition">Add to pending</button>
-          <div id="add-status" class="text-xs text-emerald-400 h-4"></div>
+                  class="w-full py-3 rounded-2xl bg-white hover:bg-zinc-100 active:scale-[0.975] text-black font-semibold text-[15px] shadow-sm flex items-center justify-center gap-2 transition">
+            Add to pending
+            <span class="text-xs font-normal opacity-50">⌘⏎</span>
+          </button>
+          <div id="add-status" class="text-xs h-4 text-emerald-400/90 px-1"></div>
         </div>
       </div>
 
       <!-- What agents see -->
       <div class="lg:col-span-3 section">
-        <div class="flex items-center justify-between mb-2">
-          <div>
-            <span class="uppercase text-xs tracking-[1px] text-zinc-500">What agents will see on next session</span>
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <div class="text-sm font-semibold tracking-tight">What agents will see</div>
+            <select id="agent-select" onchange="updateAgentPreview()" class="text-xs bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-0.5 focus:outline-none">
+              <option value="claude">Claude (SessionStart)</option>
+              <option value="cursor">Cursor (workspaceOpen)</option>
+              <option value="codex">Codex (hooks)</option>
+              <option value="copilot">Copilot CLI</option>
+              <option value="opencode">OpenCode</option>
+            </select>
           </div>
-          <button onclick="copyContext()" class="text-xs px-2.5 py-1 rounded-lg border border-zinc-800 hover:bg-zinc-900">Copy</button>
+          <button onclick="copyContext()" 
+                  class="text-xs px-3 py-1 rounded-xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.97] transition">Copy</button>
         </div>
-        <pre id="context" class="context bg-black/60 border border-zinc-800 rounded-2xl p-4 text-zinc-300 overflow-auto max-h-[260px]"></pre>
-        <div class="mt-2 text-[11px] text-zinc-500">This is the exact payload from <span class="font-mono">dora journal context</span>.</div>
+        <pre id="context" class="context bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-zinc-300 text-[13px] overflow-auto max-h-[220px] leading-relaxed"></pre>
+        <div id="agent-note" class="mt-2 text-[10px] text-zinc-500 px-1">Exact output from <span class="font-mono">dora journal context</span>. Injected via startup hook for the selected agent.</div>
       </div>
 
       <!-- Hooks -->
       <div class="lg:col-span-2 section">
-        <div class="uppercase text-xs tracking-[1px] text-zinc-500 mb-3">Journal injection hooks</div>
+        <div class="text-sm font-semibold tracking-tight mb-3">Journal hooks</div>
         <div id="hooks" class="space-y-2 text-sm"></div>
-        <div class="mt-3 text-[11px] text-zinc-500">Toggles call the same logic as <span class="font-mono">dora journal hook enable/disable</span>. Restart your agent after changes.</div>
+        <div class="mt-4 text-[10px] text-zinc-500 leading-snug">
+          Same as <span class="font-mono text-zinc-400">dora journal hook</span>. Restart Claude after toggling.
+        </div>
       </div>
 
       <!-- Journal -->
       <div class="lg:col-span-3 section">
-        <div class="flex items-baseline justify-between mb-2">
-          <div class="uppercase text-xs tracking-[1px] text-zinc-500">Journal entries</div>
-          <div class="text-xs text-zinc-500" id="entry-count"></div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-sm font-semibold tracking-tight">Journal entries</div>
+          <div class="flex items-center gap-2">
+            <input id="search" oninput="filterEntries()" 
+                   class="bg-zinc-950 border border-zinc-800 text-xs rounded-2xl px-3 py-1.5 placeholder:text-zinc-600 w-44 focus:outline-none focus:border-zinc-600" 
+                   placeholder="Search...">
+            <div class="text-[10px] text-zinc-500 tabular-nums" id="entry-count"></div>
+          </div>
         </div>
-        <div id="entries" class="space-y-2 text-sm max-h-[380px] overflow-auto pr-1"></div>
+        <div id="entries" class="space-y-2 text-sm max-h-[340px] overflow-auto pr-2 -mr-1"></div>
       </div>
     </div>
 
-    <div class="mt-6 flex flex-wrap gap-2 text-xs">
-      <button onclick="doAction('sync')" class="px-3 py-1.5 rounded-2xl border border-zinc-800 hover:bg-zinc-900">Sync pending → remote</button>
-      <button onclick="doAction('update')" class="px-3 py-1.5 rounded-2xl border border-zinc-800 hover:bg-zinc-900">Update local cache</button>
-      <button onclick="doAction('open-dir')" class="px-3 py-1.5 rounded-2xl border border-zinc-800 hover:bg-zinc-900">Open ~/.doraval</button>
+    <!-- Footer actions -->
+    <div class="mt-8 flex items-center gap-2 text-sm">
+      <button onclick="doAction('sync')" 
+              class="px-4 py-2 rounded-2xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.975] transition text-sm">
+        Sync to remote
+      </button>
+      <button onclick="doAction('update')" 
+              class="px-4 py-2 rounded-2xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.975] transition text-sm">
+        Pull latest
+      </button>
+      <button onclick="doAction('open-dir')" 
+              class="px-4 py-2 rounded-2xl border border-zinc-800 hover:bg-zinc-900 active:scale-[0.975] transition text-sm">
+        Open ~/.doraval
+      </button>
+      
       <div class="flex-1"></div>
-      <div class="text-zinc-500 self-center">Tip: use the CLI for heavy sync/agent enrichment. This UI is for speed.</div>
+      <div class="text-xs text-zinc-500">CLI is best for heavy lifting. This is for quick capture &amp; review.</div>
     </div>
   </div>
+
+  <!-- Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm items-center justify-center z-50 p-4" onclick="if (event.target.id === 'modal') closeModal()">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl modal" onclick="event.stopImmediatePropagation()">
+      <div class="p-6">
+        <div class="flex justify-between items-start">
+          <div id="modal-pb" class="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold tracking-wider"></div>
+          <button onclick="closeModal()" class="text-zinc-400 hover:text-white text-2xl leading-none -mr-1">×</button>
+        </div>
+        
+        <h3 id="modal-title" class="text-xl font-semibold tracking-tight mt-3 pr-6"></h3>
+        
+        <div class="flex items-center gap-2 mt-3 text-xs text-zinc-400">
+          <span id="modal-tags"></span>
+          <span class="text-zinc-700">•</span>
+          <span id="modal-meta"></span>
+        </div>
+
+        <div id="modal-rationale" class="mt-5 text-[14.5px] leading-relaxed text-zinc-300 whitespace-pre-wrap bg-zinc-950 border border-zinc-800 rounded-2xl p-5"></div>
+      </div>
+
+      <div class="border-t border-zinc-800 px-6 py-4 flex gap-2" id="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toasts" class="fixed bottom-5 right-5 flex flex-col gap-2 z-[70]"></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 
+let allEntriesCache = [];
+let currentProject = null;
+
+function showToast(msg, type = 'info') {
+  const container = $('toasts');
+  const el = document.createElement('div');
+  el.className = `toast px-4 py-2.5 rounded-2xl text-sm border flex items-center gap-2 shadow-lg ${type === 'error' 
+    ? 'bg-red-950/90 border-red-800 text-red-300' 
+    : 'bg-zinc-900 border-zinc-800 text-zinc-200'}`;
+  el.innerHTML = `<span>${msg}</span>`;
+  container.appendChild(el);
+
+  // Fast dismiss, interruptible
+  setTimeout(() => {
+    if (el.parentNode) {
+      el.style.transition = 'opacity 160ms ease, transform 160ms ease';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(6px)';
+      setTimeout(() => el.remove(), 120);
+    }
+  }, 2200);
+}
+
 async function fetchJSON(url, opts = {}) {
   const res = await fetch(url, opts);
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || res.statusText);
+  }
   return res.json();
 }
 
 function setProjectBadge(project) {
   const el = $('project-badge');
   el.textContent = project ? project : 'no project';
-  el.className = 'px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs ' + (project ? '' : 'text-amber-400');
+  el.className = `px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs ${project ? '' : 'text-amber-400'}`;
 }
-
-let currentProject = null;
 
 async function loadStatus() {
   const s = await fetchJSON('/api/status');
@@ -127,45 +345,97 @@ async function loadStatus() {
 
 async function loadContext() {
   const c = await fetchJSON('/api/context');
-  $('context').textContent = c.text || '(no active high-pushback decisions yet)';
+  const pre = $('context');
+  pre.textContent = c.text || '(no active high-pushback decisions yet)';
+  updateAgentPreview();
+}
+
+function updateAgentPreview() {
+  const select = $('agent-select');
+  const note = $('agent-note');
+  if (!select || !note) return;
+  const agent = select.value;
+  const base = 'Exact output from <span class="font-mono">dora journal context</span>. ';
+  let extra = 'Injected via startup hook.';
+  if (agent === 'claude') extra = 'Injected on <b>SessionStart</b> for Claude Code.';
+  else if (agent === 'cursor') extra = 'Can be used with Cursor plugins (e.g. workspaceOpen or custom rules).';
+  else if (agent === 'codex') extra = 'Injected via Codex hooks for context.';
+  else if (agent === 'copilot') extra = 'Useful for Copilot CLI custom instructions / agents.';
+  else if (agent === 'opencode') extra = 'Pairs well with OpenCode rules, agents and skills.';
+  note.innerHTML = base + extra;
+}
+
+function renderEntry(e, container) {
+  const pb = e.pushback ?? 0;
+  let border = 'border-emerald-400';
+  let pbLabel = 'nudge';
+  if (pb >= 7) { border = 'border-red-400'; pbLabel = 'strong'; }
+  else if (pb >= 4) { border = 'border-yellow-400'; pbLabel = 'friction'; }
+
+  const div = document.createElement('div');
+  div.className = `entry ${border} bg-zinc-900/50 hover:bg-zinc-900/80 border-l-[3px] rounded-r-2xl p-3.5 cursor-pointer ${e._staged ? 'staged' : ''}`;
+  div.onclick = () => showModal(e);
+
+  const preview = (e.rationale || '').replace(/\s+/g, ' ').slice(0, 120);
+
+  div.innerHTML = `
+    <div class="flex items-start gap-3">
+      <div class="shrink-0 w-8 text-center pt-px">
+        <div class="text-[17px] font-semibold tabular-nums leading-none">${pb}</div>
+        <div class="text-[9px] uppercase tracking-[1px] text-zinc-500 mt-0.5">${pbLabel}</div>
+      </div>
+      <div class="min-w-0 flex-1 pt-0.5">
+        <div class="font-medium leading-tight pr-1">${e.title}${e._staged ? ' <span class="text-amber-400 text-[10px] align-baseline">staged</span>' : ''}</div>
+        <div class="text-xs text-zinc-400 mt-1.5 line-clamp-2">${preview || 'no rationale yet'}</div>
+        <div class="mt-2 flex items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-500">
+          <span>${(e.tags || []).join(' ') || '—'}</span>
+          <span class="text-zinc-700">·</span>
+          <span>${e.author || 'you'}</span>
+        </div>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
+function filterEntries() {
+  const q = ($('search')?.value || '').toLowerCase().trim();
+  const container = $('entries');
+  container.innerHTML = '';
+
+  let filtered = allEntriesCache;
+  if (q) {
+    filtered = allEntriesCache.filter(e =>
+      (e.title || '').toLowerCase().includes(q) ||
+      (e.rationale || '').toLowerCase().includes(q) ||
+      (e.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="text-zinc-500 text-sm py-4">No matches.</div>`;
+    return;
+  }
+
+  filtered.forEach(e => renderEntry(e, container));
+  $('entry-count').textContent = `${filtered.length} / ${allEntriesCache.length} entries`;
 }
 
 async function loadEntries() {
   const data = await fetchJSON('/api/entries');
+  allEntriesCache = [...(data.staged || []), ...(data.committed || [])];
+
+  $('entry-count').textContent = allEntriesCache.length + ' entries';
   const container = $('entries');
   container.innerHTML = '';
-  const all = [...(data.staged || []), ...(data.committed || [])];
 
-  $('entry-count').textContent = all.length + ' entries';
-
-  if (all.length === 0) {
-    container.innerHTML = '<div class="text-zinc-500 text-sm py-4">No entries. Add your first decision on the left.</div>';
+  if (allEntriesCache.length === 0) {
+    container.innerHTML = '<div class="text-zinc-500 text-sm py-4">No entries yet. Capture one on the left.</div>';
     return;
   }
 
-  all.forEach(e => {
-    const pb = e.pushback ?? 0;
-    let cls = 'pb-nudge';
-    if (pb >= 7) cls = 'pb-strong';
-    else if (pb >= 4) cls = 'pb-friction';
-
-    const div = document.createElement('div');
-    div.className = 'entry ' + cls + (e._staged ? ' staged rounded-r-xl' : '');
-    div.innerHTML = `
-      <div class="flex gap-2 items-start">
-        <div class="push w-6 text-right font-semibold text-zinc-400">${pb}</div>
-        <div class="flex-1 min-w-0">
-          <div class="font-medium">${e.title}${e._staged ? ' <span class="text-amber-400 text-xs">(staged)</span>' : ''}</div>
-          <div class="text-xs text-zinc-500 mt-0.5 line-clamp-2">${(e.rationale||'').replace(/\s+/g,' ').slice(0,160)}</div>
-          <div class="mt-1 flex gap-2 text-[10px] text-zinc-500">
-            <span>${(e.tags||[]).join(', ') || 'no tags'}</span>
-            <span class="text-zinc-600">·</span>
-            <span>${e.author || 'human'}</span>
-          </div>
-        </div>
-      </div>`;
-    container.appendChild(div);
-  });
+  // show all initially
+  allEntriesCache.forEach(e => renderEntry(e, container));
 }
 
 async function loadHooks() {
@@ -173,88 +443,129 @@ async function loadHooks() {
   const el = $('hooks');
   el.innerHTML = '';
 
-  const mk = (label, info, isGlobal) => {
+  const mkToggle = (label, info, isGlobal) => {
     const row = document.createElement('div');
-    row.className = 'flex items-center justify-between gap-2 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-2';
+    row.className = 'flex items-center justify-between gap-3 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-2 text-sm';
+
+    const checked = info.enabled;
     row.innerHTML = `
-      <div>
+      <div class="min-w-0">
         <div class="font-medium">${label}</div>
-        <div class="text-[10px] text-zinc-500 font-mono truncate max-w-[260px]">${info.path}</div>
+        <div class="text-[10px] text-zinc-500 font-mono truncate">${info.path}</div>
       </div>
-      <div>
-        <button data-action="${info.enabled ? 'disable' : 'enable'}" data-global="${isGlobal}" 
-                class="text-xs px-3 py-1 rounded-xl border ${info.enabled ? 'border-emerald-800 text-emerald-400 hover:bg-emerald-950' : 'border-zinc-700 hover:bg-zinc-900'}">
-          ${info.enabled ? 'Disable' : 'Enable'}
-        </button>
-      </div>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" class="sr-only peer" ${checked ? 'checked' : ''}>
+        <div class="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+      </label>
     `;
-    const btn = row.querySelector('button');
-    btn.onclick = async () => {
-      const action = btn.dataset.action;
-      const g = btn.dataset.global === 'true';
+
+    const input = row.querySelector('input');
+    input.onchange = async () => {
+      const action = input.checked ? 'enable' : 'disable';
       try {
         await fetchJSON('/api/hooks/' + action, {
           method: 'POST',
           headers: {'content-type': 'application/json'},
-          body: JSON.stringify({ global: g })
+          body: JSON.stringify({ global: isGlobal })
         });
+        showToast(`${action === 'enable' ? 'Enabled' : 'Disabled'} ${label}`, 'info');
         await loadHooks();
       } catch (e) {
-        alert('Hook change failed: ' + e.message);
+        showToast('Hook change failed: ' + e.message, 'error');
+        input.checked = !input.checked; // revert
       }
     };
+
     el.appendChild(row);
   };
 
-  mk('Claude (local)', h.local, false);
-  mk('Claude (global ~/.claude)', h.global, true);
+  mkToggle('Claude (local)', h.local, false);
+  mkToggle('Claude (global)', h.global, true);
 }
 
 async function addDecision() {
   const title = $('title').value.trim();
-  if (!title) { $('add-status').textContent = 'Title is required'; return; }
+  if (!title) {
+    showToast('Title is required', 'error');
+    return;
+  }
   const pushback = parseInt($('pushback').value, 10);
   const tags = $('tags').value.split(',').map(t => t.trim()).filter(Boolean);
   const rationale = $('rationale').value.trim();
 
-  $('add-status').textContent = 'Saving...';
+  const btns = document.querySelectorAll('button');
+  // simple feedback on the primary button
+  const primary = Array.from(btns).find(b => b.textContent.includes('Add to pending'));
+  const originalText = primary ? primary.innerHTML : '';
+
   try {
     await fetchJSON('/api/add', {
       method: 'POST',
       headers: {'content-type': 'application/json'},
       body: JSON.stringify({ title, pushback, tags, rationale })
     });
-    $('add-status').textContent = '✓ Added to pending';
-    $('title').value = ''; $('tags').value = ''; $('rationale').value = '';
+
+    // Playful success moment
+    if (primary) {
+      primary.style.transitionDuration = '80ms';
+      primary.innerHTML = 'Captured ✓';
+      primary.style.background = '#166534';
+      primary.style.color = '#86efac';
+    }
+
+    showToast('Added to pending');
+
+    $('title').value = '';
+    $('tags').value = '';
+    $('rationale').value = '';
+
     await Promise.all([loadEntries(), loadContext()]);
-    setTimeout(() => { $('add-status').textContent = ''; }, 1400);
+
+    // reset button
+    setTimeout(() => {
+      if (primary) {
+        primary.innerHTML = originalText;
+        primary.style.background = '';
+        primary.style.color = '';
+        primary.style.transitionDuration = '';
+      }
+    }, 900);
+
   } catch (e) {
-    $('add-status').textContent = 'Error: ' + e.message;
+    showToast('Failed: ' + e.message, 'error');
+    if (primary) {
+      primary.innerHTML = originalText;
+      primary.style.background = '';
+      primary.style.color = '';
+    }
   }
 }
 
 async function copyContext() {
   const text = $('context').textContent;
+  if (!text || text.includes('no active')) {
+    showToast('Nothing to copy yet', 'error');
+    return;
+  }
   await navigator.clipboard.writeText(text);
-  const t = document.createElement('span');
-  t.textContent = ' copied!';
-  t.className = 'text-emerald-400 ml-2 text-xs';
-  $('context').after(t);
-  setTimeout(() => t.remove(), 900);
+  const orig = event.currentTarget?.textContent;
+  showToast('Copied to clipboard');
 }
 
 async function refreshAll() {
   await Promise.all([loadEntries(), loadContext(), loadHooks()]);
+  showToast('Refreshed');
 }
 
 async function doAction(name) {
   if (name === 'open-dir') {
     const s = await fetchJSON('/api/status');
-    alert('Open in Finder/Terminal: ' + s.doravalDir);
+    showToast('Path: ' + s.doravalDir);
+    // optionally try to open, but browser security limits it
     return;
   }
   if (name === 'sync' || name === 'update') {
-    alert('Use the CLI for now: dora journal ' + name + ' (full git + gh flow)');
+    showToast('Use CLI: dora journal ' + name);
     return;
   }
 }
@@ -262,21 +573,158 @@ async function doAction(name) {
 function setupSlider() {
   const slider = $('pushback');
   const val = $('pb-value');
-  const update = () => { val.textContent = slider.value; };
+
+  const update = () => {
+    const v = parseInt(slider.value, 10);
+    val.textContent = v;
+
+    val.className = `push font-semibold tabular-nums text-lg transition-colors ${v >= 7 ? 'text-red-400' : v >= 4 ? 'text-yellow-400' : 'text-emerald-400'}`;
+  };
+
   slider.addEventListener('input', update);
   update();
 }
 
+
+
+function showModal(e) {
+  const modal = $('modal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  const pb = e.pushback ?? 0;
+  let pbColor = 'bg-emerald-400 text-black';
+  let label = 'NUDGE';
+  if (pb >= 7) { pbColor = 'bg-red-500 text-white'; label = 'STRONG'; }
+  else if (pb >= 4) { pbColor = 'bg-amber-400 text-black'; label = 'FRICTION'; }
+
+  $('modal-pb').className = `inline-flex items-center px-3 py-px rounded-full text-[10px] font-semibold tracking-[0.5px] ${pbColor}`;
+  $('modal-pb').textContent = `${pb} — ${label}`;
+
+  $('modal-title').textContent = e.title;
+
+  const tagsStr = (e.tags || []).length ? (e.tags || []).join(' · ') : 'no tags';
+  $('modal-tags').innerHTML = tagsStr;
+
+  $('modal-meta').innerHTML = `${e.author || 'human'} · ${e.date || ''} ${e._staged ? '<span class="text-amber-400">· staged</span>' : ''}`;
+
+  $('modal-rationale').textContent = e.rationale || '(no rationale)';
+
+  const actions = $('modal-actions');
+  actions.innerHTML = '';
+
+  if (e._staged && e._filename) {
+    const del = document.createElement('button');
+    del.className = 'px-4 py-1.5 text-sm rounded-2xl border border-red-900/60 text-red-400 hover:bg-red-950/50 active:scale-[0.975] transition';
+    del.textContent = 'Delete staged';
+    del.onclick = async () => {
+      if (!confirm('Remove this staged entry?')) return;
+      try {
+        await fetchJSON('/api/delete-staged', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ filename: e._filename })
+        });
+        closeModal();
+        await Promise.all([loadEntries(), loadContext()]);
+        showToast('Removed from pending');
+      } catch (err) {
+        showToast('Delete failed', 'error');
+      }
+    };
+    actions.appendChild(del);
+  }
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'ml-auto px-5 py-1.5 text-sm rounded-2xl border border-zinc-700 hover:bg-zinc-800 active:scale-[0.975] transition';
+  closeBtn.textContent = 'Done';
+  closeBtn.onclick = closeModal;
+  actions.appendChild(closeBtn);
+}
+
+function closeModal() {
+  const m = $('modal');
+  m.classList.remove('flex');
+  m.classList.add('hidden');
+}
+
+function setupSlider() {
+  const slider = $('pushback');
+  const val = $('pb-value');
+  const update = () => {
+    const v = parseInt(slider.value, 10);
+    val.textContent = v;
+    val.className = `push font-semibold tabular-nums ${v >= 7 ? 'text-red-400' : v >= 4 ? 'text-yellow-400' : 'text-emerald-400'}`;
+  };
+  slider.addEventListener('input', update);
+  update();
+
+  // allow keyboard on slider
+  slider.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      addDecision();
+    }
+  });
+}
+
+function clearForm() {
+  $('title').value = '';
+  $('tags').value = '';
+  $('rationale').value = '';
+  $('pb-value').textContent = $('pushback').value = '4';
+}
+
+function setupCaptureKeys() {
+  const title = $('title');
+  const rationale = $('rationale');
+
+  [title, rationale].forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        addDecision();
+      }
+    });
+  });
+
+  // focus title on load
+  setTimeout(() => title.focus(), 300);
+}
+
 async function boot() {
   setupSlider();
+  setupCaptureKeys();
+
   await loadStatus();
   await Promise.all([loadContext(), loadEntries(), loadHooks()]);
-  // gentle polling so the UI feels alive when you add via CLI too
+
+  const search = $('search');
+  if (search) {
+    search.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        search.value = '';
+        filterEntries();
+      }
+    });
+  }
+
+  // Light polling (only when visible)
   setInterval(() => {
-    loadEntries().catch(()=>{});
-    loadContext().catch(()=>{});
-  }, 8000);
+    if (!document.hidden) {
+      loadEntries().catch(() => {});
+      loadContext().catch(() => {});
+    }
+  }, 9000);
 }
+
+window.addDecision = addDecision;
+window.refreshAll = refreshAll;
+window.copyContext = copyContext;
+window.doAction = doAction;
+window.closeModal = closeModal;
+window.clearForm = clearForm;
+window.updateAgentPreview = updateAgentPreview;
 
 boot().catch(console.error);
 </script>

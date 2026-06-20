@@ -30,6 +30,7 @@ Manual review doesn't scale. doraval automates these checks across every artifac
 | `update` | Update doraval to the latest version (Homebrew, npm, or Bun) | Instant |
 | `providers` | List supported providers and packaging details (including keyword discovery) | Instant |
 | `completion` | Generate shell completion scripts (bash, zsh, fish) | Instant |
+| `ui` | Local web dashboard for capturing and browsing journal decisions | Instant |
 | `claude new` / `codex new` / `cursor new` / `copilot new` | Interactive wizard to scaffold skills or plugins following official packaging rules | Instant |
 | `skill validate` | Structural correctness for a single skill | Instant |
 | `skill drift` | Rubric deviation — 6 categories of quality drift | Instant |
@@ -67,5 +68,7 @@ List providers and their keyword discovery support with `doraval providers`.
 Scaffold new skills or plugins with the interactive wizard: `doraval claude new`, `doraval codex new`, `doraval cursor new`, or `doraval copilot new` (see [claude new](/commands/claude-new/)).
 
 Generate shell completions with `doraval completion bash|zsh|fish`.
+
+Launch a local web dashboard with `dora ui` for fast capture and reviewing of journal decisions.
 
 `doraval journal` provides a separate system for recording project decisions and principles with pushback (see [Agent Journal](/concepts/agent-journal)). It is completely optional and lives outside your project directories.
