@@ -192,9 +192,9 @@ async function killPort(port: number) {
 
     const pids = output.split('\n').map(p => p.trim()).filter(Boolean);
 
-    console.error(`  Killing previous doraval ui on port ${port}...`);
+    cliUi.write(`  Killing previous doraval ui on port ${port}...`);
     for (const pid of pids) {
-      console.error(`    → kill -9 ${pid}`);
+      cliUi.write(`    → kill -9 ${pid}`);
       Bun.spawn(['kill', '-9', pid], { stdout: 'ignore', stderr: 'ignore' });
     }
 
@@ -252,18 +252,18 @@ export default {
     if (showStatusOnly) {
       if (existingPid) {
         const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
-        console.error(`  Dashboard running (pid ${existingPid})`);
-        console.error(`  URL:     ${pc.underline(pc.cyan(url))}`);
+        cliUi.write(`  Dashboard running (pid ${existingPid})`);
+        cliUi.write(`  URL:     ${pc.underline(pc.cyan(url))}`);
       } else {
-        console.error(`  No dashboard running.`);
+        cliUi.write(`  No dashboard running.`);
       }
       return;
     }
 
     if (existingPid && !force) {
       const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${port}`;
-      console.error(`  Dashboard already running (pid ${existingPid}).`);
-      console.error(`  URL:     ${pc.underline(pc.cyan(url))}`);
+      cliUi.write(`  Dashboard already running (pid ${existingPid}).`);
+      cliUi.write(`  URL:     ${pc.underline(pc.cyan(url))}`);
       if (shouldOpen && process.stdout.isTTY) {
         try {
           const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
@@ -274,7 +274,7 @@ export default {
     }
 
     if (existingPid && force) {
-      console.error(`  Force restarting (killing pid ${existingPid})...`);
+      cliUi.write(`  Force restarting (killing pid ${existingPid})...`);
       try { process.kill(existingPid, "SIGTERM"); } catch {}
       await new Promise((r) => setTimeout(r, 400));
       removePid(port);
@@ -416,7 +416,7 @@ export default {
     });
     } catch (err: any) {
       removePid(port);
-      console.error(`  Failed to start dashboard on port ${port}: ${err?.message || err}`);
+      cliUi.write(`  Failed to start dashboard on port ${port}: ${err?.message || err}`);
       process.exit(1);
     }
 
@@ -434,8 +434,8 @@ export default {
 
   ${pc.dim("Press Ctrl+C to stop")}
 `;
-    console.error(msg);
-    console.error(`  ${pc.dim("Tip:")} data location = ${getDoravalDir()} (set DORAVAL_HOME to change)`);
+    cliUi.write(msg);
+    cliUi.write(`  ${pc.dim("Tip:")} data location = ${getDoravalDir()} (set DORAVAL_HOME to change)`);
 
     if (shouldOpen && process.stdout.isTTY) {
       // macOS friendly + fallback
@@ -443,13 +443,13 @@ export default {
         const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
         spawn(opener, [url], { stdio: "ignore", detached: true }).unref();
       } catch {
-        console.error(pc.dim(`  Could not auto-open. Visit ${url}`));
+        cliUi.write(pc.dim(`  Could not auto-open. Visit ${url}`));
       }
     }
 
     const cleanup = () => {
       removePid(port);
-      console.error("\n  Stopping dashboard...");
+      cliUi.write("\n  Stopping dashboard...");
       server.stop();
       process.exit(0);
     };
@@ -474,7 +474,7 @@ async function getDashboardHtml(): Promise<string> {
   try {
     return await Bun.file(htmlPath).text();
   } catch (err) {
-    console.error(`[doraval ui] Failed to load HTML from ${htmlPath}`);
+    cliUi.write(`[doraval ui] Failed to load HTML from ${htmlPath}`);
     return `<!doctype html><meta charset="utf-8"><body style="font-family:monospace;background:#111;color:#ddd;padding:2rem"><h1>doraval ui</h1><p>Dashboard HTML missing.</p><pre>${String(err)}</pre></body>`;
   }
 }
