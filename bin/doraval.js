@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.56",
+    version: "0.2.58",
     author: "Saif",
     repository: {
       type: "git",
@@ -3321,20 +3321,51 @@ var init_list = __esm(() => {
 
 // src/core/journal-hook.ts
 import { existsSync as existsSync9 } from "fs";
+import { join as join8, dirname as dirname3 } from "path";
+import { fileURLToPath } from "url";
 var {spawnSync: spawnSync3 } = globalThis.Bun;
+function decodeSpawnStdout(stdout) {
+  if (!stdout?.length)
+    return "";
+  return new TextDecoder().decode(stdout).trim().split(/\r?\n/)[0]?.trim() ?? "";
+}
+function probePathBinary(name) {
+  const probes = process.platform === "win32" ? [[`where.exe`, name]] : [
+    ["command", "-v", name],
+    ["which", name]
+  ];
+  for (const cmd of probes) {
+    try {
+      const probe = spawnSync3(cmd, { stdout: "pipe", stderr: "pipe" });
+      if (probe.exitCode === 0) {
+        const found = decodeSpawnStdout(probe.stdout);
+        if (found)
+          return found;
+      }
+    } catch {}
+  }
+  return null;
+}
+function resolvePackagedBinary() {
+  try {
+    const here = dirname3(fileURLToPath(import.meta.url));
+    for (const candidate of ["doraval-wrapper.js", "doraval.js"]) {
+      const path = join8(here, "../../bin", candidate);
+      if (existsSync9(path))
+        return path;
+    }
+  } catch {}
+  return null;
+}
 function resolveDoraBinary() {
   for (const name of ["dora", "doraval"]) {
-    let probe = spawnSync3(["command", "-v", name], { stdout: "pipe", stderr: "pipe" });
-    if (probe.exitCode !== 0) {
-      probe = spawnSync3(["which", name], { stdout: "pipe", stderr: "pipe" });
-    }
-    if (probe.exitCode === 0) {
-      const found = new TextDecoder().decode(probe.stdout).trim().split(`
-`)[0]?.trim();
-      if (found)
-        return found;
-    }
+    const found = probePathBinary(name);
+    if (found)
+      return found;
   }
+  const packaged = resolvePackagedBinary();
+  if (packaged)
+    return packaged;
   const argv1 = process.argv[1];
   if (argv1 && existsSync9(argv1))
     return argv1;
@@ -3381,7 +3412,7 @@ __export(exports_context, {
   default: () => context_default
 });
 import { existsSync as existsSync10 } from "fs";
-import { join as join8, resolve as resolvePath } from "path";
+import { join as join9, resolve as resolvePath } from "path";
 function formatJournalHookJson(contextText) {
   return JSON.stringify({
     hookSpecificOutput: {
@@ -3600,7 +3631,7 @@ Hook command: ${buildJournalHookCommand()}`);
       }
       const journalsDir = getJournalsDir();
       const entries = [];
-      const globalPath = join8(journalsDir, "global.md");
+      const globalPath = join9(journalsDir, "global.md");
       if (existsSync10(globalPath)) {
         try {
           const raw = await Bun.file(globalPath).text();
@@ -3608,7 +3639,7 @@ Hook command: ${buildJournalHookCommand()}`);
         } catch {}
       }
       if (project) {
-        const projectPath = join8(journalsDir, `${project}.md`);
+        const projectPath = join9(journalsDir, `${project}.md`);
         if (existsSync10(projectPath)) {
           try {
             const raw = await Bun.file(projectPath).text();
@@ -3653,13 +3684,13 @@ __export(exports_hook, {
   addHook: () => addHook
 });
 import { existsSync as existsSync11, mkdirSync as mkdirSync3, unlinkSync, rmdirSync, readdirSync as readdirSync5 } from "fs";
-import { join as join9, dirname as dirname3 } from "path";
+import { join as join10, dirname as dirname4 } from "path";
 import { homedir as homedir4 } from "os";
 function getGlobalSettingsPath() {
-  return join9(homedir4(), ".claude", "settings.json");
+  return join10(homedir4(), ".claude", "settings.json");
 }
 function getLocalHooksPath() {
-  return join9(process.cwd(), "hooks", "hooks.json");
+  return join10(process.cwd(), "hooks", "hooks.json");
 }
 async function readJson(file) {
   if (!existsSync11(file))
@@ -3672,7 +3703,7 @@ async function readJson(file) {
   }
 }
 async function writeJson(file, data) {
-  const dir = dirname3(file);
+  const dir = dirname4(file);
   if (!existsSync11(dir)) {
     mkdirSync3(dir, { recursive: true });
   }
@@ -3740,7 +3771,7 @@ async function removeHook(file) {
         unlinkSync(file);
       } catch {}
       try {
-        const dir = dirname3(file);
+        const dir = dirname4(file);
         if (existsSync11(dir) && readdirSync5(dir).length === 0)
           rmdirSync(dir);
       } catch {}
@@ -3886,7 +3917,7 @@ __export(exports_update, {
   default: () => update_default
 });
 import { existsSync as existsSync12 } from "fs";
-import { join as join10 } from "path";
+import { join as join11 } from "path";
 var import_picocolors10, update_default;
 var init_update = __esm(() => {
   init_dist();
@@ -3960,7 +3991,7 @@ var init_update = __esm(() => {
           }
         }
       }
-      const globalLocal = join10(journalsDir, "global.md");
+      const globalLocal = join11(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", globalLocal);
       let gotGlobal;
       if (!refreshGlobalRes.ok) {
@@ -3994,7 +4025,7 @@ var init_update = __esm(() => {
       }
       for (const project of projectsToUpdate) {
         const remotePath = `projects/${project}.md`;
-        const localPath = join10(journalsDir, `${project}.md`);
+        const localPath = join11(journalsDir, `${project}.md`);
         const refreshRes = await refreshLocalJournalFile(journalRepo, remotePath, localPath);
         let got;
         if (!refreshRes.ok) {
@@ -4089,7 +4120,7 @@ __export(exports_add, {
   default: () => add_default
 });
 import { existsSync as existsSync13 } from "fs";
-import { join as join11 } from "path";
+import { join as join12 } from "path";
 function slugify(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "untitled";
 }
@@ -4360,11 +4391,11 @@ ${rationale}
       ensureDoravalDirs();
       const pendingDir = getPendingProjectDir(project);
       if (!existsSync13(pendingDir)) {
-        await Bun.write(join11(pendingDir, ".gitkeep"), "");
+        await Bun.write(join12(pendingDir, ".gitkeep"), "");
       }
       const slug = slugify(title);
       const filename = `${date}-${slug}.md`;
-      const filePath = join11(pendingDir, filename);
+      const filePath = join12(pendingDir, filename);
       await Bun.write(filePath, content);
       ui.write(`
   ${import_picocolors11.default.green("\u2713")} ${import_picocolors11.default.bold(import_picocolors11.default.white(title))}`);
@@ -4398,7 +4429,7 @@ __export(exports_sync, {
   default: () => sync_default
 });
 import { readdirSync as readdirSync6, existsSync as existsSync14 } from "fs";
-import { join as join12 } from "path";
+import { join as join13 } from "path";
 var {spawnSync: spawnSync4 } = globalThis.Bun;
 function updateGitHubFile(repo, path, content, message, sha) {
   const payload = {
@@ -4513,9 +4544,9 @@ var init_sync = __esm(() => {
       ensureDoravalDirs();
       const journalsDir = getJournalsDir();
       const remoteProjectPath = `projects/${project}.md`;
-      const localProjectPath = join12(journalsDir, `${project}.md`);
+      const localProjectPath = join13(journalsDir, `${project}.md`);
       ui.write(`  ${import_picocolors12.default.dim(import_picocolors12.default.gray("Refreshing local cache from remote..."))}`);
-      const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", join12(journalsDir, "global.md"));
+      const refreshGlobalRes = await refreshLocalJournalFile(journalRepo, "global.md", join13(journalsDir, "global.md"));
       if (!refreshGlobalRes.ok) {
         if (!refreshGlobalRes.isNotFound) {
           ui.write(import_picocolors12.default.red(`Failed to fetch global.md from ${journalRepo}:`));
@@ -4573,7 +4604,7 @@ var init_sync = __esm(() => {
       }
       let newEntries = "";
       for (const file of pendingFiles) {
-        const fullPath = join12(pendingDir, file);
+        const fullPath = join13(pendingDir, file);
         const entryContent = await Bun.file(fullPath).text();
         newEntries += `
 ` + entryContent.trim() + `
@@ -4602,7 +4633,7 @@ var init_sync = __esm(() => {
         process.exit(1);
       }
       for (const file of pendingFiles) {
-        const fullPath = join12(pendingDir, file);
+        const fullPath = join13(pendingDir, file);
         try {
           await Bun.file(fullPath).unlink();
         } catch {}
@@ -4788,11 +4819,11 @@ var init_spec = __esm(() => {
 
 // src/cli/commands/claude/context.ts
 import { existsSync as existsSync15, readdirSync as readdirSync7 } from "fs";
-import { join as join13 } from "path";
+import { join as join14 } from "path";
 function detectContext(cwd = process.cwd()) {
   const claudeSpec = getProviderSpec("claude");
-  const hasClaudeDir = existsSync15(join13(cwd, ".claude"));
-  const hasPluginManifest = existsSync15(join13(cwd, claudeSpec.manifestPath));
+  const hasClaudeDir = existsSync15(join14(cwd, ".claude"));
+  const hasPluginManifest = existsSync15(join14(cwd, claudeSpec.manifestPath));
   let looseSkillFiles = [];
   try {
     const files = readdirSync7(cwd);
@@ -4825,7 +4856,7 @@ __export(exports_new, {
   default: () => new_default,
   decidePath: () => decidePath
 });
-import { join as join14, basename as basename3, dirname as dirname4 } from "path";
+import { join as join15, basename as basename3, dirname as dirname5 } from "path";
 import { mkdirSync as mkdirSync4, writeFileSync, existsSync as existsSync16 } from "fs";
 function decidePath(ctx, intent, providedName) {
   const rawName = providedName || "";
@@ -4840,7 +4871,7 @@ function decidePath(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join14(ctx.cwd, rawName);
+      targetDir = join15(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -4850,7 +4881,7 @@ function decidePath(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join14(ctx.cwd, rawName);
+      targetDir = join15(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -4858,7 +4889,7 @@ function decidePath(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join14(ctx.cwd, rawName);
+      targetDir = join15(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -4876,15 +4907,15 @@ function scaffold(decision, ctx, migrateContent) {
   if (path === "plugin") {
     const pluginName = basename3(targetDir);
     const claudeSpec = getProviderSpec("claude");
-    const claudeManifestDir = dirname4(claudeSpec.manifestPath);
+    const claudeManifestDir = dirname5(claudeSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       description: "Scaffolded by doraval claude new",
       version: "0.1.0",
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync4(join14(targetDir, claudeManifestDir), { recursive: true });
-    writeFileSync(join14(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    mkdirSync4(join15(targetDir, claudeManifestDir), { recursive: true });
+    writeFileSync(join15(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
     const marketplaceJson = {
       name: pluginName,
       version: "0.1.0",
@@ -4895,9 +4926,9 @@ function scaffold(decision, ctx, migrateContent) {
       license: "MIT",
       keywords: ["claude-code", "skills", "plugin"]
     };
-    writeFileSync(join14(targetDir, "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync(join15(targetDir, "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync4(join14(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync4(join15(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -4921,19 +4952,19 @@ When you need to check a skill or plugin:
 
 Always run \`doraval validate\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
     }
-    writeFileSync(join14(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join14(targetDir, "README.md");
+    writeFileSync(join15(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join15(targetDir, "README.md");
     if (!existsSync16(readmePath)) {
       writeFileSync(readmePath, "# " + pluginName + `
 
 Claude Code plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync4(join14(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
+    mkdirSync4(join15(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter.`;
-    writeFileSync(join14(targetDir, ".claude", "skills", "my-skill", "SKILL.md"), `---
+    writeFileSync(join15(targetDir, ".claude", "skills", "my-skill", "SKILL.md"), `---
 name: my-skill
 description: Starter
 ---
@@ -5013,7 +5044,7 @@ var exports_bump = {};
 __export(exports_bump, {
   default: () => bump_default
 });
-import { resolve as resolve5, join as join15, dirname as dirname5, relative } from "path";
+import { resolve as resolve5, join as join16, dirname as dirname6, relative } from "path";
 import { existsSync as existsSync17, readFileSync as readFileSync4, writeFileSync as writeFileSync2, readdirSync as readdirSync8, statSync as statSync2 } from "fs";
 function bumpVersion(current, type) {
   if (/^\d+\.\d+\.\d+$/.test(type))
@@ -5097,7 +5128,7 @@ function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
     return results;
   }
   for (const entry of entries) {
-    const full = join15(dir, entry);
+    const full = join16(dir, entry);
     let st;
     try {
       st = statSync2(full);
@@ -5109,7 +5140,7 @@ function walkForTargets(dir, maxDepth = 6, currentDepth = 0) {
       results.push(...sub);
     } else if (st.isFile()) {
       if (entry === "plugin.json") {
-        const parentDir = dirname5(full);
+        const parentDir = dirname6(full);
         const parentName = parentDir.split(/[/\\]/).pop();
         if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin" || parentName === ".github") {
           results.push({
@@ -5271,12 +5302,12 @@ var init_bump = __esm(() => {
 
 // src/cli/commands/codex/context.ts
 import { existsSync as existsSync18, readdirSync as readdirSync9 } from "fs";
-import { join as join16 } from "path";
+import { join as join17 } from "path";
 function detectContext2(cwd = process.cwd()) {
   const codexSpec = getProviderSpec("codex");
-  const hasCodexDir = existsSync18(join16(cwd, ".codex"));
-  const hasPluginManifest = existsSync18(join16(cwd, codexSpec.manifestPath));
-  const hasMarketplace = existsSync18(join16(cwd, ".agents", "plugins", "marketplace.json")) || existsSync18(join16(cwd, codexSpec.manifestPath));
+  const hasCodexDir = existsSync18(join17(cwd, ".codex"));
+  const hasPluginManifest = existsSync18(join17(cwd, codexSpec.manifestPath));
+  const hasMarketplace = existsSync18(join17(cwd, ".agents", "plugins", "marketplace.json")) || existsSync18(join17(cwd, codexSpec.manifestPath));
   let looseSkillFiles = [];
   try {
     const files = readdirSync9(cwd);
@@ -5310,7 +5341,7 @@ __export(exports_new2, {
   default: () => new_default2,
   decidePath: () => decidePath2
 });
-import { join as join17, basename as basename4, dirname as dirname6 } from "path";
+import { join as join18, basename as basename4, dirname as dirname7 } from "path";
 import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync3, existsSync as existsSync19 } from "fs";
 function decidePath2(ctx, intent, providedName) {
   const rawName = providedName || "";
@@ -5325,7 +5356,7 @@ function decidePath2(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join17(ctx.cwd, rawName);
+      targetDir = join18(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -5335,7 +5366,7 @@ function decidePath2(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join17(ctx.cwd, rawName);
+      targetDir = join18(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -5343,7 +5374,7 @@ function decidePath2(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join17(ctx.cwd, rawName);
+      targetDir = join18(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -5361,7 +5392,7 @@ function scaffold2(decision, ctx, migrateContent) {
   if (path === "plugin") {
     const pluginName = basename4(targetDir);
     const codexSpec = getProviderSpec("codex");
-    const codexManifestDir = dirname6(codexSpec.manifestPath);
+    const codexManifestDir = dirname7(codexSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
@@ -5374,10 +5405,10 @@ function scaffold2(decision, ctx, migrateContent) {
       },
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync5(join17(targetDir, codexManifestDir), { recursive: true });
-    writeFileSync3(join17(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-    const marketplaceDir = dirname6(codexSpec.marketplacePath);
-    mkdirSync5(join17(targetDir, marketplaceDir), { recursive: true });
+    mkdirSync5(join18(targetDir, codexManifestDir), { recursive: true });
+    writeFileSync3(join18(targetDir, codexSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname7(codexSpec.marketplacePath);
+    mkdirSync5(join18(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: "local",
       interface: {
@@ -5398,9 +5429,9 @@ function scaffold2(decision, ctx, migrateContent) {
         }
       ]
     };
-    writeFileSync3(join17(targetDir, codexSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync3(join18(targetDir, codexSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync5(join17(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync5(join18(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -5431,19 +5462,19 @@ To test in Codex:
 3. Open the plugin directory, select your local marketplace, and enable the plugin.
 4. Invoke the demo with /${pluginName}:doraval`;
     }
-    writeFileSync3(join17(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join17(targetDir, "README.md");
+    writeFileSync3(join18(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join18(targetDir, "README.md");
     if (!existsSync19(readmePath)) {
       writeFileSync3(readmePath, "# " + pluginName + `
 
 Codex plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync5(join17(targetDir, "skills", "doraval"), { recursive: true });
+    mkdirSync5(join18(targetDir, "skills", "doraval"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter for Codex.`;
-    writeFileSync3(join17(targetDir, "skills", "doraval", "SKILL.md"), `---
+    writeFileSync3(join18(targetDir, "skills", "doraval", "SKILL.md"), `---
 name: doraval
 description: Starter (local skill)
 ---
@@ -5520,10 +5551,10 @@ var init_new2 = __esm(() => {
 
 // src/cli/commands/cursor/context.ts
 import { existsSync as existsSync20, readdirSync as readdirSync10 } from "fs";
-import { join as join18 } from "path";
+import { join as join19 } from "path";
 function detectContext3(cwd = process.cwd()) {
-  const hasCursorDir = existsSync20(join18(cwd, ".cursor"));
-  const hasPluginManifest = existsSync20(join18(cwd, ".cursor-plugin", "plugin.json"));
+  const hasCursorDir = existsSync20(join19(cwd, ".cursor"));
+  const hasPluginManifest = existsSync20(join19(cwd, ".cursor-plugin", "plugin.json"));
   let looseSkillFiles = [];
   try {
     const files = readdirSync10(cwd);
@@ -5554,7 +5585,7 @@ __export(exports_new3, {
   default: () => new_default3,
   decidePath: () => decidePath3
 });
-import { join as join19, basename as basename5, dirname as dirname7 } from "path";
+import { join as join20, basename as basename5, dirname as dirname8 } from "path";
 import { mkdirSync as mkdirSync6, writeFileSync as writeFileSync4, existsSync as existsSync21 } from "fs";
 function decidePath3(ctx, intent, providedName) {
   const rawName = providedName || "";
@@ -5569,7 +5600,7 @@ function decidePath3(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join19(ctx.cwd, rawName);
+      targetDir = join20(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -5579,7 +5610,7 @@ function decidePath3(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join19(ctx.cwd, rawName);
+      targetDir = join20(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -5587,7 +5618,7 @@ function decidePath3(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join19(ctx.cwd, rawName);
+      targetDir = join20(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -5605,7 +5636,7 @@ function scaffold3(decision, ctx, migrateContent) {
   if (path === "plugin") {
     const pluginName = basename5(targetDir);
     const cursorSpec = getProviderSpec("cursor");
-    const cursorManifestDir = dirname7(cursorSpec.manifestPath);
+    const cursorManifestDir = dirname8(cursorSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
@@ -5614,10 +5645,10 @@ function scaffold3(decision, ctx, migrateContent) {
       displayName: pluginName,
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync6(join19(targetDir, cursorManifestDir), { recursive: true });
-    writeFileSync4(join19(targetDir, cursorSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-    const marketplaceDir = dirname7(cursorSpec.marketplacePath);
-    mkdirSync6(join19(targetDir, marketplaceDir), { recursive: true });
+    mkdirSync6(join20(targetDir, cursorManifestDir), { recursive: true });
+    writeFileSync4(join20(targetDir, cursorSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname8(cursorSpec.marketplacePath);
+    mkdirSync6(join20(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: pluginName,
       version: "0.1.0",
@@ -5628,9 +5659,9 @@ function scaffold3(decision, ctx, migrateContent) {
       license: "MIT",
       keywords: ["cursor", "skills", "plugin"]
     };
-    writeFileSync4(join19(targetDir, cursorSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync4(join20(targetDir, cursorSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync6(join19(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync6(join20(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -5659,19 +5690,19 @@ To test in Cursor:
 1. Open the plugin directory or add via marketplace.
 2. The demo skill will be available.`;
     }
-    writeFileSync4(join19(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join19(targetDir, "README.md");
+    writeFileSync4(join20(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join20(targetDir, "README.md");
     if (!existsSync21(readmePath)) {
       writeFileSync4(readmePath, "# " + pluginName + `
 
 Cursor plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync6(join19(targetDir, "skills", "doraval"), { recursive: true });
+    mkdirSync6(join20(targetDir, "skills", "doraval"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter for Cursor.`;
-    writeFileSync4(join19(targetDir, "skills", "doraval", "SKILL.md"), `---
+    writeFileSync4(join20(targetDir, "skills", "doraval", "SKILL.md"), `---
 name: doraval
 description: Starter (local skill)
 ---
@@ -5747,10 +5778,10 @@ var init_new3 = __esm(() => {
 
 // src/cli/commands/copilot/context.ts
 import { existsSync as existsSync22, readdirSync as readdirSync11 } from "fs";
-import { join as join20 } from "path";
+import { join as join21 } from "path";
 function detectContext4(cwd = process.cwd()) {
-  const hasGithubDir = existsSync22(join20(cwd, ".github"));
-  const hasPluginManifest = existsSync22(join20(cwd, ".github", "plugin", "plugin.json"));
+  const hasGithubDir = existsSync22(join21(cwd, ".github"));
+  const hasPluginManifest = existsSync22(join21(cwd, ".github", "plugin", "plugin.json"));
   let looseSkillFiles = [];
   try {
     const files = readdirSync11(cwd);
@@ -5781,7 +5812,7 @@ __export(exports_new4, {
   default: () => new_default4,
   decidePath: () => decidePath4
 });
-import { join as join21, basename as basename6, dirname as dirname8 } from "path";
+import { join as join22, basename as basename6, dirname as dirname9 } from "path";
 import { mkdirSync as mkdirSync7, writeFileSync as writeFileSync5, existsSync as existsSync23 } from "fs";
 function decidePath4(ctx, intent, providedName) {
   const rawName = providedName || "";
@@ -5796,7 +5827,7 @@ function decidePath4(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join21(ctx.cwd, rawName);
+      targetDir = join22(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
     migrateExisting = ctx.looseSkillFiles.length > 0;
@@ -5806,7 +5837,7 @@ function decidePath4(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join21(ctx.cwd, rawName);
+      targetDir = join22(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   } else if (decisionPath === "standalone") {
@@ -5814,7 +5845,7 @@ function decidePath4(ctx, intent, providedName) {
       targetDir = ctx.cwd;
       shouldCreateDir = false;
     } else {
-      targetDir = join21(ctx.cwd, rawName);
+      targetDir = join22(ctx.cwd, rawName);
       shouldCreateDir = true;
     }
   }
@@ -5832,7 +5863,7 @@ function scaffold4(decision, ctx, migrateContent) {
   if (path === "plugin") {
     const pluginName = basename6(targetDir);
     const copilotSpec = getProviderSpec("copilot");
-    const copilotManifestDir = dirname8(copilotSpec.manifestPath);
+    const copilotManifestDir = dirname9(copilotSpec.manifestPath);
     const pluginJson = {
       name: pluginName,
       version: "0.1.0",
@@ -5841,10 +5872,10 @@ function scaffold4(decision, ctx, migrateContent) {
       displayName: pluginName,
       keywords: ["example-keyword", "another-keyword"]
     };
-    mkdirSync7(join21(targetDir, copilotManifestDir), { recursive: true });
-    writeFileSync5(join21(targetDir, copilotSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-    const marketplaceDir = dirname8(copilotSpec.marketplacePath);
-    mkdirSync7(join21(targetDir, marketplaceDir), { recursive: true });
+    mkdirSync7(join22(targetDir, copilotManifestDir), { recursive: true });
+    writeFileSync5(join22(targetDir, copilotSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
+    const marketplaceDir = dirname9(copilotSpec.marketplacePath);
+    mkdirSync7(join22(targetDir, marketplaceDir), { recursive: true });
     const marketplaceJson = {
       name: "local",
       plugins: [
@@ -5857,9 +5888,9 @@ function scaffold4(decision, ctx, migrateContent) {
         }
       ]
     };
-    writeFileSync5(join21(targetDir, copilotSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
+    writeFileSync5(join22(targetDir, copilotSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
     const demoSkillName = "doraval";
-    mkdirSync7(join21(targetDir, "skills", demoSkillName), { recursive: true });
+    mkdirSync7(join22(targetDir, "skills", demoSkillName), { recursive: true });
     let skillContent;
     if (migrateContent) {
       skillContent = migrateContent;
@@ -5888,19 +5919,19 @@ To test in Copilot:
 1. Configure the .github/plugin as local source.
 2. Restart/reload and invoke the skill.`;
     }
-    writeFileSync5(join21(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-    const readmePath = join21(targetDir, "README.md");
+    writeFileSync5(join22(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
+    const readmePath = join22(targetDir, "README.md");
     if (!existsSync23(readmePath)) {
       writeFileSync5(readmePath, "# " + pluginName + `
 
 Copilot plugin scaffolded by doraval.`);
     }
   } else {
-    mkdirSync7(join21(targetDir, "skills", "doraval"), { recursive: true });
+    mkdirSync7(join22(targetDir, "skills", "doraval"), { recursive: true });
     const skillBody = migrateContent || `# My Skill
 
 Basic starter for Copilot.`;
-    writeFileSync5(join21(targetDir, "skills", "doraval", "SKILL.md"), `---
+    writeFileSync5(join22(targetDir, "skills", "doraval", "SKILL.md"), `---
 name: doraval
 description: Starter (local skill)
 ---
@@ -5980,7 +6011,7 @@ __export(exports_ui, {
   default: () => ui_default
 });
 import { existsSync as existsSync24, readdirSync as readdirSync12, writeFileSync as writeFileSync6, unlinkSync as unlinkSync2, readFileSync as readFileSync5 } from "fs";
-import { join as join22 } from "path";
+import { join as join23 } from "path";
 import { spawn } from "child_process";
 function slugify2(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "untitled";
@@ -5988,7 +6019,7 @@ function slugify2(title) {
 async function loadAllEntries(project) {
   const journalsDir = getJournalsDir();
   const entries = [];
-  const globalPath = join22(journalsDir, "global.md");
+  const globalPath = join23(journalsDir, "global.md");
   if (existsSync24(globalPath)) {
     try {
       const raw = await Bun.file(globalPath).text();
@@ -5997,7 +6028,7 @@ async function loadAllEntries(project) {
     } catch {}
   }
   if (project) {
-    const projPath = join22(journalsDir, `${project}.md`);
+    const projPath = join23(journalsDir, `${project}.md`);
     if (existsSync24(projPath)) {
       try {
         const raw = await Bun.file(projPath).text();
@@ -6012,7 +6043,7 @@ async function loadAllEntries(project) {
     if (pdir && existsSync24(pdir)) {
       const files = readdirSync12(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
       for (const f of files) {
-        const txt = await Bun.file(join22(pdir, f)).text();
+        const txt = await Bun.file(join23(pdir, f)).text();
         const parsed = parseJournalEntries(txt);
         parsed.forEach((e) => {
           e._staged = true;
@@ -6029,12 +6060,12 @@ async function writePendingEntry(project, input) {
   ensureDoravalDirs();
   const pendingDir = getPendingProjectDir(project);
   if (!existsSync24(pendingDir)) {
-    await Bun.write(join22(pendingDir, ".gitkeep"), "");
+    await Bun.write(join23(pendingDir, ".gitkeep"), "");
   }
   const date = new Date().toISOString().split("T")[0];
   const slug = slugify2(input.title);
   const filename = `${date}-${slug}.md`;
-  const filePath = join22(pendingDir, filename);
+  const filePath = join23(pendingDir, filename);
   const content = `## ${input.title}
 
 \`\`\`yaml
@@ -6054,7 +6085,7 @@ async function loadEvals(limit = 30) {
   const dir = getEvalsDir();
   if (!existsSync24(dir))
     return [];
-  let files = readdirSync12(dir).filter((f) => f.endsWith(".json")).map((f) => ({ name: f, path: join22(dir, f) }));
+  let files = readdirSync12(dir).filter((f) => f.endsWith(".json")).map((f) => ({ name: f, path: join23(dir, f) }));
   files.sort((a, b) => b.name.localeCompare(a.name));
   const results = [];
   for (const f of files.slice(0, limit)) {
@@ -6126,7 +6157,7 @@ async function getDashboardHtml() {
     return `<!doctype html><meta charset="utf-8"><body style="font-family:monospace;background:#111;color:#ddd;padding:2rem"><h1>doraval ui</h1><p>Dashboard HTML missing.</p><pre>${String(err)}</pre></body>`;
   }
 }
-var import_picocolors18, DEFAULT_PORT = 3737, getPidFile = (p) => join22(getDoravalDir(), `ui.${p}.pid`), ui_default;
+var import_picocolors18, DEFAULT_PORT = 3737, getPidFile = (p) => join23(getDoravalDir(), `ui.${p}.pid`), ui_default;
 var init_ui = __esm(() => {
   init_out();
   init_journal_config();
@@ -6270,7 +6301,7 @@ var init_ui = __esm(() => {
                 return Response.json({ error: "filename required" }, { status: 400 });
               }
               const pdir = getPendingProjectDir(project);
-              const filePath = join22(pdir, filename);
+              const filePath = join23(pdir, filename);
               if (existsSync24(filePath)) {
                 try {
                   await Bun.file(filePath).unlink();
@@ -6366,7 +6397,7 @@ var init_skill = __esm(() => {
 
 // src/validators/claude/plugin.ts
 import { existsSync as existsSync26, readdirSync as readdirSync13 } from "fs";
-import { resolve as resolve7, join as join23 } from "path";
+import { resolve as resolve7, join as join24 } from "path";
 function levenshtein(a, b) {
   if (a === b)
     return 0;
@@ -6621,7 +6652,7 @@ var init_plugin = __esm(() => {
       if (existsSync26(skillsDir)) {
         const entries = readdirSync13(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join23(skillsDir, e.name, "SKILL.md");
+          const md = join24(skillsDir, e.name, "SKILL.md");
           if (existsSync26(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
@@ -6685,7 +6716,7 @@ var init_plugin = __esm(() => {
 
 // src/validators/claude/marketplace.ts
 import { existsSync as existsSync27, readdirSync as readdirSync14 } from "fs";
-import { resolve as resolve8, join as join24 } from "path";
+import { resolve as resolve8, join as join25 } from "path";
 var claudeMarketplaceValidator;
 var init_marketplace = __esm(() => {
   claudeMarketplaceValidator = {
@@ -6704,8 +6735,8 @@ var init_marketplace = __esm(() => {
         for (const entry of entries) {
           if (!entry.isDirectory())
             continue;
-          const hasSkills = existsSync27(join24(pluginsDir, entry.name, "skills"));
-          const hasManifest = existsSync27(join24(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
+          const hasSkills = existsSync27(join25(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync27(join25(pluginsDir, entry.name, ".claude-plugin", "plugin.json"));
           if (hasSkills || hasManifest)
             return true;
         }
@@ -6813,10 +6844,10 @@ var init_marketplace = __esm(() => {
           warnings.push("No LICENSE at marketplace root \u2014 recommended");
         }
         for (const plugin of pluginEntries) {
-          const pluginPath = join24(pluginsDir, plugin.name);
-          const hasSkills = existsSync27(join24(pluginPath, "skills"));
-          const hasManifest = existsSync27(join24(pluginPath, ".claude-plugin", "plugin.json"));
-          const hasReadme = existsSync27(join24(pluginPath, "README.md"));
+          const pluginPath = join25(pluginsDir, plugin.name);
+          const hasSkills = existsSync27(join25(pluginPath, "skills"));
+          const hasManifest = existsSync27(join25(pluginPath, ".claude-plugin", "plugin.json"));
+          const hasReadme = existsSync27(join25(pluginPath, "README.md"));
           if (hasManifest || hasSkills) {
             passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
           } else {
@@ -7030,7 +7061,7 @@ var init_mcp = __esm(() => {
 
 // src/validators/claude/subagent.ts
 import { existsSync as existsSync30, readdirSync as readdirSync15 } from "fs";
-import { resolve as resolve11, join as join25 } from "path";
+import { resolve as resolve11, join as join26 } from "path";
 var claudeSubagentValidator;
 var init_subagent = __esm(() => {
   init_frontmatter();
@@ -7075,7 +7106,7 @@ var init_subagent = __esm(() => {
       ]);
       const DISALLOWED = new Set(["hooks", "mcpServers", "permissionMode"]);
       for (const file of mdFiles) {
-        const filePath = join25(agentsDir, file);
+        const filePath = join26(agentsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
@@ -7122,7 +7153,7 @@ var init_subagent = __esm(() => {
 
 // src/validators/claude/command.ts
 import { existsSync as existsSync31, readdirSync as readdirSync16 } from "fs";
-import { resolve as resolve12, join as join26 } from "path";
+import { resolve as resolve12, join as join27 } from "path";
 var claudeCommandValidator;
 var init_command = __esm(() => {
   init_frontmatter();
@@ -7153,7 +7184,7 @@ var init_command = __esm(() => {
       }
       passes.push(`${mdFiles.length} command definition(s) found`);
       for (const file of mdFiles) {
-        const filePath = join26(commandsDir, file);
+        const filePath = join27(commandsDir, file);
         const raw = await Bun.file(filePath).text();
         try {
           const parsed = parseFrontmatter(raw);
@@ -7389,7 +7420,7 @@ var init_monitors = __esm(() => {
 
 // src/validators/codex/plugin.ts
 import { existsSync as existsSync35, readdirSync as readdirSync17 } from "fs";
-import { resolve as resolve16, join as join27 } from "path";
+import { resolve as resolve16, join as join28 } from "path";
 var NAME_REGEX3, codexPluginValidator;
 var init_plugin2 = __esm(() => {
   NAME_REGEX3 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -7483,7 +7514,7 @@ var init_plugin2 = __esm(() => {
       if (existsSync35(skillsDir)) {
         const entries = readdirSync17(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join27(skillsDir, e.name, "SKILL.md");
+          const md = join28(skillsDir, e.name, "SKILL.md");
           if (existsSync35(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
@@ -7714,7 +7745,7 @@ var init_skill2 = __esm(() => {
 
 // src/validators/cursor/plugin.ts
 import { existsSync as existsSync39, readdirSync as readdirSync19 } from "fs";
-import { resolve as resolve20, join as join29 } from "path";
+import { resolve as resolve20, join as join30 } from "path";
 var NAME_REGEX4, cursorPluginValidator;
 var init_plugin3 = __esm(() => {
   NAME_REGEX4 = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -7814,7 +7845,7 @@ var init_plugin3 = __esm(() => {
       if (existsSync39(skillsDir)) {
         const entries = readdirSync19(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory());
         for (const e of entries) {
-          const md = join29(skillsDir, e.name, "SKILL.md");
+          const md = join30(skillsDir, e.name, "SKILL.md");
           if (existsSync39(md)) {
             passes.push(`skills/${e.name}/SKILL.md exists`);
           } else {
@@ -7857,7 +7888,7 @@ var init_plugin3 = __esm(() => {
 
 // src/validators/cursor/marketplace.ts
 import { existsSync as existsSync40, readdirSync as readdirSync20 } from "fs";
-import { resolve as resolve21, join as join30 } from "path";
+import { resolve as resolve21, join as join31 } from "path";
 var cursorMarketplaceValidator;
 var init_marketplace3 = __esm(() => {
   cursorMarketplaceValidator = {
@@ -7876,8 +7907,8 @@ var init_marketplace3 = __esm(() => {
         for (const entry of entries) {
           if (!entry.isDirectory())
             continue;
-          const hasSkills = existsSync40(join30(pluginsDir, entry.name, "skills"));
-          const hasManifest = existsSync40(join30(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
+          const hasSkills = existsSync40(join31(pluginsDir, entry.name, "skills"));
+          const hasManifest = existsSync40(join31(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
           if (hasSkills || hasManifest)
             return true;
         }
@@ -7999,9 +8030,9 @@ var init_marketplace3 = __esm(() => {
           warnings.push("No README.md at marketplace root \u2014 recommended");
         }
         for (const plugin of pluginEntries) {
-          const pluginPath = join30(pluginsDir, plugin.name);
-          const hasSkills = existsSync40(join30(pluginPath, "skills"));
-          const hasManifest = existsSync40(join30(pluginPath, ".cursor-plugin", "plugin.json"));
+          const pluginPath = join31(pluginsDir, plugin.name);
+          const hasSkills = existsSync40(join31(pluginPath, "skills"));
+          const hasManifest = existsSync40(join31(pluginPath, ".cursor-plugin", "plugin.json"));
           if (hasManifest || hasSkills) {
             passes.push(`Plugin "${plugin.name}" has ${hasManifest ? "manifest" : "skills/"}`);
           }
@@ -8611,7 +8642,7 @@ var init_validators = __esm(() => {
 // src/core/remote.ts
 import { spawnSync as spawnSync5 } from "child_process";
 import { mkdtempSync, rmSync } from "fs";
-import { join as join32 } from "path";
+import { join as join33 } from "path";
 import { tmpdir } from "os";
 function parseRemoteUrl(input) {
   if (input.startsWith(".") || input.startsWith("/") || input.startsWith("~")) {
@@ -8676,7 +8707,7 @@ function hasGitCli() {
   }
 }
 async function cloneToTemp(parsed) {
-  const tmpDir = mkdtempSync(join32(tmpdir(), "dora-"));
+  const tmpDir = mkdtempSync(join33(tmpdir(), "dora-"));
   const cleanup = () => {
     try {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -8896,7 +8927,7 @@ var exports_init2 = {};
 __export(exports_init2, {
   default: () => init_default2
 });
-import { basename as basename7, join as join33 } from "path";
+import { basename as basename7, join as join34 } from "path";
 var {spawnSync: spawnSync6 } = globalThis.Bun;
 var import_picocolors20, init_default2;
 var init_init2 = __esm(() => {
@@ -9011,7 +9042,7 @@ var init_init2 = __esm(() => {
       }
       const journalsDir = getJournalsDir();
       const remotePath = `projects/${project}.md`;
-      const localPath = join33(journalsDir, `${project}.md`);
+      const localPath = join34(journalsDir, `${project}.md`);
       const effectiveRepo = isRefresh && !args.repo ? existing.journal.repo : repo;
       const config = existing ?? {
         journal: { repo: effectiveRepo, projects: {} }
@@ -9024,7 +9055,7 @@ var init_init2 = __esm(() => {
       ensureDoravalDirs();
       ui.write(`  ${import_picocolors20.default.dim(import_picocolors20.default.gray("Fetching journal files from"))} ${import_picocolors20.default.gray(effectiveRepo)}${import_picocolors20.default.dim(import_picocolors20.default.gray("..."))}
 `);
-      const globalDest = join33(journalsDir, "global.md");
+      const globalDest = join34(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       let wroteGlobal;
       if (!refreshGlobalRes.ok) {
@@ -9352,8 +9383,8 @@ async function readMarker() {
 async function writeMarker(marker) {
   try {
     const { mkdir, writeFile } = await import("fs/promises");
-    const { dirname: dirname10 } = await import("path");
-    await mkdir(dirname10(MARKER_PATH), { recursive: true });
+    const { dirname: dirname11 } = await import("path");
+    await mkdir(dirname11(MARKER_PATH), { recursive: true });
     await writeFile(MARKER_PATH, JSON.stringify(marker, null, 2));
   } catch {}
 }
@@ -9369,7 +9400,7 @@ __export(exports_update2, {
 });
 import { spawnSync as spawnSync7 } from "child_process";
 import { homedir as homedir6 } from "os";
-import { fileURLToPath } from "url";
+import { fileURLToPath as fileURLToPath2 } from "url";
 import { realpath, access } from "fs/promises";
 async function confirmUpdate() {
   const { createInterface } = await import("readline");
@@ -9409,7 +9440,7 @@ var init_update3 = __esm(() => {
     },
     async run({ args }) {
       const currentVersion = require_package().version;
-      const entrypoint = fileURLToPath(import.meta.url);
+      const entrypoint = fileURLToPath2(import.meta.url);
       const ctx = {
         entrypoint,
         argv: process.argv,

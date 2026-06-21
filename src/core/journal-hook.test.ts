@@ -26,6 +26,8 @@ describe("journal-hook", () => {
   });
 
   test("resolveDoraBinary returns a non-empty string", () => {
-    expect(resolveDoraBinary().length).toBeGreaterThan(0);
+    const bin = resolveDoraBinary();
+    expect(bin.length).toBeGreaterThan(0);
+    expect(bin === "dora" || bin.includes("dora")).toBe(true);
   });
 });
