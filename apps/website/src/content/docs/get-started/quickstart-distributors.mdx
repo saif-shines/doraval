@@ -5,14 +5,53 @@ sidebar:
   order: 3
 ---
 
-import { Steps } from '@astrojs/starlight/components';
+import { Steps, Badge } from '@astrojs/starlight/components';
 
-You distribute context to others — a devtool company publishing skills to the community, or a senior engineer onboarding juniors.
+You distribute context to others, whether you are a devtool company publishing skills to the community or a senior engineer onboarding juniors.
 
 - You're a **devtool company publishing React skills to the community** and need those resources to work reliably for everyone.
 - You're a **senior engineer onboarding 10 juniors** and need them to succeed with your team's skills on the first try.
 
 This quickstart assumes you have doraval installed. If you haven't yet, see [Installation](/get-started/installation/).
+
+```
+  YOU (context distributor)
+           │
+           ▼
+    ┌──────────────┐
+    │  claude new  │  scaffold a plugin to ship
+    └──────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │ dora validate│  catch broken packaging before publish
+    └──────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │   dora init  │  wire up the agent that runs evals
+    └──────────────┘
+           │
+           ├────────────────────────────┐
+           ▼                            ▼
+    ┌──────────────┐          ┌──────────────────┐
+    │ ship plugin  │          │ juniors/community │
+    │ to audience  │          │ use your skill in │
+    └──────────────┘          │ real agent sessions│
+           │                  └──────────────────┘
+           │                            │
+           └─────────────┬──────────────┘
+                         ▼
+                  ┌──────────────┐
+                  │  dora eval   │  judge real session transcripts
+                  └──────────────┘
+                         │
+                         ▼
+               ADHERES / DRIFTED per skill
+                         │
+                         ▼
+        (soon) parallel evals across sessions & users
+```
 
 <Steps>
 
@@ -32,7 +71,7 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
 
 2. ### Validate before you ship
 
-   `dora validate` auto-detects what you scaffolded and runs every check that applies — skills, plugins, hooks, MCP servers, subagents, memory files, and more. It catches broken manifests, missing `SKILL.md` files, bad frontmatter, and packaging mistakes **before** your community or juniors waste a session debugging context that was wrong from the start.
+   `dora validate` auto-detects what you scaffolded and runs every check that applies: skills, plugins, hooks, MCP servers, subagents, memory files, and more. It catches broken manifests, missing `SKILL.md` files, bad frontmatter, and packaging mistakes **before** your community or juniors waste a session debugging context that was wrong from the start.
 
    Run it for **every coding agent** your audience uses. Target a provider with `--for`, or inspect one validator at a time:
 
@@ -46,25 +85,25 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
    See [validate](/commands/validate/) and [providers](/commands/providers/) for the full matrix.
 
    ```text
-   dora validate — Claude Plugin (claude:plugin)
+   dora validate: Claude Plugin (claude:plugin)
    Path:  .
    ✓ .claude-plugin/plugin.json is valid JSON
    ✓ .claude-plugin/ contains only plugin.json (correct layout)
    ✓ name: "aiboomi-demo"
-   ✓ version: "0.1.0" (explicit — bump on every release to publish updates)
+   ✓ version: "0.1.0" (explicit: bump on every release to publish updates)
    ✓ description field present
-   ✓ keywords: [example-keyword, another-keyword] — If users mention any of these keywords, your plugin will get triggered in Claude Code
+   ✓ keywords: [example-keyword, another-keyword]. If users mention any of these keywords, your plugin will get triggered in Claude Code
    ✓ skills/doraval/SKILL.md exists
    ✓ README.md present
 
    ✓ All checks passed.
 
-   dora validate — Claude LSP Servers (claude:lsp)
+   dora validate: Claude LSP Servers (claude:lsp)
    Path:  .
 
    ✓ All checks passed.
 
-   dora validate — Claude Monitors (experimental) (claude:monitors)
+   dora validate: Claude Monitors (experimental) (claude:monitors)
    Path:  .
 
    ✓ All checks passed.
@@ -72,30 +111,88 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
 
 3. ### Set your coding agent
 
-   Tell doraval which agent runs on your behalf — for scaffolding, validation, journal enrichment, and eval. Run [`doraval init`](/commands/init/) once (it detects `claude` or `grok` if installed), or set keys directly.
+   Tell doraval which agent runs on your behalf, for scaffolding, validation, journal enrichment, and eval. Run [`doraval init`](/commands/init/) once (it detects `claude` or `grok` if installed), or set keys directly.
 
-   Claude Code and Grok have the deepest support today. **Cursor**, **Copilot**, **OpenCode**, and more work for scaffolding and validation — with fuller agent-driving and eval integrations coming soon. Run `doraval providers` for the current list.
+   Claude Code and Grok have the deepest support today. **Cursor**, **Copilot**, **OpenCode**, and more work for scaffolding and validation, with fuller agent-driving and eval integrations coming soon. Run `doraval providers` for the current list.
 
    **Claude Code**
 
    ```bash
    dora config set agent.command claude
-   dora config set agent.prompt_template '-p "{{prompt}}" --output-format json'
-   dora config set agent.cwd_flag --cwd
    ```
 
    **Grok**
 
    ```bash
    dora config set agent.command grok
-   dora config set agent.prompt_template '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen'
-   dora config set agent.cwd_flag --cwd
    ```
 
    Verify with `dora config get agent`. Re-run `dora init` anytime to change it.
 
-   Going forward, doraval uses an **LLM as a judge** to run [evals](/commands/eval/) on real agent sessions — so you can see **subjective drift**: whether juniors or community users actually followed your skill in practice, not just whether the packaging validated. `validate` catches structural problems; `dora eval` and [`judge`](/commands/judge/) answer whether the skill worked in a real session.
+4. ### Run evals on real sessions
+
+   `validate` catches structural problems before you ship. [`dora eval`](/commands/eval/) goes further: it reads a real coding agent session, finds which skills were invoked, and uses an **LLM as a judge** to score adherence. That is how you measure **subjective drift**: whether juniors or community users actually followed your skill in practice.
+
+   After someone (or you) runs a session in the project directory:
+
+   ```bash
+   dora eval
+   ```
+
+   doraval lists recent sessions that used skills and lets you pick one interactively:
+
+   ```text
+   doraval eval: Session skill adherence
+
+   Recent sessions for this directory:
+     1. 2026-06-21 "Identify most important file" (1 skill)  7dfc005f-ff1e-4a04-a973-743526b516a5.jsonl
+     2. 2026-06-20 (2 skills)  1758ced3-a2e1-4d25-b045-e5190668d796.jsonl
+     3. 2026-06-20 (2 skills)  014c7848-3e1f-4976-84b7-2c06ba3157e2.jsonl
+     4. 2026-06-20 (2 skills)  bcc87a8b-d384-4eab-b8a3-37b681742bab.jsonl
+     5. 2026-06-20 "Identify most important file in repo" (1 skill)  26cfb952-522f-4ed8-9918-7611a56d401b.jsonl
+     6. 2026-06-20 (2 skills)  7527c538-e4ce-4a4c-8961-fca2a1068240.jsonl
+     7. 2026-06-20 "Identify important project files" (1 skill)  e88eb76c-8b35-4118-8e03-146a4a97559a.jsonl
+     8. 2026-06-20 "Identify most important file in repository" (1 skill)  a606889d-3b84-4e9f-9bf4-dfde7110db8a.jsonl
+
+   Select session(s) (e.g. 1,3 or 2-4 or all or latest):  (1) 1
+   Session: /Users/.../.claude/projects/.../7dfc005f-ff1e-4a04-a973-743526b516a5.jsonl
+   · Send session summary (tool calls + 5 user messages) to claude-sonnet-4-6. Use --verbose to inspect.
+
+   Evaluating: superpowers:using-superpowers
+
+   [DRIFTED] superpowers:using-superpowers
+   agent:       claude-code
+   model:       claude-sonnet-4-6
+   familiarity: 2/10  (The user asked a terse, informal question with an abbreviation ('imp') and no file paths or technical context.)
+   closure:     incomplete
+   session:     7dfc005f  "Identify most important file"
+
+   Adherence:
+   ✗ Invoke relevant or requested skills BEFORE any response or action  Agent ran Glob and Read before any skill invocation.
+   ✓ If there is even a 1% chance a skill might apply, invoke the skill to check  Skill tool called after initial exploration.
+   ✓ Use the platform skill-loading mechanism (e.g., Skill tool), not manual file reads  Skill tool used on second invocation after an initial manual Read.
+   ✓ Announce 'Using [skill] to [purpose]' when invoking a skill  Announced "Using using-superpowers to check applicable skills."
+   ✗ If an inv has a checklist, create a todo per item  Only 1 of 5 checklist items became todos.
+   ✓ When multiple skills could apply, use process skills first  using-superpowers was selected before domain skills.
+   ✗ Follow invoked skill instructions exactly  Session stopped after partial recon; skill workflow never completed.
+
+   Result: 4/7  [DRIFTED: Agent eventually invoked the skill but acted first, skipped most checklist todos, and never finished the workflow.]
+   ```
+
+   A `DRIFTED` verdict here means the agent did not follow your skill reliably. That is exactly the kind of first-attempt failure distributors need to catch before shipping. See [eval](/commands/eval/) and [`judge`](/commands/judge/) for flags, history, and CI usage.
+
+5. ### Parallelize evals across sessions and users <Badge text="Coming soon" variant="caution" size="small" />
+
+   One session tells you what happened once. As a distributor, you care about **patterns across your audience**: ten juniors, a beta cohort, or community adopters all trying the same skill on different prompts, repos, and familiarity levels.
+
+   Coming soon: parallelize evals over **real sessions and real users** so you can batch-select recent transcripts, fan out judge calls, and see aggregate ADHERES / DRIFTED rates before you publish the next plugin version.
+
+   ```bash
+   dora eval --all --parallel
+   ```
+
+   Until then, run `dora eval` per session (or select a range with `1-4` / `all`) and use `dora eval history` to track drift over time.
 
 </Steps>
 
-This quickstart covers just a few features — evals, drift checks, provider scaffolding for Cursor and Copilot, and more are on the way.
+This quickstart covers just a few features: provider scaffolding for Cursor and Copilot, and more are on the way.

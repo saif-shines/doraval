@@ -3,6 +3,72 @@ import { spawnSync } from "bun";
 export interface AgentConfig {
   command: string;
   prompt_template?: string;
+  cwd_flag?: string;
+}
+
+let lastInvokeError = "";
+
+export function getLastInvokeError(): string {
+  return lastInvokeError;
+}
+
+function isClaudeCommand(command: string): boolean {
+  return /claude/i.test(command);
+}
+
+function isGrokCommand(command: string): boolean {
+  return /grok/i.test(command);
+}
+
+/**
+ * Returns a sensible default prompt_template based on the agent command name.
+ */
+export function getDefaultPromptTemplate(command: string): string {
+  const lower = (command || '').toLowerCase();
+
+  if (lower.includes('claude')) {
+    // --output-format json produces a single JSON object {"result":"..."} wrapping the model's text.
+    // --bare skips hooks/plugins so the judge call is clean. extractCandidates unwraps c.result.
+    return '-p "{{prompt}}" --output-format json --bare';
+  }
+
+  if (lower.includes('grok')) {
+    return '-p "{{prompt}}" --no-auto-update --no-alt-screen --always-approve';
+  }
+
+  return '-p "{{prompt}}"';
+}
+
+/**
+ * Returns agent config with prompt_template corrected for the actual CLI.
+ * Strips cross-agent flags (e.g. Grok flags in a Claude template) and removes
+ * unsupported cwd_flag for Claude (Claude has no --cwd; uses spawn cwd).
+ */
+export function resolveAgentConfig(agent: AgentConfig): AgentConfig {
+  const command = agent.command || "";
+  const desired = getDefaultPromptTemplate(command);
+  let template = agent.prompt_template;
+
+  if (template) {
+    if (isClaudeCommand(command) && /--no-auto-update|--no-alt-screen|--always-approve/.test(template)) {
+      template = desired;
+    } else if (isGrokCommand(command) && /--output-format\s+json/.test(template)) {
+      template = desired;
+    }
+  } else {
+    template = desired;
+  }
+
+  let cwd_flag = agent.cwd_flag;
+  if (isClaudeCommand(command) && cwd_flag) {
+    cwd_flag = undefined;
+  }
+
+  return {
+    command,
+    prompt_template: template,
+    ...(cwd_flag ? { cwd_flag } : {}),
+  };
 }
 
 /**
@@ -52,7 +118,37 @@ function extractCandidates(text: string): Record<string, unknown>[] {
     }
     unwrapped.push(c);
   }
-  return unwrapped;
+
+  function collectObjects(obj: any, out: any[] = []): any[] {
+    if (!obj || typeof obj !== 'object') return out;
+    if (Array.isArray(obj)) {
+      for (const item of obj) collectObjects(item, out);
+    } else {
+      out.push(obj);
+      for (const v of Object.values(obj)) collectObjects(v, out);
+    }
+    return out;
+  }
+
+  const nested: Record<string, unknown>[] = [];
+  for (const c of [...candidates, ...unwrapped]) {
+    collectObjects(c, nested);
+  }
+
+  return [...unwrapped, ...nested];
+}
+
+function formatAgentFailure(stdout: string, stderr: string, exitCode: number | null): string {
+  if (stderr) return stderr;
+  const candidates = extractCandidates(stdout);
+  for (const c of candidates) {
+    if (c.is_error === true && typeof c.result === "string" && c.result.trim()) {
+      return c.result.trim();
+    }
+    if (typeof c.error === "string" && c.error.trim()) return c.error.trim();
+  }
+  if (stdout) return stdout;
+  return `agent exited with code ${exitCode ?? "unknown"}`;
 }
 
 /**
@@ -65,31 +161,27 @@ export async function invokeAgent(
   agentCfg: AgentConfig,
   expectedKeys: string[]
 ): Promise<Record<string, unknown> | null> {
-  const template = agentCfg.prompt_template ?? '-p "{{prompt}}" --output-format json --bare';
+  lastInvokeError = "";
+  const resolved = resolveAgentConfig(agentCfg);
+  const template = resolved.prompt_template ?? getDefaultPromptTemplate(resolved.command);
   const extraArgs = buildAgentArgv(template, promptText);
 
   let result: ReturnType<typeof spawnSync>;
   try {
-    result = spawnSync([agentCfg.command, ...extraArgs], {
+    result = spawnSync([resolved.command, ...extraArgs], {
       stdout: "pipe",
       stderr: "pipe",
       env: { ...process.env },
     });
   } catch (e) {
+    lastInvokeError = e instanceof Error ? e.message : "agent spawn failed";
     return null;
   }
 
   const stdout = (result.stdout ?? "").toString().trim();
   const stderr = (result.stderr ?? "").toString().trim();
 
-  if (result.exitCode !== 0) {
-    return null;
-  }
-
-  // Clean markdown code fences that models often add
-  let cleaned = stdout.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
-
-  // Extract candidates using shared helper
+  const cleaned = stdout.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
   const unwrapped = extractCandidates(cleaned);
 
   // Prefer first blob that has one of the expected keys
@@ -97,8 +189,14 @@ export async function invokeAgent(
     if (expectedKeys.some((k) => k in c)) return c;
   }
 
+  if (result.exitCode !== 0) {
+    lastInvokeError = formatAgentFailure(stdout, stderr, result.exitCode);
+    return null;
+  }
+
   if (unwrapped[0]) return unwrapped[0];
 
+  lastInvokeError = formatAgentFailure(stdout, stderr, result.exitCode);
   return null;
 }
 
@@ -106,10 +204,6 @@ export async function invokeAgent(
  * Runs the agent in "full session" mode for test/skill exercise runs.
  * Unlike invokeAgent (which forces JSON for judges), this aims to let the
  * agent perform real work following a skill + task.
- *
- * Returns the full stdout text (the "trace" or response).
- * Grok gets special headless flags (including --cwd for session isolation + updates.jsonl capture).
- * Other agents rely on the cwd passed to Bun.spawn; put agent-specific flags in prompt_template.
  */
 export async function runAgentSession(
   promptText: string,
@@ -117,13 +211,13 @@ export async function runAgentSession(
   opts: { cwd?: string; alwaysApprove?: boolean; stream?: boolean } = {}
 ): Promise<string> {
   const { cwd, alwaysApprove = true, stream = true } = opts;
-  const cmd = agentCfg.command || "grok";
+  const resolved = resolveAgentConfig(agentCfg);
+  const cmd = resolved.command || "grok";
 
   let args: string[] = [];
 
-  const isGrok = /grok/i.test(cmd);
+  const isGrok = isGrokCommand(cmd);
   if (isGrok) {
-    // Use exact flags from Grok docs for headless scripting + real persisted session
     args = [
       "--no-auto-update",
       "-p", promptText,
@@ -133,19 +227,18 @@ export async function runAgentSession(
       "--output-format", "plain",
     ];
   } else {
-    // Fallback for other agents: use a non-JSON template if provided, else basic -p
-    const template = agentCfg.prompt_template && !agentCfg.prompt_template.includes("output-format json")
-      ? agentCfg.prompt_template
+    const template = (resolved.prompt_template && !resolved.prompt_template.includes("output-format json"))
+      ? resolved.prompt_template
       : '-p "{{prompt}}"';
     args = buildAgentArgv(template, promptText);
-    // If the agent declares a cwd_flag (e.g. "--cwd" or "-C"), pass the run directory so the *agent*
-    // knows which repo/dir is the current project (in addition to the spawn cwd).
-    // This is needed because many agent CLIs key their sessions, indexing, and context off the
-    // explicit project directory, not just process PWD.
-    if (cwd && agentCfg.cwd_flag) {
-      args.push(agentCfg.cwd_flag, cwd);
+
+    if (cwd && resolved.cwd_flag) {
+      args.push(resolved.cwd_flag, cwd);
     }
-    // We intentionally do not default to --cwd or --always-approve for unknown agents.
+
+    if (alwaysApprove && isClaudeCommand(cmd)) {
+      args.push("--dangerously-skip-permissions");
+    }
   }
 
   const proc = Bun.spawn([cmd, ...args], {

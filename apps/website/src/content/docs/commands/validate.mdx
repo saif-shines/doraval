@@ -58,7 +58,7 @@ Keywords in a plugin manifest help agents discover your plugin:
 ```bash
 dora validate . --for cursor:plugin
 # ...
-✓ keywords: [foo, bar-baz] — If users mention any of these keywords, your plugin will get triggered in Cursor
+✓ keywords: [foo, bar-baz]. If users mention any of these keywords, your plugin will get triggered in Cursor
 ```
 
 ## Remote URLs
@@ -81,7 +81,7 @@ The repo is cloned to a temp directory and cleaned up automatically after valida
 ```
   Cloning https://github.com/obra/superpowers...
 
-  dora validate — Claude Plugin (claude:plugin)
+  dora validate: Claude Plugin (claude:plugin)
 
   Path:  https://github.com/obra/superpowers
 
@@ -103,7 +103,7 @@ The original single-skill validation command is still available:
 dora skill validate <path> [options]
 ```
 
-This validates a single skill directory (must contain `SKILL.md`). The top-level `dora validate` is now the recommended command — it auto-detects and runs all applicable validators including `claude:skill`.
+This validates a single skill directory (must contain `SKILL.md`). The top-level `dora validate` is now the recommended command; it auto-detects and runs all applicable validators including `claude:skill`.
 
 `skill validate` (and `claude:skill`) now treats `name` and `description` as recommended rather than hard requirements (missing values produce warnings). It also detects advanced frontmatter fields (e.g. `allowed-tools`, `context`, `when_to_use`, `disable-model-invocation`), dynamic context injection (`!` `command` `` and ```! blocks), and substitutions (`$ARGUMENTS`, `$0`, `${CLAUDE_SKILL_DIR}`, etc.).
 
@@ -149,5 +149,5 @@ The output can also include warnings (e.g. when `description` or `name` is omitt
 
 ## Exit codes
 
-- **0** — No errors
-- **1** — Validation errors found, no validators matched, or path not found
+- **0**: No errors
+- **1**: Validation errors found, no validators matched, or path not found

@@ -18,22 +18,22 @@ doraval providers [options]
 The command prints a summary for each provider:
 
 ```
-doraval providers — Supported platforms
+doraval providers: Supported platforms
 
-claude — Claude Code
+claude: Claude Code
   Manifest: .claude-plugin/plugin.json
   Marketplace: .claude-plugin/marketplace.json
   MCP: .mcp.json
-  Keywords in plugin.json: supported — If users mention any of these keywords, your plugin will get triggered
+  Keywords in plugin.json: supported. If users mention any of these keywords, your plugin will get triggered
   Example: doraval validate . --for claude:plugin
 
-codex — Codex
+codex: Codex
   ...
 
-cursor — Cursor
+cursor: Cursor
   ...
 
-copilot — Copilot CLI
+copilot: Copilot CLI
   ...
 ```
 
@@ -44,7 +44,7 @@ Use `--json` for machine-readable output.
 Each provider supports a `keywords` array in its plugin manifest. When present, doraval surfaces it during validation:
 
 ```
-✓ keywords: [foo, bar-baz] — If users mention any of these keywords, your plugin will get triggered in Cursor
+✓ keywords: [foo, bar-baz]. If users mention any of these keywords, your plugin will get triggered in Cursor
 ```
 
 This helps agents discover and load your plugin when users reference those terms.
@@ -57,5 +57,5 @@ This helps agents discover and load your plugin when users reference those terms
 
 ## See also
 
-- [validate](/commands/validate/) — use `--for <provider>:plugin` to inspect a specific plugin
+- [validate](/commands/validate/): use `--for <provider>:plugin` to inspect a specific plugin
 - The individual provider new commands for scaffolding

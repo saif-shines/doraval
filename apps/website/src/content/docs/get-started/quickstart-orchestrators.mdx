@@ -1,6 +1,6 @@
 ---
 title: "Quickstart: Context Orchestrators"
-description: Manage context for your own coding agent — scaffold, validate, journal, and inject decisions.
+description: Manage context for your own coding agent. Scaffold, validate, journal, and inject decisions.
 sidebar:
   order: 4
 ---
@@ -10,6 +10,47 @@ import { Steps } from '@astrojs/starlight/components';
 You're an **expert engineer** who wants to better manage context for your own coding agent.
 
 This quickstart assumes you have doraval installed. If you haven't yet, see [Installation](/get-started/installation/).
+
+```
+  YOU (context orchestrator)
+           │
+           ▼
+    ┌──────────────┐
+    │  claude new  │  scaffold skill/context for your agent
+    └──────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │ dora validate│  confirm files load and trigger correctly
+    └──────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │   dora init  │  journal repo + coding agent for enrichment
+    └──────────────┘
+           │
+           ▼
+     decisions as you work
+           │
+           ▼
+    ┌──────────────┐
+    │ journal add  │  stage entries locally
+    └──────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │ journal sync │  publish to your GitHub journal repo
+    └──────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │  hook enable │  inject journal on every SessionStart
+    └──────────────┘
+           │
+           ▼
+    your agent already knows your decisions
+    before you type the first message
+```
 
 <Steps>
 
@@ -29,7 +70,7 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
 
 2. ### Validate before you rely on it
 
-   `dora validate` auto-detects what you scaffolded and runs every check that applies — skills, plugins, hooks, MCP servers, subagents, memory files, and more. It catches broken manifests, missing `SKILL.md` files, bad frontmatter, and packaging mistakes **before** your coding agent burns context on resources that will not load or trigger correctly.
+   `dora validate` auto-detects what you scaffolded and runs every check that applies: skills, plugins, hooks, MCP servers, subagents, memory files, and more. It catches broken manifests, missing `SKILL.md` files, bad frontmatter, and packaging mistakes **before** your coding agent burns context on resources that will not load or trigger correctly.
 
    Run it for **every coding agent** you use day to day. Target a provider with `--for`, or inspect one validator at a time:
 
@@ -43,25 +84,25 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
    See [validate](/commands/validate/) and [providers](/commands/providers/) for the full matrix.
 
    ```text
-   dora validate — Claude Plugin (claude:plugin)
+   dora validate: Claude Plugin (claude:plugin)
    Path:  .
    ✓ .claude-plugin/plugin.json is valid JSON
    ✓ .claude-plugin/ contains only plugin.json (correct layout)
    ✓ name: "aiboomi-demo"
-   ✓ version: "0.1.0" (explicit — bump on every release to publish updates)
+   ✓ version: "0.1.0" (explicit: bump on every release to publish updates)
    ✓ description field present
-   ✓ keywords: [example-keyword, another-keyword] — If users mention any of these keywords, your plugin will get triggered in Claude Code
+   ✓ keywords: [example-keyword, another-keyword]. If users mention any of these keywords, your plugin will get triggered in Claude Code
    ✓ skills/doraval/SKILL.md exists
    ✓ README.md present
 
    ✓ All checks passed.
 
-   dora validate — Claude LSP Servers (claude:lsp)
+   dora validate: Claude LSP Servers (claude:lsp)
    Path:  .
 
    ✓ All checks passed.
 
-   dora validate — Claude Monitors (experimental) (claude:monitors)
+   dora validate: Claude Monitors (experimental) (claude:monitors)
    Path:  .
 
    ✓ All checks passed.
@@ -76,15 +117,15 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
    ```
 
    ```text
-   dora init — Set up doraval, your journal, and the coding agent dora should use on the fly
+   dora init: Set up doraval, your journal, and the coding agent dora should use on the fly
    Step 1: Journal setup
    Journal repo (owner/name)
    (from your previous journal setup)
    > (saif-shines/saif-shines.md)
    Project name (aiboomi-demo)
    Fetching journal files from saif-shines/saif-shines.md...
-   · global.md (not found — will be created on first sync)
-   · projects/aiboomi-demo.md (not found — will be created on first sync)
+   · global.md (not found, will be created on first sync)
+   · projects/aiboomi-demo.md (not found, will be created on first sync)
 
    ✓ Journal ready for project aiboomi-demo.
    Coding agent (already configured)
@@ -95,7 +136,7 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
    ✓ Try: dora journal add "short decision"
    ```
 
-   Claude Code and Grok have the deepest support today. **Cursor**, **Copilot**, **OpenCode**, and more work for scaffolding and validation — with fuller agent-driving and eval integrations coming soon. Run `doraval providers` for the current list.
+   Claude Code and Grok have the deepest support today. **Cursor**, **Copilot**, **OpenCode**, and more work for scaffolding and validation, with fuller agent-driving and eval integrations coming soon. Run `doraval providers` for the current list.
 
    Or set the agent directly:
 
@@ -104,7 +145,7 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
    dora config set agent.prompt_template '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen'
    ```
 
-   Going forward, doraval uses an **LLM as a judge** to run [evals](/commands/eval/) on your own agent sessions — so you can see **subjective drift** for yourself: whether your coding agent actually followed your skill in practice, not just whether the files look correct. `validate` catches structural problems; `dora eval` and [`judge`](/commands/judge/) answer whether the skill worked when you relied on it.
+   Going forward, doraval uses an **LLM as a judge** to run [evals](/commands/eval/) on your own agent sessions, so you can see **subjective drift** for yourself: whether your coding agent actually followed your skill in practice, not just whether the files look correct. `validate` catches structural problems; `dora eval` and [`judge`](/commands/judge/) answer whether the skill worked when you relied on it.
 
 4. ### Capture and sync decisions
 
@@ -128,7 +169,7 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
        └── projects/aiboomi-demo.md
    ```
 
-   If your GitHub username is `saif-shines`, doraval uses `saif-shines/saif-shines.md` as your journal repo and stores everything there — global principles in `global.md`, project-specific entries under `projects/`.
+   If your GitHub username is `saif-shines`, doraval uses `saif-shines/saif-shines.md` as your journal repo and stores everything there: global principles in `global.md`, project-specific entries under `projects/`.
 
    ```bash
    dora journal add "README.md is the most important file because it's the index of the repo"
@@ -147,7 +188,7 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
    ```
 
    ```text
-   dora journal sync — aiboomi-demo
+   dora journal sync: aiboomi-demo
    Journal repo: saif-shines/saif-shines.md
    Refreshing local cache from remote...
    Found 1 pending entry
@@ -161,7 +202,7 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
 
 5. ### Inject decisions when Claude starts
 
-   Once decisions are synced, install a **SessionStart hook** so Claude receives them automatically — no copy-paste, no re-explaining every session.
+   Once decisions are synced, install a **SessionStart hook** so Claude receives them automatically: no copy-paste, no re-explaining every session.
 
    ```bash
    dora journal hook enable
@@ -204,12 +245,12 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
    claude
    ```
 
-   When you ask a question that matches a recorded decision, Claude already has the journal context from SessionStart — it does not have to guess:
+   When you ask a question that matches a recorded decision, Claude already has the journal context from SessionStart; it does not have to guess:
 
    ```text
    ❯ what is the most important file in this repo?
 
-   README.md — per your recorded decision (pushback 5): it is the index of the repo.
+   README.md: per your recorded decision (pushback 5): it is the index of the repo.
    Start there for orientation before diving into skills/, hooks/, or marketplace.json.
    ```
 
@@ -219,4 +260,4 @@ This quickstart assumes you have doraval installed. If you haven't yet, see [Ins
 
 </Steps>
 
-This quickstart covers just a few features — evals, drift checks, provider scaffolding for Cursor and Copilot, and more are on the way.
+This quickstart covers just a few features: evals, drift checks, provider scaffolding for Cursor and Copilot, and more are on the way.

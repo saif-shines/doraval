@@ -187,8 +187,8 @@ describe("doraval CLI", () => {
       );
 
       expect(exitCode).toBe(2);
-      // Now delegates to doraval eval; will fail on missing eval config rather than stub
-      expect((stdout + stderr).toLowerCase()).toContain("eval");
+      // Exits with "no coding agent configured" when no config present
+      expect((stdout + stderr).toLowerCase()).toContain("no coding agent configured");
     });
   });
 

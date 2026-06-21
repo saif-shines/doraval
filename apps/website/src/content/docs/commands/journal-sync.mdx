@@ -15,7 +15,7 @@ doraval journal sync
 
 ## What it does
 
-1. Refreshes your local cache (`~/.doraval/journals/`) from the remote (global + current project). This is new behavior — `sync` always pulls first.
+1. Refreshes your local cache (`~/.doraval/journals/`) from the remote (global + current project). This is new behavior: `sync` always pulls first.
 2. Reads any staged entries from `~/.doraval/pending/<project>/`.
 3. If there are none → refreshes the cache and exits cleanly with a message.
 4. If there are pending entries:
@@ -35,7 +35,7 @@ doraval journal sync
 ## Safety
 
 - Uses GitHub's conditional update (SHA) so concurrent writes from other machines are detected and rejected.
-- Never writes directly from `add` — staging + explicit `sync` prevents accidents.
+- Never writes directly from `add`; staging + explicit `sync` prevents accidents.
 - Requires the `gh` CLI with appropriate permissions on the journal repo.
 
 ## When to run it
@@ -48,8 +48,8 @@ See [journal update](/commands/journal-update) for a pure refresh without any pu
 
 ## Related
 
-- [journal add](/commands/journal-add) — the main way to create things that `sync` will publish
-- [journal update](/commands/journal-update) — just refresh the cache
+- [journal add](/commands/journal-add): the main way to create things that `sync` will publish
+- [journal update](/commands/journal-update): just refresh the cache
 - [journal list](/commands/journal-list)
 
 The full architecture (including why only `sync` writes) is explained in [How the Agent Journal Works](/concepts/journal-rationale).

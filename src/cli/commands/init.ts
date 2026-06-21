@@ -203,8 +203,8 @@ export default defineCommand({
     }
 
     const common = [
-      { name: "claude", template: '-p "{{prompt}}" --output-format json', cwd_flag: "--cwd" },
-      { name: "grok", template: '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen', cwd_flag: "--cwd" },
+      { name: "claude", template: '-p "{{prompt}}" --output-format json --bare', cwd_flag: "" },
+      { name: "grok", template: '-p "{{prompt}}" --no-auto-update --no-alt-screen --always-approve', cwd_flag: "--cwd" },
       { name: "cursor", template: '', cwd_flag: "" },
     ];
 
@@ -224,7 +224,7 @@ export default defineCommand({
     ui.write(`  Detected / default agent command: ${pc.dim(pc.gray(agentCmd))}`);
     agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
 
-    let template = detected ? (common.find(c => c.name === detected)?.template || '-p "{{prompt}}" --output-format json') : '-p "{{prompt}}" --output-format json';
+    let template = detected ? (common.find(c => c.name === detected)?.template || '-p "{{prompt}}"') : '-p "{{prompt}}"';
     ui.info(`  Prompt template (use {{prompt}} placeholder):`);
     template = prompt("  ", template);
 

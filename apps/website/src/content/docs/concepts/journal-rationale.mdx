@@ -1,6 +1,6 @@
 ---
 title: How the Agent Journal Works
-description: Understand the mental model behind the journal — what it gives you, why it exists, and how it safely turns decisions into persistent, opinionated memory for you and your agents.
+description: Understand the mental model behind the journal: what it gives you, why it exists, and how it safely turns decisions into persistent, opinionated memory for you and your agents.
 sidebar:
   label: How It Works
   order: 2
@@ -14,18 +14,18 @@ The journal gives that "why" a permanent, queryable home with a personality.
 
 ## What You Get
 
-- **A living memory of decisions** — Not just what changed, but *why* it was changed and how strongly you feel about it.
-- **Pushback instead of silent contradiction** — When future work conflicts with a recorded principle, the journal can argue back at a calibrated intensity instead of letting the bad decision slip through.
-- **Shared context for humans and agents** — Both you and AI coding agents can read the same principles. Agents can propose new ones too.
-- **Zero pollution of your projects** — Everything lives in one private GitHub repo you control. No files, no submodules, no config ever touch your actual project repositories.
+- **A living memory of decisions**: Not just what changed, but *why* it was changed and how strongly you feel about it.
+- **Pushback instead of silent contradiction**: When future work conflicts with a recorded principle, the journal can argue back at a calibrated intensity instead of letting the bad decision slip through.
+- **Shared context for humans and agents**: Both you and AI coding agents can read the same principles. Agents can propose new ones too.
+- **Zero pollution of your projects**: Everything lives in one private GitHub repo you control. No files, no submodules, no config ever touch your actual project repositories.
 
 ## The Core Model
 
 Your journal lives in a single private GitHub repository (by convention named after you, e.g. `yourname/yourname.md`).
 
 Inside it you have two kinds of content:
-- `global.md` — principles that apply across all your projects
-- `projects/<name>.md` — principles specific to one project
+- `global.md`, principles that apply across all your projects
+- `projects/<name>.md`, principles specific to one project
 
 doraval never writes directly to this repo from `journal add`. Instead it uses a safe two-step flow:
 
@@ -75,6 +75,6 @@ When an agent or a future `doraval skill drift` run touches something in the `na
 - **No files in your projects** means the journal works even for projects you don't own or that live in restrictive environments.
 - **Pushback as a number** lets both humans and future tools reason about intensity instead of just binary "important / not important."
 
-The journal is opinionated memory, not a linter or a blocker. Its power comes from being present and having a point of view — not from stopping you.
+The journal is opinionated memory, not a linter or a blocker. Its power comes from being present and having a point of view, not from stopping you.
 
 Start with `doraval journal init` to connect a project. Use `list` and `update` to explore and stay fresh, `add` + `sync` to contribute, and the principles will start pushing back (via future `check` and drift integration) when something drifts from your recorded decisions.

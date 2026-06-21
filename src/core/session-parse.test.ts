@@ -79,6 +79,34 @@ describe("parseSession", () => {
     const result = parseSession(withBadLine);
     expect(result.sessionId).toBe("test-session-001");
   });
+
+  test("detects modern client-driven skill invocations via attributionSkill", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"<command-message>agent-plugin-development</command-message>\\n<command-name>/agent-plugin-development</command-name>"},"sessionId":"modern-1","cwd":"/tmp/demo"}',
+      '{"type":"assistant","attributionSkill":"agent-plugin-development","message":{"model":"claude-sonnet-4-6","content":[{"type":"text","text":"On it"}]},"sessionId":"modern-1"}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.skillsInvoked).toContain("agent-plugin-development");
+  });
+
+  test("detects skill from hook_additional_context attachment", () => {
+    const transcript = [
+      '{"type":"attachment","attachment":{"type":"hook_additional_context","content":"Here is the full content of your \'using-superpowers\' skill"},"sessionId":"hook-1"}',
+      '{"type":"assistant","message":{"model":"claude-sonnet-4-6","content":[{"type":"text","text":"Got it"}]},"sessionId":"hook-1"}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.skillsInvoked).toContain("using-superpowers");
+  });
+
+  test("does NOT detect skill from auto-injected system-reminder content", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"<system-reminder>\\n---\\nname: claude-api\\ndescription: Reference\\n---\\nContent\\n</system-reminder>\\nHello"},"sessionId":"inj-1"}',
+      '{"type":"assistant","message":{"model":"claude-sonnet-4-6","content":[{"type":"text","text":"Hi"}]},"sessionId":"inj-1"}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.skillsInvoked).not.toContain("claude-api");
+    expect(result.skillsInvoked).toHaveLength(0);
+  });
 });
 
 describe("truncateToolCalls", () => {

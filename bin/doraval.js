@@ -1071,6 +1071,48 @@ var init_skill_drift = __esm(() => {
 
 // src/core/agent-invoke.ts
 var {spawnSync } = globalThis.Bun;
+function getLastInvokeError() {
+  return lastInvokeError;
+}
+function isClaudeCommand(command) {
+  return /claude/i.test(command);
+}
+function isGrokCommand(command) {
+  return /grok/i.test(command);
+}
+function getDefaultPromptTemplate(command) {
+  const lower = (command || "").toLowerCase();
+  if (lower.includes("claude")) {
+    return '-p "{{prompt}}" --output-format json --bare';
+  }
+  if (lower.includes("grok")) {
+    return '-p "{{prompt}}" --no-auto-update --no-alt-screen --always-approve';
+  }
+  return '-p "{{prompt}}"';
+}
+function resolveAgentConfig(agent) {
+  const command = agent.command || "";
+  const desired = getDefaultPromptTemplate(command);
+  let template = agent.prompt_template;
+  if (template) {
+    if (isClaudeCommand(command) && /--no-auto-update|--no-alt-screen|--always-approve/.test(template)) {
+      template = desired;
+    } else if (isGrokCommand(command) && /--output-format\s+json/.test(template)) {
+      template = desired;
+    }
+  } else {
+    template = desired;
+  }
+  let cwd_flag = agent.cwd_flag;
+  if (isClaudeCommand(command) && cwd_flag) {
+    cwd_flag = undefined;
+  }
+  return {
+    command,
+    prompt_template: template,
+    ...cwd_flag ? { cwd_flag } : {}
+  };
+}
 function buildAgentArgv(template, promptText) {
   const marker = "__DORA_PROMPT__";
   const substituted = template.replace("{{prompt}}", marker);
@@ -1120,41 +1162,79 @@ function extractCandidates(text) {
     }
     unwrapped.push(c);
   }
-  return unwrapped;
+  function collectObjects(obj, out = []) {
+    if (!obj || typeof obj !== "object")
+      return out;
+    if (Array.isArray(obj)) {
+      for (const item of obj)
+        collectObjects(item, out);
+    } else {
+      out.push(obj);
+      for (const v of Object.values(obj))
+        collectObjects(v, out);
+    }
+    return out;
+  }
+  const nested = [];
+  for (const c of [...candidates, ...unwrapped]) {
+    collectObjects(c, nested);
+  }
+  return [...unwrapped, ...nested];
+}
+function formatAgentFailure(stdout, stderr, exitCode) {
+  if (stderr)
+    return stderr;
+  const candidates = extractCandidates(stdout);
+  for (const c of candidates) {
+    if (c.is_error === true && typeof c.result === "string" && c.result.trim()) {
+      return c.result.trim();
+    }
+    if (typeof c.error === "string" && c.error.trim())
+      return c.error.trim();
+  }
+  if (stdout)
+    return stdout;
+  return `agent exited with code ${exitCode ?? "unknown"}`;
 }
 async function invokeAgent(promptText, agentCfg, expectedKeys) {
-  const template = agentCfg.prompt_template ?? '-p "{{prompt}}" --output-format json --bare';
+  lastInvokeError = "";
+  const resolved = resolveAgentConfig(agentCfg);
+  const template = resolved.prompt_template ?? getDefaultPromptTemplate(resolved.command);
   const extraArgs = buildAgentArgv(template, promptText);
   let result;
   try {
-    result = spawnSync([agentCfg.command, ...extraArgs], {
+    result = spawnSync([resolved.command, ...extraArgs], {
       stdout: "pipe",
       stderr: "pipe",
       env: { ...process.env }
     });
   } catch (e) {
+    lastInvokeError = e instanceof Error ? e.message : "agent spawn failed";
     return null;
   }
   const stdout = (result.stdout ?? "").toString().trim();
   const stderr = (result.stderr ?? "").toString().trim();
-  if (result.exitCode !== 0) {
-    return null;
-  }
-  let cleaned = stdout.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
+  const cleaned = stdout.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
   const unwrapped = extractCandidates(cleaned);
   for (const c of unwrapped) {
     if (expectedKeys.some((k) => (k in c)))
       return c;
   }
+  if (result.exitCode !== 0) {
+    lastInvokeError = formatAgentFailure(stdout, stderr, result.exitCode);
+    return null;
+  }
   if (unwrapped[0])
     return unwrapped[0];
+  lastInvokeError = formatAgentFailure(stdout, stderr, result.exitCode);
   return null;
 }
 async function runAgentSession(promptText, agentCfg, opts = {}) {
   const { cwd, alwaysApprove = true, stream = true } = opts;
-  const cmd = agentCfg.command || "grok";
+  const resolved = resolveAgentConfig(agentCfg);
+  const cmd = resolved.command || "grok";
   let args = [];
-  const isGrok = /grok/i.test(cmd);
+  const isGrok = isGrokCommand(cmd);
   if (isGrok) {
     args = [
       "--no-auto-update",
@@ -1168,10 +1248,13 @@ async function runAgentSession(promptText, agentCfg, opts = {}) {
       "plain"
     ];
   } else {
-    const template = agentCfg.prompt_template && !agentCfg.prompt_template.includes("output-format json") ? agentCfg.prompt_template : '-p "{{prompt}}"';
+    const template = resolved.prompt_template && !resolved.prompt_template.includes("output-format json") ? resolved.prompt_template : '-p "{{prompt}}"';
     args = buildAgentArgv(template, promptText);
-    if (cwd && agentCfg.cwd_flag) {
-      args.push(agentCfg.cwd_flag, cwd);
+    if (cwd && resolved.cwd_flag) {
+      args.push(resolved.cwd_flag, cwd);
+    }
+    if (alwaysApprove && isClaudeCommand(cmd)) {
+      args.push("--dangerously-skip-permissions");
     }
   }
   const proc = Bun.spawn([cmd, ...args], {
@@ -1207,6 +1290,7 @@ ${stderr || stdout}`;
   }
   return stdout.trim() || "(no output)";
 }
+var lastInvokeError = "";
 var init_agent_invoke = () => {};
 
 // src/core/session-parse.ts
@@ -1250,6 +1334,7 @@ function parseSession(jsonlText) {
   const toolCalls = [];
   const userMessages = [];
   let toolIndex = 0;
+  const skillsFromTranscript = new Set;
   for (const msg of messages) {
     if (!sessionId && typeof msg.sessionId === "string")
       sessionId = msg.sessionId;
@@ -1257,6 +1342,29 @@ function parseSession(jsonlText) {
       cwd = msg.cwd;
     if (!gitBranch && typeof msg.gitBranch === "string")
       gitBranch = msg.gitBranch;
+    if (typeof msg.attributionSkill === "string" && msg.attributionSkill.trim()) {
+      skillsFromTranscript.add(msg.attributionSkill.trim());
+    }
+    const raw = JSON.stringify(msg);
+    const cmdMatch = raw.match(/<command-name>([^<]+)<\/command-name>/i);
+    if (cmdMatch) {
+      let name = cmdMatch[1].trim();
+      if (name.startsWith("/"))
+        name = name.slice(1);
+      if (name)
+        skillsFromTranscript.add(name);
+    }
+    if (msg.type === "attachment") {
+      const att = msg.attachment;
+      if (att && att.type === "hook_additional_context") {
+        const content = Array.isArray(att.content) ? att.content.join(`
+`) : typeof att.content === "string" ? att.content : "";
+        const hookSkillMatch = content.match(/full content of your '([^']+)' skill/i);
+        if (hookSkillMatch) {
+          skillsFromTranscript.add(hookSkillMatch[1].trim());
+        }
+      }
+    }
     if (msg.type === "ai-title") {
       sessionTitle = typeof msg.aiTitle === "string" ? msg.aiTitle : undefined;
     }
@@ -1300,7 +1408,9 @@ function parseSession(jsonlText) {
         userMessages.push(text);
     }
   }
-  const skillsInvoked = toolCalls.filter((t) => t.name === "Skill").map((t) => typeof t.input.skill === "string" ? t.input.skill : "unknown").filter((s, i, arr) => arr.indexOf(s) === i);
+  const legacySkills = toolCalls.filter((t) => t.name === "Skill").map((t) => typeof t.input.skill === "string" ? t.input.skill : "").filter(Boolean);
+  const modernSkills = Array.from(skillsFromTranscript);
+  const skillsInvoked = [...new Set([...legacySkills, ...modernSkills])];
   const toolCallCounts = {};
   for (const t of toolCalls) {
     toolCallCounts[t.name] = (toolCallCounts[t.name] ?? 0) + 1;
@@ -1424,7 +1534,8 @@ async function runEval(primitives, skillName, skillContent, agentCfg, evalCfg) {
   const prompt = buildEvalPrompt(primitives, skillContent, evalCfg.max_tool_calls);
   const raw = await invokeAgent(prompt, agentCfg, ["verdict", "checklist"]);
   if (!raw) {
-    return makeUnknownResult(primitives, skillName, "LLM call failed \u2014 no response");
+    const err = getLastInvokeError();
+    return makeUnknownResult(primitives, skillName, err ? `LLM call failed: ${err}` : "LLM call failed \u2014 no response");
   }
   if (typeof raw.verdict !== "string" || !Array.isArray(raw.checklist)) {
     return makeUnknownResult(primitives, skillName, "LLM returned malformed response");
@@ -2418,7 +2529,7 @@ var init_eval = __esm(() => {
       },
       prompt: {
         type: "string",
-        description: "Prompt(s) to use for generated sessions (comma separated)"
+        description: "Single prompt to use for generated sessions. For multiple distinct prompts use --prompts-file."
       },
       "prompts-file": {
         type: "string",
@@ -2465,7 +2576,7 @@ var init_eval = __esm(() => {
         const skillPath = resolve4(skillInput);
         let prompts;
         if (args.prompt) {
-          prompts = String(args.prompt).split(",").map((p) => p.trim()).filter(Boolean);
+          prompts = [String(args.prompt).trim()].filter(Boolean);
         } else if (args["prompts-file"]) {
           try {
             const content = await Bun.file(String(args["prompts-file"])).text();
@@ -8990,8 +9101,8 @@ Project-specific decisions.
 `);
       }
       const common = [
-        { name: "claude", template: '-p "{{prompt}}" --output-format json', cwd_flag: "--cwd" },
-        { name: "grok", template: '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen', cwd_flag: "--cwd" },
+        { name: "claude", template: '-p "{{prompt}}" --output-format json --bare', cwd_flag: "" },
+        { name: "grok", template: '-p "{{prompt}}" --no-auto-update --no-alt-screen --always-approve', cwd_flag: "--cwd" },
         { name: "cursor", template: "", cwd_flag: "" }
       ];
       let detected = "";
@@ -9008,7 +9119,7 @@ Project-specific decisions.
       let agentCmd = detected || "claude";
       ui.write(`  Detected / default agent command: ${import_picocolors20.default.dim(import_picocolors20.default.gray(agentCmd))}`);
       agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
-      let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}" --output-format json' : '-p "{{prompt}}" --output-format json';
+      let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}"' : '-p "{{prompt}}"';
       ui.info(`  Prompt template (use {{prompt}} placeholder):`);
       template = prompt("  ", template);
       const detectedCommon = common.find((c) => c.name === detected);

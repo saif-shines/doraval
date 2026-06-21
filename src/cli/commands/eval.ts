@@ -134,7 +134,7 @@ export default defineCommand({
     },
     prompt: {
       type: "string",
-      description: "Prompt(s) to use for generated sessions (comma separated)",
+      description: "Single prompt to use for generated sessions. For multiple distinct prompts use --prompts-file.",
     },
     "prompts-file": {
       type: "string",
@@ -189,7 +189,8 @@ export default defineCommand({
 
       let prompts: string[] | undefined;
       if (args.prompt) {
-        prompts = String(args.prompt).split(",").map((p) => p.trim()).filter(Boolean);
+        // Single value — commas are valid inside prompts, so no split. Use --prompts-file for multiple.
+        prompts = [String(args.prompt).trim()].filter(Boolean);
       } else if (args["prompts-file"]) {
         try {
           const content = await Bun.file(String(args["prompts-file"])).text();

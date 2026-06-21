@@ -17,13 +17,13 @@ doraval journal add "We decided to always use 'update' for cache refreshes"
 
 ## Three ways to add (pick the one that matches your situation)
 
-1. **Minimal / magic (recommended for quick capture)** — just the title. If you ran `dora init` and configured a coding agent, dora will use that agent on the fly (via its native prompt tool + a documented scaffold) to produce rich pushback/tags/rationale. Otherwise it uses the defaults above.
+1. **Minimal / magic (recommended for quick capture)**: just the title. If you ran `dora init` and configured a coding agent, dora will use that agent on the fly (via its native prompt tool + a documented scaffold) to produce rich pushback/tags/rationale. Otherwise it uses the defaults above.
 
    ```bash
    doraval journal add "Task that just happened"
    ```
 
-2. **Agent / structured (the 90% agent use case)** — give dora a JSON blob (or pipe it). This is what the "on the fly" internal call ultimately does, and what you use when you have an outer agent produce the entry via its own `claude -p ... --output-format json` + the prompt scaffold.
+2. **Agent / structured (the 90% agent use case)**: give dora a JSON blob (or pipe it). This is what the "on the fly" internal call ultimately does, and what you use when you have an outer agent produce the entry via its own `claude -p ... --output-format json` + the prompt scaffold.
 
    ```bash
    doraval journal add --json '{
@@ -41,7 +41,7 @@ doraval journal add "We decided to always use 'update' for cache refreshes"
    echo '{"title":"...","pushback":5,"tags":["ux"],"rationale":"..."}' | doraval journal add --json -
    ```
 
-3. **Explicit / power-user** — full flags (still fully supported, no magic, no agent call).
+3. **Explicit / power-user**: full flags (still fully supported, no magic, no agent call).
 
    ```bash
    doraval journal add "Use 'update' not 'refresh' for cache pulls" \

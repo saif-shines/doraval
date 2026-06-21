@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-Measures how far a skill has drifted from rubric standards. Each check maps to a drift category — the output tells you where to tighten up.
+Measures how far a skill has drifted from rubric standards. Each check maps to a drift category. The output tells you where to tighten up.
 
 ## Usage
 
@@ -27,15 +27,15 @@ doraval skill drift <path> [options]
 ## Example
 
 ```
-  doraval skill drift — Measuring rubric drift
+  doraval skill drift: Measuring rubric drift
 
   Path:  ./skills/my-skill/
 
   · Trigger    Description includes activation phrases
   · Structure  Has step-by-step instructions
   · Voice      Uses imperative voice ("Do X" not "You might X")
-  ↗ Example    No code blocks found — add examples if the skill involves code
-  ↗ Guardrail  No explicit constraints — add MUST / MUST NOT guardrails
+  ↗ Example    No code blocks found. Add examples if the skill involves code
+  ↗ Guardrail  No explicit constraints. Add MUST / MUST NOT guardrails
   · Clarity    No ambiguous language found
 
   2/6 rubric areas have drifted.
@@ -67,7 +67,7 @@ Returns:
   "total": 6,
   "drifts": [
     { "drifted": false, "category": "Trigger", "detail": "Description includes activation phrases" },
-    { "drifted": true, "category": "Example", "detail": "No code blocks found — add examples if the skill involves code" }
+    { "drifted": true, "category": "Example", "detail": "No code blocks found. Add examples if the skill involves code" }
   ]
 }
 ```

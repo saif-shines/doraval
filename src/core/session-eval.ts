@@ -1,5 +1,5 @@
 import type { AgentConfig } from "./agent-invoke.js";
-import { invokeAgent } from "./agent-invoke.js";
+import { invokeAgent, getLastInvokeError } from "./agent-invoke.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
 
@@ -125,7 +125,8 @@ export async function runEval(
   const raw = await invokeAgent(prompt, agentCfg, ["verdict", "checklist"]);
 
   if (!raw) {
-    return makeUnknownResult(primitives, skillName, "LLM call failed — no response");
+    const err = getLastInvokeError();
+    return makeUnknownResult(primitives, skillName, err ? `LLM call failed: ${err}` : "LLM call failed — no response");
   }
 
   // Validate shape

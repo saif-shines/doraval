@@ -72,11 +72,43 @@ export function parseSession(jsonlText: string): SessionPrimitives {
   const userMessages: string[] = [];
   let toolIndex = 0;
 
+  // Collect skill names from modern client-driven invocations
+  const skillsFromTranscript = new Set<string>();
+
   for (const msg of messages) {
     // Extract session-level metadata from any message
     if (!sessionId && typeof msg.sessionId === "string") sessionId = msg.sessionId;
     if (!cwd && typeof msg.cwd === "string") cwd = msg.cwd;
     if (!gitBranch && typeof msg.gitBranch === "string") gitBranch = msg.gitBranch;
+
+    // attributionSkill field (modern Claude Code client)
+    if (typeof msg.attributionSkill === "string" && msg.attributionSkill.trim()) {
+      skillsFromTranscript.add(msg.attributionSkill.trim());
+    }
+
+    // <command-name>/foo</command-name> wrappers in message content
+    const raw = JSON.stringify(msg);
+    const cmdMatch = raw.match(/<command-name>([^<]+)<\/command-name>/i);
+    if (cmdMatch) {
+      let name = cmdMatch[1].trim();
+      if (name.startsWith("/")) name = name.slice(1);
+      if (name) skillsFromTranscript.add(name);
+    }
+
+    // Hook-injected skills: hook_additional_context attachments
+    // Pattern: "full content of your 'skill-name' skill"
+    if (msg.type === "attachment") {
+      const att = msg.attachment as Record<string, unknown> | undefined;
+      if (att && att.type === "hook_additional_context") {
+        const content = Array.isArray(att.content)
+          ? (att.content as unknown[]).join("\n")
+          : typeof att.content === "string" ? att.content : "";
+        const hookSkillMatch = content.match(/full content of your '([^']+)' skill/i);
+        if (hookSkillMatch) {
+          skillsFromTranscript.add(hookSkillMatch[1].trim());
+        }
+      }
+    }
 
     if (msg.type === "ai-title") {
       sessionTitle = typeof msg.aiTitle === "string" ? msg.aiTitle : undefined;
@@ -128,11 +160,14 @@ export function parseSession(jsonlText: string): SessionPrimitives {
     }
   }
 
-  // Derive skillsInvoked from Skill tool calls
-  const skillsInvoked = toolCalls
+  // Derive skillsInvoked from BOTH legacy Skill tool calls and modern client paths
+  const legacySkills = toolCalls
     .filter((t) => t.name === "Skill")
-    .map((t) => (typeof t.input.skill === "string" ? t.input.skill : "unknown"))
-    .filter((s, i, arr) => arr.indexOf(s) === i);
+    .map((t) => (typeof t.input.skill === "string" ? t.input.skill : ""))
+    .filter(Boolean);
+
+  const modernSkills = Array.from(skillsFromTranscript);
+  const skillsInvoked = [...new Set([...legacySkills, ...modernSkills])];
 
   // Count tool calls
   const toolCallCounts: Record<string, number> = {};

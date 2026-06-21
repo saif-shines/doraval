@@ -1,6 +1,6 @@
 ---
 title: Agent Journal
-description: A decision memory with opinions — records project principles and argues back when they're violated.
+description: A decision memory with opinions. Records project principles and argues back when they're violated.
 sidebar:
   order: 1
 ---
@@ -13,7 +13,7 @@ When a change conflicts with a recorded principle (or you just want to capture a
 
 Decisions get lost across Slack threads, commit messages, and agent sessions that start fresh with no memory. An agent makes reasonable choices that accidentally contradict deliberate ones.
 
-The journal is a persistent memory with opinions. It doesn't block — it argues.
+The journal is a persistent memory with opinions. It doesn't block; it argues.
 
 ## Architecture
 
@@ -21,7 +21,7 @@ The journal has two layers:
 
 **Remote:** A private GitHub repo (e.g., `saif-shines/saif-shines.md`) with `global.md` for universal principles and `projects/<name>.md` for project-specific decisions.
 
-**Local:** doraval maintains a cache at `~/.doraval/` — not in the project directory. No submodules, no symlinks, no config files polluting your repos.
+**Local:** doraval maintains a cache at `~/.doraval/`, not in the project directory. No submodules, no symlinks, no config files polluting your repos.
 
 ```
 ~/.doraval/
@@ -65,7 +65,7 @@ status: active
 ​```
 
 We renamed `score` to `drift` because "score" implies a generic quality
-rating. The command measures deviation from a rubric — distance from a
+rating. The command measures deviation from a rubric, distance from a
 standard, not a grade.
 ```
 
@@ -144,7 +144,7 @@ For a clear explanation of the mental model and why the journal is built this wa
 See the individual command pages under **Commands** (e.g. [journal init](/commands/journal-init), [journal update](/commands/journal-update)) for flag details and examples.
 ## Integration with existing commands
 
-- `doraval skill drift` gains **Principle drift** — flags when a skill contradicts an active journal entry (planned).
+- `doraval skill drift` gains **Principle drift**: flags when a skill contradicts an active journal entry (planned).
 - `doraval eval` / `skill judge` can be extended in the future to incorporate journal entries as additional context for the LLM judge.
 - Entries with `pushback >= 7` surface as warnings in `doraval skill validate` (planned).
 
@@ -153,4 +153,4 @@ See the individual command pages under **Commands** (e.g. [journal init](/comman
 - **Not an AGENTS.md replacement.** AGENTS.md says *how to work*. The journal says *why decisions were made*.
 - **Not a changelog.** Principles and reasoning, not a list of changes.
 - **Not a linter.** Opinions with conviction levels, not pass/fail rules.
-- **Not a blocker.** Every pushback can be overridden — but the conflict must be acknowledged.
+- **Not a blocker.** Every pushback can be overridden, but the conflict must be acknowledged.
