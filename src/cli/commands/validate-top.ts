@@ -5,7 +5,6 @@ import pc from "picocolors";
 import { ui } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
-<<<<<<< HEAD
 import { parseRemoteUrl, cloneToTemp, hasGitCli, sanitizeSubpath } from "../../core/remote.js";
 
 export default defineCommand({

@@ -11,7 +11,7 @@ The interface is sleek, clean, and slightly playful:
 
 ![dora ui dashboard](./dora-ui-dashboard.jpg)
 
-The screenshot above shows the current dashboard (as of the latest improvements).
+The screenshot above shows the current dashboard (as of the latest improvements, including loading states and a working "Open data dir" button).
 
 ```bash
 dora ui [options]
@@ -26,8 +26,12 @@ This starts a small local server (default `http://localhost:3737`) with a clean 
 - **Hook management**: Toggle journal injection hooks for Claude (local or global).
 - **Entry browser**: Search and review both committed journal entries and staged/pending ones.
 - **Modal details**: Click any entry for the full rationale and actions (including deleting staged entries).
+- **Loading states**: The dashboard shows progress while fetching data (no more blank screens).
+- **Open data dir**: The footer button now actually opens the `~/.doraval` folder in your file manager.
 
 The UI provides a sleek, clean interface (with a touch of playfulness) for quickly capturing decisions and reviewing your journal without leaving the browser.
+
+Heavy operations (full sync, agent enrichment) are still best done from the CLI.
 
 Heavy operations (full sync, agent enrichment) are still best done from the CLI.
 

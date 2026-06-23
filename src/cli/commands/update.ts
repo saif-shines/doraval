@@ -32,7 +32,7 @@ export default defineCommand({
     },
     via: {
       type: "string",
-      description: 'Force install method detection: "homebrew" | "npm" | "bun"',
+      description: 'Force install method (homebrew|npm|bun). Bypasses auto-detection and interactive picker (useful for scripts/CI).',
     },
   },
   async run({ args }) {
@@ -61,7 +61,20 @@ export default defineCommand({
       readMarker,
     };
 
-    const method = await detectInstallMethod(ctx, args.via ? { force: args.via } : undefined);
+    let method: InstallMethod;
+
+    if (args.via) {
+      const f = args.via;
+      if (['homebrew', 'npm', 'bun'].includes(f)) {
+        method = { type: f as any, source: 'user' };
+      } else if (f === 'npx' || f === 'bunx') {
+        method = { type: 'transient', via: f as any, source: 'path' };
+      } else {
+        method = { type: 'unknown', reason: `Invalid --via value: ${f}` };
+      }
+    } else {
+      method = await detectInstallMethod(ctx);
+    }
 
     if (method.type === "transient") {
       ui.info("It looks like you're using doraval via npx or bunx.");
@@ -76,8 +89,13 @@ export default defineCommand({
 
     if (method.type === "unknown") {
       ui.fail(`Could not determine how doraval was installed: ${method.reason}`);
-      ui.info("You can force it with --via homebrew|npm|bun");
-      process.exit(2);
+      const chosen = await promptInstallMethod();
+      if (chosen) {
+        method = { type: chosen, source: 'user' } as InstallMethod;
+      } else {
+        ui.info("You can force it with --via homebrew|npm|bun");
+        process.exit(2);
+      }
     }
 
     const latestInfo = await fetchLatestVersionInfo();
@@ -127,6 +145,8 @@ export default defineCommand({
       ui.info("Common fixes:");
       if (cmd[0] === "brew") {
         ui.info("  • Try: sudo brew upgrade doraval  or  ensure you are in the admin group");
+        ui.info("  • For custom taps (e.g. saif-shines/tap): run `brew trust saif-shines/tap`");
+        ui.info("    or `brew trust --formula saif-shines/tap/doraval`");
       }
       if (cmd[0] === "npm" || cmd[0] === "bun") {
         ui.info("  • Try running with appropriate permissions or check network.");
@@ -144,6 +164,27 @@ async function confirmUpdate(): Promise<boolean> {
     rl.question("Update now? (y/N) ", (answer) => {
       rl.close();
       resolve(answer.toLowerCase().startsWith("y"));
+    });
+  });
+}
+
+async function promptInstallMethod(): Promise<'homebrew' | 'npm' | 'bun' | null> {
+  const { createInterface } = await import("node:readline");
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    ui.info("How was doraval installed?");
+    ui.info("  1. homebrew (brew install saif-shines/tap/doraval)");
+    ui.info("  2. npm    (npm install -g @hacksmith/doraval)");
+    ui.info("  3. bun    (bun add -g @hacksmith/doraval)");
+    rl.question("Enter 1, 2, or 3 (or q to cancel): ", (answer) => {
+      rl.close();
+      const a = answer.trim().toLowerCase();
+      if (a === "1" || a === "homebrew") return resolve("homebrew");
+      if (a === "2" || a === "npm") return resolve("npm");
+      if (a === "3" || a === "bun") return resolve("bun");
+      if (a === "q" || a === "quit" || a === "cancel") return resolve(null);
+      ui.info("Invalid choice.");
+      resolve(null);
     });
   });
 }

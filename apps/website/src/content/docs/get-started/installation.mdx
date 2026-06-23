@@ -18,6 +18,14 @@ brew tap saif-shines/tap
 brew install doraval
 ```
 
+**Note for custom taps:** On some systems, Homebrew will refuse formulas from third-party taps until you trust them once:
+
+```bash
+brew trust saif-shines/tap
+# or
+brew trust --formula saif-shines/tap/doraval
+```
+
 Verify:
 
 ```bash

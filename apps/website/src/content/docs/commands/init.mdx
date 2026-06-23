@@ -15,7 +15,13 @@ doraval init [options]
 
 ## What it does
 
-`init` performs several one-time steps:
+`init` performs several one-time steps. The interactive CLI now clearly labels them:
+
+1. **Journal setup** – repository, project name, and fetching.
+2. **Agent configuration** – choose and configure your coding agent (Claude, Cursor, etc.).
+3. **Eval configuration** – optional model for `dora eval`.
+
+Details:
 
 - Ensures the GitHub CLI (`gh`) is available and authenticated.
 - Prompts for (or accepts via flags/env) your journal repository.

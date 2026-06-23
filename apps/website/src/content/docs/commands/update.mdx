@@ -101,20 +101,34 @@ For easier updates, install globally:
 
 ## Unknown installs and `--via`
 
-If detection fails, `doraval update` explains the reason and suggests `--via`:
+If detection fails, `doraval update` explains the reason and offers an interactive picker (or suggests `--via`):
 
 ```
 Could not determine how doraval was installed: ...
-You can force it with --via homebrew|npm|bun
+How was doraval installed?
+  1. homebrew ...
 ```
 
-Force a method when needed:
+Force a method when needed (non-interactive):
 
 ```bash
 doraval update --via npm
 ```
 
-See [Installation](/get-started/installation/) for the supported install paths.
+## Homebrew custom taps
+
+When installed via a third-party tap (e.g. `saif-shines/tap`), Homebrew may refuse to load the formula until the tap is trusted:
+
+```
+Error: Refusing to load formula saif-shines/tap/doraval from untrusted tap ...
+Run `brew trust --formula saif-shines/tap/doraval` or `brew trust saif-shines/tap` to trust it.
+```
+
+Run the suggested `brew trust` command once, then retry `doraval update`.
+
+The update command will also suggest this in its "Common fixes" output for brew failures.
+
+See the [Installation](/get-started/installation/) page for the `brew tap` step.
 
 ## How detection works
 

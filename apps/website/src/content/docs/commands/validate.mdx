@@ -76,6 +76,8 @@ dora validate github.com/owner/repo
 
 The repo is cloned to a temp directory and cleaned up automatically after validation.
 
+Subdirectories are validated strictly – invalid or traversal paths (e.g. `../..`) are rejected with a clear error: "Invalid subdirectory in remote URL".
+
 ## Example
 
 ```
