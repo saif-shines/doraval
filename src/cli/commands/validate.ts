@@ -3,12 +3,12 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
 import { ui } from "../out.js";
-import { loadSkill, OPTIONAL_DIRS, validateSkillModel } from "../../core/skill-validate.js";
+import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
 
 export default defineCommand({
   meta: {
     name: "validate",
-    description: "Validate structure and schema of a skill or plugin (keywords in plugin.json help agent discovery)",
+    description: "Validate structure and schema of a skill or plugin",
   },
   args: {
     path: {
@@ -50,7 +50,7 @@ export default defineCommand({
       process.exit(1);
     }
 
-    const loaded = await loadSkill(fullPath);
+    const loaded = await loadSkillFromDir(fullPath);
     if (!loaded.ok) {
       if (loaded.error === "No SKILL.md found") {
         ui.fail(
@@ -58,7 +58,7 @@ export default defineCommand({
         );
       } else {
         ui.fail(
-          `${loaded.error}\n\nFix the YAML syntax and retry.`
+          `Failed to parse YAML frontmatter in SKILL.md\n\nFix the YAML syntax and retry.`
         );
       }
       process.exit(1);

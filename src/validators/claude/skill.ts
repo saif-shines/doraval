@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
-import { loadSkill, OPTIONAL_DIRS, validateSkillModel } from "../../core/skill-validate.js";
+import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
 import type { Validator, ValidateResult, ValidateOptions } from "../types.js";
 
 export const claudeSkillValidator: Validator = {
@@ -14,17 +14,14 @@ export const claudeSkillValidator: Validator = {
   },
 
   async validate(dir: string, _opts: ValidateOptions): Promise<ValidateResult> {
-    const loaded = await loadSkill(dir);
+    const loaded = await loadSkillFromDir(dir);
     if (!loaded.ok) {
       return {
-        errors: [loaded.error],
+        errors: ["Failed to parse YAML frontmatter in SKILL.md"],
         warnings: [],
         passes: [],
       };
     }
-
-    const { model, existingDirs } = loaded;
-
-    return validateSkillModel(model, { existingDirs: [...existingDirs] });
+    return validateSkillModel(loaded.model, { existingDirs: [...loaded.existingDirs] });
   },
 };

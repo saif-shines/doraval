@@ -51,7 +51,7 @@ const KNOWN_FIELDS = new Set([
 ]);
 
 // Directories commonly bundled with skills (supporting files, scripts, examples, etc.)
-const SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"] as const;
+export const SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"] as const;
 
 export const OPTIONAL_DIRS = ["references", "scripts", "assets"] as const;
 
@@ -168,4 +168,25 @@ export function validateSkillModel(
     (acc, check) => merge(acc, check(model, context)),
     EMPTY
   );
+}
+
+export async function loadSkillFromDir(dir: string): Promise<
+  | { ok: true; model: SkillModel; existingDirs: string[] }
+  | { ok: false; error: string }
+> {
+  const skillMd = resolve(dir, "SKILL.md");
+  if (!existsSync(skillMd)) {
+    return { ok: false, error: "No SKILL.md found" };
+  }
+  const raw = await Bun.file(skillMd).text();
+  let parsed;
+  try {
+    parsed = parseFrontmatter(raw);
+  } catch {
+    return { ok: false, error: "frontmatter-parse-error" };
+  }
+  const existingDirs = SUPPORTING_DIRS.filter((d) =>
+    existsSync(resolve(dir, d))
+  );
+  return { ok: true, model: { data: parsed.data, content: parsed.content }, existingDirs };
 }
