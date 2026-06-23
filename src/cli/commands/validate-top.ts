@@ -5,7 +5,8 @@ import pc from "picocolors";
 import { ui } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
-import { parseRemoteUrl, cloneToTemp, hasGitCli } from "../../core/remote.js";
+<<<<<<< HEAD
+import { parseRemoteUrl, cloneToTemp, hasGitCli, sanitizeSubpath } from "../../core/remote.js";
 
 export default defineCommand({
   meta: {
@@ -56,8 +57,18 @@ export default defineCommand({
       ui.info(`\n  Cloning ${pc.dim(args.path)}...`);
       try {
         const result = await cloneToTemp(remote);
-        fullPath = remote.subpath ? resolve(result.dir, remote.subpath) : result.dir;
         cleanup = result.cleanup;
+        if (remote.subpath) {
+          const safe = sanitizeSubpath(remote.subpath);
+          if (!safe) {
+            if (cleanup) cleanup();
+            ui.fail(`Invalid subdirectory in remote URL: ${remote.subpath}`);
+            process.exit(1);
+          }
+          fullPath = resolve(result.dir, safe);
+        } else {
+          fullPath = result.dir;
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         ui.fail(msg);

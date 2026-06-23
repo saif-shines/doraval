@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseRemoteUrl } from "./remote.js";
+import { parseRemoteUrl, sanitizeSubpath } from "./remote.js";
 
 describe("parseRemoteUrl", () => {
   // ── GitHub URLs ────────────────────────────────────────────────
@@ -96,4 +96,32 @@ describe("parseRemoteUrl", () => {
     const r = parseRemoteUrl(input);
     expect(r!.original).toBe(input);
   });
+});
+
+describe("sanitizeSubpath", () => {
+  test("returns null for undefined / empty", () => {
+    expect(sanitizeSubpath(undefined)).toBeNull();
+    expect(sanitizeSubpath("")).toBeNull();
+  });
+
+  test("accepts normal nested subpath", () => {
+    expect(sanitizeSubpath("plugins/caveman")).toBe("plugins/caveman");
+    expect(sanitizeSubpath("skills/foo-bar")).toBe("skills/foo-bar");
+  });
+
+  test("rejects traversal", () => {
+    expect(sanitizeSubpath("../etc")).toBeNull();
+    expect(sanitizeSubpath("foo/../../bar")).toBeNull();
+    expect(sanitizeSubpath("..")).toBeNull();
+  });
+
+  test("rejects absolute", () => {
+    expect(sanitizeSubpath("/etc/passwd")).toBeNull();
+  });
+});
+
+test("parseRemoteUrl with traversal subpath yields null subpath (sanitized)", () => {
+  const r = parseRemoteUrl("https://github.com/owner/repo/tree/main/../../../etc");
+  expect(r).not.toBeNull();
+  expect(r!.subpath).toBeUndefined(); // the sanitized form that the caller treats as "no subpath" (sanitize returns null internally)
 });

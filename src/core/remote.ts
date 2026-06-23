@@ -26,6 +26,23 @@ const GENERIC_GIT_RE =
   /^https?:\/\/[^/]+\/[^/]+\/[^/]+/;
 
 /**
+ * Returns a safe relative subpath or null.
+ * Rejects any segment that is ".." (or starts with .. after normalization),
+ * absolute paths, or anything that would escape the clone root.
+ */
+export function sanitizeSubpath(subpath: string | undefined): string | null {
+  if (!subpath) return null;
+  // Reject obvious traversal or absolute
+  if (subpath.startsWith("/") || subpath.startsWith("~")) return null;
+  const parts = subpath.split("/").filter(Boolean);
+  if (parts.some(p => p === ".." || p.startsWith(".."))) return null;
+  // Re-join the safe parts (preserves intended subdir like "plugins/foo")
+  const safe = parts.join("/");
+  if (!safe) return null;
+  return safe;
+}
+
+/**
  * Returns null if input is a local path, ParsedRemote if it looks like a URL.
  */
 export function parseRemoteUrl(input: string): ParsedRemote | null {
@@ -47,7 +64,7 @@ export function parseRemoteUrl(input: string): ParsedRemote | null {
       ghRepo: ownerRepo,
       gitUrl: `https://github.com/${ownerRepo}.git`,
       ref,
-      subpath,
+      subpath: sanitizeSubpath(subpath) ?? undefined,
     };
   }
 
