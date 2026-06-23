@@ -23,7 +23,7 @@ export default defineConfig({
       },
       title: "doraval",
       description:
-        "The context engineering toolkit for coding agent orchestrators",
+        "Make your next context work (skills, plugins & more) for your team, community, or self.",
       customCss: ["./src/styles/custom.css"],
       social: [
         {

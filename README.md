@@ -1,6 +1,6 @@
 # doraval
 
-**Context engineering for coding agent orchestrators.**
+**Make your next context work (skills, plugins & more) for your team, community, or self.**
 
 [Documentation](https://doraval.thehacksmith.dev) · [Distributor quickstart](https://doraval.thehacksmith.dev/get-started/quickstart-distributors/) · [Orchestrator quickstart](https://doraval.thehacksmith.dev/get-started/quickstart-orchestrators/)
 

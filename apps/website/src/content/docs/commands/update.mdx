@@ -25,20 +25,20 @@ doraval update [options]
 |------------|--------------------------------------------------------------|
 | `--check`  | Only check for updates, do not install (Default: false)      |
 | `--yes`    | Skip confirmation prompt (Default: false)                    |
-| `--via`    | Force install method detection: "homebrew" \| "npm" \| "bun" |
+| `--via`    | Force install method (homebrew\|npm\|bun). Bypasses auto-detection and interactive picker (useful for scripts/CI) |
 
-Exact help:
+Exact help (current):
 
 ```
-Update doraval to the latest version (doraval update v0.2.28)
+Update doraval to the latest version (doraval update v0.2.63)
 
 USAGE doraval update [OPTIONS] 
 
 OPTIONS
 
-      --check    Only check for updates, do not install (Default: false)   
-        --yes    Skip confirmation prompt (Default: false)                 
-  --via=<via>    Force install method detection: "homebrew" | "npm" | "bun"
+      --check    Only check for updates, do not install (Default: false)                                                         
+        --yes    Skip confirmation prompt (Default: false)                                                                       
+  --via=<via>    Force install method (homebrew|npm|bun). Bypasses auto-detection and interactive picker (useful for scripts/CI).
 ```
 
 ## Normal update flow
@@ -56,14 +56,14 @@ Example:
 ```
 doraval update
 
-  Current: 0.2.27
-  Latest:  0.2.28
+  Current: 0.2.63
+  Latest:  0.2.64
 
   New release available.
 
 Running: brew upgrade doraval
 
-Successfully updated to 0.2.28.
+Successfully updated to 0.2.64.
 You may need to restart your shell to pick up the new version.
 ```
 
@@ -78,7 +78,7 @@ doraval update --check
 When an update exists it prints the versions and exits 1:
 
 ```
-Update available: 0.2.27 → 0.2.28
+Update available: 0.2.63 → 0.2.64
 ```
 
 When up to date it exits 0.
@@ -101,15 +101,22 @@ For easier updates, install globally:
 
 ## Unknown installs and `--via`
 
-If detection fails, `doraval update` explains the reason and offers an interactive picker (or suggests `--via`):
+If detection fails and an update is available, `doraval update` first shows the version info, then explains and offers an interactive picker (or suggests `--via` for CI). `--check` reports availability without prompting.
 
 ```
-Could not determine how doraval was installed: ...
+doraval update
+
+  Current: 0.2.63
+  Latest:  0.2.64
+
+  ...
+
+✗ Could not determine how doraval was installed: ...
 How was doraval installed?
   1. homebrew ...
 ```
 
-Force a method when needed (non-interactive):
+Force a method when needed (non-interactive / scripts):
 
 ```bash
 doraval update --via npm

@@ -117,7 +117,7 @@ description: Use doraval to validate, measure drift, and judge skills and plugin
 
 # Use Doraval (Cursor edition)
 
-Doraval is the context engineering toolkit.
+Make your next context work (skills, plugins & more) for your team, community, or self.
 
 When you need to check a skill or Cursor plugin:
 

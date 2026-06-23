@@ -70,7 +70,9 @@ export default defineCommand({
       } else if (f === 'npx' || f === 'bunx') {
         method = { type: 'transient', via: f as any, source: 'path' };
       } else {
-        method = { type: 'unknown', reason: `Invalid --via value: ${f}` };
+        ui.fail(`Invalid --via value: "${f}". Valid: homebrew | npm | bun (or npx | bunx for transient).`);
+        ui.info("Use --via to bypass detection for scripts/CI.");
+        process.exit(2);
       }
     } else {
       method = await detectInstallMethod(ctx);
@@ -85,17 +87,6 @@ export default defineCommand({
       ui.info("  npm install -g @hacksmith/doraval");
       ui.info("  bun add -g @hacksmith/doraval");
       process.exit(0);
-    }
-
-    if (method.type === "unknown") {
-      ui.fail(`Could not determine how doraval was installed: ${method.reason}`);
-      const chosen = await promptInstallMethod();
-      if (chosen) {
-        method = { type: chosen, source: 'user' } as InstallMethod;
-      } else {
-        ui.info("You can force it with --via homebrew|npm|bun");
-        process.exit(2);
-      }
     }
 
     const latestInfo = await fetchLatestVersionInfo();
@@ -114,6 +105,23 @@ export default defineCommand({
     ui.info(`  Current: ${currentVersion}`);
     ui.info(`  Latest:  ${latestInfo.version}\n`);
     ui.info(`  ${latestInfo.summary}\n`);
+
+    // Only prompt for unknown installs when we are actually going to upgrade.
+    // --check and "up to date" cases never need the method.
+    if (method.type === "unknown") {
+      ui.fail(`Could not determine how doraval was installed: ${method.reason}`);
+      if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        ui.info("Use --via homebrew|npm|bun to specify (non-interactive).");
+        process.exit(2);
+      }
+      const chosen = await promptInstallMethod();
+      if (chosen) {
+        method = { type: chosen, source: 'user' } as InstallMethod;
+      } else {
+        ui.info("Update cancelled.");
+        process.exit(0);
+      }
+    }
 
     if (!args.yes) {
       const confirmed = await confirmUpdate();

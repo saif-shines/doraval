@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.2.62",
+    version: "0.2.63",
     author: "Saif",
     repository: {
       type: "git",
@@ -612,7 +612,7 @@ var require_package = __commonJS((exports, module) => {
       doraval: "bin/doraval-wrapper.js",
       dora: "bin/doraval-wrapper.js"
     },
-    description: "The context engineering toolkit for coding agent orchestrators",
+    description: "Make your next context work (skills, plugins & more) for your team, community, or self.",
     engines: {
       bun: ">=1.2.0",
       node: ">=14.18.0"
@@ -4890,7 +4890,7 @@ description: Use doraval to validate, measure drift, and judge skills and plugin
 
 # Use Doraval
 
-Doraval is the context engineering toolkit.
+Make your next context work (skills, plugins & more) for your team, community, or self.
 
 When you need to check a skill or plugin:
 
@@ -5393,7 +5393,7 @@ description: Use doraval to validate, measure drift, and judge skills and plugin
 
 # Use Doraval (Codex edition)
 
-Doraval is the context engineering toolkit.
+Make your next context work (skills, plugins & more) for your team, community, or self.
 
 When you need to check a skill or Codex plugin:
 
@@ -5623,7 +5623,7 @@ description: Use doraval to validate, measure drift, and judge skills and plugin
 
 # Use Doraval (Cursor edition)
 
-Doraval is the context engineering toolkit.
+Make your next context work (skills, plugins & more) for your team, community, or self.
 
 When you need to check a skill or Cursor plugin:
 
@@ -5852,7 +5852,7 @@ description: Use doraval to validate, measure drift, and judge skills and plugin
 
 # Use Doraval (Copilot edition)
 
-Doraval is the context engineering toolkit.
+Make your next context work (skills, plugins & more) for your team, community, or self.
 
 When you need to check a skill or Copilot plugin:
 
@@ -9466,7 +9466,9 @@ var init_update3 = __esm(() => {
         } else if (f === "npx" || f === "bunx") {
           method = { type: "transient", via: f, source: "path" };
         } else {
-          method = { type: "unknown", reason: `Invalid --via value: ${f}` };
+          ui.fail(`Invalid --via value: "${f}". Valid: homebrew | npm | bun (or npx | bunx for transient).`);
+          ui.info("Use --via to bypass detection for scripts/CI.");
+          process.exit(2);
         }
       } else {
         method = await detectInstallMethod(ctx);
@@ -9480,16 +9482,6 @@ var init_update3 = __esm(() => {
         ui.info("  npm install -g @hacksmith/doraval");
         ui.info("  bun add -g @hacksmith/doraval");
         process.exit(0);
-      }
-      if (method.type === "unknown") {
-        ui.fail(`Could not determine how doraval was installed: ${method.reason}`);
-        const chosen = await promptInstallMethod();
-        if (chosen) {
-          method = { type: chosen, source: "user" };
-        } else {
-          ui.info("You can force it with --via homebrew|npm|bun");
-          process.exit(2);
-        }
       }
       const latestInfo = await fetchLatestVersionInfo();
       if (!shouldUpdate(currentVersion, latestInfo.version)) {
@@ -9506,6 +9498,20 @@ var init_update3 = __esm(() => {
 `);
       ui.info(`  ${latestInfo.summary}
 `);
+      if (method.type === "unknown") {
+        ui.fail(`Could not determine how doraval was installed: ${method.reason}`);
+        if (!process.stdin.isTTY || !process.stdout.isTTY) {
+          ui.info("Use --via homebrew|npm|bun to specify (non-interactive).");
+          process.exit(2);
+        }
+        const chosen = await promptInstallMethod();
+        if (chosen) {
+          method = { type: chosen, source: "user" };
+        } else {
+          ui.info("Update cancelled.");
+          process.exit(0);
+        }
+      }
       if (!args.yes) {
         const confirmed = await confirmUpdate();
         if (!confirmed) {
@@ -9903,7 +9909,7 @@ var main = defineCommand({
   meta: {
     name: "doraval",
     version: import__package.default.version,
-    description: "The context engineering toolkit for coding agent orchestrators"
+    description: "Make your next context work (skills, plugins & more) for your team, community, or self."
   },
   subCommands: {
     validate: () => Promise.resolve().then(() => (init_validate_top(), exports_validate_top)).then((m) => m.default),
