@@ -243,17 +243,20 @@ export default defineCommand({
       console.log(
         JSON.stringify(
           {
-            hooks: {
-              SessionStart: [journalHookGroup()],
-            },
+            hooks: [
+              {
+                type: "command",
+                command: "sh -c 'dora journal context 2>/dev/null || true'",
+              },
+            ],
           },
           null,
           2
         )
       );
-      ui.write(`\nHook command: ${buildJournalHookCommand()}`);
-      ui.write("\nTip: Use `dora journal hook enable -g` to install globally (recommended).");
+      ui.write("\nTip: Use `dora journal hook enable` to install the hook automatically.");
       ui.write("     Use `dora journal hook disable` to remove it.");
+      ui.write("     (sh -c wrapper ensures shell features like redir work reliably.)");
       process.exit(0);
     }
 
