@@ -2,7 +2,7 @@
   "name": "@doraval/website",
   "private": true,
   "type": "module",
-  "version": "0.2.70",
+  "version": "0.2.72",
   "engines": {
     "node": ">=18"
   },
