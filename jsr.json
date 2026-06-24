@@ -1,6 +1,6 @@
 {
   "name": "@hacksmith/doraval",
-  "version": "0.2.64",
+  "version": "0.2.65",
   "license": "MIT",
   "description": "Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.",
   "exports": "./src/cli/index.ts"
