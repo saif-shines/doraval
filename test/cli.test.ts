@@ -72,7 +72,8 @@ describe("doraval CLI", () => {
       ]);
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain("Failed to parse YAML frontmatter");
+      expect(stderr).toContain("E-VAL-003");
+      expect(stderr).toContain("frontmatter");
     });
 
     test("exits 1 for missing path", () => {
@@ -83,6 +84,7 @@ describe("doraval CLI", () => {
       ]);
 
       expect(exitCode).toBe(1);
+      expect(stderr).toContain("E-VAL-001");
       expect(stderr).toContain("Path not found");
     });
 
@@ -98,6 +100,7 @@ describe("doraval CLI", () => {
       expect(stdout).toBe("");
       expect(stderr).toContain("Structural validation");
       expect(stderr).toContain("minimal-good");
+      expect(stderr).toContain("Next:");
     });
 
     test("validates CRLF fixture on disk", () => {

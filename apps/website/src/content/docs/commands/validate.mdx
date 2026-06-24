@@ -83,18 +83,21 @@ Subdirectories are validated strictly – invalid or traversal paths (e.g. `../.
 ```
   Cloning https://github.com/obra/superpowers...
 
-  dora validate: Claude Plugin (claude:plugin)
-
+  dora validate — 1 validator(s)
   Path:  https://github.com/obra/superpowers
+  1 validators • 0 errors • 0 warnings
 
-  ✓ .claude-plugin/plugin.json is valid JSON
-  ✓ name: "superpowers"
-  ✓ version: "5.1.0"
-  ✓ description field present
-  ✓ skills/brainstorming/SKILL.md exists
-  ✓ skills/writing-plans/SKILL.md exists
+  Claude Plugin (claude:plugin)
+  Status  Check
+  ✓       .claude-plugin/plugin.json is valid JSON
+  ✓       name: "superpowers"
+  ✓       version: "5.1.0"
+  ✓       description field present
+  ✓       skills/brainstorming/SKILL.md exists
 
-  Result: 0 error(s), 0 warning(s)
+  ✓ All checks passed.
+
+  Next: dora skill drift https://github.com/obra/superpowers
 ```
 
 ## `skill validate` (legacy)

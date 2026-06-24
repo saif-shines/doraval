@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
-import { ui } from "../out.js";
+import { ui, renderChecksTable, nextAction, summaryLine, type CheckStatus } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
 import { parseRemoteUrl, cloneToTemp, hasGitCli, sanitizeSubpath } from "../../core/remote.js";
@@ -76,15 +76,16 @@ export default defineCommand({
 
       if (!existsSync(fullPath)) {
         cleanup!();
-        ui.fail(`Subdirectory not found in repo: ${remote.subpath}`);
+        ui.fail(`Error (E-VAL-001): Subdirectory not found in repo: ${remote.subpath}`);
+        nextAction("dora validate <valid-path-or-url>");
         process.exit(1);
       }
     } else {
       fullPath = resolve(args.path);
       if (!existsSync(fullPath)) {
-        ui.fail(
-          `Path not found: ${args.path}\n\nCheck that the path is correct and the directory exists.`
-        );
+        ui.fail(`Error (E-VAL-001): Path not found: ${args.path}`);
+        ui.info("  Check that the path is correct and the directory exists.");
+        nextAction("dora validate .");
         process.exit(1);
       }
     }
@@ -99,6 +100,7 @@ export default defineCommand({
       const { matched: candidates, error } = resolveFor(args.for as string | undefined);
       if (error) {
         ui.fail(error);
+        nextAction("dora validate . --for claude   (or another provider)");
         process.exit(1);
       }
 
@@ -111,25 +113,27 @@ export default defineCommand({
 
       if (matched.length === 0) {
         const providers = [...new Set(validators.map((v) => v.provider))];
-        ui.fail(
-          `No validator matched this directory: ${args.path}\n\n` +
-            `Available providers:\n` +
+        ui.fail(`Error (E-VAL-004): No validator matched this directory: ${args.path}`);
+        ui.info(
+          `  Available providers:\n` +
             providers.map((p) => {
               const pvs = validators.filter((v) => v.provider === p);
-              return `  ${pc.bold(p)}\n` + pvs.map((v) => `    • ${pc.dim(v.id)} — ${v.description}`).join("\n");
-            }).join("\n") +
-            `\n\nUse ${pc.dim("--for <provider>")} or ${pc.dim("--for <provider:type>")} to target explicitly.`
+              return `    ${pc.bold(p)}\n` + pvs.map((v) => `      • ${pc.dim(v.id)} — ${v.description}`).join("\n");
+            }).join("\n")
         );
+        ui.info(`  Solutions:\n    • dora validate . --for <provider>\n    • dora providers`);
         process.exit(1);
       }
 
       const allResults: { id: string; name: string; result: ValidateResult }[] = [];
       let totalErrors = 0;
+      let totalWarnings = 0;
 
       for (const v of matched) {
         const result = await v.validate(fullPath, opts);
         allResults.push({ id: v.id, name: v.name, result });
         totalErrors += result.errors.length;
+        totalWarnings += result.warnings.length;
       }
 
       if (opts.format === "json") {
@@ -141,29 +145,38 @@ export default defineCommand({
         }));
         console.log(JSON.stringify(output, null, 2));
       } else {
-        for (const { id, name, result } of allResults) {
-          ui.write(
-            `\n  ${pc.bold("dora validate")} — ${pc.white(name)} ${pc.dim(`(${id})`)}\n`
-          );
-          ui.info(`  Path:  ${args.path}\n`);
+        // Overall summary header (less repetition than before)
+        ui.heading(`dora validate — ${matched.length} validator(s)`);
+        ui.info(`  Path:  ${args.path}`);
+        summaryLine(`${matched.length} validators • ${totalErrors} errors • ${totalWarnings} warnings\n`);
 
-          for (const p of result.passes) {
-            ui.pass(p);
-          }
-          for (const w of result.warnings) {
-            ui.warnItem(w);
-          }
-          for (const e of result.errors) {
-            ui.failItem(e);
-          }
+        for (const { id, name, result } of allResults) {
+          ui.write(`  ${pc.bold(name)} ${pc.dim(`(${id})`)}`);
+
+          const checks: Array<{ status: CheckStatus; text: string }> = [];
+          for (const e of result.errors) checks.push({ status: "fail", text: e });
+          for (const w of result.warnings) checks.push({ status: "warn", text: w });
+          for (const p of result.passes) checks.push({ status: "pass", text: p });
+
+          const useHeader = checks.length > 2 || !!args.verbose;
+          renderChecksTable(checks, { header: useHeader });
 
           if (result.errors.length === 0 && result.warnings.length === 0) {
-            ui.write(`\n  ${pc.green("✓")} ${pc.white("All checks passed.")}\n`);
+            ui.write(`  ${pc.green("✓")} ${pc.white("All checks passed.")}\n`);
           } else {
             ui.info(
-              `\n  Result: ${result.errors.length} error(s), ${result.warnings.length} warning(s)\n`
+              `  Result: ${result.errors.length} error(s), ${result.warnings.length} warning(s)\n`
             );
           }
+        }
+
+        // Single overall next action at the end
+        if (totalErrors === 0 && totalWarnings === 0) {
+          nextAction(`dora skill drift ${args.path}   or   dora journal add "..."`);
+        } else if (totalErrors > 0) {
+          nextAction(`dora validate ${args.path} --verbose`);
+        } else {
+          nextAction(`dora validate ${args.path} --for claude`);
         }
       }
 

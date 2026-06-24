@@ -38,3 +38,40 @@ export const ui = {
   failItem: (s: string) => write(`  ${pc.red("✗")} ${pc.white(s)}`),
   warnItem: (s: string) => write(`  ${pc.yellow("⚠")} ${pc.white(s)}`),
 };
+
+export type CheckStatus = 'pass' | 'warn' | 'fail' | 'ok';
+
+const statusIcon = (s: CheckStatus) =>
+  s === 'pass' || s === 'ok' ? pc.green('✓') :
+  s === 'warn' ? pc.yellow('⚠') : pc.red('✗');
+
+/** Render one check row (lightweight columnar style, matches drift/eval-history pad patterns). */
+export function renderCheck(status: CheckStatus, text: string): string {
+  return `  ${statusIcon(status)}  ${text}`;
+}
+
+/** Render validation checks as a simple aligned table (Status + message).
+ *  Use for --format table human output to avoid "pretty basic" flat lists.
+ *  No extra deps (per nodejs-cli-best-practices §2.1).
+ */
+export function renderChecksTable(
+  checks: Array<{ status: CheckStatus; text: string }>,
+  opts: { header?: boolean } = {}
+): void {
+  if (opts.header && checks.length > 0) {
+    write(`  ${pc.dim('Status')}  ${pc.dim('Check')}`);
+  }
+  for (const c of checks) {
+    write(renderCheck(c.status, c.text));
+  }
+}
+
+/** Explicit "Next:" action line. Use for developer guidance (see skill + plan 019). */
+export function nextAction(s: string): void {
+  write(`\n  ${pc.white('Next:')} ${pc.dim(s)}`);
+}
+
+/** One-line summary (counts, totals, etc.). */
+export function summaryLine(s: string): void {
+  write(`  ${pc.dim(s)}`);
+}
