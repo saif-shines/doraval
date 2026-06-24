@@ -13,8 +13,11 @@ export interface ProjectMapping {
 export interface EvalConfig {
   model: string;
   api_key?: string;
+  base_url?: string;
   max_tool_calls: number;
   save_history: boolean;
+  /** Explicit judge backend preference. "auto" (default) prefers direct API when credentials available. */
+  judge?: 'auto' | 'api' | 'cli';
 }
 
 export interface JournalConfig {
@@ -61,8 +64,10 @@ export function getEvalConfig(config: JournalConfig | null): EvalConfig {
   const defaults: EvalConfig = {
     model: "",
     api_key: undefined,
+    base_url: undefined,
     max_tool_calls: 200,
     save_history: true,
+    judge: 'auto',
   };
   return { ...defaults, ...(config?.eval ?? {}) };
 }

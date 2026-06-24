@@ -1,5 +1,6 @@
 import type { AgentConfig } from "./agent-invoke.js";
 import { invokeAgent, getLastInvokeError } from "./agent-invoke.js";
+import { invokeJudge, canUseApiJudge, type JudgeResult } from "./llm-judge.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
 
@@ -122,10 +123,32 @@ export async function runEval(
 ): Promise<EvalResult> {
   const prompt = buildEvalPrompt(primitives, skillContent, evalCfg.max_tool_calls);
 
-  const raw = await invokeAgent(prompt, agentCfg, ["verdict", "checklist"]);
+  const preference = evalCfg.judge ?? 'auto';
+
+  let raw: Record<string, unknown> | null = null;
+  let judgeError: string | undefined;
+
+  const shouldTryApi =
+    preference !== 'cli' &&
+    (preference === 'api' || canUseApiJudge(evalCfg)) &&
+    !!evalCfg.model;
+
+  if (shouldTryApi) {
+    const result: JudgeResult = await invokeJudge(prompt, evalCfg);
+    if (result.success) {
+      raw = result.data;
+    } else {
+      judgeError = result.error;
+    }
+  }
+
+  if (!raw && preference !== 'api') {
+    // Fallback to (or use) agent CLI
+    raw = await invokeAgent(prompt, agentCfg, ["verdict", "checklist"]);
+  }
 
   if (!raw) {
-    const err = getLastInvokeError();
+    const err = judgeError || getLastInvokeError();
     return makeUnknownResult(primitives, skillName, err ? `LLM call failed: ${err}` : "LLM call failed — no response");
   }
 

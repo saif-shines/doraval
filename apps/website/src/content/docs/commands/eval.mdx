@@ -118,7 +118,9 @@ Results are saved (by default) under `~/.doraval/evals/`.
    - User messages (first 5 used for familiarity inference)
    - Session metadata
 3. For each skill, loads the local `SKILL.md` when possible.
-4. Sends a compact summary (tool calls + user messages) to an LLM using **your configured coding agent** (the one set during `dora init`).
+4. Sends a compact summary (tool calls + user messages) to an LLM.
+   - Default: your configured coding agent CLI.
+   - If `eval.model` + API key is present: calls directly (OpenAI-compatible). No gateway needed. GLM models auto-default to Zhipu's endpoint.
 5. Parses the structured verdict + checklist.
 
 ## Configuration
@@ -136,9 +138,31 @@ dora config set eval.model claude-sonnet-4-6
 dora config get eval.model
 ```
 
-The judge call re-uses the same agent command and prompt template you configured for journal enrichment.
+The judge can use your coding agent CLI, **or call an LLM directly via API** (no proxy or gateway server required).
 
-Recommended: have `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in your environment.
+For cheap dev evals:
+- `doraval config set eval.model glm-5-turbo`
+- Set `ZAI_API_KEY` (or `ZHIPU_API_KEY`) in your environment
+
+We default `glm*` models to the general Z.AI endpoint (`https://api.z.ai/api/paas/v4`).
+
+You don't need to tell doraval which plan you're on.
+
+To use a different endpoint (e.g. Coding Plan, self-hosted, LiteLLM proxy, etc.), set one of these:
+
+```bash
+OPENAI_BASE_URL=https://api.z.ai/api/coding/paas/v4
+# or
+ZAI_BASE_URL=https://api.z.ai/api/coding/paas/v4
+```
+
+You can also set it permanently:
+
+```bash
+doraval config set eval.base_url https://api.z.ai/api/coding/paas/v4
+```
+
+`glm-5-turbo` is recommended for the judge (fast + cheap). See https://docs.z.ai for current model names. Works with any OpenAI-compatible provider. Falls back to your agent CLI if no API key is available.
 
 ## Options
 

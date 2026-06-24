@@ -1,6 +1,6 @@
 # doraval
 
-**Make your next context work (skills, plugins & more) for your team, community, or self.**
+**Make your next context work (skills, plugins & more) for your team, community, or self.** Context engineering toolkit for AI coding agents.
 
 [Documentation](https://doraval.thehacksmith.dev) · [Distributor quickstart](https://doraval.thehacksmith.dev/get-started/quickstart-distributors/) · [Orchestrator quickstart](https://doraval.thehacksmith.dev/get-started/quickstart-orchestrators/)
 
@@ -9,6 +9,8 @@ You write skills, plugins, and team context so agents (and humans) ship on the f
 **The problem:** context you cannot trust until someone else has already wasted a day debugging it.
 
 **The win:** validate, scaffold, journal, and measure so the first attempt succeeds across Claude, Cursor, Codex, Copilot, Grok, and whatever comes next.
+
+doraval is the toolkit for **context engineering** — authoring, validating, and evolving reliable context (skills, plugins, decisions) that works the first time for agents and people.
 
 > **Magic is free. First win in under 2 minutes:**
 > ```bash
@@ -27,7 +29,7 @@ You write skills, plugins, and team context so agents (and humans) ship on the f
 doraval serves two jobs. Pick the path that matches yours:
 
 ```
-  Context you engineer (skills, plugins, decisions)
+  Context engineering (skills, plugins, decisions)
                         │
                         ▼
                  ┌─────────────┐

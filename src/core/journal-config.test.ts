@@ -20,11 +20,12 @@ describe("getEvalConfig", () => {
   test("returns values from config when present", () => {
     const config = {
       journal: { repo: "test/repo", projects: {} },
-      eval: { model: "claude-sonnet-4-6", max_tool_calls: 300, save_history: false },
+      eval: { model: "glm-5-turbo", max_tool_calls: 300, save_history: false, judge: 'api' },
     };
     const result = getEvalConfig(config);
-    expect(result.model).toBe("claude-sonnet-4-6");
+    expect(result.model).toBe("glm-5-turbo");
     expect(result.max_tool_calls).toBe(300);
     expect(result.save_history).toBe(false);
+    expect(result.judge).toBe('api');
   });
 });

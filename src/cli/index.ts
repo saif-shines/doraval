@@ -177,7 +177,7 @@ const main = defineCommand({
     name: "doraval",
     version: pkg.version,
     description:
-      "Make your next context work (skills, plugins & more) for your team, community, or self.",
+      "Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.",
   },
   subCommands: {
     validate: () =>

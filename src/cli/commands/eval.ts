@@ -7,6 +7,7 @@ import { getAdapter } from "../../core/session-adapters.js";
 import { parseSession, sanitizeSessionId, type SessionPrimitives } from "../../core/session-parse.js";
 import { runEval, type EvalResult } from "../../core/session-eval.js";
 import { readConfig, getEvalConfig, ensureDoravalDirs, getEvalsDir } from "../../core/journal-config.js";
+import { canUseApiJudge } from "../../core/llm-judge.js";
 import { loadSkill } from "../../core/skill-validate.js";
 import { prompt } from "../prompt.js";
 import { runSkillSessions, renderBatchResults, displayVerdict } from "../../core/skill-runner.js";
@@ -312,7 +313,8 @@ export default defineCommand({
       }
 
       // Privacy notice
-      ui.write(`  ${pc.dim("· Sending session summary (tool calls + 5 user messages) to")} ${pc.dim(evalCfg.model || "configured model")}${pc.dim(". Use --verbose to inspect.")}`);
+      const judgeVia = canUseApiJudge(evalCfg) && evalCfg.model ? "direct (no proxy)" : "your agent CLI";
+      ui.write(`  ${pc.dim("· Sending session summary (tool calls + 5 user messages) to")} ${pc.dim(evalCfg.model || "configured model")} ${pc.dim(`(${judgeVia})`)}${pc.dim(". Use --verbose to inspect.")}`);
 
       ensureDoravalDirs();
 

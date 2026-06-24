@@ -1,5 +1,6 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { buildAgentArgv, getDefaultPromptTemplate, resolveAgentConfig } from "./agent-invoke.js";
+import { canUseApiJudge } from "./llm-judge.js";
 
 describe("buildAgentArgv", () => {
   test("substitutes prompt marker into argv", () => {
@@ -67,5 +68,48 @@ describe("resolveAgentConfig", () => {
   test("fills in default template when none set", () => {
     const resolved = resolveAgentConfig({ command: "claude" });
     expect(resolved.prompt_template).toBe('-p "{{prompt}}" --output-format json --bare');
+  });
+});
+
+describe("canUseApiJudge", () => {
+  const origEnv = { ...process.env };
+
+  beforeEach(() => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.ZAI_API_KEY;
+    delete process.env.ZHIPU_API_KEY;
+    delete process.env.GLM_API_KEY;
+    delete process.env.OPENAI_BASE_URL;
+  });
+
+  afterEach(() => {
+    process.env = { ...origEnv };
+  });
+
+  test("returns false with no keys and no config", () => {
+    expect(canUseApiJudge({ model: "", api_key: undefined, base_url: undefined, max_tool_calls: 200, save_history: true, judge: 'auto' })).toBe(false);
+  });
+
+  test("returns true when base_url is set", () => {
+    expect(canUseApiJudge({ model: "glm-5-turbo", api_key: undefined, base_url: "https://example.com/v1", max_tool_calls: 200, save_history: true, judge: 'auto' })).toBe(true);
+  });
+
+  test("returns true when OPENAI_BASE_URL or ZAI_BASE_URL is set in env", () => {
+    process.env.OPENAI_BASE_URL = "https://example.com/v1";
+    expect(canUseApiJudge({ model: "glm-5-turbo", api_key: undefined, base_url: undefined, max_tool_calls: 200, save_history: true, judge: 'auto' })).toBe(true);
+
+    delete process.env.OPENAI_BASE_URL;
+    process.env.ZAI_BASE_URL = "https://example.com/v1";
+    expect(canUseApiJudge({ model: "glm-5-turbo", api_key: undefined, base_url: undefined, max_tool_calls: 200, save_history: true, judge: 'auto' })).toBe(true);
+  });
+
+  test("returns true when api_key in eval config", () => {
+    expect(canUseApiJudge({ model: "glm-5-turbo", api_key: "sk-test", base_url: undefined, max_tool_calls: 200, save_history: true, judge: 'auto' })).toBe(true);
+  });
+
+  test("returns true when ZAI_API_KEY in env", () => {
+    process.env.ZAI_API_KEY = "sk-zai";
+    expect(canUseApiJudge({ model: "glm-5-turbo", api_key: undefined, base_url: undefined, max_tool_calls: 200, save_history: true, judge: 'auto' })).toBe(true);
   });
 });

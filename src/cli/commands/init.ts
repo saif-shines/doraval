@@ -249,16 +249,15 @@ export default defineCommand({
     // ── Eval setup ──────────────────────────────────────────────────────────────
     ui.write(`\n  ${pc.bold("Step 3: Eval configuration (doraval eval)")}\n`);
 
-    const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
-    const hasOpenAI = !!process.env.OPENAI_API_KEY;
-    if (hasAnthropic || hasOpenAI) {
-      ui.success("API key found in environment — will be used for eval.");
+    const hasApiKey = !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.ZHIPU_API_KEY || process.env.GLM_API_KEY);
+    if (hasApiKey) {
+      ui.success("API key found — doraval eval can call models directly (no proxy server needed). GLM works great for cheap dev evals.");
     } else {
-      ui.warn("No ANTHROPIC_API_KEY or OPENAI_API_KEY set. Set the right one before running doraval eval.");
+      ui.warn("No API key found for direct eval. You can still use your agent CLI, or set ZHIPU_API_KEY (or OPENAI_API_KEY) + eval.model for cheap direct API judging.");
     }
 
     const evalModelAnswer = await prompt(
-      `  Which model should doraval eval use? ${pc.dim("(e.g. claude-sonnet-4-6 or gpt-4o, press Enter to skip)")} `,
+      `  Which model should doraval eval use? ${pc.dim("(e.g. glm-5-turbo, glm-5.2, gpt-4o-mini)")} `,
       ""
     );
 

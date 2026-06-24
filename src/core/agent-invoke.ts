@@ -1,4 +1,9 @@
 import { spawnSync } from "bun";
+import { extractCandidates, canUseApiJudge as _canUseApiJudge, invokeJudge as _invokeJudge } from "./llm-judge.js";
+
+// Re-exports for backward compatibility during transition
+export { canUseApiJudge } from "./llm-judge.js";
+export { invokeJudge } from "./llm-judge.js";
 
 export interface AgentConfig {
   command: string;
@@ -275,3 +280,5 @@ export async function runAgentSession(
 
   return stdout.trim() || "(no output)";
 }
+
+
