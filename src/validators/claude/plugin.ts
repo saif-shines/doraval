@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "fs";
 import { resolve, join } from "path";
-import type { Validator, ValidateResult, ValidateOptions } from "../types.js";
+import type { Validator, ValidateResult, ValidateOptions, CheckItem } from "../types.js";
 
 const NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const RELATIVE_PATH_REGEX = /^\.\//;
@@ -119,9 +119,9 @@ export const claudePluginValidator: Validator = {
   },
 
   async validate(dir: string, _opts: ValidateOptions): Promise<ValidateResult> {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    const passes: string[] = [];
+    const errors: CheckItem[] = [];
+    const warnings: CheckItem[] = [];
+    const passes: CheckItem[] = [];
 
     const manifestPath = resolve(dir, ".claude-plugin", "plugin.json");
     const dotClaudePluginDir = resolve(dir, ".claude-plugin");
@@ -131,13 +131,13 @@ export const claudePluginValidator: Validator = {
     try {
       const raw = await Bun.file(manifestPath).text();
       manifest = JSON.parse(raw) as PluginManifest;
-      passes.push(".claude-plugin/plugin.json is valid JSON");
+      passes.push({ text: ".claude-plugin/plugin.json is valid JSON" });
     } catch (err: any) {
       if (!existsSync(manifestPath)) {
-        errors.push(`.claude-plugin/plugin.json is missing (looked for ${manifestPath})`);
-        warnings.push('Hint: Run `doraval claude new` (or `dora claude new`) to scaffold a new Claude plugin in this directory.');
+        errors.push({ text: `.claude-plugin/plugin.json is missing (looked for ${manifestPath})` });
+        warnings.push({ text: 'Hint: Run `doraval claude new` (or `dora claude new`) to scaffold a new Claude plugin in this directory.' });
       } else {
-        errors.push(`.claude-plugin/plugin.json is invalid JSON (${err.message})`);
+        errors.push({ text: `.claude-plugin/plugin.json is invalid JSON (${err.message})` });
       }
       return { errors, warnings, passes };
     }
@@ -149,22 +149,22 @@ export const claudePluginValidator: Validator = {
       const unexpected = entries.filter((e) => e !== "plugin.json");
       if (unexpected.length > 0) {
         for (const e of unexpected) {
-          warnings.push(`Unexpected item "${e}" inside .claude-plugin/ — only plugin.json belongs here. Move component directories and files (skills/, commands/, agents/, hooks/, .mcp.json etc.) to the plugin root.`);
+          warnings.push({ text: `Unexpected item "${e}" inside .claude-plugin/ — only plugin.json belongs here. Move component directories and files (skills/, commands/, agents/, hooks/, .mcp.json etc.) to the plugin root.` });
         }
       } else if (entries.length === 1) {
-        passes.push(".claude-plugin/ contains only plugin.json (correct layout)");
+        passes.push({ text: ".claude-plugin/ contains only plugin.json (correct layout)" });
       }
     } catch {}
 
     // name — required, kebab-case (used for namespacing e.g. plugin-name:skill-name)
     if (!manifest.name) {
-      errors.push('Missing required field: "name"');
+      errors.push({ text: 'Missing required field: "name"' });
     } else {
       const name = String(manifest.name);
       if (!NAME_REGEX.test(name)) {
-        errors.push(`Invalid name format: "${name}" — must be kebab-case (a-z, 0-9, hyphens)`);
+        errors.push({ text: `Invalid name format: "${name}" — must be kebab-case (a-z, 0-9, hyphens)` });
       } else {
-        passes.push(`name: "${name}"`);
+        passes.push({ text: `name: "${name}"` });
       }
     }
 
@@ -174,24 +174,24 @@ export const claudePluginValidator: Validator = {
     if (manifest.version !== undefined) {
       const v = String(manifest.version);
       if (!/^\d+\.\d+\.\d+/.test(v)) {
-        errors.push(`Invalid version format: "${v}" — must look like semver (MAJOR.MINOR.PATCH) when using explicit versioning`);
+        errors.push({ text: `Invalid version format: "${v}" — must look like semver (MAJOR.MINOR.PATCH) when using explicit versioning` });
       } else {
-        passes.push(`version: "${v}" (explicit — bump on every release to publish updates)`);
+        passes.push({ text: `version: "${v}" (explicit — bump on every release to publish updates)` });
       }
     } else {
-      passes.push("version omitted (git commit SHA used as version key — every commit becomes an available update)");
+      passes.push({ text: "version omitted (git commit SHA used as version key — every commit becomes an available update)" });
     }
 
     // description
     if (manifest.description !== undefined) {
       const desc = String(manifest.description);
       if (desc.length < 10) {
-        warnings.push(`Description is very short (${desc.length} chars) — 50-200 chars recommended`);
+        warnings.push({ text: `Description is very short (${desc.length} chars) — 50-200 chars recommended` });
       } else {
-        passes.push("description field present");
+        passes.push({ text: "description field present" });
       }
     } else {
-      warnings.push('Missing "description" (recommended for UI, marketplace listings, and auto-discovery)');
+      warnings.push({ text: 'Missing "description" (recommended for UI, marketplace listings, and auto-discovery)' });
     }
 
     // Other metadata (lightweight)
@@ -201,35 +201,35 @@ export const claudePluginValidator: Validator = {
     if (manifest.author !== undefined) {
       const a = manifest.author as { name?: string } | undefined;
       if (a && typeof a === "object" && a.name) {
-        passes.push("author present");
+        passes.push({ text: "author present" });
       } else {
-        warnings.push('author should be an object like {"name": "...", "email?": "..."}');
+        warnings.push({ text: 'author should be an object like {"name": "...", "email?": "..."}' });
       }
     }
     if (manifest.license !== undefined) {
-      passes.push(`license: "${manifest.license}"`);
+      passes.push({ text: `license: "${manifest.license}"` });
     }
     if (manifest.keywords !== undefined) {
       if (Array.isArray(manifest.keywords)) {
-        passes.push(`keywords: [${manifest.keywords.join(", ")}] — If users mention any of these keywords, your plugin will get triggered in Claude Code`);
+        passes.push({ text: `keywords: [${manifest.keywords.join(", ")}] — If users mention any of these keywords, your plugin will get triggered in Claude Code` });
       } else {
-        errors.push("keywords must be an array of strings");
+        errors.push({ text: "keywords must be an array of strings" });
       }
     } else {
-      warnings.push('Missing "keywords" (recommended — if users mention any of these, your plugin will get triggered in Claude Code)');
+      warnings.push({ text: 'Missing "keywords" (recommended — if users mention any of these, your plugin will get triggered in Claude Code)' });
     }
     if (manifest.defaultEnabled !== undefined) {
-      passes.push(`defaultEnabled: ${manifest.defaultEnabled}`);
+      passes.push({ text: `defaultEnabled: ${manifest.defaultEnabled}` });
     }
-    if (manifest.homepage) passes.push("homepage present");
-    if (manifest.repository) passes.push("repository present");
+    if (manifest.homepage) passes.push({ text: "homepage present" });
+    if (manifest.repository) passes.push({ text: "repository present" });
 
     // Unrecognized fields (official: warnings not errors. Suggests likely intended name on small typos.)
     const unknown = Object.keys(manifest).filter((k) => !KNOWN_FIELDS.has(k));
     for (const k of unknown) {
       const sug = suggestField(k);
       const hint = sug ? ` (did you mean "${sug}"?)` : "";
-      warnings.push(`Unrecognized top-level field "${k}"${hint} — will be ignored at runtime (allowed for cross-tool manifest compatibility).`);
+      warnings.push({ text: `Unrecognized top-level field "${k}"${hint} — will be ignored at runtime (allowed for cross-tool manifest compatibility).` });
     }
 
     // Handle component path fields and inline configs (full set from schema + path behavior rules)
@@ -241,24 +241,24 @@ export const claudePluginValidator: Validator = {
         for (const p of arr) {
           const s = String(p);
           if (!RELATIVE_PATH_REGEX.test(s)) {
-            errors.push(`${field}: path "${s}" must start with "./"`);
+            errors.push({ text: `${field}: path "${s}" must start with "./"` });
           } else if (s.includes("..")) {
-            errors.push(`${field}: path "${s}" must not use ".." (paths are confined to the plugin tree after cache copy)`);
+            errors.push({ text: `${field}: path "${s}" must not use ".." (paths are confined to the plugin tree after cache copy)` });
           } else if (existsSync(resolve(dir, s))) {
-            passes.push(`${field}: path "${s}" exists`);
+            passes.push({ text: `${field}: path "${s}" exists` });
           } else {
-            warnings.push(`${field}: path "${s}" does not exist on disk`);
+            warnings.push({ text: `${field}: path "${s}" does not exist on disk` });
           }
         }
         if (field === "skills") {
-          passes.push(`${field}: augments the default skills/ (both are scanned)`);
+          passes.push({ text: `${field}: augments the default skills/ (both are scanned)` });
         } else if (REPLACES_DEFAULT.has(field)) {
-          passes.push(`${field}: custom path replaces default ${field}/ scan`);
+          passes.push({ text: `${field}: custom path replaces default ${field}/ scan` });
         } else {
-          passes.push(`${field}: custom path or config (merge rules apply)`);
+          passes.push({ text: `${field}: custom path or config (merge rules apply)` });
         }
       } else if (typeof val === "object") {
-        passes.push(`${field}: inline ${field} config present`);
+        passes.push({ text: `${field}: inline ${field} config present` });
       }
     };
 
@@ -271,32 +271,32 @@ export const claudePluginValidator: Validator = {
       const exp = manifest.experimental as Record<string, unknown>;
       if (exp.themes !== undefined) handleField("experimental.themes", exp.themes);
       if (exp.monitors !== undefined) handleField("experimental.monitors", exp.monitors);
-      passes.push("experimental section present (themes and monitors are experimental components)");
+      passes.push({ text: "experimental section present (themes and monitors are experimental components)" });
     }
 
     // userConfig (values prompted on enable; support ${user_config.KEY} and CLAUDE_PLUGIN_OPTION_*)
     if (manifest.userConfig && typeof manifest.userConfig === "object") {
       const keys = Object.keys(manifest.userConfig as object);
-      passes.push(`userConfig: ${keys.length} user-configurable value(s) declared`);
+      passes.push({ text: `userConfig: ${keys.length} user-configurable value(s) declared` });
       for (const k of keys) {
         const opt: any = (manifest.userConfig as any)[k];
         if (!opt || !opt.type || !opt.title) {
-          warnings.push(`userConfig.${k} is missing required "type" and/or "title"`);
+          warnings.push({ text: `userConfig.${k} is missing required "type" and/or "title"` });
         }
       }
     }
 
     // channels (for MCP-backed injection like telegram/slack)
     if (Array.isArray(manifest.channels)) {
-      passes.push(`channels: ${manifest.channels.length} channel(s) (each binds to an mcpServer)`);
+      passes.push({ text: `channels: ${manifest.channels.length} channel(s) (each binds to an mcpServer)` });
       (manifest.channels as any[]).forEach((ch, i) => {
-        if (!ch?.server) warnings.push(`channels[${i}]: "server" is required and must match an mcpServers key`);
+        if (!ch?.server) warnings.push({ text: `channels[${i}]: "server" is required and must match an mcpServers key` });
       });
     }
 
     // dependencies (other plugins required)
     if (Array.isArray(manifest.dependencies)) {
-      passes.push(`dependencies: declares ${manifest.dependencies.length} plugin dependency/ies`);
+      passes.push({ text: `dependencies: declares ${manifest.dependencies.length} plugin dependency/ies` });
     }
 
     // Default on-disk component discovery (always reported; warnings when both manifest key + default dir exist for replace fields)
@@ -306,13 +306,13 @@ export const claudePluginValidator: Validator = {
       for (const e of entries) {
         const md = join(skillsDir, e.name, "SKILL.md");
         if (existsSync(md)) {
-          passes.push(`skills/${e.name}/SKILL.md exists`);
+          passes.push({ text: `skills/${e.name}/SKILL.md exists` });
         } else {
-          errors.push(`skills/${e.name}/ is missing SKILL.md`);
+          errors.push({ text: `skills/${e.name}/ is missing SKILL.md` });
         }
       }
       if (manifest.skills !== undefined) {
-        warnings.push("Default skills/ dir co-exists with manifest \"skills\" — manifest path is authoritative; default folder ignored for loading");
+        warnings.push({ text: "Default skills/ dir co-exists with manifest \"skills\" — manifest path is authoritative; default folder ignored for loading" });
       }
     }
 
@@ -320,10 +320,10 @@ export const claudePluginValidator: Validator = {
     if (existsSync(commandsDir)) {
       const mds = readdirSync(commandsDir).filter((f) => f.endsWith(".md"));
       if (mds.length) {
-        passes.push(`commands/ has ${mds.length} .md file(s)`);
+        passes.push({ text: `commands/ has ${mds.length} .md file(s)` });
       }
       if (manifest.commands !== undefined) {
-        warnings.push("commands/ co-exists with manifest \"commands\" — manifest replaces default (dir ignored)");
+        warnings.push({ text: "commands/ co-exists with manifest \"commands\" — manifest replaces default (dir ignored)" });
       }
     }
 
@@ -331,21 +331,21 @@ export const claudePluginValidator: Validator = {
     if (existsSync(agentsDir)) {
       const mds = readdirSync(agentsDir).filter((f) => f.endsWith(".md"));
       if (mds.length) {
-        passes.push(`agents/ has ${mds.length} .md file(s)`);
+        passes.push({ text: `agents/ has ${mds.length} .md file(s)` });
       }
       if (manifest.agents !== undefined) {
-        warnings.push("agents/ co-exists with manifest \"agents\" — manifest replaces default (dir ignored)");
+        warnings.push({ text: "agents/ co-exists with manifest \"agents\" — manifest replaces default (dir ignored)" });
       }
     }
 
     // output-styles, themes, monitors, bin, etc. (presence reporting)
     if (existsSync(resolve(dir, "output-styles"))) {
-      passes.push("output-styles/ directory present");
-      if (manifest.outputStyles) warnings.push("output-styles/ co-exists with manifest outputStyles — manifest wins");
+      passes.push({ text: "output-styles/ directory present" });
+      if (manifest.outputStyles) warnings.push({ text: "output-styles/ co-exists with manifest outputStyles — manifest wins" });
     }
-    if (existsSync(resolve(dir, "themes"))) passes.push("themes/ present (experimental)");
+    if (existsSync(resolve(dir, "themes"))) passes.push({ text: "themes/ present (experimental)" });
     if (existsSync(resolve(dir, "monitors")) || (manifest.experimental as any)?.monitors) {
-      passes.push("monitors config present (experimental)");
+      passes.push({ text: "monitors config present (experimental)" });
     }
     if (existsSync(resolve(dir, "bin"))) passes.push("bin/ present (adds executables to Bash tool $PATH)");
     if (existsSync(resolve(dir, "settings.json"))) passes.push("settings.json present (plugin defaults for agent/statusline)");

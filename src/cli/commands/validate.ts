@@ -1,8 +1,7 @@
 import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
-import pc from "picocolors";
-import { ui, renderChecksTable, nextAction, type CheckStatus } from "../out.js";
+import { ui, renderValidationReport } from "../out.js";
 import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
 
 export default defineCommand({
@@ -80,33 +79,12 @@ export default defineCommand({
       const result = { path: targetPath, errors, warnings, passes };
       console.log(JSON.stringify(result, null, 2));
     } else {
-      ui.heading("dora skill validate — Structural validation");
-      ui.info(`  Path:  ${targetPath}\n`);
-
-      // Build in priority order (errors high first) for table output
-      const checks: Array<{ status: CheckStatus; text: string }> = [];
-      for (const e of errors) checks.push({ status: "fail", text: e });
-      for (const w of warnings) checks.push({ status: "warn", text: w });
-      for (const p of passes) checks.push({ status: "pass", text: p });
-
-      const useHeader = checks.length > 2 || !!args.verbose;
-      renderChecksTable(checks, { header: useHeader });
-
-      if (errors.length === 0 && warnings.length === 0) {
-        ui.write(`\n  ${pc.green("✓")} ${pc.white("All checks passed.")}\n`);
-        nextAction(
-          `dora skill drift ${targetPath === "." ? "." : targetPath}   or   dora validate ${targetPath} --for claude`
-        );
-      } else {
-        ui.info(
-          `\n  Result: ${errors.length} error(s), ${warnings.length} warning(s)\n`
-        );
-        if (errors.length > 0) {
-          nextAction(`dora skill validate ${targetPath} --verbose`);
-        } else {
-          nextAction(`dora skill drift ${targetPath}`);
-        }
-      }
+      const wrappedResult = {
+        id: "skill",
+        name: "Structural validation",
+        result: { errors, warnings, passes }
+      };
+      renderValidationReport([wrappedResult], { path: targetPath, verbose: !!args.verbose });
     }
 
     if (errors.length > 0) {

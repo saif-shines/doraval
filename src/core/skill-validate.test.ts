@@ -18,10 +18,10 @@ describe("validateSkillModel", () => {
     );
 
     expect(result.errors).toEqual([]);
-    expect(result.passes).toContain('name: "my-skill"');
-    expect(result.passes).toContain("description field present");
-    expect(result.passes).toContain("Markdown body is non-empty");
-    expect(result.passes).toContain("references/ directory exists");
+    expect(result.passes.some(p => p.text === 'name: "my-skill"')).toBe(true);
+    expect(result.passes.some(p => p.text.includes("description field present"))).toBe(true);
+    expect(result.passes.some(p => p.text.includes("Markdown body is non-empty"))).toBe(true);
+    expect(result.passes.some(p => p.text.includes("references/ directory exists"))).toBe(true);
   });
 
   test("reports missing name as warning (not error)", () => {
@@ -31,7 +31,7 @@ describe("validateSkillModel", () => {
     });
 
     expect(result.errors).toEqual([]);
-    expect(result.warnings.some((w) => w.includes("name"))).toBe(true);
+    expect(result.warnings.some((w) => w.text.includes("name"))).toBe(true);
   });
 
   test("reports invalid kebab-case name (still error when bad name supplied)", () => {
@@ -40,7 +40,7 @@ describe("validateSkillModel", () => {
       content: "Body",
     });
 
-    expect(result.errors[0]).toContain("Invalid name format");
+    expect(result.errors[0].text).toContain("Invalid name format");
   });
 
   test("reports name length out of range (still error when bad name supplied)", () => {
@@ -49,7 +49,7 @@ describe("validateSkillModel", () => {
       content: "Body",
     });
 
-    expect(result.errors[0]).toContain("Name length out of range");
+    expect(result.errors[0].text).toContain("Name length out of range");
   });
 
   test("reports missing description as warning (not error)", () => {
@@ -59,7 +59,7 @@ describe("validateSkillModel", () => {
     });
 
     expect(result.errors).toEqual([]);
-    expect(result.warnings.some((w) => w.includes("description"))).toBe(true);
+    expect(result.warnings.some((w) => w.text.includes("description"))).toBe(true);
   });
 
   test("reports empty body (still hard error)", () => {
@@ -68,7 +68,7 @@ describe("validateSkillModel", () => {
       content: "   \n  ",
     });
 
-    expect(result.errors).toContain("Markdown body is empty");
+    expect(result.errors.some(e => e.text.includes("Markdown body is empty"))).toBe(true);
   });
 
   test("reports missing frontmatter as warning (not hard error)", () => {
@@ -78,7 +78,7 @@ describe("validateSkillModel", () => {
     });
 
     expect(result.errors).toEqual([]);
-    expect(result.warnings.some((w) => w.includes("frontmatter"))).toBe(true);
+    expect(result.warnings.some((w) => w.text.includes("frontmatter"))).toBe(true);
   });
 
   test("recognizes advanced frontmatter, dynamic injection, and substitutions", () => {
@@ -103,12 +103,12 @@ Use $ARGUMENTS or $0 and \${CLAUDE_SKILL_DIR}.
     );
 
     expect(result.errors).toEqual([]);
-    expect(result.passes).toContain('name: "rich-example"');
-    expect(result.passes.some((p) => p.includes("advanced frontmatter"))).toBe(true);
-    expect(result.passes).toContain("uses dynamic context injection (!`...` or ```! blocks)");
-    expect(result.passes).toContain("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
-    expect(result.passes).toContain("scripts/ directory exists");
-    expect(result.passes).toContain("examples/ directory exists");
+    expect(result.passes.some(p => p.text.includes('name: "rich-example"'))).toBe(true);
+    expect(result.passes.some((p) => p.text.includes("advanced frontmatter"))).toBe(true);
+    expect(result.passes.some(p => p.text.includes("uses dynamic context injection"))).toBe(true);
+    expect(result.passes.some(p => p.text.includes("uses argument / session substitutions"))).toBe(true);
+    expect(result.passes.some(p => p.text.includes("scripts/ directory exists"))).toBe(true);
+    expect(result.passes.some(p => p.text.includes("examples/ directory exists"))).toBe(true);
   });
 });
 
@@ -120,35 +120,35 @@ describe("merge", () => {
   });
 
   test("concatenates errors from both sides", () => {
-    const a = { errors: ["e1"], warnings: [], passes: [] };
-    const b = { errors: ["e2"] };
-    expect(merge(a, b)).toEqual({ errors: ["e1", "e2"], warnings: [], passes: [] });
+    const a = { errors: [{ text: "e1" }], warnings: [], passes: [] };
+    const b = { errors: [{ text: "e2" }] };
+    expect(merge(a, b)).toEqual({ errors: [{ text: "e1" }, { text: "e2" }], warnings: [], passes: [] });
   });
 
   test("concatenates warnings and passes", () => {
-    const a = { errors: [], warnings: ["w1"], passes: ["p1"] };
-    const b = { warnings: ["w2"], passes: ["p2"] };
-    expect(merge(a, b)).toEqual({ errors: [], warnings: ["w1", "w2"], passes: ["p1", "p2"] });
+    const a = { errors: [], warnings: [{ text: "w1" }], passes: [{ text: "p1" }] };
+    const b = { warnings: [{ text: "w2" }], passes: [{ text: "p2" }] };
+    expect(merge(a, b)).toEqual({ errors: [], warnings: [{ text: "w1" }, { text: "w2" }], passes: [{ text: "p1" }, { text: "p2" }] });
   });
 
   test("does not mutate the accumulator", () => {
-    const a = { errors: [], warnings: [], passes: ["p1"] };
-    const b = { passes: ["p2"] };
+    const a = { errors: [], warnings: [], passes: [{ text: "p1" }] };
+    const b = { passes: [{ text: "p2" }] };
     merge(a, b);
-    expect(a.passes).toEqual(["p1"]);
+    expect(a.passes).toEqual([{ text: "p1" }]);
   });
 });
 
 describe("checkFrontmatterPresence", () => {
   test("returns warning when frontmatter is empty", () => {
     const result = checkFrontmatterPresence({ data: {}, content: "body" }, { existingDirs: [] });
-    expect(result.warnings).toContain("YAML frontmatter is empty (description recommended for discoverability)");
+    expect(result.warnings?.[0]?.text).toContain("YAML frontmatter is empty (description recommended for discoverability)");
     expect(result.passes).toBeUndefined();
   });
 
   test("returns pass when frontmatter has keys", () => {
     const result = checkFrontmatterPresence({ data: { name: "x" }, content: "body" }, { existingDirs: [] });
-    expect(result.passes).toContain("YAML frontmatter present and parseable");
+    expect(result.passes?.[0]?.text).toContain("YAML frontmatter present and parseable");
     expect(result.warnings).toBeUndefined();
   });
 });
@@ -156,46 +156,46 @@ describe("checkFrontmatterPresence", () => {
 describe("checkName", () => {
   test("returns warning when name is absent", () => {
     const result = checkName({ data: {}, content: "" }, { existingDirs: [] });
-    expect(result.warnings?.[0]).toContain("No \"name\" in frontmatter");
+    expect(result.warnings?.[0]?.text).toContain("No \"name\" in frontmatter");
   });
 
   test("returns error for invalid kebab-case", () => {
     const result = checkName({ data: { name: "Bad_Name" }, content: "" }, { existingDirs: [] });
-    expect(result.errors?.[0]).toContain("Invalid name format");
+    expect(result.errors?.[0]?.text).toContain("Invalid name format");
   });
 
   test("returns error for name too short", () => {
     const result = checkName({ data: { name: "a" }, content: "" }, { existingDirs: [] });
-    expect(result.errors?.[0]).toContain("Name length out of range");
+    expect(result.errors?.[0]?.text).toContain("Name length out of range");
   });
 
   test("returns pass for valid name", () => {
     const result = checkName({ data: { name: "my-skill" }, content: "" }, { existingDirs: [] });
-    expect(result.passes).toContain('name: "my-skill"');
+    expect(result.passes?.[0]?.text).toContain('name: "my-skill"');
   });
 });
 
 describe("checkDescription", () => {
   test("returns warning when description absent", () => {
     const result = checkDescription({ data: {}, content: "" }, { existingDirs: [] });
-    expect(result.warnings?.[0]).toContain("Missing \"description\"");
+    expect(result.warnings?.[0]?.text).toContain("Missing \"description\"");
   });
 
   test("returns pass when description present", () => {
     const result = checkDescription({ data: { description: "Use when testing." }, content: "" }, { existingDirs: [] });
-    expect(result.passes).toContain("description field present");
+    expect(result.passes?.[0]?.text).toContain("description field present");
   });
 });
 
 describe("checkBody", () => {
   test("returns error when content is blank", () => {
     const result = checkBody({ data: {}, content: "   \n  " }, { existingDirs: [] });
-    expect(result.errors).toContain("Markdown body is empty");
+    expect(result.errors?.[0]?.text).toContain("Markdown body is empty");
   });
 
   test("returns pass when content is non-empty", () => {
     const result = checkBody({ data: {}, content: "# Steps" }, { existingDirs: [] });
-    expect(result.passes).toContain("Markdown body is non-empty");
+    expect(result.passes?.[0]?.text).toContain("Markdown body is non-empty");
   });
 });
 
@@ -213,9 +213,9 @@ describe("checkAdvancedFields", () => {
       { data: { name: "x", description: "d", "allowed-tools": "Read", context: "fork" }, content: "" },
       { existingDirs: [] }
     );
-    expect(result.passes?.[0]).toContain("advanced frontmatter");
-    expect(result.passes?.[0]).toContain("allowed-tools");
-    expect(result.passes?.[0]).toContain("context");
+    expect(result.passes?.[0]?.text).toContain("advanced frontmatter");
+    expect(result.passes?.[0]?.text).toContain("allowed-tools");
+    expect(result.passes?.[0]?.text).toContain("context");
   });
 });
 
@@ -234,8 +234,8 @@ describe("checkUnknownFields", () => {
       { existingDirs: [] }
     );
     expect(result.warnings?.length).toBe(2);
-    expect(result.warnings?.[0]).toContain("foo");
-    expect(result.warnings?.[1]).toContain("baz");
+    expect(result.warnings?.[0]?.text).toContain("foo");
+    expect(result.warnings?.[1]?.text).toContain("baz");
   });
 });
 
@@ -250,8 +250,8 @@ describe("checkSupportingDirs", () => {
       { data: {}, content: "" },
       { existingDirs: ["references", "scripts"] }
     );
-    expect(result.passes).toContain("references/ directory exists");
-    expect(result.passes).toContain("scripts/ directory exists");
+    expect(result.passes?.some(p => p.text.includes("references/"))).toBe(true);
+    expect(result.passes?.some(p => p.text.includes("scripts/"))).toBe(true);
   });
 
   test("ignores dirs not in SUPPORTING_DIRS", () => {
@@ -274,7 +274,7 @@ describe("checkDynamicInjection", () => {
       { data: {}, content: "State: !`git status`" },
       { existingDirs: [] }
     );
-    expect(result.passes).toContain("uses dynamic context injection (!`...` or ```! blocks)");
+    expect(result.passes?.some(p => p.text.includes("uses dynamic context injection"))).toBe(true);
   });
 
   test("detects argument substitutions", () => {
@@ -282,7 +282,7 @@ describe("checkDynamicInjection", () => {
       { data: {}, content: "Use $ARGUMENTS here." },
       { existingDirs: [] }
     );
-    expect(result.passes).toContain("uses argument / session substitutions ($ARGUMENTS, $0, ${CLAUDE_*})");
+    expect(result.passes?.some(p => p.text.includes("uses argument / session substitutions"))).toBe(true);
   });
 
   test("detects both injection and substitution independently", () => {

@@ -17,7 +17,7 @@ export const codexSkillValidator: Validator = {
     const loaded = await loadSkill(dir);
     if (!loaded.ok) {
       return {
-        errors: [loaded.error],
+        errors: [{ text: loaded.error }],
         warnings: [],
         passes: [],
       };

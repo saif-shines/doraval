@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
-import { ui, renderChecksTable, nextAction, summaryLine, type CheckStatus } from "../out.js";
+import { ui, renderValidationReport } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
 import { parseRemoteUrl, cloneToTemp, hasGitCli, sanitizeSubpath } from "../../core/remote.js";
@@ -145,39 +145,7 @@ export default defineCommand({
         }));
         console.log(JSON.stringify(output, null, 2));
       } else {
-        // Overall summary header (less repetition than before)
-        ui.heading(`dora validate — ${matched.length} validator(s)`);
-        ui.info(`  Path:  ${args.path}`);
-        summaryLine(`${matched.length} validators • ${totalErrors} errors • ${totalWarnings} warnings\n`);
-
-        for (const { id, name, result } of allResults) {
-          ui.write(`  ${pc.bold(name)} ${pc.dim(`(${id})`)}`);
-
-          const checks: Array<{ status: CheckStatus; text: string }> = [];
-          for (const e of result.errors) checks.push({ status: "fail", text: e });
-          for (const w of result.warnings) checks.push({ status: "warn", text: w });
-          for (const p of result.passes) checks.push({ status: "pass", text: p });
-
-          const useHeader = checks.length > 2 || !!args.verbose;
-          renderChecksTable(checks, { header: useHeader });
-
-          if (result.errors.length === 0 && result.warnings.length === 0) {
-            ui.write(`  ${pc.green("✓")} ${pc.white("All checks passed.")}\n`);
-          } else {
-            ui.info(
-              `  Result: ${result.errors.length} error(s), ${result.warnings.length} warning(s)\n`
-            );
-          }
-        }
-
-        // Single overall next action at the end
-        if (totalErrors === 0 && totalWarnings === 0) {
-          nextAction(`dora skill drift ${args.path}   or   dora journal add "..."`);
-        } else if (totalErrors > 0) {
-          nextAction(`dora validate ${args.path} --verbose`);
-        } else {
-          nextAction(`dora validate ${args.path} --for claude`);
-        }
+        renderValidationReport(allResults, { path: args.path, verbose: !!args.verbose });
       }
 
       process.exit(totalErrors > 0 ? 1 : 0);

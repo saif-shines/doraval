@@ -152,7 +152,7 @@ describe("claude:plugin", () => {
       { format: "table", verbose: false, ci: false }
     );
     expect(result.errors).toEqual([]);
-    expect(result.passes).toContain('name: "test-plugin"');
+    expect(result.passes.some(p => p.text.includes('name: "test-plugin"'))).toBe(true);
   });
 
   test("warns on unrecognized fields (with suggestion) and version semantics", async () => {
@@ -167,9 +167,9 @@ describe("claude:plugin", () => {
       }, null, 2));
       const result = await claudePluginValidator.validate(tmp, { format: "table", verbose: false, ci: false });
       expect(result.errors).toEqual([]);
-      expect(result.warnings.some(w => w.includes("Unrecognized") && w.includes("foobar"))).toBe(true);
-      expect(result.warnings.some(w => w.includes("licence") && w.includes("license"))).toBe(true);
-      expect(result.passes.some(p => p.includes("explicit") && p.includes("1.2.3"))).toBe(true);
+      expect(result.warnings.some(w => w.text.includes("Unrecognized") && w.text.includes("foobar"))).toBe(true);
+      expect(result.warnings.some(w => w.text.includes("licence") && w.text.includes("license"))).toBe(true);
+      expect(result.passes.some(p => p.text.includes("explicit") && p.text.includes("1.2.3"))).toBe(true);
     } finally {
       await Bun.$`rm -rf ${tmp}`.quiet();
     }
@@ -181,7 +181,7 @@ describe("claude:plugin", () => {
       await Bun.write(resolve(tmp, ".claude-plugin/plugin.json"), JSON.stringify({ name: "purity-test" }));
       await Bun.write(resolve(tmp, ".claude-plugin/evil.txt"), "oops");
       const result = await claudePluginValidator.validate(tmp, { format: "table", verbose: false, ci: false });
-      expect(result.warnings.some(w => w.includes("Unexpected") && w.includes("evil.txt"))).toBe(true);
+      expect(result.warnings.some(w => w.text.includes("Unexpected") && w.text.includes("evil.txt"))).toBe(true);
     } finally {
       await Bun.$`rm -rf ${tmp}`.quiet();
     }

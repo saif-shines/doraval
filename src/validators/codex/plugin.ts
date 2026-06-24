@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "fs";
 import { resolve, join, dirname } from "path";
-import type { Validator, ValidateResult, ValidateOptions } from "../types.js";
+import type { Validator, ValidateResult, ValidateOptions, CheckItem } from "../types.js";
 
 const NAME_REGEX = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
@@ -24,9 +24,9 @@ export const codexPluginValidator: Validator = {
   },
 
   async validate(dir: string, _opts: ValidateOptions): Promise<ValidateResult> {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    const passes: string[] = [];
+    const errors: CheckItem[] = [];
+    const warnings: CheckItem[] = [];
+    const passes: CheckItem[] = [];
 
     const manifestPath = resolve(dir, ".codex-plugin", "plugin.json");
 

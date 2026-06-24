@@ -44,7 +44,7 @@ describe("doraval CLI", () => {
       expect(stderr).toBe("");
       const result = JSON.parse(stdout);
       expect(result.errors).toEqual([]);
-      expect(result.passes).toContain('name: "minimal-good"');
+      expect(result.passes.some((p: any) => p.text === 'name: "minimal-good"')).toBe(true);
     });
 
     test("reports missing name as warning and exits 0", () => {
@@ -60,7 +60,7 @@ describe("doraval CLI", () => {
       expect(exitCode).toBe(0);
       const result = JSON.parse(stdout);
       expect(result.errors).toEqual([]);
-      expect(result.warnings.some((w: string) => w.includes("name"))).toBe(true);
+      expect(result.warnings.some((w: any) => w.text.includes("name"))).toBe(true);
     });
 
     test("exits 1 for invalid YAML frontmatter", () => {
@@ -101,6 +101,7 @@ describe("doraval CLI", () => {
       expect(stderr).toContain("Structural validation");
       expect(stderr).toContain("minimal-good");
       expect(stderr).toContain("Next:");
+      expect(stderr).toContain("Status  Check");
     });
 
     test("validates CRLF fixture on disk", () => {
@@ -116,7 +117,7 @@ describe("doraval CLI", () => {
       expect(exitCode).toBe(0);
       const result = JSON.parse(stdout);
       expect(result.errors).toEqual([]);
-      expect(result.passes).toContain('name: "crlf-lines"');
+      expect(result.passes.some((p: any) => p.text === 'name: "crlf-lines"')).toBe(true);
     });
   });
 

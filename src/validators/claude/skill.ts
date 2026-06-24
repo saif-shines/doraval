@@ -17,7 +17,7 @@ export const claudeSkillValidator: Validator = {
     const loaded = await loadSkillFromDir(dir);
     if (!loaded.ok) {
       return {
-        errors: ["Failed to parse YAML frontmatter in SKILL.md"],
+        errors: [{ text: "Failed to parse YAML frontmatter in SKILL.md" }],
         warnings: [],
         passes: [],
       };
