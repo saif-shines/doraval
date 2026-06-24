@@ -1,16 +1,18 @@
 # doraval
 
-**Make your next context work (skills, plugins & more) for your team, community, or self.** Context engineering toolkit for AI coding agents.
+**Scale your AI context for coding agents.** Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.
 
-[Documentation](https://doraval.thehacksmith.dev) · [Distributor quickstart](https://doraval.thehacksmith.dev/get-started/quickstart-distributors/) · [Orchestrator quickstart](https://doraval.thehacksmith.dev/get-started/quickstart-orchestrators/)
+**doraval** (*dor-uh-val*) blends **Doraemon** and **eval** — gadget-pulling context tools plus session evaluation. The `dora` alias is the same CLI.
 
-You write skills, plugins, and team context so agents (and humans) ship on the first try. Then you hand that context to juniors, your community, or your own agent, and watch it fail anyway. Broken manifests. Skills that never trigger. Decisions that drift session to session. "Works on my machine with Claude" does not mean it works for Cursor, Codex, or the ten engineers you just onboarded.
+[Documentation](https://doraval.thehacksmith.dev) · [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/)
 
-**The problem:** context you cannot trust until someone else has already wasted a day debugging it.
+You scale AI context — skills, plugins, decisions — so agents (and humans) succeed on the first try. For yourself, your team, or your community. Broken manifests, skills that never trigger, decisions that drift session to session, and "works on my machine with Claude" that fails for Cursor, Codex, or the tenth engineer you onboard.
 
-**The win:** validate, scaffold, journal, and measure so the first attempt succeeds across Claude, Cursor, Codex, Copilot, Grok, and whatever comes next.
+**The problem:** context you cannot trust until someone has already wasted a day debugging it.
 
-doraval is the toolkit for **context engineering** — authoring, validating, and evolving reliable context (skills, plugins, decisions) that works the first time for agents and people.
+**The win:** validate, scaffold, journal, and eval so the first attempt succeeds across Claude, Cursor, Codex, Copilot, Grok, and whatever comes next.
+
+doraval is the toolkit for **context engineering** — authoring, validating, and evolving reliable context that works the first time.
 
 > **Magic is free. First win in under 2 minutes:**
 > ```bash
@@ -24,41 +26,54 @@ doraval is the toolkit for **context engineering** — authoring, validating, an
 
 `validate` auto-detects what you built and tells you what's broken before anyone burns a session on it.
 
-## Who you are
+## Who it's for
 
-doraval serves two jobs. Pick the path that matches yours:
+Anyone scaling AI context for coding agents — yourself, your team, or your community:
 
 ```
-  Context engineering (skills, plugins, decisions)
+  Scale AI context (skills, plugins, decisions)
                         │
                         ▼
                  ┌─────────────┐
                  │   doraval   │  validate · scaffold · journal · eval
                  └─────────────┘
                         │
-          ┌─────────────┴─────────────┐
-          ▼                           ▼
-   CONTEXT DISTRIBUTOR          CONTEXT ORCHESTRATOR
-          │                           │
-   Devtool company              Expert engineer
-   shipping skills to           tuning context for
-   the community                your own coding agent
-          │                           │
-   Senior engineer               Journal + hooks inject
-   onboarding juniors            decisions before you
-          │                      type the first message
-          ▼                           ▼
-   Ship → users run real        Scaffold → validate →
-   sessions → eval judges       journal → hook enable
-   adherence per skill
+                        ▼
+        yourself · your team · your community
+                        │
+                        ▼
+              first attempt succeeds
 ```
 
-| You are… | Your loop | Quickstart |
-|---|---|---|
-| **Context distributor**, publish skills or onboard juniors | scaffold → validate → ship → `eval` on real sessions | [Distributor guide](https://doraval.thehacksmith.dev/get-started/quickstart-distributors/) |
-| **Context orchestrator**, manage context for your own agent | scaffold → validate → journal → hook enable | [Orchestrator guide](https://doraval.thehacksmith.dev/get-started/quickstart-orchestrators/) |
+Same loop everywhere: scaffold → validate → journal → eval. [Quickstart →](https://doraval.thehacksmith.dev/get-started/quickstart/)
 
-The orchestrator problem, stated plainly: give 10 new engineers (or agents) a skill and only 3/10 succeed on the first try. 4/10 take hours. 7/10 take a day. 10/10 take days. doraval **left-shifts success**: catch breakage before the first session, not after the third debugging thread.
+Give 10 engineers (or agents) a skill and only 3/10 succeed on the first try. doraval **left-shifts success**: catch breakage before the first session, not after the third debugging thread.
+
+## Quickstart
+
+One path whether you are tuning your own agent, onboarding a team, or shipping to a community:
+
+```bash
+# 1. Scaffold
+doraval claude new --yes --intent self my-context      # personal / team
+doraval claude new --yes --intent distribute my-plugin # ship to others
+
+# 2. Validate before anyone relies on it
+doraval validate .
+
+# 3. One-time setup (journal + coding agent for evals)
+doraval init
+
+# 4. Record decisions that persist across sessions
+doraval journal add "Validate before shipping skill changes"
+doraval journal sync
+doraval journal hook enable
+
+# 5. Measure adherence in real agent sessions
+doraval eval
+```
+
+Full walkthrough: [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/)
 
 ## Install
 
@@ -119,12 +134,12 @@ doraval validate . --for claude:plugin    # one validator
 
 ### `claude new` / `cursor new` / …: scaffold by construction
 
-Interactive wizard for skills and plugins. Targets the agent your audience actually runs.
+Interactive wizard for skills and plugins. Targets the coding agent you use — or the one your team and community run.
 
 ```bash
 doraval claude new                              # interactive
-doraval claude new --yes --intent distribute my-plugin   # distributor
-doraval claude new --yes --intent self my-context        # orchestrator
+doraval claude new --yes --intent distribute my-plugin   # ship to others
+doraval claude new --yes --intent self my-context        # personal / team
 doraval cursor new / doraval codex new / doraval copilot new
 ```
 
@@ -218,7 +233,7 @@ Claude Code, Cursor, Codex, Copilot CLI, and Grok validators and scaffolding bui
 
 ## Links
 
-- [Docs](https://doraval.thehacksmith.dev): distributor and orchestrator quickstarts, command reference
+- [Docs](https://doraval.thehacksmith.dev): [What is doraval?](https://doraval.thehacksmith.dev/get-started/), [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/), command reference
 - [JSR package](https://jsr.io/@hacksmith/doraval)
 - [npm package](https://www.npmjs.com/package/@hacksmith/doraval)
 - [GitHub Releases](https://github.com/saif-shines/doraval/releases)

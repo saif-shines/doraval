@@ -1,100 +1,68 @@
 ---
 title: What is doraval?
-description: Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.
+description: Scale your AI context for coding agents. Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.
 sidebar:
   order: 1
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+**Scale your AI context for coding agents.** Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.
 
-**Make your next context work (skills, plugins & more) for your team, community, or self.** Context engineering toolkit for AI coding agents.
+Whether you are optimizing context for yourself, your team, or a wider community, the job is the same: make skills, plugins, and decisions work on the first attempt — not after days of debugging.
 
-If you're a senior engineer handing skills to new team members, a company publishing resources to the community, or someone who wants agents (and humans) to succeed on the first attempt instead of after days of debugging, this is for you.
+[Quickstart →](/get-started/quickstart/)
 
-### The problem orchestrators face
-- Give 10 new engineers (or agents) a skill. Only 3/10 succeed on the first try. 4/10 take hours. 7/10 take a day. 10/10 take days.
-- Publish a skill or plugin? Community members hit the same slow ramp.
-- Validate that your resource actually works for Claude, Cursor, Codex, or Copilot?
-- Want to use your context window (and your agents') more effectively?
+## Name and pronunciation
 
-It helps you **left-shift success** by making the context you engineer reliable from the first attempt. doraval is the toolkit for context engineering.
+**doraval** is pronounced *dor-uh-val* — stress the last syllable, like **Dora** + **eval**.
+
+The **Dora** comes from [Doraemon](https://en.wikipedia.org/wiki/Doraemon), the robot cat who pulls the right gadget for the job. The **-val** comes from **evaluation** — session evals that judge whether an agent actually followed your skills, not just whether the file parses. `validate` and `skill drift` check the document; `eval` checks reality. The shorter alias **`dora`** is the same CLI.
+
+## The problem
+
+- Give 10 engineers (or agents) a skill. Only 3/10 succeed on the first try.
+- Publish a plugin to the community? Most adopters hit the same slow ramp.
+- Decisions drift across sessions because nothing persists.
+- You cannot confidently say "this works for Claude, Cursor, and Copilot."
+
+doraval **left-shifts success**: catch breakage before the first session, not after the third debugging thread.
 
 ## How it fits together
 
 ```
-  Context engineering (skills, plugins, decisions)
+  Scale AI context (skills, plugins, decisions)
                         │
                         ▼
                  ┌─────────────┐
-                 │   doraval   │  validate · providers · journal · init
+                 │   doraval   │  validate · scaffold · journal · eval
                  └─────────────┘
                         │
-          ┌─────────────┴─────────────┐
-          ▼                           ▼
-   FOR CONTEXT DISTRIBUTORS    FOR CONTEXT ORCHESTRATORS
-          │                           │
-   Devtool company              Expert engineer
-   ships React skills           tuning their own agent
-   to the community                    │
-          │                           ▼
-   Senior engineer               You succeed on
-   onboarding 10 juniors          first try
-          │
-          ▼
-   Others pick up the skill
-   and succeed on first try
-   (community or juniors)
+                        ▼
+        yourself · your team · your community
+                        │
+                        ▼
+              first attempt succeeds
 ```
 
-Pick the quickstart that matches your job:
+## What doraval does
 
-<CardGrid>
-  <Card title="Context Distributors" icon="rocket">
-    Ship skills to your community or onboard juniors. Scaffold a plugin, validate before you publish, and measure subjective drift for your users. (Context engineering for distributors.)
+| Command | What it scales | Speed |
+|---------|----------------|-------|
+| `validate` | Catch broken skills, plugins, hooks, MCP before anyone uses them | Instant |
+| `claude new` / `cursor new` etc. | Scaffold resources that load correctly across agents | Instant |
+| `init` | One-time setup for journal + coding agent | Instant |
+| `journal` | Decisions that persist across sessions and people | Instant |
+| `eval` | Proof that agents followed your skills in real sessions | Minutes |
+| `skill drift` | Rubric deviation before subjective failure shows up | Instant |
+| `ui` | Local dashboard for capturing context without retyping | Instant |
+| `providers` | See which agents understand which packaging | Instant |
 
-    [Start distributor quickstart →](/get-started/quickstart-distributors/)
-  </Card>
-  <Card title="Context Orchestrators" icon="setting">
-    Tune context for your own coding agent. Scaffold skills, validate, journal decisions, and inject them on every session. (Context engineering for orchestrators.)
+`validate` is the workhorse. Point it at a directory or GitHub URL and it tells you what is broken before you scale context to anyone else.
 
-    [Start orchestrator quickstart →](/get-started/quickstart-orchestrators/)
-  </Card>
-</CardGrid>
+## What to do next
 
-## Why this matters for orchestrators
+- [Install](/get-started/installation/) doraval
+- [Quickstart](/get-started/quickstart/) — scaffold, validate, journal, eval in one path
+- `doraval update` — stay current
+- `doraval providers` + `--for` — target the right agents
 
-You don't just write one skill. You orchestrate context across teams, agents, models, and time.
-
-When that context is wrong, success is slow and expensive:
-
-- New engineers (or new agents) waste days instead of shipping in hours.
-- Published resources fail for most users on first try.
-- You can't confidently say "this works for Claude, Cursor, and Copilot."
-- Your team's decisions drift because agents (and humans) don't have the right shared context.
-
-doraval turns "it works on my machine with my agent" into "this reliably works for the people and agents I orchestrate."
-
-## How orchestrators use doraval
-
-| Command | Orchestrator job it accelerates | Speed |
-|---------|--------------------------------|-------|
-| `validate` | Make sure a skill/plugin/hook/MCP actually works (for the right agents) | Instant |
-| `claude new` / `cursor new` etc. | Scaffold resources that succeed on first attempt across agents | Instant |
-| `init` | One-time setup so your team + agents start with the right context foundation | Instant |
-| `providers` | See exactly which agents understand which keywords | Instant |
-| `ui` | Stop re-typing. Capture and reuse decisions in a local dashboard | Instant |
-| `journal` | Record team principles with pushback so agents (and humans) stay consistent over time | Instant |
-| `skill validate` / `skill drift` | Check individual resources or measure how far they've drifted | Instant |
-
-`validate` is the workhorse for left-shifting success. Point it at a directory or GitHub URL and it tells you what's broken before your new engineers or community members waste time on it.
-
-## What orchestrators do next
-
-- `doraval init`: one-time foundation so your team + agents share context from day one (see [Installation](/get-started/installation/)).
-- `doraval update`: stay current.
-- `doraval providers` + `--for`: target the right agents.
-- `doraval claude new` / `cursor new` etc.: create resources that are correct by construction.
-- `dora ui`: daily context management without repetitive typing.
-- `doraval journal`: capture decisions with pushback so agents and humans don't contradict the past.
-
-The goal is always the same: make the first attempt the successful one.
+The goal is always the same: scale context that works on the first attempt.

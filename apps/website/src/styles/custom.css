@@ -94,7 +94,7 @@
 /* Hero copy — readable, left-aligned, terminal character */
 .hero .tagline {
   margin-bottom: 0.75rem !important;
-  max-width: 42ch !important;
+  max-width: 48ch !important;
   margin-inline: 0 !important;
   font-size: clamp(0.95rem, 1.5vw, 1.1rem) !important;
   line-height: 1.55 !important;
@@ -103,7 +103,16 @@
 
 .hero [data-page-title] {
   letter-spacing: -0.02em;
-  line-height: 1.1 !important;
+  line-height: 1.15 !important;
+  font-size: clamp(1.75rem, 4vw, 2.75rem) !important;
+  max-width: min(100%, 28rem);
+  text-wrap: balance;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+
+.hero [data-page-title] .hero-title-nowrap {
+  white-space: nowrap;
 }
 
 .hero .actions {
@@ -402,68 +411,7 @@
     var(--sl-color-bg) !important;
 }
 
-/* Home intro — two-column editorial layout (Basecamp-style) */
-.home-intro {
-  display: grid;
-  grid-template-columns: 1fr 1.75fr;
-  gap: 0 4.5rem;
-  max-width: none;
-  margin: 2.5rem 0 3rem;
-  align-items: start;
-}
-
-.home-intro-anchor {
-  position: sticky;
-  top: 5rem;
-}
-
-.home-intro-headline {
-  font-family: var(--sl-font-mono);
-  font-size: clamp(1.6rem, 2.8vw, 2.4rem);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  color: var(--sl-color-white);
-}
-
-.home-intro-headline em {
-  font-style: normal;
-  color: var(--sl-color-accent);
-}
-
-.home-intro-body p {
-  font-size: 1rem;
-  line-height: 1.75;
-  margin-bottom: 1.5rem;
-  color: var(--sl-color-gray-2);
-}
-
-.home-intro-body p:last-child { margin-bottom: 0; }
-
-.home-intro-pivot {
-  padding: 0.875rem 1.125rem !important;
-  border-left: 3px solid var(--sl-color-accent) !important;
-  background: color-mix(in srgb, var(--sl-color-accent) 6%, transparent) !important;
-  border-radius: 0 4px 4px 0 !important;
-  margin: 0.25rem 0 1.75rem !important;
-  color: var(--sl-color-gray-1) !important;
-}
-
-.home-intro hr {
-  border: none;
-  border-top: 1px solid color-mix(in srgb, var(--sl-color-accent) 15%, transparent);
-  margin: 1.75rem 0;
-}
-
-@media (max-width: 640px) {
-  .home-intro {
-    grid-template-columns: 1fr;
-    gap: 1.5rem 0;
-  }
-  .home-intro-anchor { position: static; }
-}
-
-/* 4-card grid for orchestrator problems */
+/* 4-card grid — landing page value props */
 .problem-cards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

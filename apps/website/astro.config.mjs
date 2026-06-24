@@ -5,13 +5,17 @@ import starlightThemeTerminal from "starlight-theme-terminal";
 export default defineConfig({
   site: "https://doraval.thehacksmith.dev",
   redirects: {
-    "/get-started/quickstart": "/get-started/",
+    "/get-started/quickstart-distributors": "/get-started/quickstart/",
+    "/get-started/quickstart-orchestrators": "/get-started/quickstart/",
   },
   image: {
     service: passthroughImageService(),
   },
   integrations: [
     starlight({
+      components: {
+        Hero: "./src/components/Hero.astro",
+      },
       plugins: [starlightThemeTerminal()],
       expressiveCode: {
         themes: ["github-dark", "github-light"],
@@ -23,7 +27,7 @@ export default defineConfig({
       },
       title: "doraval",
       description:
-        "Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.",
+        "Scale your AI context for coding agents. Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.",
       customCss: ["./src/styles/custom.css"],
       social: [
         {
@@ -38,8 +42,7 @@ export default defineConfig({
           items: [
             "get-started",
             "get-started/installation",
-            "get-started/quickstart-distributors",
-            "get-started/quickstart-orchestrators",
+            "get-started/quickstart",
           ],
         },
         {
