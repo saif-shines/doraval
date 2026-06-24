@@ -411,42 +411,134 @@
     var(--sl-color-bg) !important;
 }
 
-/* 4-card grid — landing page value props */
-.problem-cards {
+/* Home second fold — install + try-it demo */
+.home-fold {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin: 1.5rem 0 2.5rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+  margin: 0 0 1.5rem;
 }
 
-.problem-card {
-  padding: 1.125rem 1.25rem;
-  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 20%, transparent);
-  border-radius: var(--sl-border-radius);
-  background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg));
-  margin: 0 !important;
-}
-
-.problem-card-title {
+.home-fold-label {
   display: block;
+  margin-bottom: 0.625rem;
   font-family: var(--sl-font-mono);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--sl-color-accent-high);
-  margin-bottom: 0.5rem;
 }
 
-.problem-card p {
-  margin: 0;
+.home-fold-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--sl-color-gray-3);
+}
+
+.home-fold-lead {
+  margin: 0 0 0.75rem;
   font-size: 0.9rem;
-  line-height: 1.6;
+  line-height: 1.55;
   color: var(--sl-color-gray-2);
 }
 
-@media (max-width: 640px) {
-  .problem-cards { grid-template-columns: 1fr; }
+.home-fold-demo .expressive-code,
+.home-command .expressive-code {
+  margin-top: 0;
+}
+
+.home-fold-demo > .expressive-code + .expressive-code,
+.home-command > .expressive-code + .expressive-code {
+  margin-top: 0.5rem;
+}
+
+.home-fold-demo > .expressive-code:last-of-type pre,
+.home-command > .expressive-code:last-of-type pre {
+  display: block;
+  max-height: 14rem;
+  overflow-y: auto !important;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-fold-demo > .expressive-code:last-of-type pre {
+  max-height: 15rem;
+}
+
+.home-command > .expressive-code:last-of-type pre {
+  max-height: 12rem;
+}
+
+.home-command-wide > .expressive-code:last-of-type pre {
+  max-height: 16rem;
+}
+
+.home-fold-links {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--sl-color-gray-3);
+}
+
+.home-fold-links a {
+  color: var(--sl-color-accent-high);
+  text-decoration: none;
+}
+
+.home-fold-links a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 52rem) {
+  .home-fold {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+}
+
+/* Home toolkit — command demo cards */
+.home-commands {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin: 0 0 1.5rem;
+}
+
+.home-command {
+  padding: 1.125rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--sl-color-accent) 20%, transparent);
+  border-radius: var(--sl-border-radius);
+  background: color-mix(in srgb, var(--sl-color-accent) 4%, var(--sl-color-bg));
+}
+
+.home-command-wide {
+  grid-column: 1 / -1;
+}
+
+.home-toolkit-more {
+  margin: 0 0 2rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--sl-color-gray-3);
+}
+
+.home-toolkit-more a {
+  color: var(--sl-color-accent-high);
+  text-decoration: none;
+}
+
+.home-toolkit-more a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 52rem) {
+  .home-commands {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Final !important hammer — guarantees Doraemon blue wins over any late theme rules */

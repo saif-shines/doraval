@@ -24,6 +24,12 @@ hero:
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
+<div class="home-fold">
+
+<div class="home-fold-install">
+
+<span class="home-fold-label">Install</span>
+
 <Tabs>
   <TabItem label="macOS (Homebrew)">
     ```bash
@@ -59,72 +65,197 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
   </TabItem>
 </Tabs>
 
-<div class="problem-cards">
-<div class="problem-card">
-<span class="problem-card-title">Onboarding left-shift</span>
-<p>Give new engineers (or agents) skills that actually work on first try across Claude, Cursor, Codex, Copilot.</p>
-</div>
-<div class="problem-card">
-<span class="problem-card-title">Publishing success</span>
-<p>Ship resources to the community that deliver real value sooner.</p>
-</div>
-<div class="problem-card">
-<span class="problem-card-title">Validation</span>
-<p>Confirm your skill, plugin, hooks, MCP, or memory works for the agents you target.</p>
-</div>
-<div class="problem-card">
-<span class="problem-card-title">Productivity</span>
-<p>Use your (and your agents') context window better with decisions that stick.</p>
-</div>
+<p class="home-fold-hint">After install: <code>dora validate .</code> on your project.</p>
+
 </div>
 
-## Common commands
+<div class="home-fold-demo">
 
-Copy and paste these to try immediately (no install required).
+<span class="home-fold-label">Try it — no install</span>
 
-### Left-shift onboarding, validate so new engineers (and agents) succeed on first try
+<p class="home-fold-lead">Validate a popular plugin on GitHub — clone, auto-detect validators, and see what passes.</p>
 
 ```bash
-npx @hacksmith/doraval validate .
+npx @hacksmith/doraval validate https://github.com/obra/superpowers
 ```
 
-### Validate a published resource or remote repo (for community success)
+```text
+  Cloning https://github.com/obra/superpowers...
+
+  dora validate — 8 validator(s)
+  Path:  https://github.com/obra/superpowers
+  8 validators • 0 errors • 3 warnings
+
+  Claude Plugin (claude:plugin)
+  Status  Check
+  ✓  name: "superpowers"
+  ✓  version: "6.0.3"
+  ✓  keywords: [skills, tdd, debugging, collaboration, ...]
+  ✓  skills/brainstorming/SKILL.md exists
+  ✓  skills/test-driven-development/SKILL.md exists
+  … 12 more skills checked
+  Result: 0 error(s), 1 warning(s)
+```
+
+<p class="home-fold-links">Repo: <a href="https://github.com/obra/superpowers">obra/superpowers</a> · <a href="/commands/validate/">validate command</a></p>
+
+</div>
+
+</div>
+
+## The toolkit
+
+Same workflow as the [quickstart](/get-started/quickstart/): scaffold, validate, journal, **eval**. Validate is above — each card shows the command and what you get back. Use `npx` before install; use `dora` after.
+
+<div class="home-commands">
+
+<div class="home-command">
+
+<span class="home-fold-label">Scaffold</span>
+
+<p class="home-fold-lead">Context-aware wizard — detects your directory, picks standalone vs plugin, writes the right layout for Claude Code.</p>
 
 ```bash
-npx @hacksmith/doraval validate https://github.com/owner/repo
+npx @hacksmith/doraval claude new --yes --intent self my-skill
 ```
 
-### Validate for a specific agent (Claude? Cursor? Codex? Copilot?)
+```text
+  doraval claude new — Context-aware scaffolding
+  Decision: path=standalone, target=./my-skill
+
+  ✓ Created standalone at ./my-skill
+  Command: /my-skill
+  Validate: dora validate ./my-skill
+```
+
+<p class="home-fold-links">Also: <code>cursor new</code>, <code>codex new</code>, <code>copilot new</code> · <a href="/commands/claude-new/">scaffold docs</a></p>
+
+</div>
+
+<div class="home-command">
+
+<span class="home-fold-label">Drift</span>
+
+<p class="home-fold-lead">Measure rubric deviation before subjective failure — trigger phrases, structure, voice, examples, guardrails.</p>
 
 ```bash
-npx @hacksmith/doraval validate . --for claude
-npx @hacksmith/doraval validate . --for claude:skill
-npx @hacksmith/doraval validate . --for cursor:plugin
+npx @hacksmith/doraval skill drift ./skills/my-skill/
 ```
 
-### Scaffold skills/plugins that work across agents (on first attempt)
+```text
+  dora skill drift — Measuring rubric drift
+  Path:  ./skills/my-skill/
 
-```bash
-npx @hacksmith/doraval claude new my-skill
-npx @hacksmith/doraval cursor new my-skill
-npx @hacksmith/doraval codex new my-skill
-npx @hacksmith/doraval copilot new my-skill
+  · Trigger    Description includes activation phrases
+  ↗ Structure  No ordered steps or checklists
+  ↗ Voice      Passive or suggestive phrasing
+  ↗ Example    No code blocks found
+  ↗ Guardrail  No explicit constraints
+  · Clarity    No ambiguous language found
+
+  4/6 rubric areas have drifted.
 ```
 
-### See what agents understand (keyword triggers & providers)
+<p class="home-fold-links"><a href="/commands/drift/">drift command</a> · run after <a href="/commands/validate/">validate</a></p>
+
+</div>
+
+<div class="home-command">
+
+<span class="home-fold-label">Providers</span>
+
+<p class="home-fold-lead">See manifest paths and keyword discovery per agent before you ship cross-platform context.</p>
 
 ```bash
 npx @hacksmith/doraval providers
 ```
 
-### Stop typing repetitive commands, local dashboard for context
+```text
+  doraval providers — Supported platforms
 
-```bash
-npx @hacksmith/doraval ui
+  claude — Claude Code
+  Manifest: .claude-plugin/plugin.json
+  Keywords in plugin.json: supported — triggers in Claude Code
+  Example: dora validate . --for claude:plugin
+
+  cursor — Cursor
+  Manifest: .cursor-plugin/plugin.json
+  Keywords in plugin.json: supported — triggers in Cursor
+  Example: dora validate . --for cursor:plugin
+
+  … codex, copilot, grok
 ```
 
-### One-time setup so your whole team (humans + agents) stays consistent
+<p class="home-fold-links"><a href="/commands/providers/">providers command</a></p>
+
+</div>
+
+<div class="home-command">
+
+<span class="home-fold-label">Journal</span>
+
+<p class="home-fold-lead">Decisions that persist across sessions and people. Run <a href="/commands/init/">dora init</a> once, then capture and list principles.</p>
 
 ```bash
-npx @hacksmith/doraval init
+dora journal add "Validate before shipping any skill change"
+dora journal list
 ```
+
+```text
+  dora journal list — my-project
+
+   1  Validate before shipping any skill change
+      tags: workflow, quality
+      by: human  on 2026-06-20
+      Catch breakage before scaling context to the team.
+
+   2  Use drift not score for rubric deviation
+      tags: naming, cli
+      by: human  on 2026-05-25
+```
+
+<p class="home-fold-links"><a href="/commands/journal-list/">journal list</a> · <a href="/concepts/agent-journal/">Agent Journal</a></p>
+
+</div>
+
+<div class="home-command home-command-wide">
+
+<span class="home-fold-label">Eval</span>
+
+<p class="home-fold-lead"><code>validate</code> and <code>drift</code> check the document. <code>dora eval</code> checks reality — did the agent follow the skill in a real session transcript? Pick a recent session interactively or pass <code>--session</code>.</p>
+
+```bash
+dora eval
+```
+
+```text
+  Recent sessions for this directory:
+    1. 2026-06-20 "Explore improvement options" (1 skill)  41be1f09-….jsonl
+    2. 2026-06-19 "Summarize repo using CLI developer" (1 skill)  e5d77e7c-….jsonl
+
+  Select session(s) (e.g. 1,3 or latest):
+
+  doraval eval: Session skill adherence
+  Evaluating: improve
+
+  [FAIL] improve
+  agent:       claude-code
+  familiarity: 2/10
+  closure:     incomplete (1 turns)
+
+  Adherence:
+  ✓ Invoke the improve skill before responding
+  ✓ Phase 1: Read README, AGENTS.md, config files
+  ✗ Phase 2: Fan out parallel audit subagents
+  ✗ Phase 3: Present findings table to user
+
+  Result: 3/9  [FAIL: stopped mid-recon]
+```
+
+<p class="home-fold-links"><a href="/commands/eval/">eval command</a> (includes <code>dora eval history</code>) · needs <a href="/commands/init/">init</a> for model config</p>
+
+</div>
+
+</div>
+
+<p class="home-toolkit-more">Also: <a href="/commands/init/">init</a> (one-time journal + agent setup) · <a href="/commands/ui/">ui</a> (local dashboard). Full path in the <a href="/get-started/quickstart/">quickstart</a>.</p>
