@@ -28,6 +28,22 @@ doraval is the toolkit for **context engineering** — authoring, validating, an
 
 `validate` auto-detects what you built and tells you what's broken before anyone burns a session on it.
 
+Typical first run:
+
+```
+dora validate .
+  dora validate — 1 validator(s)
+  Path:  .
+  1 validators • 0 errors • 0 warnings
+  Claude Skill (claude:skill)
+  Status  Check
+  ✓  YAML frontmatter present and parseable
+  ✓  name: "my-skill"
+  ✓  description field present
+  ✓  uses dynamic context injection
+  ✓ All checks passed.
+```
+
 ## Who it's for
 
 Anyone scaling AI context for coding agents — yourself, your team, or your community:
@@ -98,9 +114,17 @@ npx @hacksmith/doraval validate .        # run without installing
 npm install -g @hacksmith/doraval        # or install globally
 ```
 
-Requires Node.js. Bun runs faster if installed; Node works fine.
+Requires Node.js. The wrapper will automatically use Bun when available (faster). If Bun is missing, it guides you to install it — and on macOS it recommends Homebrew first.
 
 ### Bun
+
+Don't have Bun? Install it first:
+
+```bash
+curl -fsSL https://bun.sh/install | bash   # macOS / Linux
+```
+
+After the installer finishes, **restart your terminal** (or run `source ~/.zshrc` / `source ~/.bashrc`), then:
 
 ```bash
 bunx @hacksmith/doraval validate .
@@ -161,7 +185,18 @@ doraval skill drift ./skills/my-skill/
 
 ### `eval`: did the agent actually follow the skill?
 
-`validate` and `drift` check the document. `eval` checks reality: it reads a real session transcript, finds which skills were invoked, and runs an LLM judge for a per-skill **PASS / FAIL** with a dynamic checklist, familiarity score, and closure info (1-shot vs multi-turn vs incomplete).
+`validate` and `drift` check the document. `eval` checks reality: it reads a real session transcript, finds which skills were invoked, and runs an LLM judge for a per-skill **PASS / FAIL** with a dynamic checklist, familiarity score, and closure info.
+
+Example judgment:
+
+```
+[FAIL] improve
+  familiarity: 2/10  (prompt was very vague)
+  ✓ Invoke the improve skill before responding
+  ✗ Phase 1: Run git log for churn signal
+  ✗ Phase 2: Fan out parallel subagents
+  Result: 3/9 checks — stopped after initial recon.
+```
 
 ```bash
 doraval eval                    # pick from recent sessions interactively
