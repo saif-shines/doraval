@@ -15,14 +15,15 @@ Fastest path on macOS, no Node or Bun runtime required:
 
 ```bash
 brew tap saif-shines/tap
+brew trust saif-shines/tap
 brew install doraval
 ```
 
-**Note for custom taps:** On some systems, Homebrew will refuse formulas from third-party taps until you trust them once:
+On some systems you must run `brew trust` for third-party taps (run it if `brew install` complains about an untrusted tap).
+
+You can also use the formula form:
 
 ```bash
-brew trust saif-shines/tap
-# or
 brew trust --formula saif-shines/tap/doraval
 ```
 

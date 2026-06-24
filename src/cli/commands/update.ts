@@ -83,8 +83,16 @@ export default defineCommand({
       ui.info("These always fetch the latest version on the next run.");
       ui.info("");
       ui.info("For easier updates, install globally:");
-      ui.info("  brew install saif-shines/tap/doraval");
+      ui.info("");
+      ui.info("macOS (Homebrew, recommended):");
+      ui.info("  brew tap saif-shines/tap");
+      ui.info("  brew trust saif-shines/tap");
+      ui.info("  brew install doraval");
+      ui.info("");
+      ui.info("npm:");
       ui.info("  npm install -g @hacksmith/doraval");
+      ui.info("");
+      ui.info("Bun:");
       ui.info("  bun add -g @hacksmith/doraval");
       process.exit(0);
     }
@@ -181,7 +189,7 @@ async function promptInstallMethod(): Promise<'homebrew' | 'npm' | 'bun' | null>
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
     ui.info("How was doraval installed?");
-    ui.info("  1. homebrew (brew install saif-shines/tap/doraval)");
+    ui.info("  1. homebrew (brew tap + trust + brew install doraval)");
     ui.info("  2. npm    (npm install -g @hacksmith/doraval)");
     ui.info("  3. bun    (bun add -g @hacksmith/doraval)");
     rl.question("Enter 1, 2, or 3 (or q to cancel): ", (answer) => {

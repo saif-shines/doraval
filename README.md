@@ -16,8 +16,10 @@ doraval is the toolkit for **context engineering** — authoring, validating, an
 
 > **Magic is free. First win in under 2 minutes:**
 > ```bash
-> # macOS: self-contained binary, no runtime
-> brew install saif-shines/tap/doraval
+> # macOS (Homebrew, recommended):
+> brew tap saif-shines/tap
+> brew trust saif-shines/tap
+> brew install doraval
 > doraval validate .
 >
 > # Everyone else: no install required
@@ -81,10 +83,13 @@ Full walkthrough: [Quickstart](https://doraval.thehacksmith.dev/get-started/quic
 
 ```bash
 brew tap saif-shines/tap
+brew trust saif-shines/tap
 brew install doraval
 ```
 
 No runtime required. The binary is self-contained.
+
+On some systems, run `brew trust saif-shines/tap` (or `brew trust --formula saif-shines/tap/doraval`) before the install step for the tap to work smoothly.
 
 ### npm / npx
 

@@ -94,8 +94,16 @@ It looks like you're using doraval via npx or bunx.
 These always fetch the latest version on the next run.
 
 For easier updates, install globally:
-  brew install saif-shines/tap/doraval
+
+macOS (Homebrew, recommended):
+  brew tap saif-shines/tap
+  brew trust saif-shines/tap
+  brew install doraval
+
+npm:
   npm install -g @hacksmith/doraval
+
+Bun:
   bun add -g @hacksmith/doraval
 ```
 
