@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
-import { ui, renderValidationReport } from "../out.js";
+import { ui, renderValidationReport, guidedError, nextAction } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
 import { parseRemoteUrl, cloneToTemp, hasGitCli, sanitizeSubpath } from "../../core/remote.js";
@@ -49,8 +49,15 @@ export default defineCommand({
 
     if (remote) {
       if (!hasGitCli()) {
-        ui.fail("git is not installed. Remote validation requires git to clone the repository.");
-        ui.info("  Install git and try again.");
+        guidedError({
+          context: "Remote validate clones a git repo (or uses gh) so it can inspect its skills, plugins, etc. without you checking it out.",
+          problem: "git is not installed",
+          solutions: [
+            "Install git (macOS: brew install git)",
+            "Validate a local checkout instead: dora validate .",
+          ],
+          next: "dora validate .",
+        });
         process.exit(1);
       }
       ui.info(`\n  Cloning ${pc.dim(args.path)}...`);
@@ -113,7 +120,16 @@ export default defineCommand({
 
       if (matched.length === 0) {
         const providers = [...new Set(validators.map((v) => v.provider))];
-        ui.fail(`Error (E-VAL-004): No validator matched this directory: ${args.path}`);
+        guidedError({
+          context: `dora validate auto-detects skills, plugins, hooks, etc. based on files present. Nothing matched ${args.path}.`,
+          problem: "No validator matched this directory",
+          solutions: [
+            `dora validate . --for <provider>   (e.g. claude, cursor)`,
+            "dora providers   (see all supported + keywords)",
+          ],
+          next: "dora validate . --for claude",
+        });
+        // still show the list for discoverability
         ui.info(
           `  Available providers:\n` +
             providers.map((p) => {
@@ -121,7 +137,6 @@ export default defineCommand({
               return `    ${pc.bold(p)}\n` + pvs.map((v) => `      • ${pc.dim(v.id)} — ${v.description}`).join("\n");
             }).join("\n")
         );
-        ui.info(`  Solutions:\n    • dora validate . --for <provider>\n    • dora providers`);
         process.exit(1);
       }
 

@@ -1,5 +1,5 @@
 import { defineCommand } from "citty";
-import { ui } from "../out.js";
+import { ui, guidedError } from "../out.js";
 import { readConfig, writeConfig, ensureDoravalDirs } from "../../core/journal-config.js";
 import { YAML } from "bun";
 
@@ -61,7 +61,14 @@ const configGet = defineCommand({
   async run({ args }) {
     const config = await readConfig();
     if (!config) {
-      ui.info("No config found. Run: doraval init");
+      guidedError({
+        context: "doraval config and most commands (eval, journal, etc.) read ~/.doraval/config.yml.",
+        problem: "No doraval config found",
+        solutions: [
+          "dora init   (one-time setup for journal + agent + eval)",
+        ],
+        next: "dora init",
+      });
       process.exit(0);
     }
     if (!args.key) {

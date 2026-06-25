@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { join, basename, resolve, dirname } from "path";
 import { existsSync, readFileSync } from "fs";
 import pc from "picocolors";
-import { ui } from "../out.js";
+import { ui, guidedError, nextAction } from "../out.js";
 import { getAdapter } from "../../core/session-adapters.js";
 import { parseSession, sanitizeSessionId, type SessionPrimitives } from "../../core/session-parse.js";
 import { runEval, type EvalResult } from "../../core/session-eval.js";
@@ -163,22 +163,37 @@ export default defineCommand({
 
     const agentCfg = config?.agent;
     if (!agentCfg) {
-      ui.fail("No coding agent configured. Run: dora init");
+      guidedError({
+        context: "doraval eval judges real agent sessions (or generates runs) and needs to know which coding agent CLI to use or proxy through.",
+        problem: "No coding agent configured in ~/.doraval/config.yml",
+        solutions: [
+          "dora init                 (recommended — sets up agent + eval.model)",
+          "dora eval --session <path>  (bypass discovery; use an explicit transcript)",
+        ],
+        next: "dora init",
+      });
       process.exit(2);
     }
 
     // The point of eval is to reuse whatever agent the user already has configured.
     // We only need eval.model for the "sending to ..." notice and the result record.
     if (!evalCfg.model) {
-      ui.warn("No eval.model configured for the judge LLM.");
-      ui.info("  doraval will use your configured agent (" + agentCfg.command + ").");
-      ui.info("  If you want to record a specific model, run: dora config set eval.model claude-3-5-sonnet-20241022");
+      ui.warn("No eval.model configured — falling back to your agent CLI for the judge LLM.");
+      ui.info("  This works, but direct API (with OPENAI_API_KEY or ZAI_API_KEY + eval.model) is usually faster/cheaper.");
+      nextAction("dora config set eval.model gpt-4o-mini   (or glm-4, claude-3-5-sonnet-20241022, ...)");
     }
 
     const numRuns = parseInt(String(args.runs || "0"), 10) || 0;
     if (numRuns > 0) {
       if (!args.skill) {
-        ui.fail("--runs requires --skill <path-to-skill>");
+        guidedError({
+          context: "--runs generates new sessions using a skill then evaluates them.",
+          problem: "--runs requires --skill",
+          solutions: [
+            "dora eval --runs 3 --skill ./skills/my-skill",
+          ],
+          next: "dora eval --runs 3 --skill ./path/to/skill",
+        });
         process.exit(1);
       }
       let skillInput = String(args.skill);
@@ -251,7 +266,15 @@ export default defineCommand({
     } else {
       discoveryAdapter = getAdapter();
       if (!discoveryAdapter) {
-        ui.fail("No supported coding agent detected. Is Claude Code installed?");
+        guidedError({
+          context: "Without --session, dora eval discovers recent sessions with skills from your local coding agent history (~/.claude or ~/.grok).",
+          problem: "No supported coding agent with history detected for this directory",
+          solutions: [
+            "dora eval --session <path-to-.jsonl>   (explicit transcript, works without local agent)",
+            "Install/use Claude Code (or Grok) and run a session that invokes a skill",
+          ],
+          next: "dora eval --session ~/.claude/projects/.../latest.jsonl",
+        });
         process.exit(2);
       }
       let recent = discoveryAdapter.listRecentSessions(process.cwd(), 12);
@@ -259,8 +282,15 @@ export default defineCommand({
       if (withSkills.length > 0) recent = withSkills;
 
       if (recent.length === 0) {
-        ui.fail(`No sessions with skills found for ${process.cwd()}`);
-        ui.info("  Use --session <path> to specify a session file.");
+        guidedError({
+          context: `dora eval looks for recent .jsonl sessions (with skill invocations) under your agent's history for ${process.cwd()}.`,
+          problem: "No sessions with skills found",
+          solutions: [
+            "Run a session that uses a skill, then retry",
+            "dora eval --session <path-to-.jsonl>",
+          ],
+          next: "dora eval --session <path>",
+        });
         process.exit(2);
       }
       if (recent.length === 1) {
@@ -274,7 +304,15 @@ export default defineCommand({
     }
 
     if (sessionPaths.length === 0) {
-      ui.fail("No sessions selected.");
+      guidedError({
+        context: "Session selection (interactive or via args) produced no paths.",
+        problem: "No sessions selected",
+        solutions: [
+          "Provide --session <path>",
+          "Run interactively and choose from the list",
+        ],
+        next: "dora eval --session <path>",
+      });
       process.exit(2);
     }
 
@@ -292,13 +330,20 @@ export default defineCommand({
           primitives = parseSession(text);
         }
       } catch (err: any) {
-        ui.fail(`Failed to read or parse session: ${sessionPath}`);
-        if (err?.message) ui.info(`  ${err.message}`);
+        guidedError({
+          context: `Could not load the session transcript at ${sessionPath}.`,
+          problem: "Failed to read or parse session",
+          solutions: [
+            "Check the path and that it is a valid .jsonl from your agent",
+            "Use a different --session",
+          ],
+        });
+        if (err?.message) ui.dim(`  ${err.message}`);
         continue;
       }
 
       if (primitives.skillsInvoked.length === 0) {
-        ui.warn("  No skills were invoked in this session.");
+        ui.warn("  No skills were invoked in this session. (eval only makes sense for sessions that used skills)");
         continue;
       }
 
@@ -307,7 +352,14 @@ export default defineCommand({
       if (args.skill) {
         skillsToEval = skillsToEval.filter((s) => s.includes(args.skill!));
         if (skillsToEval.length === 0) {
-          ui.warn(`  No matching skills found for filter: ${args.skill}`);
+          guidedError({
+            context: `Filtering the skills invoked in the session to only those matching "${args.skill}".`,
+            problem: "No matching skills found for filter",
+            solutions: [
+              "Omit --skill to eval all skills in the session",
+              "Use a skill name that appears in the session",
+            ],
+          });
           continue;
         }
       }

@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { basename, join } from "path";
 import { spawnSync } from "bun";
 import pc from "picocolors";
-import { ui } from "../out.js";
+import { ui, guidedError } from "../out.js";
 import {
   readConfig,
   writeConfig,
@@ -253,11 +253,18 @@ export default defineCommand({
     if (hasApiKey) {
       ui.success("API key found — doraval eval can call models directly (no proxy server needed). GLM works great for cheap dev evals.");
     } else {
-      ui.warn("No API key found for direct eval. You can still use your agent CLI, or set ZHIPU_API_KEY (or OPENAI_API_KEY) + eval.model for cheap direct API judging.");
+      guidedError({
+        context: "doraval eval can judge using your agent CLI (always works) or call an LLM API directly (faster, cheaper, no local agent needed for judging).",
+        problem: "No API key detected for direct eval judging",
+        solutions: [
+          "Set OPENAI_API_KEY or ZAI_API_KEY (or ANTHROPIC_*) and choose a model below",
+          "Skip — eval will fall back to your configured agent CLI",
+        ],
+      });
     }
 
     const evalModelAnswer = await prompt(
-      `  Which model should doraval eval use? ${pc.dim("(e.g. glm-5-turbo, glm-5.2, gpt-4o-mini)")} `,
+      `  Which model should doraval eval use? ${pc.dim("(e.g. glm-4, gpt-4o-mini, claude-3-5-sonnet-20241022)")} `,
       ""
     );
 
@@ -273,7 +280,8 @@ export default defineCommand({
         ui.success(`eval.model set to ${evalModelAnswer.trim()}`);
       }
     } else {
-      ui.dim("  Skipped. Run: dora config set eval.model <model-name>");
+      ui.info("  Skipped. You can set later with: dora config set eval.model <model>");
+      ui.info("  Eval will still work via your agent CLI.");
     }
 
     ui.info(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))}, ${pc.dim(pc.gray("dora journal list"))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);

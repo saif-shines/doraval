@@ -72,8 +72,8 @@ describe("doraval CLI", () => {
       ]);
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain("E-VAL-003");
-      expect(stderr).toContain("frontmatter");
+      expect(stderr).toContain("Failed to parse YAML frontmatter in SKILL.md");
+      expect(stderr).toContain("Fix the YAML syntax");
     });
 
     test("exits 1 for missing path", () => {

@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 import pc from "picocolors";
-import { ui } from "../out.js";
+import { ui, guidedError } from "../out.js";
 import { getEvalsDir } from "../../core/journal-config.js";
 import type { EvalResult } from "../../core/session-eval.js";
 
@@ -32,7 +32,15 @@ export default defineCommand({
   async run({ args }) {
     const evalsDir = getEvalsDir();
     if (!existsSync(evalsDir)) {
-      ui.info("No eval history yet. Run: doraval eval");
+      guidedError({
+        context: "dora eval history shows past judgments. It is populated after you run dora eval (or --runs).",
+        problem: "No eval history yet",
+        solutions: [
+          "dora eval",
+          "dora eval --runs 3 --skill ./skills/example",
+        ],
+        next: "dora eval",
+      });
       process.exit(0);
     }
 

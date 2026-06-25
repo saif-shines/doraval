@@ -79,6 +79,30 @@ export function nextAction(s: string): void {
   write(`\n  ${pc.white('Next:')} ${pc.dim(s)}`);
 }
 
+/**
+ * Guided error following devrel-tooling + cli-developer conventions:
+ * context → problem → solutions (with remediation) + optional Next.
+ * Keeps text-first, no new deps, TTY-aware via picocolors + ui.
+ */
+export function guidedError(opts: {
+  context: string;
+  problem: string;
+  solutions: string[];
+  next?: string;
+}): void {
+  ui.fail(`Error: ${opts.problem}`);
+  ui.info(`  Context: ${opts.context}`);
+  ui.info(`  Solutions:`);
+  for (const s of opts.solutions) {
+    ui.info(`    • ${s}`);
+  }
+  if (opts.next) {
+    nextAction(opts.next);
+  } else {
+    write(""); // spacing
+  }
+}
+
 /** One-line summary (counts, totals, etc.). */
 export function summaryLine(s: string): void {
   write(`  ${pc.dim(s)}`);

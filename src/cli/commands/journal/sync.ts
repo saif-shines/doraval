@@ -3,7 +3,7 @@ import { readdirSync, existsSync } from "fs";
 import { join } from "path";
 import { spawnSync } from "bun";
 import pc from "picocolors";
-import { ui } from "../../out.js";
+import { ui, guidedError } from "../../out.js";
 import {
   readConfig,
   resolveProjectName,
@@ -112,7 +112,15 @@ export default defineCommand({
     }
 
     if (!config?.journal.repo) {
-      ui.write(`${pc.red("✗")} No journal repo configured. Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first.`);
+      guidedError({
+        context: "Journal sync publishes decisions to a GitHub repo you control (set during dora init).",
+        problem: "No journal repo configured",
+        solutions: [
+          "dora init",
+          "dora journal init",
+        ],
+        next: "dora init",
+      });
       process.exit(1);
     }
 

@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
-import { ui, renderValidationReport } from "../out.js";
+import { ui, renderValidationReport, guidedError } from "../out.js";
 import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
 
 export default defineCommand({
@@ -64,8 +64,14 @@ export default defineCommand({
           "    • Use --for to target a specific validator"
         );
       } else {
-        ui.fail("Error (E-VAL-003): Failed to parse YAML frontmatter in SKILL.md");
-        ui.info("  Fix the YAML syntax and retry.");
+        guidedError({
+          context: "SKILL.md must start with valid YAML frontmatter (--- ... ---).",
+          problem: "Failed to parse YAML frontmatter in SKILL.md",
+          solutions: [
+            "Fix the YAML syntax at the top of SKILL.md",
+            "dora skill validate <path> --verbose for details",
+          ],
+        });
       }
       process.exit(1);
     }
