@@ -5,6 +5,7 @@
     "": {
       "name": "doraval",
       "dependencies": {
+        "@clack/prompts": "^1.6.0",
         "citty": "^0.2.2",
         "openai": "^6.44.0",
         "picocolors": "^1.1.1",
@@ -15,7 +16,7 @@
     },
     "apps/website": {
       "name": "@doraval/website",
-      "version": "0.2.64",
+      "version": "0.2.74",
       "dependencies": {
         "@astrojs/starlight": "0.40.0",
         "astro": "6.4.8",

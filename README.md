@@ -79,7 +79,7 @@ doraval claude new --yes --intent distribute my-plugin # ship to others
 # 2. Validate before anyone relies on it
 doraval validate .
 
-# 3. One-time setup (journal + coding agent for evals)
+# 3. One-time setup (decision memory + agent integration for scaling AI context)
 doraval init
 
 # 4. Record decisions that persist across sessions

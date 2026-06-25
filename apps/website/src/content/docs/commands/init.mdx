@@ -1,11 +1,11 @@
 ---
 title: init
-description: One-time setup for doraval, your journal, and the coding agent.
+description: One-time setup for decision memory (journal) and agent integration when scaling AI context.
 sidebar:
   order: 3
 ---
 
-Set up doraval together with the Agent Journal and configure which coding agent doraval should use when enriching journal entries.
+One-time setup for decision memory (the journal) and agent integration so the journal can remember decisions and principles while you scale AI context through skills, plugins, and more.
 
 ## Usage
 
@@ -17,16 +17,17 @@ doraval init [options]
 
 `init` performs several one-time steps. The interactive CLI now clearly labels them:
 
-1. **Journal setup** – repository, project name, and fetching.
-2. **Agent configuration** – choose and configure your coding agent (Claude, Cursor, etc.).
-3. **Eval configuration** – optional model for `dora eval`.
+1. **Decision memory (journal)** – set up the persistent memory that remembers decisions and principles while scaling AI context.
+2. **Agent integration** – configure the coding agent doraval will use to help capture and enrich journal entries.
+3. **Evaluation setup** – optional model so you can verify agents are following your decisions/principles as you scale.
 
 Details:
 
 - Ensures the GitHub CLI (`gh`) is available and authenticated.
-- Prompts for (or accepts via flags/env) your journal repository.
+- Prompts for (or accepts via flags/env) your journal repository — this is the persistent decision memory that remembers principles while scaling AI context.
 - Prompts for a project name (defaults to the current directory).
 - Configures a coding agent command and prompt template so that `doraval journal add` can automatically enrich entries with tags and rationale.
+- Sets up evaluation so you can verify agents are following your decisions and principles as you scale via skills and plugins.
 - Creates local cache directories under `~/.doraval/`.
 - Fetches the relevant journal files from GitHub.
 
@@ -52,16 +53,20 @@ DORAVAL_PROJECT=my-project \
 doraval init
 ```
 
+This sets up the journal that will remember decisions and principles as you scale AI context.
+
 ## After init
 
-Use the journal commands to work with your decisions:
+Your journal is now ready to remember decisions and principles while you scale AI context through skills, plugins, etc.
+
+Use the journal commands:
 
 - `doraval journal list`
-- `doraval journal add "..."` (can use the configured agent to help)
+- `doraval journal add "..."` (agent can help enrich)
 - `doraval journal update`
 - `doraval journal sync`
 
-See the [Agent Journal](/concepts/agent-journal/) concept page for the broader picture.
+See the [Agent Journal](/concepts/agent-journal/) concept page.
 
 ## See also
 

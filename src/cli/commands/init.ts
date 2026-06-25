@@ -18,12 +18,22 @@ import {
   ghUser,
   repoExists,
 } from "../../core/journal-remote.js";
-import { prompt } from "../prompt.js";
+import {
+  intro,
+  outro,
+  text,
+  confirm,
+  select,
+  isCancel,
+  spinner,
+  cancel,
+  note,
+} from '@clack/prompts';
 
 export default defineCommand({
   meta: {
     name: "init",
-    description: "One-time setup for doraval + journal (decisions + notes) + your coding agent (recommended starting point)",
+    description: "One-time setup for decision memory (journal) and agent integration when scaling AI context (skills, plugins, etc.)",
   },
   args: {
     repo: {
@@ -44,8 +54,21 @@ export default defineCommand({
   },
 
   async run({ args }) {
-    ui.heading("dora init — Set up doraval, your journal, and the coding agent dora should use on the fly");
-    ui.write(`  ${pc.bold(pc.white("Step 1: Journal setup"))}\n`);
+    ui.heading("dora init — Set up decision memory and agent integration for scaling AI context");
+
+    const isInteractive = process.stdout.isTTY && !process.env.CI;
+
+    if (isInteractive) {
+      intro('dora init — decision memory (journal) + agent integration for scaling AI context');
+    }
+
+    ui.write(`  ${pc.bold(pc.white("Step 1: Decision memory (journal)"))}\n`);
+
+    if (isInteractive) {
+      note('The journal remembers decisions and principles so you (and agents) can reliably scale AI context through skills, plugins, and more.');
+    } else {
+      ui.info(`  The journal remembers decisions and principles so you (and agents) can reliably scale AI context through skills, plugins, and more.\n`);
+    }
 
     const ghCheck = ensureGhCli();
     if (!ghCheck.ok) {
@@ -86,18 +109,56 @@ export default defineCommand({
       const existingConfig = await readConfig();
       if (existingConfig?.journal.repo) {
         defaultRepo = existingConfig.journal.repo;
-        sourceNote = `  ${pc.dim("(from your previous journal setup)")}\n`;
+        sourceNote = `  ${pc.dim("(from your previous decision memory setup)")}\n`;
       }
 
       ui.info(`  Journal repo ${pc.dim("(owner/name)")}`);
       if (sourceNote) ui.write(sourceNote);
-      repo = prompt("  >", defaultRepo);
+
+      if (isInteractive) {
+        const result = await text({
+          message: 'Journal repo (owner/name) — this will remember your decisions and principles',
+          placeholder: defaultRepo,
+          initialValue: defaultRepo,
+          validate(value) {
+            if (!value) return 'Repository is required';
+            return undefined;
+          },
+        });
+        if (isCancel(result)) {
+          cancel('Setup cancelled.');
+          process.exit(0);
+        }
+        repo = result;
+      } else {
+        repo = defaultRepo;
+        ui.info(`  Using default (non-interactive): ${repo}`);
+      }
     }
 
     let project = (args.project as string | undefined) || process.env.DORAVAL_PROJECT;
     if (!project) {
       const defaultProject = basename(process.cwd());
-      project = prompt("  Project name", defaultProject);
+
+      if (isInteractive) {
+        const result = await text({
+          message: 'Project name (decisions for this project will live in the journal)',
+          placeholder: defaultProject,
+          initialValue: defaultProject,
+          validate(value) {
+            if (!value) return 'Project name is required';
+            return undefined;
+          },
+        });
+        if (isCancel(result)) {
+          cancel('Setup cancelled.');
+          process.exit(0);
+        }
+        project = result;
+      } else {
+        project = defaultProject;
+        ui.info(`  Using default (non-interactive): ${project}`);
+      }
     }
     project = sanitizeProjectName(project);
 
@@ -137,6 +198,9 @@ export default defineCommand({
 
     ui.write(`  ${pc.dim(pc.gray("Fetching journal files from"))} ${pc.gray(effectiveRepo)}${pc.dim(pc.gray("..."))}\n`);
 
+    const s = spinner();
+    if (isInteractive) s.start('Fetching from GitHub');
+
     const globalDest = join(journalsDir, "global.md");
     const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
     let wroteGlobal: boolean;
@@ -144,6 +208,7 @@ export default defineCommand({
       if (refreshGlobalRes.isNotFound) {
         wroteGlobal = false;
       } else {
+        if (isInteractive) s.stop('Failed');
         ui.fail(`Failed to fetch global.md from ${effectiveRepo}:`);
         ui.info(refreshGlobalRes.error);
         process.exit(1);
@@ -164,6 +229,7 @@ export default defineCommand({
       if (refreshProjectRes.isNotFound) {
         wroteProject = false;
       } else {
+        if (isInteractive) s.stop('Failed');
         ui.fail(`Failed to fetch ${remotePath} from ${effectiveRepo}:`);
         ui.info(refreshProjectRes.error);
         process.exit(1);
@@ -178,6 +244,8 @@ export default defineCommand({
       await Bun.write(localPath, `# ${project} Journal\n\nProject-specific decisions.\n`);
     }
 
+    if (isInteractive) s.stop('Done');
+
     await writeConfig(config);
 
     ui.write(`\n  ${pc.green("✓")} ${pc.white("Journal ready for project")} ${pc.bold(pc.white(project))}.\n`);
@@ -186,8 +254,21 @@ export default defineCommand({
     if (existingAgent?.command) {
       ui.write(`  ${pc.bold(pc.white("Coding agent (already configured)"))}\n`);
       ui.write(`    Current: ${pc.dim(pc.gray(existingAgent.command))}  template: ${pc.dim(pc.gray(existingAgent.prompt_template || "(default)"))}  cwd_flag: ${pc.dim(pc.gray(existingAgent.cwd_flag || "(none)"))}\n`);
-      const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
-      if (!/^y/i.test(String(change))) {
+
+      let shouldReconfigure = false;
+      if (isInteractive) {
+        const change = await confirm({
+          message: 'Reconfigure / change the coding agent for on-the-fly enrichment?',
+          initialValue: false,
+        });
+        if (isCancel(change)) {
+          cancel('Setup cancelled.');
+          process.exit(0);
+        }
+        shouldReconfigure = !!change;
+      }
+
+      if (!shouldReconfigure) {
         ui.dim("  Keeping existing agent config. You can re-run dora init later to change it.\n");
         const cfg = (await readConfig()) || { journal: { repo: effectiveRepo, projects: {} } };
         if (existingAgent) cfg.agent = existingAgent;
@@ -198,8 +279,12 @@ export default defineCommand({
       }
       ui.blank();
     } else {
-      ui.write(`\n  ${pc.bold(pc.white("Step 2: Coding agent for journal add"))}\n`);
-      ui.info(`  When configured, ${pc.dim(pc.gray("dora journal add \"..\""))} will use your agent to enrich entries with tags and rationale automatically.\n`);
+      ui.write(`\n  ${pc.bold(pc.white("Step 2: Coding agent integration"))}\n`);
+      if (isInteractive) {
+        note('Configure the agent that will help you capture and enrich decisions/principles as you scale AI context through skills and plugins.');
+      } else {
+        ui.info(`  Configure the agent that will help you capture and enrich decisions/principles as you scale AI context through skills and plugins.\n`);
+      }
     }
 
     const common = [
@@ -221,18 +306,73 @@ export default defineCommand({
     }
 
     let agentCmd = detected || "claude";
-    ui.write(`  Detected / default agent command: ${pc.dim(pc.gray(agentCmd))}`);
-    agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
-
     let template = detected ? (common.find(c => c.name === detected)?.template || '-p "{{prompt}}"') : '-p "{{prompt}}"';
-    ui.info(`  Prompt template (use {{prompt}} placeholder):`);
-    template = prompt("  ", template);
+    let cwdFlag = (common.find(c => c.name === detected)?.cwd_flag) ?? "";
 
-    const detectedCommon = common.find(c => c.name === detected);
-    let cwdFlag = detectedCommon?.cwd_flag ?? "";
-    if (detected) {
-      ui.info(`  Cwd flag (flag your agent uses to set working directory/repo, e.g. --cwd or -C; blank = rely on process cwd only):`);
-      cwdFlag = prompt("  ", cwdFlag);
+    if (isInteractive) {
+      ui.write(`  Detected / default agent command: ${pc.dim(pc.gray(agentCmd))}`);
+
+      const agentOptions = [
+        ...common.map((c) => ({
+          value: c.name,
+          label: `${c.name}${detected === c.name ? ' (detected)' : ''}`,
+        })),
+        { value: 'custom', label: 'Custom command' },
+      ];
+
+      const agentChoice = await select({
+        message: 'Agent command — the one you use for coding (doraval will use it to help remember decisions)',
+        options: agentOptions,
+        initialValue: detected || 'claude',
+      });
+      if (isCancel(agentChoice)) {
+        cancel('Setup cancelled.');
+        process.exit(0);
+      }
+
+      if (agentChoice === 'custom') {
+        const custom = await text({
+          message: 'Agent command',
+          initialValue: agentCmd,
+        });
+        if (isCancel(custom)) {
+          cancel('Setup cancelled.');
+          process.exit(0);
+        }
+        agentCmd = custom;
+      } else {
+        agentCmd = agentChoice;
+      }
+
+      // refresh template/cwd based on choice
+      const chosen = common.find((c) => c.name === agentCmd) || { template: '-p "{{prompt}}"', cwd_flag: '' };
+      template = chosen.template;
+      cwdFlag = chosen.cwd_flag ?? '';
+
+      ui.info(`  Prompt template (use {{prompt}} placeholder):`);
+      const tpl = await text({
+        message: 'Prompt template (how doraval will ask your agent to help with decisions)',
+        initialValue: template,
+      });
+      if (isCancel(tpl)) {
+        cancel('Setup cancelled.');
+        process.exit(0);
+      }
+      template = tpl;
+
+      if (agentCmd !== 'cursor') {
+        const flag = await text({
+          message: 'Cwd flag your agent uses (e.g. --cwd; so it works on the right project when helping with decisions)',
+          initialValue: cwdFlag,
+        });
+        if (isCancel(flag)) {
+          cancel('Setup cancelled.');
+          process.exit(0);
+        }
+        cwdFlag = flag;
+      }
+    } else {
+      ui.info(`  Using non-interactive defaults for agent: ${agentCmd}`);
     }
 
     const finalConfig: JournalConfig = (await readConfig()) || { journal: { repo: effectiveRepo, projects: {} } };
@@ -247,7 +387,13 @@ export default defineCommand({
     ui.info(`  Re-run ${pc.dim(pc.gray("dora init"))} anytime to change it.\n`);
 
     // ── Eval setup ──────────────────────────────────────────────────────────────
-    ui.write(`\n  ${pc.bold("Step 3: Eval configuration (doraval eval)")}\n`);
+    ui.write(`\n  ${pc.bold("Step 3: Evaluation setup")}\n`);
+
+    if (isInteractive) {
+      note('Optional model so you can verify that agents are following your decisions and principles while scaling AI context.');
+    } else {
+      ui.info(`  Optional model so you can verify that agents are following your decisions and principles while scaling AI context.\n`);
+    }
 
     const hasApiKey = !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.ZHIPU_API_KEY || process.env.GLM_API_KEY);
     if (hasApiKey) {
@@ -263,10 +409,20 @@ export default defineCommand({
       });
     }
 
-    const evalModelAnswer = await prompt(
-      `  Which model should doraval eval use? ${pc.dim("(e.g. glm-4, gpt-4o-mini, claude-3-5-sonnet-20241022)")} `,
-      ""
-    );
+    let evalModelAnswer = '';
+
+    if (isInteractive) {
+      const model = await text({
+        message: 'Which model should doraval eval use? (to check if agents follow your decisions/principles)',
+        placeholder: 'glm-4, gpt-4o-mini, claude-3-5-sonnet-20241022',
+        initialValue: '',
+      });
+      if (isCancel(model)) {
+        cancel('Setup cancelled.');
+        process.exit(0);
+      }
+      evalModelAnswer = model;
+    }
 
     if (evalModelAnswer.trim()) {
       const updatedConfig2 = await readConfig();
@@ -284,7 +440,11 @@ export default defineCommand({
       ui.info("  Eval will still work via your agent CLI.");
     }
 
-    ui.info(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))}, ${pc.dim(pc.gray("dora journal list"))}, or ${pc.dim(pc.gray("dora journal update"))}.\n`);
+    if (isInteractive) {
+      outro('Setup complete. Your journal will now remember decisions and principles as you scale AI context.');
+    } else {
+      ui.info(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))} to record decisions while scaling context.\n`);
+    }
 
     process.exit(0);
   },

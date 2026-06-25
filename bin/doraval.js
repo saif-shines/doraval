@@ -656,6 +656,7 @@ var require_package = __commonJS((exports, module) => {
     },
     type: "module",
     dependencies: {
+      "@clack/prompts": "^1.6.0",
       citty: "^0.2.2",
       openai: "^6.44.0",
       picocolors: "^1.1.1"
@@ -17092,6 +17093,1567 @@ var init_validate_top = __esm(() => {
   });
 });
 
+// node_modules/.bun/fast-string-truncated-width@3.0.3/node_modules/fast-string-truncated-width/dist/utils.js
+var getCodePointsLength, isFullWidth = (x) => {
+  return x === 12288 || x >= 65281 && x <= 65376 || x >= 65504 && x <= 65510;
+}, isWideNotCJKTNotEmoji = (x) => {
+  return x === 8987 || x === 9001 || x >= 12272 && x <= 12287 || x >= 12289 && x <= 12350 || x >= 12441 && x <= 12543 || x >= 12549 && x <= 12591 || x >= 12593 && x <= 12686 || x >= 12688 && x <= 12771 || x >= 12783 && x <= 12830 || x >= 12832 && x <= 12871 || x >= 12880 && x <= 19903 || x >= 65040 && x <= 65049 || x >= 65072 && x <= 65106 || x >= 65108 && x <= 65126 || x >= 65128 && x <= 65131 || x >= 127488 && x <= 127490 || x >= 127504 && x <= 127547 || x >= 127552 && x <= 127560 || x >= 131072 && x <= 196605 || x >= 196608 && x <= 262141;
+};
+var init_utils3 = __esm(() => {
+  getCodePointsLength = (() => {
+    const SURROGATE_PAIR_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+    return (input) => {
+      let surrogatePairsNr = 0;
+      SURROGATE_PAIR_RE.lastIndex = 0;
+      while (SURROGATE_PAIR_RE.test(input)) {
+        surrogatePairsNr += 1;
+      }
+      return input.length - surrogatePairsNr;
+    };
+  })();
+});
+
+// node_modules/.bun/fast-string-truncated-width@3.0.3/node_modules/fast-string-truncated-width/dist/index.js
+var ANSI_RE, CONTROL_RE, CJKT_WIDE_RE, TAB_RE, EMOJI_RE, LATIN_RE, MODIFIER_RE, NO_TRUNCATION, getStringTruncatedWidth = (input, truncationOptions = {}, widthOptions = {}) => {
+  const LIMIT = truncationOptions.limit ?? Infinity;
+  const ELLIPSIS = truncationOptions.ellipsis ?? "";
+  const ELLIPSIS_WIDTH = truncationOptions?.ellipsisWidth ?? (ELLIPSIS ? getStringTruncatedWidth(ELLIPSIS, NO_TRUNCATION, widthOptions).width : 0);
+  const ANSI_WIDTH = 0;
+  const CONTROL_WIDTH = widthOptions.controlWidth ?? 0;
+  const TAB_WIDTH = widthOptions.tabWidth ?? 8;
+  const EMOJI_WIDTH = widthOptions.emojiWidth ?? 2;
+  const FULL_WIDTH_WIDTH = 2;
+  const REGULAR_WIDTH = widthOptions.regularWidth ?? 1;
+  const WIDE_WIDTH = widthOptions.wideWidth ?? FULL_WIDTH_WIDTH;
+  const PARSE_BLOCKS = [
+    [LATIN_RE, REGULAR_WIDTH],
+    [ANSI_RE, ANSI_WIDTH],
+    [CONTROL_RE, CONTROL_WIDTH],
+    [TAB_RE, TAB_WIDTH],
+    [EMOJI_RE, EMOJI_WIDTH],
+    [CJKT_WIDE_RE, WIDE_WIDTH]
+  ];
+  let indexPrev = 0;
+  let index = 0;
+  let length = input.length;
+  let lengthExtra = 0;
+  let truncationEnabled = false;
+  let truncationIndex = length;
+  let truncationLimit = Math.max(0, LIMIT - ELLIPSIS_WIDTH);
+  let unmatchedStart = 0;
+  let unmatchedEnd = 0;
+  let width = 0;
+  let widthExtra = 0;
+  outer:
+    while (true) {
+      if (unmatchedEnd > unmatchedStart || index >= length && index > indexPrev) {
+        const unmatched = input.slice(unmatchedStart, unmatchedEnd) || input.slice(indexPrev, index);
+        lengthExtra = 0;
+        for (const char of unmatched.replaceAll(MODIFIER_RE, "")) {
+          const codePoint = char.codePointAt(0) || 0;
+          if (isFullWidth(codePoint)) {
+            widthExtra = FULL_WIDTH_WIDTH;
+          } else if (isWideNotCJKTNotEmoji(codePoint)) {
+            widthExtra = WIDE_WIDTH;
+          } else {
+            widthExtra = REGULAR_WIDTH;
+          }
+          if (width + widthExtra > truncationLimit) {
+            truncationIndex = Math.min(truncationIndex, Math.max(unmatchedStart, indexPrev) + lengthExtra);
+          }
+          if (width + widthExtra > LIMIT) {
+            truncationEnabled = true;
+            break outer;
+          }
+          lengthExtra += char.length;
+          width += widthExtra;
+        }
+        unmatchedStart = unmatchedEnd = 0;
+      }
+      if (index >= length) {
+        break outer;
+      }
+      for (let i = 0, l = PARSE_BLOCKS.length;i < l; i++) {
+        const [BLOCK_RE, BLOCK_WIDTH] = PARSE_BLOCKS[i];
+        BLOCK_RE.lastIndex = index;
+        if (BLOCK_RE.test(input)) {
+          lengthExtra = BLOCK_RE === CJKT_WIDE_RE ? getCodePointsLength(input.slice(index, BLOCK_RE.lastIndex)) : BLOCK_RE === EMOJI_RE ? 1 : BLOCK_RE.lastIndex - index;
+          widthExtra = lengthExtra * BLOCK_WIDTH;
+          if (width + widthExtra > truncationLimit) {
+            truncationIndex = Math.min(truncationIndex, index + Math.floor((truncationLimit - width) / BLOCK_WIDTH));
+          }
+          if (width + widthExtra > LIMIT) {
+            truncationEnabled = true;
+            break outer;
+          }
+          width += widthExtra;
+          unmatchedStart = indexPrev;
+          unmatchedEnd = index;
+          index = indexPrev = BLOCK_RE.lastIndex;
+          continue outer;
+        }
+      }
+      index += 1;
+    }
+  return {
+    width: truncationEnabled ? truncationLimit : width,
+    index: truncationEnabled ? truncationIndex : length,
+    truncated: truncationEnabled,
+    ellipsed: truncationEnabled && LIMIT >= ELLIPSIS_WIDTH
+  };
+}, dist_default;
+var init_dist2 = __esm(() => {
+  init_utils3();
+  ANSI_RE = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]|\u001b\]8;[^;]*;.*?(?:\u0007|\u001b\u005c)/y;
+  CONTROL_RE = /[\x00-\x08\x0A-\x1F\x7F-\x9F]{1,1000}/y;
+  CJKT_WIDE_RE = /(?:(?![\uFF61-\uFF9F\uFF00-\uFFEF])[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Tangut}]){1,1000}/yu;
+  TAB_RE = /\t{1,1000}/y;
+  EMOJI_RE = /[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[\u{E0061}-\u{E007A}]{2}[\u{E0030}-\u{E0039}\u{E0061}-\u{E007A}]{1,3}\u{E007F}|(?:\p{Emoji}\uFE0F\u20E3?|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation})(?:\u200D(?:\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation}|\p{Emoji}\uFE0F\u20E3?))*/yu;
+  LATIN_RE = /(?:[\x20-\x7E\xA0-\xFF](?!\uFE0F)){1,1000}/y;
+  MODIFIER_RE = /\p{M}+/gu;
+  NO_TRUNCATION = { limit: Infinity, ellipsis: "" };
+  dist_default = getStringTruncatedWidth;
+});
+
+// node_modules/.bun/fast-string-width@3.0.2/node_modules/fast-string-width/dist/index.js
+var NO_TRUNCATION2, fastStringWidth = (input, options = {}) => {
+  return dist_default(input, NO_TRUNCATION2, options).width;
+}, dist_default2;
+var init_dist3 = __esm(() => {
+  init_dist2();
+  NO_TRUNCATION2 = {
+    limit: Infinity,
+    ellipsis: "",
+    ellipsisWidth: 0
+  };
+  dist_default2 = fastStringWidth;
+});
+
+// node_modules/.bun/fast-wrap-ansi@0.2.2/node_modules/fast-wrap-ansi/lib/main.js
+function wrapAnsi(string, columns, options) {
+  return String(string).normalize().split(CRLF_OR_LF).map((line) => exec(line, columns, options)).join(`
+`);
+}
+var ESC = "\x1B", CSI = "\x9B", END_CODE = 39, ANSI_ESCAPE_BELL = "\x07", ANSI_CSI = "[", ANSI_OSC = "]", ANSI_SGR_TERMINATOR = "m", ANSI_ESCAPE_LINK, GROUP_REGEX, getClosingCode = (openingCode) => {
+  if (openingCode >= 30 && openingCode <= 37)
+    return 39;
+  if (openingCode >= 90 && openingCode <= 97)
+    return 39;
+  if (openingCode >= 40 && openingCode <= 47)
+    return 49;
+  if (openingCode >= 100 && openingCode <= 107)
+    return 49;
+  if (openingCode === 1 || openingCode === 2)
+    return 22;
+  if (openingCode === 3)
+    return 23;
+  if (openingCode === 4)
+    return 24;
+  if (openingCode === 7)
+    return 27;
+  if (openingCode === 8)
+    return 28;
+  if (openingCode === 9)
+    return 29;
+  if (openingCode === 0)
+    return 0;
+  return;
+}, wrapAnsiCode = (code) => `${ESC}${ANSI_CSI}${code}${ANSI_SGR_TERMINATOR}`, wrapAnsiHyperlink = (url) => `${ESC}${ANSI_ESCAPE_LINK}${url}${ANSI_ESCAPE_BELL}`, wrapWord = (rows, word, columns) => {
+  const characters = word[Symbol.iterator]();
+  let isInsideEscape = false;
+  let isInsideLinkEscape = false;
+  let lastRow = rows.at(-1);
+  let visible = lastRow === undefined ? 0 : dist_default2(lastRow);
+  let currentCharacter = characters.next();
+  let nextCharacter = characters.next();
+  let rawCharacterIndex = 0;
+  while (!currentCharacter.done) {
+    const character = currentCharacter.value;
+    const characterLength = dist_default2(character);
+    if (visible + characterLength <= columns) {
+      rows[rows.length - 1] += character;
+    } else {
+      rows.push(character);
+      visible = 0;
+    }
+    if (character === ESC || character === CSI) {
+      isInsideEscape = true;
+      isInsideLinkEscape = word.startsWith(ANSI_ESCAPE_LINK, rawCharacterIndex + 1);
+    }
+    if (isInsideEscape) {
+      if (isInsideLinkEscape) {
+        if (character === ANSI_ESCAPE_BELL) {
+          isInsideEscape = false;
+          isInsideLinkEscape = false;
+        }
+      } else if (character === ANSI_SGR_TERMINATOR) {
+        isInsideEscape = false;
+      }
+    } else {
+      visible += characterLength;
+      if (visible === columns && !nextCharacter.done) {
+        rows.push("");
+        visible = 0;
+      }
+    }
+    currentCharacter = nextCharacter;
+    nextCharacter = characters.next();
+    rawCharacterIndex += character.length;
+  }
+  lastRow = rows.at(-1);
+  if (!visible && lastRow !== undefined && lastRow.length && rows.length > 1) {
+    rows[rows.length - 2] += rows.pop();
+  }
+}, stringVisibleTrimSpacesRight = (string) => {
+  const words = string.split(" ");
+  let last = words.length;
+  while (last) {
+    if (dist_default2(words[last - 1])) {
+      break;
+    }
+    last--;
+  }
+  if (last === words.length) {
+    return string;
+  }
+  return words.slice(0, last).join(" ") + words.slice(last).join("");
+}, exec = (string, columns, options = {}) => {
+  if (options.trim !== false && string.trim() === "") {
+    return "";
+  }
+  let returnValue = "";
+  let escapeCode;
+  let escapeUrl;
+  const words = string.split(" ");
+  let rows = [""];
+  let rowLength = 0;
+  for (let index = 0;index < words.length; index++) {
+    const word = words[index];
+    if (options.trim !== false) {
+      const row = rows.at(-1) ?? "";
+      const trimmed = row.trimStart();
+      if (row.length !== trimmed.length) {
+        rows[rows.length - 1] = trimmed;
+        rowLength = dist_default2(trimmed);
+      }
+    }
+    if (index !== 0) {
+      if (rowLength >= columns && (options.wordWrap === false || options.trim === false)) {
+        rows.push("");
+        rowLength = 0;
+      }
+      if (rowLength || options.trim === false) {
+        rows[rows.length - 1] += " ";
+        rowLength++;
+      }
+    }
+    const wordLength = dist_default2(word);
+    if (options.hard && wordLength > columns) {
+      const remainingColumns = columns - rowLength;
+      const breaksStartingThisLine = 1 + Math.floor((wordLength - remainingColumns - 1) / columns);
+      const breaksStartingNextLine = Math.floor((wordLength - 1) / columns);
+      if (breaksStartingNextLine < breaksStartingThisLine) {
+        rows.push("");
+      }
+      wrapWord(rows, word, columns);
+      rowLength = dist_default2(rows.at(-1) ?? "");
+      continue;
+    }
+    if (rowLength + wordLength > columns && rowLength && wordLength) {
+      if (options.wordWrap === false && rowLength < columns) {
+        wrapWord(rows, word, columns);
+        rowLength = dist_default2(rows.at(-1) ?? "");
+        continue;
+      }
+      rows.push("");
+      rowLength = 0;
+    }
+    if (rowLength + wordLength > columns && options.wordWrap === false) {
+      wrapWord(rows, word, columns);
+      rowLength = dist_default2(rows.at(-1) ?? "");
+      continue;
+    }
+    rows[rows.length - 1] += word;
+    rowLength += wordLength;
+  }
+  if (options.trim !== false) {
+    rows = rows.map((row) => stringVisibleTrimSpacesRight(row));
+  }
+  const preString = rows.join(`
+`);
+  let inSurrogate = false;
+  for (let i = 0;i < preString.length; i++) {
+    const character = preString[i];
+    returnValue += character;
+    if (!inSurrogate) {
+      inSurrogate = character >= "\uD800" && character <= "\uDBFF";
+      if (inSurrogate) {
+        continue;
+      }
+    } else {
+      inSurrogate = false;
+    }
+    if (character === ESC || character === CSI) {
+      GROUP_REGEX.lastIndex = i + 1;
+      const groupsResult = GROUP_REGEX.exec(preString);
+      const groups = groupsResult?.groups;
+      if (groups?.code !== undefined) {
+        const code = Number.parseFloat(groups.code);
+        escapeCode = code === END_CODE ? undefined : code;
+      } else if (groups?.uri !== undefined) {
+        escapeUrl = groups.uri.length === 0 ? undefined : groups.uri;
+      }
+    }
+    if (preString[i + 1] === `
+`) {
+      if (escapeUrl) {
+        returnValue += wrapAnsiHyperlink("");
+      }
+      const closingCode = escapeCode ? getClosingCode(escapeCode) : undefined;
+      if (escapeCode && closingCode) {
+        returnValue += wrapAnsiCode(closingCode);
+      }
+    } else if (character === `
+`) {
+      if (escapeCode && getClosingCode(escapeCode)) {
+        returnValue += wrapAnsiCode(escapeCode);
+      }
+      if (escapeUrl) {
+        returnValue += wrapAnsiHyperlink(escapeUrl);
+      }
+    }
+  }
+  return returnValue;
+}, CRLF_OR_LF;
+var init_main = __esm(() => {
+  init_dist3();
+  ANSI_ESCAPE_LINK = `${ANSI_OSC}8;;`;
+  GROUP_REGEX = new RegExp(`(?:\\${ANSI_CSI}(?<code>\\d+)m|\\${ANSI_ESCAPE_LINK}(?<uri>.*)${ANSI_ESCAPE_BELL})`, "y");
+  CRLF_OR_LF = /\r?\n/;
+});
+
+// node_modules/.bun/sisteransi@1.0.5/node_modules/sisteransi/src/index.js
+var require_src = __commonJS((exports, module) => {
+  var ESC2 = "\x1B";
+  var CSI2 = `${ESC2}[`;
+  var beep = "\x07";
+  var cursor = {
+    to(x, y) {
+      if (!y)
+        return `${CSI2}${x + 1}G`;
+      return `${CSI2}${y + 1};${x + 1}H`;
+    },
+    move(x, y) {
+      let ret = "";
+      if (x < 0)
+        ret += `${CSI2}${-x}D`;
+      else if (x > 0)
+        ret += `${CSI2}${x}C`;
+      if (y < 0)
+        ret += `${CSI2}${-y}A`;
+      else if (y > 0)
+        ret += `${CSI2}${y}B`;
+      return ret;
+    },
+    up: (count = 1) => `${CSI2}${count}A`,
+    down: (count = 1) => `${CSI2}${count}B`,
+    forward: (count = 1) => `${CSI2}${count}C`,
+    backward: (count = 1) => `${CSI2}${count}D`,
+    nextLine: (count = 1) => `${CSI2}E`.repeat(count),
+    prevLine: (count = 1) => `${CSI2}F`.repeat(count),
+    left: `${CSI2}G`,
+    hide: `${CSI2}?25l`,
+    show: `${CSI2}?25h`,
+    save: `${ESC2}7`,
+    restore: `${ESC2}8`
+  };
+  var scroll = {
+    up: (count = 1) => `${CSI2}S`.repeat(count),
+    down: (count = 1) => `${CSI2}T`.repeat(count)
+  };
+  var erase = {
+    screen: `${CSI2}2J`,
+    up: (count = 1) => `${CSI2}1J`.repeat(count),
+    down: (count = 1) => `${CSI2}J`.repeat(count),
+    line: `${CSI2}2K`,
+    lineEnd: `${CSI2}K`,
+    lineStart: `${CSI2}1K`,
+    lines(count) {
+      let clear = "";
+      for (let i = 0;i < count; i++)
+        clear += this.line + (i < count - 1 ? cursor.up() : "");
+      if (count)
+        clear += cursor.left;
+      return clear;
+    }
+  };
+  module.exports = { cursor, scroll, erase, beep };
+});
+
+// node_modules/.bun/@clack+core@1.4.2/node_modules/@clack/core/dist/index.mjs
+import { styleText } from "util";
+import { stdout, stdin } from "process";
+import * as l from "readline";
+import l__default from "readline";
+import { ReadStream } from "tty";
+function findCursor(s, o, l2) {
+  if (!l2.some((r) => !r.disabled))
+    return s;
+  const t = s + o, n = Math.max(l2.length - 1, 0), e = t < 0 ? n : t > n ? 0 : t;
+  return l2[e].disabled ? findCursor(e, o < 0 ? -1 : 1, l2) : e;
+}
+function findTextCursor(s, o, l2, i) {
+  const t = i.split(`
+`);
+  let n = 0, e = s;
+  for (const r of t) {
+    if (e <= r.length)
+      break;
+    e -= r.length + 1, n++;
+  }
+  for (n = Math.max(0, Math.min(t.length - 1, n + l2)), e = Math.min(e, t[n].length) + o;e < 0 && n > 0; )
+    n--, e += t[n].length + 1;
+  for (;e > t[n].length && n < t.length - 1; )
+    e -= t[n].length + 1, n++;
+  e = Math.max(0, Math.min(t[n].length, e));
+  let h = 0;
+  for (let r = 0;r < n; r++)
+    h += t[r].length + 1;
+  return h + e;
+}
+function isActionKey(n, e) {
+  if (typeof n == "string")
+    return settings.aliases.get(n) === e;
+  for (const s of n)
+    if (s !== undefined && isActionKey(s, e))
+      return true;
+  return false;
+}
+function diffLines(i, s) {
+  if (i === s)
+    return;
+  const e = i.split(`
+`), t2 = s.split(`
+`), r = Math.max(e.length, t2.length), f = [];
+  for (let n = 0;n < r; n++)
+    e[n] !== t2[n] && f.push(n);
+  return {
+    lines: f,
+    numLinesBefore: e.length,
+    numLinesAfter: t2.length,
+    numLines: r
+  };
+}
+function isCancel(e) {
+  return e === CANCEL_SYMBOL;
+}
+function setRawMode(e, r) {
+  const o = e;
+  o.isTTY && o.setRawMode(r);
+}
+function block({
+  input: e = stdin,
+  output: r = stdout,
+  overwrite: o = true,
+  hideCursor: t2 = true
+} = {}) {
+  const s = l.createInterface({
+    input: e,
+    output: r,
+    prompt: "",
+    tabSize: 1
+  });
+  l.emitKeypressEvents(e, s), e instanceof ReadStream && e.isTTY && e.setRawMode(true);
+  const n = (f, { name: a, sequence: p }) => {
+    const c = String(f);
+    if (isActionKey([c, a, p], "cancel")) {
+      t2 && r.write(import_sisteransi.cursor.show), process.exit(0);
+      return;
+    }
+    if (!o)
+      return;
+    const i = a === "return" ? 0 : -1, m = a === "return" ? -1 : 0;
+    l.moveCursor(r, i, m, () => {
+      l.clearLine(r, 1, () => {
+        e.once("keypress", n);
+      });
+    });
+  };
+  return t2 && r.write(import_sisteransi.cursor.hide), e.once("keypress", n), () => {
+    e.off("keypress", n), t2 && r.write(import_sisteransi.cursor.show), e instanceof ReadStream && e.isTTY && !R && e.setRawMode(false), s.terminal = false, s.close();
+  };
+}
+function wrapTextWithPrefix(e, r, o, t2 = o, s = o, n) {
+  const f = getColumns(e ?? stdout);
+  return wrapAnsi(r, f - o.length, {
+    hard: true,
+    trim: false
+  }).split(`
+`).map((c, i, m) => {
+    const d = n ? n(c, i) : c;
+    return i === 0 ? `${t2}${d}` : i === m.length - 1 ? `${s}${d}` : `${o}${d}`;
+  }).join(`
+`);
+}
+function runValidation(e, n) {
+  if ("~standard" in e) {
+    const a = e["~standard"].validate(n);
+    if (a instanceof Promise)
+      throw new TypeError("Schema validation must be synchronous. Update `validate()` and remove any asynchronous logic.");
+    return a.issues?.at(0)?.message;
+  }
+  return e(n);
+}
+
+class V {
+  input;
+  output;
+  _abortSignal;
+  rl;
+  opts;
+  _render;
+  _track = false;
+  _prevFrame = "";
+  _subscribers = /* @__PURE__ */ new Map;
+  _cursor = 0;
+  state = "initial";
+  error = "";
+  value;
+  userInput = "";
+  constructor(t2, e = true) {
+    const { input: i = stdin, output: n = stdout, render: s, signal: r, ...o } = t2;
+    this.opts = o, this.onKeypress = this.onKeypress.bind(this), this.close = this.close.bind(this), this.render = this.render.bind(this), this._render = s.bind(this), this._track = e, this._abortSignal = r, this.input = i, this.output = n;
+  }
+  unsubscribe() {
+    this._subscribers.clear();
+  }
+  setSubscriber(t2, e) {
+    const i = this._subscribers.get(t2) ?? [];
+    i.push(e), this._subscribers.set(t2, i);
+  }
+  on(t2, e) {
+    this.setSubscriber(t2, { cb: e });
+  }
+  once(t2, e) {
+    this.setSubscriber(t2, { cb: e, once: true });
+  }
+  emit(t2, ...e) {
+    const i = this._subscribers.get(t2) ?? [], n = [];
+    for (const s of i)
+      s.cb(...e), s.once && n.push(() => i.splice(i.indexOf(s), 1));
+    for (const s of n)
+      s();
+  }
+  prompt() {
+    return new Promise((t2) => {
+      if (this._abortSignal) {
+        if (this._abortSignal.aborted)
+          return this.state = "cancel", this.close(), t2(CANCEL_SYMBOL);
+        this._abortSignal.addEventListener("abort", () => {
+          this.state = "cancel", this.close();
+        }, { once: true });
+      }
+      this.rl = l__default.createInterface({
+        input: this.input,
+        tabSize: 2,
+        prompt: "",
+        escapeCodeTimeout: 50,
+        terminal: true
+      }), this.rl.prompt(), this.opts.initialUserInput !== undefined && this._setUserInput(this.opts.initialUserInput, true), this.input.on("keypress", this.onKeypress), setRawMode(this.input, true), this.output.on("resize", this.render), this.render(), this.once("submit", () => {
+        this.output.write(import_sisteransi.cursor.show), this.output.off("resize", this.render), setRawMode(this.input, false), t2(this.value);
+      }), this.once("cancel", () => {
+        this.output.write(import_sisteransi.cursor.show), this.output.off("resize", this.render), setRawMode(this.input, false), t2(CANCEL_SYMBOL);
+      });
+    });
+  }
+  _isActionKey(t2, e) {
+    return t2 === "\t";
+  }
+  _shouldSubmit(t2, e) {
+    return true;
+  }
+  _setValue(t2) {
+    this.value = t2, this.emit("value", this.value);
+  }
+  _setUserInput(t2, e) {
+    this.userInput = t2 ?? "", this.emit("userInput", this.userInput), e && this._track && this.rl && (this.rl.write(this.userInput), this._cursor = this.rl.cursor);
+  }
+  _clearUserInput() {
+    this.rl?.write(null, { ctrl: true, name: "u" }), this._setUserInput("");
+  }
+  onKeypress(t2, e) {
+    if (this._track && e.name !== "return" && (e.name && this._isActionKey(t2, e) && this.rl?.write(null, { ctrl: true, name: "h" }), this._cursor = this.rl?.cursor ?? 0, this._setUserInput(this.rl?.line)), this.state === "error" && (this.state = "active"), e?.name && (!this._track && settings.aliases.has(e.name) && this.emit("cursor", settings.aliases.get(e.name)), settings.actions.has(e.name) && this.emit("cursor", e.name)), t2 && (t2.toLowerCase() === "y" || t2.toLowerCase() === "n") && this.emit("confirm", t2.toLowerCase() === "y"), this.emit("key", t2, e), e?.name === "return" && this._shouldSubmit(t2, e)) {
+      if (this.opts.validate) {
+        const i = runValidation(this.opts.validate, this.value);
+        i && (this.error = i instanceof Error ? i.message : i, this.state = "error", this.rl?.write(this.userInput));
+      }
+      this.state !== "error" && (this.state = "submit");
+    }
+    isActionKey([t2, e?.name, e?.sequence], "cancel") && (this.state = "cancel"), (this.state === "submit" || this.state === "cancel") && this.emit("finalize"), this.render(), (this.state === "submit" || this.state === "cancel") && this.close();
+  }
+  close() {
+    this.input.unpipe(), this.input.removeListener("keypress", this.onKeypress), this.output.write(`
+`), setRawMode(this.input, false), this.rl?.close(), this.rl = undefined, this.emit(`${this.state}`, this.value), this.unsubscribe();
+  }
+  restoreCursor() {
+    const t2 = wrapAnsi(this._prevFrame, process.stdout.columns, { hard: true, trim: false }).split(`
+`).length - 1;
+    this.output.write(import_sisteransi.cursor.move(-999, t2 * -1));
+  }
+  render() {
+    const t2 = wrapAnsi(this._render(this) ?? "", process.stdout.columns, {
+      hard: true,
+      trim: false
+    });
+    if (t2 !== this._prevFrame) {
+      if (this.state === "initial")
+        this.output.write(import_sisteransi.cursor.hide);
+      else {
+        const e = diffLines(this._prevFrame, t2), i = getRows(this.output);
+        if (this.restoreCursor(), e) {
+          const n = Math.max(0, e.numLinesAfter - i), s = Math.max(0, e.numLinesBefore - i);
+          let r = e.lines.find((o) => o >= n);
+          if (r === undefined) {
+            this._prevFrame = t2;
+            return;
+          }
+          if (e.lines.length === 1) {
+            this.output.write(import_sisteransi.cursor.move(0, r - s)), this.output.write(import_sisteransi.erase.lines(1));
+            const o = t2.split(`
+`);
+            this.output.write(o[r]), this._prevFrame = t2, this.output.write(import_sisteransi.cursor.move(0, o.length - r - 1));
+            return;
+          } else if (e.lines.length > 1) {
+            if (n < s)
+              r = n;
+            else {
+              const h = r - s;
+              h > 0 && this.output.write(import_sisteransi.cursor.move(0, h));
+            }
+            this.output.write(import_sisteransi.erase.down());
+            const f = t2.split(`
+`).slice(r);
+            this.output.write(f.join(`
+`)), this._prevFrame = t2;
+            return;
+          }
+        }
+        this.output.write(import_sisteransi.erase.down());
+      }
+      this.output.write(t2), this.state === "initial" && (this.state = "active"), this._prevFrame = t2;
+    }
+  }
+}
+function p$1(l2, e) {
+  if (l2 === undefined || e.length === 0)
+    return 0;
+  const i = e.findIndex((s) => s.value === l2);
+  return i !== -1 ? i : 0;
+}
+function g(l2, e) {
+  return (e.label ?? String(e.value)).toLowerCase().includes(l2.toLowerCase());
+}
+function m(l2, e) {
+  if (e)
+    return l2 ? e : e[0];
+}
+function M(r2) {
+  return [...r2].map((t2) => _[t2]);
+}
+function P(r2) {
+  const i = new Intl.DateTimeFormat(r2, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(2000, 0, 15)), s = [];
+  let n = "/";
+  for (const e of i)
+    e.type === "literal" ? n = e.value.trim() || e.value : (e.type === "year" || e.type === "month" || e.type === "day") && s.push({ type: e.type, len: e.type === "year" ? 4 : 2 });
+  return { segments: s, separator: n };
+}
+function p(r2) {
+  return Number.parseInt((r2 || "0").replace(/_/g, "0"), 10) || 0;
+}
+function f(r2) {
+  return {
+    year: p(r2.year),
+    month: p(r2.month),
+    day: p(r2.day)
+  };
+}
+function c(r2, t2) {
+  return new Date(r2 || 2001, t2 || 1, 0).getDate();
+}
+function b(r2) {
+  const { year: t2, month: i, day: s } = f(r2);
+  if (!t2 || t2 < 0 || t2 > 9999 || !i || i < 1 || i > 12 || !s || s < 1)
+    return;
+  const n = new Date(Date.UTC(t2, i - 1, s));
+  if (!(n.getUTCFullYear() !== t2 || n.getUTCMonth() !== i - 1 || n.getUTCDate() !== s))
+    return { year: t2, month: i, day: s };
+}
+function C(r2) {
+  const t2 = b(r2);
+  return t2 ? new Date(Date.UTC(t2.year, t2.month - 1, t2.day)) : undefined;
+}
+function T2(r2, t2, i, s) {
+  const n = i ? {
+    year: i.getUTCFullYear(),
+    month: i.getUTCMonth() + 1,
+    day: i.getUTCDate()
+  } : null, e = s ? {
+    year: s.getUTCFullYear(),
+    month: s.getUTCMonth() + 1,
+    day: s.getUTCDate()
+  } : null;
+  return r2 === "year" ? { min: n?.year ?? 1, max: e?.year ?? 9999 } : r2 === "month" ? {
+    min: n && t2.year === n.year ? n.month : 1,
+    max: e && t2.year === e.year ? e.month : 12
+  } : {
+    min: n && t2.year === n.year && t2.month === n.month ? n.day : 1,
+    max: e && t2.year === e.year && t2.month === e.month ? e.day : c(t2.year, t2.month)
+  };
+}
+var import_sisteransi, a$2, t, settings, R, CANCEL_SYMBOL, getColumns = (e) => ("columns" in e) && typeof e.columns == "number" ? e.columns : 80, getRows = (e) => ("rows" in e) && typeof e.rows == "number" ? e.rows : 20, T$1, r, _, U, u$1, o$1, h, a, n;
+var init_dist4 = __esm(() => {
+  init_main();
+  import_sisteransi = __toESM(require_src(), 1);
+  a$2 = ["up", "down", "left", "right", "space", "enter", "cancel"];
+  t = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  ];
+  settings = {
+    actions: new Set(a$2),
+    aliases: /* @__PURE__ */ new Map([
+      ["k", "up"],
+      ["j", "down"],
+      ["h", "left"],
+      ["l", "right"],
+      ["\x03", "cancel"],
+      ["escape", "cancel"]
+    ]),
+    messages: {
+      cancel: "Canceled",
+      error: "Something went wrong"
+    },
+    withGuide: true,
+    date: {
+      monthNames: [...t],
+      messages: {
+        required: "Please enter a valid date",
+        invalidMonth: "There are only 12 months in a year",
+        invalidDay: (n, e) => `There are only ${n} days in ${e}`,
+        afterMin: (n) => `Date must be on or after ${n.toISOString().slice(0, 10)}`,
+        beforeMax: (n) => `Date must be on or before ${n.toISOString().slice(0, 10)}`
+      }
+    }
+  };
+  R = globalThis.process.platform.startsWith("win");
+  CANCEL_SYMBOL = Symbol("clack:cancel");
+  T$1 = class T extends V {
+    filteredOptions;
+    multiple;
+    isNavigating = false;
+    selectedValues = [];
+    focusedValue;
+    #e = 0;
+    #s = "";
+    #t;
+    #i;
+    #n;
+    get cursor() {
+      return this.#e;
+    }
+    get userInputWithCursor() {
+      if (!this.userInput)
+        return styleText(["inverse", "hidden"], "_");
+      if (this._cursor >= this.userInput.length)
+        return `${this.userInput}\u2588`;
+      const e = this.userInput.slice(0, this._cursor), [t2, ...i] = this.userInput.slice(this._cursor);
+      return `${e}${styleText("inverse", t2)}${i.join("")}`;
+    }
+    get options() {
+      return typeof this.#i == "function" ? this.#i() : this.#i;
+    }
+    constructor(e) {
+      super(e), this.#i = e.options, this.#n = e.placeholder;
+      const t2 = this.options;
+      this.filteredOptions = [...t2], this.multiple = e.multiple === true, this.#t = typeof e.options == "function" ? e.filter : e.filter ?? g;
+      let i;
+      if (e.initialValue && Array.isArray(e.initialValue) ? this.multiple ? i = e.initialValue : i = e.initialValue.slice(0, 1) : !this.multiple && this.options.length > 0 && (i = [this.options[0].value]), i)
+        for (const s of i) {
+          const n = t2.findIndex((o) => o.value === s);
+          n !== -1 && (this.toggleSelected(s), this.#e = n);
+        }
+      this.focusedValue = this.options[this.#e]?.value, this.on("key", (s, n) => this.#l(s, n)), this.on("userInput", (s) => this.#u(s));
+    }
+    _isActionKey(e, t2) {
+      return e === "\t" || this.multiple && this.isNavigating && t2.name === "space" && e !== undefined && e !== "";
+    }
+    #l(e, t2) {
+      const i = t2.name === "up", s = t2.name === "down", n = t2.name === "return", o = this.userInput === "" || this.userInput === "\t", u = this.#n, h = this.options, f = u !== undefined && u !== "" && h.some((r) => !r.disabled && (this.#t ? this.#t(u, r) : true));
+      if (t2.name === "tab" && o && f) {
+        this.userInput === "\t" && this._clearUserInput(), this._setUserInput(u, true), this.isNavigating = false;
+        return;
+      }
+      i || s ? (this.#e = findCursor(this.#e, i ? -1 : 1, this.filteredOptions), this.focusedValue = this.filteredOptions[this.#e]?.value, this.multiple || (this.selectedValues = [this.focusedValue]), this.isNavigating = true) : n ? this.value = m(this.multiple, this.selectedValues) : this.multiple ? this.focusedValue !== undefined && (t2.name === "tab" || this.isNavigating && t2.name === "space") ? this.toggleSelected(this.focusedValue) : this.isNavigating = false : (this.focusedValue && (this.selectedValues = [this.focusedValue]), this.isNavigating = false);
+    }
+    deselectAll() {
+      this.selectedValues = [];
+    }
+    toggleSelected(e) {
+      this.filteredOptions.length !== 0 && (this.multiple ? this.selectedValues.includes(e) ? this.selectedValues = this.selectedValues.filter((t2) => t2 !== e) : this.selectedValues = [...this.selectedValues, e] : this.selectedValues = [e]);
+    }
+    #u(e) {
+      if (e !== this.#s) {
+        this.#s = e;
+        const t2 = this.options;
+        e && this.#t ? this.filteredOptions = t2.filter((n) => this.#t?.(e, n)) : this.filteredOptions = [...t2];
+        const i = p$1(this.focusedValue, this.filteredOptions);
+        this.#e = findCursor(i, 0, this.filteredOptions);
+        const s = this.filteredOptions[this.#e];
+        s && !s.disabled ? this.focusedValue = s.value : this.focusedValue = undefined, this.multiple || (this.focusedValue !== undefined ? this.toggleSelected(this.focusedValue) : this.deselectAll());
+      }
+    }
+  };
+  r = class r extends V {
+    get cursor() {
+      return this.value ? 0 : 1;
+    }
+    get _value() {
+      return this.cursor === 0;
+    }
+    constructor(t2) {
+      super(t2, false), this.value = !!t2.initialValue, this.on("userInput", () => {
+        this.value = this._value;
+      }), this.on("confirm", (i) => {
+        this.output.write(import_sisteransi.cursor.move(0, -1)), this.value = i, this.state = "submit", this.close();
+      }), this.on("cursor", () => {
+        this.value = !this.value;
+      });
+    }
+  };
+  _ = {
+    Y: { type: "year", len: 4 },
+    M: { type: "month", len: 2 },
+    D: { type: "day", len: 2 }
+  };
+  U = class U extends V {
+    #i;
+    #o;
+    #t;
+    #h;
+    #u;
+    #e = { segmentIndex: 0, positionInSegment: 0 };
+    #n = true;
+    #s = null;
+    inlineError = "";
+    get segmentCursor() {
+      return { ...this.#e };
+    }
+    get segmentValues() {
+      return { ...this.#t };
+    }
+    get segments() {
+      return this.#i;
+    }
+    get separator() {
+      return this.#o;
+    }
+    get formattedValue() {
+      return this.#l(this.#t);
+    }
+    #l(t2) {
+      return this.#i.map((i) => t2[i.type]).join(this.#o);
+    }
+    #r() {
+      this._setUserInput(this.#l(this.#t)), this._setValue(C(this.#t) ?? undefined);
+    }
+    constructor(t2) {
+      const i = t2.format ? { segments: M(t2.format), separator: t2.separator ?? "/" } : P(t2.locale), s = t2.separator ?? i.separator, n = t2.format ? M(t2.format) : i.segments, e = t2.initialValue ?? t2.defaultValue, m2 = e ? {
+        year: String(e.getUTCFullYear()).padStart(4, "0"),
+        month: String(e.getUTCMonth() + 1).padStart(2, "0"),
+        day: String(e.getUTCDate()).padStart(2, "0")
+      } : { year: "____", month: "__", day: "__" }, o = n.map((a) => m2[a.type]).join(s);
+      super({ ...t2, initialUserInput: o }, false), this.#i = n, this.#o = s, this.#t = m2, this.#h = t2.minDate, this.#u = t2.maxDate, this.#r(), this.on("cursor", (a) => this.#f(a)), this.on("key", (a, u) => this.#y(a, u)), this.on("finalize", () => this.#p(t2));
+    }
+    #a() {
+      const t2 = Math.max(0, Math.min(this.#e.segmentIndex, this.#i.length - 1)), i = this.#i[t2];
+      if (i)
+        return this.#e.positionInSegment = Math.max(0, Math.min(this.#e.positionInSegment, i.len - 1)), { segment: i, index: t2 };
+    }
+    #m(t2) {
+      this.inlineError = "", this.#s = null;
+      const i = this.#a();
+      i && (this.#e.segmentIndex = Math.max(0, Math.min(this.#i.length - 1, i.index + t2)), this.#e.positionInSegment = 0, this.#n = true);
+    }
+    #d(t2) {
+      const i = this.#a();
+      if (!i)
+        return;
+      const { segment: s } = i, n = this.#t[s.type], e = !n || n.replace(/_/g, "") === "", m2 = Number.parseInt((n || "0").replace(/_/g, "0"), 10) || 0, o = T2(s.type, f(this.#t), this.#h, this.#u);
+      let a;
+      e ? a = t2 === 1 ? o.min : o.max : a = Math.max(Math.min(o.max, m2 + t2), o.min), this.#t = {
+        ...this.#t,
+        [s.type]: a.toString().padStart(s.len, "0")
+      }, this.#n = true, this.#s = null, this.#r();
+    }
+    #f(t2) {
+      if (t2)
+        switch (t2) {
+          case "right":
+            return this.#m(1);
+          case "left":
+            return this.#m(-1);
+          case "up":
+            return this.#d(1);
+          case "down":
+            return this.#d(-1);
+        }
+    }
+    #y(t2, i) {
+      if (i?.name === "backspace" || i?.sequence === "\x7F" || i?.sequence === "\b" || t2 === "\x7F" || t2 === "\b") {
+        this.inlineError = "";
+        const n = this.#a();
+        if (!n)
+          return;
+        if (!this.#t[n.segment.type].replace(/_/g, "")) {
+          this.#m(-1);
+          return;
+        }
+        this.#t[n.segment.type] = "_".repeat(n.segment.len), this.#n = true, this.#e.positionInSegment = 0, this.#r();
+        return;
+      }
+      if (i?.name === "tab") {
+        this.inlineError = "";
+        const n = this.#a();
+        if (!n)
+          return;
+        const e = i.shift ? -1 : 1, m2 = n.index + e;
+        m2 >= 0 && m2 < this.#i.length && (this.#e.segmentIndex = m2, this.#e.positionInSegment = 0, this.#n = true);
+        return;
+      }
+      if (t2 && /^[0-9]$/.test(t2)) {
+        const n = this.#a();
+        if (!n)
+          return;
+        const { segment: e } = n, m2 = !this.#t[e.type].replace(/_/g, "");
+        if (this.#n && this.#s !== null && !m2) {
+          const h = this.#s + t2, d = { ...this.#t, [e.type]: h }, g2 = this.#g(d, e);
+          if (g2) {
+            this.inlineError = g2, this.#s = null, this.#n = false;
+            return;
+          }
+          this.inlineError = "", this.#t[e.type] = h, this.#s = null, this.#n = false, this.#r(), n.index < this.#i.length - 1 && (this.#e.segmentIndex = n.index + 1, this.#e.positionInSegment = 0, this.#n = true);
+          return;
+        }
+        this.#n && !m2 && (this.#t[e.type] = "_".repeat(e.len), this.#e.positionInSegment = 0), this.#n = false, this.#s = null;
+        const o = this.#t[e.type], a = o.indexOf("_"), u = a >= 0 ? a : Math.min(this.#e.positionInSegment, e.len - 1);
+        if (u < 0 || u >= e.len)
+          return;
+        let l2 = o.slice(0, u) + t2 + o.slice(u + 1), D = false;
+        if (u === 0 && o === "__" && (e.type === "month" || e.type === "day")) {
+          const h = Number.parseInt(t2, 10);
+          l2 = `0${t2}`, D = h <= (e.type === "month" ? 1 : 2);
+        }
+        if (e.type === "year" && (l2 = (o.replace(/_/g, "") + t2).padStart(e.len, "_")), !l2.includes("_")) {
+          const h = { ...this.#t, [e.type]: l2 }, d = this.#g(h, e);
+          if (d) {
+            this.inlineError = d;
+            return;
+          }
+        }
+        this.inlineError = "", this.#t[e.type] = l2;
+        const y = l2.includes("_") ? undefined : b(this.#t);
+        if (y) {
+          const { year: h, month: d } = y, g2 = c(h, d);
+          this.#t = {
+            year: String(Math.max(0, Math.min(9999, h))).padStart(4, "0"),
+            month: String(Math.max(1, Math.min(12, d))).padStart(2, "0"),
+            day: String(Math.max(1, Math.min(g2, y.day))).padStart(2, "0")
+          };
+        }
+        this.#r();
+        const S = l2.indexOf("_");
+        D ? (this.#n = true, this.#s = t2) : S >= 0 ? this.#e.positionInSegment = S : a >= 0 && n.index < this.#i.length - 1 ? (this.#e.segmentIndex = n.index + 1, this.#e.positionInSegment = 0, this.#n = true) : this.#e.positionInSegment = Math.min(u + 1, e.len - 1);
+      }
+    }
+    #g(t2, i) {
+      const { month: s, day: n } = f(t2);
+      if (i.type === "month" && (s < 0 || s > 12))
+        return settings.date.messages.invalidMonth;
+      if (i.type === "day" && (n < 0 || n > 31))
+        return settings.date.messages.invalidDay(31, "any month");
+    }
+    #p(t2) {
+      const { year: i, month: s, day: n } = f(this.#t);
+      if (i && s && n) {
+        const e = c(i, s);
+        this.#t = {
+          ...this.#t,
+          day: String(Math.min(n, e)).padStart(2, "0")
+        };
+      }
+      this.value = C(this.#t) ?? t2.defaultValue ?? undefined;
+    }
+  };
+  u$1 = class u extends V {
+    options;
+    cursor = 0;
+    #t;
+    getGroupItems(t2) {
+      return this.options.filter((r2) => r2.group === t2);
+    }
+    isGroupSelected(t2) {
+      const r2 = this.getGroupItems(t2), e = this.value;
+      return e === undefined ? false : r2.every((s) => e.includes(s.value));
+    }
+    toggleValue() {
+      const t2 = this.options[this.cursor];
+      if (this.value === undefined && (this.value = []), t2.group === true) {
+        const r2 = t2.value, e = this.getGroupItems(r2);
+        this.isGroupSelected(r2) ? this.value = this.value.filter((s) => e.findIndex((i) => i.value === s) === -1) : this.value = [...this.value, ...e.map((s) => s.value)], this.value = Array.from(new Set(this.value));
+      } else {
+        const r2 = this.value.includes(t2.value);
+        this.value = r2 ? this.value.filter((e) => e !== t2.value) : [...this.value, t2.value];
+      }
+    }
+    constructor(t2) {
+      super(t2, false);
+      const { options: r2 } = t2;
+      this.#t = t2.selectableGroups !== false, this.options = Object.entries(r2).flatMap(([e, s]) => [
+        { value: e, group: true, label: e },
+        ...s.map((i) => ({ ...i, group: e }))
+      ]), this.value = [...t2.initialValues ?? []], this.cursor = Math.max(this.options.findIndex(({ value: e }) => e === t2.cursorAt), this.#t ? 0 : 1), this.on("cursor", (e) => {
+        switch (e) {
+          case "left":
+          case "up": {
+            this.cursor = this.cursor === 0 ? this.options.length - 1 : this.cursor - 1;
+            const s = this.options[this.cursor]?.group === true;
+            !this.#t && s && (this.cursor = this.cursor === 0 ? this.options.length - 1 : this.cursor - 1);
+            break;
+          }
+          case "down":
+          case "right": {
+            this.cursor = this.cursor === this.options.length - 1 ? 0 : this.cursor + 1;
+            const s = this.options[this.cursor]?.group === true;
+            !this.#t && s && (this.cursor = this.cursor === this.options.length - 1 ? 0 : this.cursor + 1);
+            break;
+          }
+          case "space":
+            this.toggleValue();
+            break;
+        }
+      });
+    }
+  };
+  o$1 = /* @__PURE__ */ new Set(["up", "down", "left", "right"]);
+  h = class h extends V {
+    #t = false;
+    #s;
+    focused = "editor";
+    get userInputWithCursor() {
+      if (this.state === "submit")
+        return this.userInput;
+      const t2 = this.userInput;
+      if (this.cursor >= t2.length)
+        return `${t2}\u2588`;
+      const s = t2.slice(0, this.cursor), r2 = t2[this.cursor], i = t2.slice(this.cursor + 1);
+      return r2 === `
+` ? `${s}\u2588
+${i}` : `${s}${styleText("inverse", r2)}${i}`;
+    }
+    get cursor() {
+      return this._cursor;
+    }
+    #r(t2) {
+      if (this.userInput.length === 0) {
+        this._setUserInput(t2);
+        return;
+      }
+      this._setUserInput(this.userInput.slice(0, this.cursor) + t2 + this.userInput.slice(this.cursor));
+    }
+    #i(t2) {
+      const s = this.value ?? "";
+      switch (t2) {
+        case "up":
+          this._cursor = findTextCursor(this._cursor, 0, -1, s);
+          return;
+        case "down":
+          this._cursor = findTextCursor(this._cursor, 0, 1, s);
+          return;
+        case "left":
+          this._cursor = findTextCursor(this._cursor, -1, 0, s);
+          return;
+        case "right":
+          this._cursor = findTextCursor(this._cursor, 1, 0, s);
+          return;
+      }
+    }
+    _shouldSubmit(t2, s) {
+      if (this.#s)
+        return this.focused === "submit" ? true : (this.#r(`
+`), this._cursor++, false);
+      const r2 = this.#t;
+      return this.#t = true, r2 && this.cursor === this.userInput.length ? (this.userInput[this.cursor - 1] === `
+` && (this._setUserInput(this.userInput.slice(0, this.cursor - 1) + this.userInput.slice(this.cursor)), this._cursor--), true) : (this.#r(`
+`), this._cursor++, false);
+    }
+    constructor(t2) {
+      const s = t2.initialUserInput ?? t2.initialValue;
+      super({
+        ...t2,
+        initialUserInput: s
+      }, false), s !== undefined && (this._cursor = s.length), this.#s = t2.showSubmit ?? false, this.on("key", (r2, i) => {
+        if (i?.name && o$1.has(i.name)) {
+          this.#t = false, this.#i(i.name);
+          return;
+        }
+        if (r2 === "\t" && this.#s) {
+          this.focused = this.focused === "editor" ? "submit" : "editor";
+          return;
+        }
+        if (i?.name !== "return") {
+          if (this.#t = false, i?.name === "backspace" && this.cursor > 0) {
+            this._setUserInput(this.userInput.slice(0, this.cursor - 1) + this.userInput.slice(this.cursor)), this._cursor--;
+            return;
+          }
+          if (i?.name === "delete" && this.cursor < this.userInput.length) {
+            this._setUserInput(this.userInput.slice(0, this.cursor) + this.userInput.slice(this.cursor + 1));
+            return;
+          }
+          r2 && (this.#s && this.focused === "submit" && (this.focused = "editor"), this.#r(r2 ?? ""), this._cursor++);
+        }
+      }), this.on("userInput", (r2) => {
+        this._setValue(r2);
+      }), this.on("finalize", () => {
+        this.value || (this.value = t2.defaultValue), this.value === undefined && (this.value = "");
+      });
+    }
+  };
+  a = class a extends V {
+    options;
+    cursor = 0;
+    get _selectedValue() {
+      return this.options[this.cursor];
+    }
+    changeValue() {
+      this.value = this._selectedValue.value;
+    }
+    constructor(t2) {
+      super(t2, false), this.options = t2.options;
+      const i = this.options.findIndex(({ value: s }) => s === t2.initialValue), e = i === -1 ? 0 : i;
+      this.cursor = this.options[e].disabled ? findCursor(e, 1, this.options) : e, this.changeValue(), this.on("cursor", (s) => {
+        switch (s) {
+          case "left":
+          case "up":
+            this.cursor = findCursor(this.cursor, -1, this.options);
+            break;
+          case "down":
+          case "right":
+            this.cursor = findCursor(this.cursor, 1, this.options);
+            break;
+        }
+        this.changeValue();
+      });
+    }
+  };
+  n = class n extends V {
+    get userInputWithCursor() {
+      if (this.state === "submit")
+        return this.userInput;
+      const t2 = this.userInput;
+      if (this.cursor >= t2.length)
+        return `${this.userInput}\u2588`;
+      const e = t2.slice(0, this.cursor), [s, ...r2] = t2.slice(this.cursor);
+      return `${e}${styleText("inverse", s)}${r2.join("")}`;
+    }
+    get cursor() {
+      return this._cursor;
+    }
+    constructor(t2) {
+      super({
+        ...t2,
+        initialUserInput: t2.initialUserInput ?? t2.initialValue
+      }), this.on("userInput", (e) => {
+        this._setValue(e);
+      }), this.on("finalize", () => {
+        this.value || (this.value = t2.defaultValue), this.value === undefined && (this.value = "");
+      });
+    }
+  };
+});
+
+// node_modules/.bun/@clack+prompts@1.6.0/node_modules/@clack/prompts/dist/index.mjs
+import { styleText as styleText2, stripVTControlCharacters } from "util";
+import process$1 from "process";
+function isUnicodeSupported() {
+  if (process$1.platform !== "win32") {
+    return process$1.env.TERM !== "linux";
+  }
+  return Boolean(process$1.env.CI) || Boolean(process$1.env.WT_SESSION) || Boolean(process$1.env.TERMINUS_SUBLIME) || process$1.env.ConEmuTask === "{cmd::Cmder}" || process$1.env.TERM_PROGRAM === "Terminus-Sublime" || process$1.env.TERM_PROGRAM === "vscode" || process$1.env.TERM === "xterm-256color" || process$1.env.TERM === "alacritty" || process$1.env.TERMINAL_EMULATOR === "JetBrains-JediTerm";
+}
+function formatInstructionFooter(o2, e) {
+  const r2 = [`${e ? `${styleText2("cyan", S_BAR)}  ` : ""}${o2.join(" \u2022 ")}`];
+  return e && r2.push(styleText2("cyan", S_BAR_END)), r2;
+}
+var import_sisteransi2, unicode, isCI = () => process.env.CI === "true", unicodeOr = (o2, e) => unicode ? o2 : e, S_STEP_ACTIVE, S_STEP_CANCEL, S_STEP_ERROR, S_STEP_SUBMIT, S_BAR_START, S_BAR, S_BAR_END, S_BAR_START_RIGHT, S_BAR_END_RIGHT, S_RADIO_ACTIVE, S_RADIO_INACTIVE, S_CHECKBOX_ACTIVE, S_CHECKBOX_SELECTED, S_CHECKBOX_INACTIVE, S_PASSWORD_MASK, S_BAR_H, S_CORNER_TOP_RIGHT, S_CONNECT_LEFT, S_CORNER_BOTTOM_RIGHT, S_CORNER_BOTTOM_LEFT, S_CORNER_TOP_LEFT, S_INFO, S_SUCCESS, S_WARN, S_ERROR, symbol = (o2) => {
+  switch (o2) {
+    case "initial":
+    case "active":
+      return styleText2("cyan", S_STEP_ACTIVE);
+    case "cancel":
+      return styleText2("red", S_STEP_CANCEL);
+    case "error":
+      return styleText2("yellow", S_STEP_ERROR);
+    case "submit":
+      return styleText2("green", S_STEP_SUBMIT);
+  }
+}, symbolBar = (o2) => {
+  switch (o2) {
+    case "initial":
+    case "active":
+      return styleText2("cyan", S_BAR);
+    case "cancel":
+      return styleText2("red", S_BAR);
+    case "error":
+      return styleText2("yellow", S_BAR);
+    case "submit":
+      return styleText2("green", S_BAR);
+  }
+}, E$1 = (l2, o2, g2, c2, h2, O = false) => {
+  let r2 = o2, w = 0;
+  if (O)
+    for (let i = c2 - 1;i >= g2 && (r2 -= l2[i].length, w++, !(r2 <= h2)); i--)
+      ;
+  else
+    for (let i = g2;i < c2 && (r2 -= l2[i].length, w++, !(r2 <= h2)); i++)
+      ;
+  return { lineCount: r2, removals: w };
+}, limitOptions = ({
+  cursor: l2,
+  options: o2,
+  style: g2,
+  output: c2 = process.stdout,
+  maxItems: h2 = Number.POSITIVE_INFINITY,
+  columnPadding: O = 0,
+  rowPadding: r2 = 4
+}) => {
+  const i = getColumns(c2) - O, I = getRows(c2), C2 = styleText2("dim", "..."), x = Math.max(I - r2, 0), m2 = Math.max(Math.min(h2, x), 5);
+  let p2 = 0;
+  l2 >= m2 - 3 && (p2 = Math.max(Math.min(l2 - m2 + 3, o2.length - m2), 0));
+  let f2 = m2 < o2.length && p2 > 0, u3 = m2 < o2.length && p2 + m2 < o2.length;
+  const W = Math.min(p2 + m2, o2.length), e = [];
+  let d = 0;
+  f2 && d++, u3 && d++;
+  const v = p2 + (f2 ? 1 : 0), P2 = W - (u3 ? 1 : 0);
+  for (let t2 = v;t2 < P2; t2++) {
+    const n2 = wrapAnsi(g2(o2[t2], t2 === l2), i, {
+      hard: true,
+      trim: false
+    }).split(`
+`);
+    e.push(n2), d += n2.length;
+  }
+  if (d > x) {
+    let t2 = 0, n2 = 0, s = d;
+    const M2 = l2 - v;
+    let a2 = x;
+    const T3 = () => E$1(e, s, 0, M2, a2), L = () => E$1(e, s, M2 + 1, e.length, a2, true);
+    f2 ? ({ lineCount: s, removals: t2 } = T3(), s > a2 && (u3 || (a2 -= 1), { lineCount: s, removals: n2 } = L())) : (u3 || (a2 -= 1), { lineCount: s, removals: n2 } = L(), s > a2 && (a2 -= 1, { lineCount: s, removals: t2 } = T3())), t2 > 0 && (f2 = true, e.splice(0, t2)), n2 > 0 && (u3 = true, e.splice(e.length - n2, n2));
+  }
+  const b2 = [];
+  f2 && b2.push(C2);
+  for (const t2 of e)
+    for (const n2 of t2)
+      b2.push(n2);
+  return u3 && b2.push(C2), b2;
+}, confirm = (i) => {
+  const a2 = i.active ?? "Yes", s = i.inactive ?? "No";
+  return new r({
+    active: a2,
+    inactive: s,
+    signal: i.signal,
+    input: i.input,
+    output: i.output,
+    initialValue: i.initialValue ?? true,
+    render() {
+      const e = i.withGuide ?? settings.withGuide, u3 = `${symbol(this.state)}  `, l2 = e ? `${styleText2("gray", S_BAR)}  ` : "", f2 = wrapTextWithPrefix(i.output, i.message, l2, u3), o2 = `${e ? `${styleText2("gray", S_BAR)}
+` : ""}${f2}
+`, c2 = this.value ? a2 : s;
+      switch (this.state) {
+        case "submit": {
+          const r2 = e ? `${styleText2("gray", S_BAR)}  ` : "";
+          return `${o2}${r2}${styleText2("dim", c2)}`;
+        }
+        case "cancel": {
+          const r2 = e ? `${styleText2("gray", S_BAR)}  ` : "";
+          return `${o2}${r2}${styleText2(["strikethrough", "dim"], c2)}${e ? `
+${styleText2("gray", S_BAR)}` : ""}`;
+        }
+        default: {
+          const r2 = e ? `${styleText2("cyan", S_BAR)}  ` : "", g2 = e ? styleText2("cyan", S_BAR_END) : "";
+          return `${o2}${r2}${this.value ? `${styleText2("green", S_RADIO_ACTIVE)} ${a2}` : `${styleText2("dim", S_RADIO_INACTIVE)} ${styleText2("dim", a2)}`}${i.vertical ? e ? `
+${styleText2("cyan", S_BAR)}  ` : `
+` : ` ${styleText2("dim", "/")} `}${this.value ? `${styleText2("dim", S_RADIO_INACTIVE)} ${styleText2("dim", s)}` : `${styleText2("green", S_RADIO_ACTIVE)} ${s}`}
+${g2}
+`;
+        }
+      }
+    }
+  }).prompt();
+}, MULTISELECT_INSTRUCTIONS, cancel = (o2 = "", t2) => {
+  const i = t2?.output ?? process.stdout, e = t2?.withGuide ?? settings.withGuide ? `${styleText2("gray", S_BAR_END)}  ` : "";
+  i.write(`${e}${styleText2("red", o2)}
+
+`);
+}, intro = (o2 = "", t2) => {
+  const i = t2?.output ?? process.stdout, e = t2?.withGuide ?? settings.withGuide ? `${styleText2("gray", S_BAR_START)}  ` : "";
+  i.write(`${e}${o2}
+`);
+}, outro = (o2 = "", t2) => {
+  const i = t2?.output ?? process.stdout, e = t2?.withGuide ?? settings.withGuide ? `${styleText2("gray", S_BAR)}
+${styleText2("gray", S_BAR_END)}  ` : "";
+  i.write(`${e}${o2}
+
+`);
+}, W = (l2) => styleText2("magenta", l2), spinner = ({
+  indicator: l2 = "dots",
+  onCancel: h2,
+  output: n2 = process.stdout,
+  cancelMessage: G,
+  errorMessage: O,
+  frames: E = unicode ? ["\u25D2", "\u25D0", "\u25D3", "\u25D1"] : ["\u2022", "o", "O", "0"],
+  delay: F = unicode ? 80 : 120,
+  signal: m2,
+  ...I
+} = {}) => {
+  const u3 = isCI();
+  let M2, T3, d = false, S = false, s = "", p2, w = performance.now();
+  const x = getColumns(n2), k = I?.styleFrame ?? W, g2 = (e) => {
+    const r2 = e > 1 ? O ?? settings.messages.error : G ?? settings.messages.cancel;
+    S = e === 1, d && (a2(r2, e), S && typeof h2 == "function" && h2());
+  }, f2 = () => g2(2), i = () => g2(1), A = () => {
+    process.on("uncaughtExceptionMonitor", f2), process.on("unhandledRejection", f2), process.on("SIGINT", i), process.on("SIGTERM", i), process.on("exit", g2), m2 && m2.addEventListener("abort", i);
+  }, H = () => {
+    process.removeListener("uncaughtExceptionMonitor", f2), process.removeListener("unhandledRejection", f2), process.removeListener("SIGINT", i), process.removeListener("SIGTERM", i), process.removeListener("exit", g2), m2 && m2.removeEventListener("abort", i);
+  }, y = () => {
+    if (p2 === undefined)
+      return;
+    u3 && n2.write(`
+`);
+    const r2 = wrapAnsi(p2, x, {
+      hard: true,
+      trim: false
+    }).split(`
+`);
+    r2.length > 1 && n2.write(import_sisteransi2.cursor.up(r2.length - 1)), n2.write(import_sisteransi2.cursor.to(0)), n2.write(import_sisteransi2.erase.down());
+  }, C2 = (e) => e.replace(/\.+$/, ""), _2 = (e) => {
+    const r2 = (performance.now() - e) / 1000, t2 = Math.floor(r2 / 60), o2 = Math.floor(r2 % 60);
+    return t2 > 0 ? `[${t2}m ${o2}s]` : `[${o2}s]`;
+  }, N = I.withGuide ?? settings.withGuide, P2 = (e = "") => {
+    d = true, M2 = block({ output: n2 }), s = C2(e), w = performance.now(), N && n2.write(`${styleText2("gray", S_BAR)}
+`);
+    let r2 = 0, t2 = 0;
+    A(), T3 = setInterval(() => {
+      if (u3 && s === p2)
+        return;
+      y(), p2 = s;
+      const o2 = k(E[r2]);
+      let v;
+      if (u3)
+        v = `${o2}  ${s}...`;
+      else if (l2 === "timer")
+        v = `${o2}  ${s} ${_2(w)}`;
+      else {
+        const B = ".".repeat(Math.floor(t2)).slice(0, 3);
+        v = `${o2}  ${s}${B}`;
+      }
+      const j = wrapAnsi(v, x, {
+        hard: true,
+        trim: false
+      });
+      n2.write(j), r2 = r2 + 1 < E.length ? r2 + 1 : 0, t2 = t2 < 4 ? t2 + 0.125 : 0;
+    }, F);
+  }, a2 = (e = "", r2 = 0, t2 = false) => {
+    if (!d)
+      return;
+    d = false, clearInterval(T3), y();
+    const o2 = r2 === 0 ? styleText2("green", S_STEP_SUBMIT) : r2 === 1 ? styleText2("red", S_STEP_CANCEL) : styleText2("red", S_STEP_ERROR);
+    s = e ?? s, t2 || (l2 === "timer" ? n2.write(`${o2}  ${s} ${_2(w)}
+`) : n2.write(`${o2}  ${s}
+`)), H(), M2();
+  };
+  return {
+    start: P2,
+    stop: (e = "") => a2(e, 0),
+    message: (e = "") => {
+      s = C2(e ?? s);
+    },
+    cancel: (e = "") => a2(e, 1),
+    error: (e = "") => a2(e, 2),
+    clear: () => a2("", 0, true),
+    get isCancelled() {
+      return S;
+    }
+  };
+}, u3, SELECT_INSTRUCTIONS, c2 = (t2, a2) => t2.includes(`
+`) ? t2.split(`
+`).map((i) => a2(i)).join(`
+`) : a2(t2), select = (t2) => {
+  const a2 = (i, m2) => {
+    const s = i.label ?? String(i.value);
+    switch (m2) {
+      case "disabled":
+        return `${styleText2("gray", S_RADIO_INACTIVE)} ${c2(s, (n2) => styleText2("gray", n2))}${i.hint ? ` ${styleText2("dim", `(${i.hint ?? "disabled"})`)}` : ""}`;
+      case "selected":
+        return `${c2(s, (n2) => styleText2("dim", n2))}`;
+      case "active":
+        return `${styleText2("green", S_RADIO_ACTIVE)} ${s}${i.hint ? ` ${styleText2("dim", `(${i.hint})`)}` : ""}`;
+      case "cancelled":
+        return `${c2(s, (n2) => styleText2(["strikethrough", "dim"], n2))}`;
+      default:
+        return `${styleText2("dim", S_RADIO_INACTIVE)} ${c2(s, (n2) => styleText2("dim", n2))}`;
+    }
+  };
+  return new a({
+    options: t2.options,
+    signal: t2.signal,
+    input: t2.input,
+    output: t2.output,
+    initialValue: t2.initialValue,
+    render() {
+      const i = t2.withGuide ?? settings.withGuide, m2 = `${symbol(this.state)}  `, s = `${symbolBar(this.state)}  `, n2 = wrapTextWithPrefix(t2.output, t2.message, s, m2), u4 = `${i ? `${styleText2("gray", S_BAR)}
+` : ""}${n2}
+`;
+      switch (this.state) {
+        case "submit": {
+          const r2 = i ? `${styleText2("gray", S_BAR)}  ` : "", o2 = wrapTextWithPrefix(t2.output, a2(this.options[this.cursor], "selected"), r2);
+          return `${u4}${o2}`;
+        }
+        case "cancel": {
+          const r2 = i ? `${styleText2("gray", S_BAR)}  ` : "", o2 = wrapTextWithPrefix(t2.output, a2(this.options[this.cursor], "cancelled"), r2);
+          return `${u4}${o2}${i ? `
+${styleText2("gray", S_BAR)}` : ""}`;
+        }
+        default: {
+          const r2 = i ? `${styleText2("cyan", S_BAR)}  ` : "", o2 = u4.split(`
+`).length, $ = formatInstructionFooter(SELECT_INSTRUCTIONS, i), h2 = $.join(`
+`), b2 = $.length + 1;
+          return `${u4}${r2}${limitOptions({
+            output: t2.output,
+            cursor: this.cursor,
+            options: this.options,
+            maxItems: t2.maxItems,
+            columnPadding: r2.length,
+            rowPadding: o2 + b2,
+            style: (p2, x) => a2(p2, p2.disabled ? "disabled" : x ? "active" : "inactive")
+          }).join(`
+${r2}`)}
+${h2}
+`;
+        }
+      }
+    }
+  }).prompt();
+}, i, text = (t2) => new n({
+  validate: t2.validate,
+  placeholder: t2.placeholder,
+  defaultValue: t2.defaultValue,
+  initialValue: t2.initialValue,
+  output: t2.output,
+  signal: t2.signal,
+  input: t2.input,
+  render() {
+    const i2 = t2?.withGuide ?? settings.withGuide, s = `${`${i2 ? `${styleText2("gray", S_BAR)}
+` : ""}${symbol(this.state)}  `}${t2.message}
+`, c3 = t2.placeholder ? styleText2("inverse", t2.placeholder[0]) + styleText2("dim", t2.placeholder.slice(1)) : styleText2(["inverse", "hidden"], "_"), o2 = this.userInput ? this.userInputWithCursor : c3, a2 = this.value ?? "";
+    switch (this.state) {
+      case "error": {
+        const n2 = this.error ? `  ${styleText2("yellow", this.error)}` : "", r2 = i2 ? `${styleText2("yellow", S_BAR)}  ` : "", d = i2 ? styleText2("yellow", S_BAR_END) : "";
+        return `${s.trim()}
+${r2}${o2}
+${d}${n2}
+`;
+      }
+      case "submit": {
+        const n2 = a2 ? `  ${styleText2("dim", a2)}` : "", r2 = i2 ? styleText2("gray", S_BAR) : "";
+        return `${s}${r2}${n2}`;
+      }
+      case "cancel": {
+        const n2 = a2 ? `  ${styleText2(["strikethrough", "dim"], a2)}` : "", r2 = i2 ? styleText2("gray", S_BAR) : "";
+        return `${s}${r2}${n2}${a2.trim() ? `
+${r2}` : ""}`;
+      }
+      default: {
+        const n2 = i2 ? `${styleText2("cyan", S_BAR)}  ` : "", r2 = i2 ? styleText2("cyan", S_BAR_END) : "";
+        return `${s}${n2}${o2}
+${r2}
+`;
+      }
+    }
+  }
+}).prompt();
+var init_dist5 = __esm(() => {
+  init_dist4();
+  init_dist4();
+  init_main();
+  init_dist3();
+  import_sisteransi2 = __toESM(require_src(), 1);
+  unicode = isUnicodeSupported();
+  S_STEP_ACTIVE = unicodeOr("\u25C6", "*");
+  S_STEP_CANCEL = unicodeOr("\u25A0", "x");
+  S_STEP_ERROR = unicodeOr("\u25B2", "x");
+  S_STEP_SUBMIT = unicodeOr("\u25C7", "o");
+  S_BAR_START = unicodeOr("\u250C", "T");
+  S_BAR = unicodeOr("\u2502", "|");
+  S_BAR_END = unicodeOr("\u2514", "\u2014");
+  S_BAR_START_RIGHT = unicodeOr("\u2510", "T");
+  S_BAR_END_RIGHT = unicodeOr("\u2518", "\u2014");
+  S_RADIO_ACTIVE = unicodeOr("\u25CF", ">");
+  S_RADIO_INACTIVE = unicodeOr("\u25CB", " ");
+  S_CHECKBOX_ACTIVE = unicodeOr("\u25FB", "[\u2022]");
+  S_CHECKBOX_SELECTED = unicodeOr("\u25FC", "[+]");
+  S_CHECKBOX_INACTIVE = unicodeOr("\u25FB", "[ ]");
+  S_PASSWORD_MASK = unicodeOr("\u25AA", "\u2022");
+  S_BAR_H = unicodeOr("\u2500", "-");
+  S_CORNER_TOP_RIGHT = unicodeOr("\u256E", "+");
+  S_CONNECT_LEFT = unicodeOr("\u251C", "+");
+  S_CORNER_BOTTOM_RIGHT = unicodeOr("\u256F", "+");
+  S_CORNER_BOTTOM_LEFT = unicodeOr("\u2570", "+");
+  S_CORNER_TOP_LEFT = unicodeOr("\u256D", "+");
+  S_INFO = unicodeOr("\u25CF", "\u2022");
+  S_SUCCESS = unicodeOr("\u25C6", "*");
+  S_WARN = unicodeOr("\u25B2", "!");
+  S_ERROR = unicodeOr("\u25A0", "x");
+  MULTISELECT_INSTRUCTIONS = [
+    `${styleText2("dim", "\u2191/\u2193")} to navigate`,
+    `${styleText2("dim", "Space:")} select`,
+    `${styleText2("dim", "Enter:")} confirm`
+  ];
+  u3 = {
+    light: unicodeOr("\u2500", "-"),
+    heavy: unicodeOr("\u2501", "="),
+    block: unicodeOr("\u2588", "#")
+  };
+  SELECT_INSTRUCTIONS = [
+    `${styleText2("dim", "\u2191/\u2193")} to navigate`,
+    `${styleText2("dim", "Enter:")} confirm`
+  ];
+  i = `${styleText2("gray", S_BAR)}  `;
+});
+
 // src/cli/commands/init.ts
 var exports_init2 = {};
 __export(exports_init2, {
@@ -17105,7 +18667,7 @@ var init_init2 = __esm(() => {
   init_out();
   init_journal_config();
   init_journal_remote();
-  init_prompt();
+  init_dist5();
   import_picocolors19 = __toESM(require_picocolors(), 1);
   init_default2 = defineCommand({
     meta: {
@@ -17131,6 +18693,10 @@ var init_init2 = __esm(() => {
     },
     async run({ args }) {
       ui.heading("dora init \u2014 Set up doraval, your journal, and the coding agent dora should use on the fly");
+      const isInteractive = process.stdout.isTTY && !process.env.CI;
+      if (isInteractive) {
+        intro("dora init");
+      }
       ui.write(`  ${import_picocolors19.default.bold(import_picocolors19.default.white("Step 1: Journal setup"))}
 `);
       const ghCheck = ensureGhCli();
@@ -17182,12 +18748,50 @@ var init_init2 = __esm(() => {
         ui.info(`  Journal repo ${import_picocolors19.default.dim("(owner/name)")}`);
         if (sourceNote)
           ui.write(sourceNote);
-        repo = prompt("  >", defaultRepo);
+        if (isInteractive) {
+          const result = await text({
+            message: "Journal repo (owner/name)",
+            placeholder: defaultRepo,
+            initialValue: defaultRepo,
+            validate(value) {
+              if (!value)
+                return "Repository is required";
+              return;
+            }
+          });
+          if (isCancel(result)) {
+            cancel("Setup cancelled.");
+            process.exit(0);
+          }
+          repo = result;
+        } else {
+          repo = defaultRepo;
+          ui.info(`  Using default (non-interactive): ${repo}`);
+        }
       }
       let project = args.project || process.env.DORAVAL_PROJECT;
       if (!project) {
         const defaultProject = basename7(process.cwd());
-        project = prompt("  Project name", defaultProject);
+        if (isInteractive) {
+          const result = await text({
+            message: "Project name",
+            placeholder: defaultProject,
+            initialValue: defaultProject,
+            validate(value) {
+              if (!value)
+                return "Project name is required";
+              return;
+            }
+          });
+          if (isCancel(result)) {
+            cancel("Setup cancelled.");
+            process.exit(0);
+          }
+          project = result;
+        } else {
+          project = defaultProject;
+          ui.info(`  Using default (non-interactive): ${project}`);
+        }
       }
       project = sanitizeProjectName(project);
       if (!repoExists(repo)) {
@@ -17225,6 +18829,9 @@ var init_init2 = __esm(() => {
       ensureDoravalDirs();
       ui.write(`  ${import_picocolors19.default.dim(import_picocolors19.default.gray("Fetching journal files from"))} ${import_picocolors19.default.gray(effectiveRepo)}${import_picocolors19.default.dim(import_picocolors19.default.gray("..."))}
 `);
+      const s = spinner();
+      if (isInteractive)
+        s.start("Fetching from GitHub");
       const globalDest = join34(journalsDir, "global.md");
       const refreshGlobalRes = await refreshLocalJournalFile(effectiveRepo, "global.md", globalDest);
       let wroteGlobal;
@@ -17232,6 +18839,8 @@ var init_init2 = __esm(() => {
         if (refreshGlobalRes.isNotFound) {
           wroteGlobal = false;
         } else {
+          if (isInteractive)
+            s.stop("Failed");
           ui.fail(`Failed to fetch global.md from ${effectiveRepo}:`);
           ui.info(refreshGlobalRes.error);
           process.exit(1);
@@ -17254,6 +18863,8 @@ Cross-project principles.
         if (refreshProjectRes.isNotFound) {
           wroteProject = false;
         } else {
+          if (isInteractive)
+            s.stop("Failed");
           ui.fail(`Failed to fetch ${remotePath} from ${effectiveRepo}:`);
           ui.info(refreshProjectRes.error);
           process.exit(1);
@@ -17270,6 +18881,8 @@ Cross-project principles.
 Project-specific decisions.
 `);
       }
+      if (isInteractive)
+        s.stop("Done");
       await writeConfig(config);
       ui.write(`
   ${import_picocolors19.default.green("\u2713")} ${import_picocolors19.default.white("Journal ready for project")} ${import_picocolors19.default.bold(import_picocolors19.default.white(project))}.
@@ -17280,8 +18893,19 @@ Project-specific decisions.
 `);
         ui.write(`    Current: ${import_picocolors19.default.dim(import_picocolors19.default.gray(existingAgent.command))}  template: ${import_picocolors19.default.dim(import_picocolors19.default.gray(existingAgent.prompt_template || "(default)"))}  cwd_flag: ${import_picocolors19.default.dim(import_picocolors19.default.gray(existingAgent.cwd_flag || "(none)"))}
 `);
-        const change = prompt("  Reconfigure / change the coding agent for on-the-fly enrichment? (y/N)", "n");
-        if (!/^y/i.test(String(change))) {
+        let shouldReconfigure = false;
+        if (isInteractive) {
+          const change = await confirm({
+            message: "Reconfigure / change the coding agent for on-the-fly enrichment?",
+            initialValue: false
+          });
+          if (isCancel(change)) {
+            cancel("Setup cancelled.");
+            process.exit(0);
+          }
+          shouldReconfigure = !!change;
+        }
+        if (!shouldReconfigure) {
           ui.dim(`  Keeping existing agent config. You can re-run dora init later to change it.
 `);
           const cfg = await readConfig() || { journal: { repo: effectiveRepo, projects: {} } };
@@ -17307,27 +18931,76 @@ Project-specific decisions.
         { name: "cursor", template: "", cwd_flag: "" }
       ];
       let detected = "";
-      for (const c of common) {
-        let probe = spawnSync6(["command", "-v", c.name], { stdout: "pipe", stderr: "pipe" });
+      for (const c3 of common) {
+        let probe = spawnSync6(["command", "-v", c3.name], { stdout: "pipe", stderr: "pipe" });
         if (probe.exitCode !== 0) {
-          probe = spawnSync6(["which", c.name], { stdout: "pipe", stderr: "pipe" });
+          probe = spawnSync6(["which", c3.name], { stdout: "pipe", stderr: "pipe" });
         }
         if (probe.exitCode === 0) {
-          detected = c.name;
+          detected = c3.name;
           break;
         }
       }
       let agentCmd = detected || "claude";
-      ui.write(`  Detected / default agent command: ${import_picocolors19.default.dim(import_picocolors19.default.gray(agentCmd))}`);
-      agentCmd = prompt("  Agent command (the binary you run for prompts)", agentCmd);
-      let template = detected ? common.find((c) => c.name === detected)?.template || '-p "{{prompt}}"' : '-p "{{prompt}}"';
-      ui.info(`  Prompt template (use {{prompt}} placeholder):`);
-      template = prompt("  ", template);
-      const detectedCommon = common.find((c) => c.name === detected);
-      let cwdFlag = detectedCommon?.cwd_flag ?? "";
-      if (detected) {
-        ui.info(`  Cwd flag (flag your agent uses to set working directory/repo, e.g. --cwd or -C; blank = rely on process cwd only):`);
-        cwdFlag = prompt("  ", cwdFlag);
+      let template = detected ? common.find((c3) => c3.name === detected)?.template || '-p "{{prompt}}"' : '-p "{{prompt}}"';
+      let cwdFlag = common.find((c3) => c3.name === detected)?.cwd_flag ?? "";
+      if (isInteractive) {
+        ui.write(`  Detected / default agent command: ${import_picocolors19.default.dim(import_picocolors19.default.gray(agentCmd))}`);
+        const agentOptions = [
+          ...common.map((c3) => ({
+            value: c3.name,
+            label: `${c3.name}${detected === c3.name ? " (detected)" : ""}`
+          })),
+          { value: "custom", label: "Custom command" }
+        ];
+        const agentChoice = await select({
+          message: "Agent command (the binary you run for prompts)",
+          options: agentOptions,
+          initialValue: detected || "claude"
+        });
+        if (isCancel(agentChoice)) {
+          cancel("Setup cancelled.");
+          process.exit(0);
+        }
+        if (agentChoice === "custom") {
+          const custom = await text({
+            message: "Agent command",
+            initialValue: agentCmd
+          });
+          if (isCancel(custom)) {
+            cancel("Setup cancelled.");
+            process.exit(0);
+          }
+          agentCmd = custom;
+        } else {
+          agentCmd = agentChoice;
+        }
+        const chosen = common.find((c3) => c3.name === agentCmd) || { template: '-p "{{prompt}}"', cwd_flag: "" };
+        template = chosen.template;
+        cwdFlag = chosen.cwd_flag ?? "";
+        ui.info(`  Prompt template (use {{prompt}} placeholder):`);
+        const tpl = await text({
+          message: "Prompt template",
+          initialValue: template
+        });
+        if (isCancel(tpl)) {
+          cancel("Setup cancelled.");
+          process.exit(0);
+        }
+        template = tpl;
+        if (agentCmd !== "cursor") {
+          const flag = await text({
+            message: "Cwd flag (e.g. --cwd or -C; blank = rely on process cwd only)",
+            initialValue: cwdFlag
+          });
+          if (isCancel(flag)) {
+            cancel("Setup cancelled.");
+            process.exit(0);
+          }
+          cwdFlag = flag;
+        }
+      } else {
+        ui.info(`  Using non-interactive defaults for agent: ${agentCmd}`);
       }
       const finalConfig = await readConfig() || { journal: { repo: effectiveRepo, projects: {} } };
       finalConfig.agent = {
@@ -17357,7 +19030,19 @@ Project-specific decisions.
           ]
         });
       }
-      const evalModelAnswer = await prompt(`  Which model should doraval eval use? ${import_picocolors19.default.dim("(e.g. glm-4, gpt-4o-mini, claude-3-5-sonnet-20241022)")} `, "");
+      let evalModelAnswer = "";
+      if (isInteractive) {
+        const model = await text({
+          message: "Which model should doraval eval use?",
+          placeholder: "glm-4, gpt-4o-mini, claude-3-5-sonnet-20241022",
+          initialValue: ""
+        });
+        if (isCancel(model)) {
+          cancel("Setup cancelled.");
+          process.exit(0);
+        }
+        evalModelAnswer = model;
+      }
       if (evalModelAnswer.trim()) {
         const updatedConfig2 = await readConfig();
         if (updatedConfig2) {
@@ -17373,8 +19058,12 @@ Project-specific decisions.
         ui.info("  Skipped. You can set later with: dora config set eval.model <model>");
         ui.info("  Eval will still work via your agent CLI.");
       }
-      ui.info(`  Next: ${import_picocolors19.default.dim(import_picocolors19.default.gray('dora journal add ".."'))}, ${import_picocolors19.default.dim(import_picocolors19.default.gray("dora journal list"))}, or ${import_picocolors19.default.dim(import_picocolors19.default.gray("dora journal update"))}.
+      if (isInteractive) {
+        outro('Setup complete. Try: dora journal add "..."');
+      } else {
+        ui.info(`  Next: ${import_picocolors19.default.dim(import_picocolors19.default.gray('dora journal add ".."'))}, ${import_picocolors19.default.dim(import_picocolors19.default.gray("dora journal list"))}, or ${import_picocolors19.default.dim(import_picocolors19.default.gray("dora journal update"))}.
 `);
+      }
       process.exit(0);
     }
   });
@@ -17383,19 +19072,19 @@ Project-specific decisions.
 // src/core/update.ts
 import { resolve as resolve29 } from "path";
 import { homedir as homedir5 } from "os";
-function normalizePath(p) {
-  return p.replace(/\\/g, "/").replace(/\/+$/, "");
+function normalizePath(p2) {
+  return p2.replace(/\\/g, "/").replace(/\/+$/, "");
 }
 function isInside(child, parent) {
-  const c = normalizePath(child);
-  const p = normalizePath(parent);
-  return c === p || c.startsWith(`${p}/`);
+  const c3 = normalizePath(child);
+  const p2 = normalizePath(parent);
+  return c3 === p2 || c3.startsWith(`${p2}/`);
 }
-async function realpathOrSelf(ctx, p) {
+async function realpathOrSelf(ctx, p2) {
   try {
-    return await ctx.realpath(p);
+    return await ctx.realpath(p2);
   } catch {
-    return p;
+    return p2;
   }
 }
 function markerMatchesCurrentInstall(marker, realEntry) {
@@ -17463,12 +19152,12 @@ async function detectInstallMethod(ctx, options) {
     return { type: "npm", source: "probe" };
   }
   if (options?.force) {
-    const f = options.force;
-    if (["homebrew", "npm", "bun"].includes(f)) {
-      return { type: f, source: "probe" };
+    const f2 = options.force;
+    if (["homebrew", "npm", "bun"].includes(f2)) {
+      return { type: f2, source: "probe" };
     }
-    if (f === "npx" || f === "bunx") {
-      return { type: "transient", via: f, source: "path" };
+    if (f2 === "npx" || f2 === "bunx") {
+      return { type: "transient", via: f2, source: "path" };
     }
   }
   const rawEntry = ctx.entrypoint ?? ctx.argv?.[1];
@@ -17512,7 +19201,7 @@ async function fetchLatestVersionInfo() {
       const ghData = await ghRes.json();
       const body = (ghData.body || "").trim();
       const lines = body.split(`
-`).filter((l) => l.trim().startsWith("-") || l.trim().startsWith("*")).slice(0, 2);
+`).filter((l2) => l2.trim().startsWith("-") || l2.trim().startsWith("*")).slice(0, 2);
       if (lines.length)
         summary = lines.join(" ").slice(0, 200);
       else if (body)
@@ -17538,12 +19227,12 @@ function buildUpgradeCommand(method) {
 function shouldUpdate(current, latest) {
   if (current === latest)
     return false;
-  const c = current.split(".").map(Number);
-  const l = latest.split(".").map(Number);
-  for (let i = 0;i < 3; i++) {
-    if ((l[i] || 0) > (c[i] || 0))
+  const c3 = current.split(".").map(Number);
+  const l2 = latest.split(".").map(Number);
+  for (let i2 = 0;i2 < 3; i2++) {
+    if ((l2[i2] || 0) > (c3[i2] || 0))
       return true;
-    if ((l[i] || 0) < (c[i] || 0))
+    if ((l2[i2] || 0) < (c3[i2] || 0))
       return false;
   }
   return false;
@@ -17580,8 +19269,8 @@ import { homedir as homedir6 } from "os";
 import { fileURLToPath as fileURLToPath2 } from "url";
 import { realpath, access } from "fs/promises";
 async function confirmUpdate() {
-  const { createInterface } = await import("readline");
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const { createInterface: createInterface2 } = await import("readline");
+  const rl = createInterface2({ input: process.stdin, output: process.stdout });
   return new Promise((resolve30) => {
     rl.question("Update now? (y/N) ", (answer) => {
       rl.close();
@@ -17590,8 +19279,8 @@ async function confirmUpdate() {
   });
 }
 async function promptInstallMethod() {
-  const { createInterface } = await import("readline");
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const { createInterface: createInterface2 } = await import("readline");
+  const rl = createInterface2({ input: process.stdin, output: process.stdout });
   return new Promise((resolve30) => {
     ui.info("How was doraval installed?");
     ui.info("  1. homebrew (brew tap + trust + brew install doraval)");
@@ -17599,14 +19288,14 @@ async function promptInstallMethod() {
     ui.info("  3. bun    (bun add -g @hacksmith/doraval)");
     rl.question("Enter 1, 2, or 3 (or q to cancel): ", (answer) => {
       rl.close();
-      const a = answer.trim().toLowerCase();
-      if (a === "1" || a === "homebrew")
+      const a2 = answer.trim().toLowerCase();
+      if (a2 === "1" || a2 === "homebrew")
         return resolve30("homebrew");
-      if (a === "2" || a === "npm")
+      if (a2 === "2" || a2 === "npm")
         return resolve30("npm");
-      if (a === "3" || a === "bun")
+      if (a2 === "3" || a2 === "bun")
         return resolve30("bun");
-      if (a === "q" || a === "quit" || a === "cancel")
+      if (a2 === "q" || a2 === "quit" || a2 === "cancel")
         return resolve30(null);
       ui.info("Invalid choice.");
       resolve30(null);
@@ -17647,10 +19336,10 @@ var init_update3 = __esm(() => {
         argv: process.argv,
         env: process.env,
         homeDir: homedir6(),
-        realpath: (p) => realpath(p),
-        exists: async (p) => {
+        realpath: (p2) => realpath(p2),
+        exists: async (p2) => {
           try {
-            await access(p);
+            await access(p2);
             return true;
           } catch {
             return false;
@@ -17664,13 +19353,13 @@ var init_update3 = __esm(() => {
       };
       let method;
       if (args.via) {
-        const f = args.via;
-        if (["homebrew", "npm", "bun"].includes(f)) {
-          method = { type: f, source: "user" };
-        } else if (f === "npx" || f === "bunx") {
-          method = { type: "transient", via: f, source: "path" };
+        const f2 = args.via;
+        if (["homebrew", "npm", "bun"].includes(f2)) {
+          method = { type: f2, source: "user" };
+        } else if (f2 === "npx" || f2 === "bunx") {
+          method = { type: "transient", via: f2, source: "path" };
         } else {
-          ui.fail(`Invalid --via value: "${f}". Valid: homebrew | npm | bun (or npx | bunx for transient).`);
+          ui.fail(`Invalid --via value: "${f2}". Valid: homebrew | npm | bun (or npx | bunx for transient).`);
           ui.info("Use --via to bypass detection for scripts/CI.");
           process.exit(2);
         }
@@ -17972,9 +19661,9 @@ var skill = defineCommand({
     description: "Validate, measure drift, run sessions with prompts, and judge AI agent skills"
   },
   subCommands: {
-    validate: () => Promise.resolve().then(() => (init_validate(), exports_validate)).then((m) => m.default),
-    drift: () => Promise.resolve().then(() => (init_drift(), exports_drift)).then((m) => m.default),
-    judge: () => Promise.resolve().then(() => (init_judge(), exports_judge)).then((m) => m.default)
+    validate: () => Promise.resolve().then(() => (init_validate(), exports_validate)).then((m2) => m2.default),
+    drift: () => Promise.resolve().then(() => (init_drift(), exports_drift)).then((m2) => m2.default),
+    judge: () => Promise.resolve().then(() => (init_judge(), exports_judge)).then((m2) => m2.default)
   },
   run() {
     const cliArgs = process.argv.slice(2);
@@ -17989,13 +19678,13 @@ var journal = defineCommand({
     description: "Decision & note memory (with optional pushback/tags) \u2014 record, view, and sync project principles and useful notes"
   },
   subCommands: {
-    init: () => Promise.resolve().then(() => (init_init(), exports_init)).then((m) => m.default),
-    list: () => Promise.resolve().then(() => (init_list(), exports_list)).then((m) => m.default),
-    context: () => Promise.resolve().then(() => (init_context(), exports_context)).then((m) => m.default),
-    hook: () => Promise.resolve().then(() => (init_hook(), exports_hook)).then((m) => m.default),
-    update: () => Promise.resolve().then(() => (init_update(), exports_update)).then((m) => m.default),
-    add: () => Promise.resolve().then(() => (init_add(), exports_add)).then((m) => m.default),
-    sync: () => Promise.resolve().then(() => (init_sync(), exports_sync)).then((m) => m.default)
+    init: () => Promise.resolve().then(() => (init_init(), exports_init)).then((m2) => m2.default),
+    list: () => Promise.resolve().then(() => (init_list(), exports_list)).then((m2) => m2.default),
+    context: () => Promise.resolve().then(() => (init_context(), exports_context)).then((m2) => m2.default),
+    hook: () => Promise.resolve().then(() => (init_hook(), exports_hook)).then((m2) => m2.default),
+    update: () => Promise.resolve().then(() => (init_update(), exports_update)).then((m2) => m2.default),
+    add: () => Promise.resolve().then(() => (init_add(), exports_add)).then((m2) => m2.default),
+    sync: () => Promise.resolve().then(() => (init_sync(), exports_sync)).then((m2) => m2.default)
   },
   run() {
     const cliArgs = process.argv.slice(2);
@@ -18004,15 +19693,15 @@ var journal = defineCommand({
     showUsage(journal);
   }
 });
-var config = () => Promise.resolve().then(() => (init_config(), exports_config)).then((m) => m.default);
+var config = () => Promise.resolve().then(() => (init_config(), exports_config)).then((m2) => m2.default);
 var claude = defineCommand({
   meta: {
     name: "claude",
     description: "Claude Code-specific commands (packaging, scaffolding, distribution)"
   },
   subCommands: {
-    new: () => Promise.resolve().then(() => (init_new(), exports_new)).then((m) => m.default),
-    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
+    new: () => Promise.resolve().then(() => (init_new(), exports_new)).then((m2) => m2.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m2) => m2.default)
   },
   run() {
     const cliArgs = process.argv.slice(2);
@@ -18027,8 +19716,8 @@ var codex = defineCommand({
     description: "Codex (OpenAI)-specific commands (packaging, scaffolding, distribution)"
   },
   subCommands: {
-    new: () => Promise.resolve().then(() => (init_new2(), exports_new2)).then((m) => m.default),
-    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
+    new: () => Promise.resolve().then(() => (init_new2(), exports_new2)).then((m2) => m2.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m2) => m2.default)
   },
   run() {
     const cliArgs = process.argv.slice(2);
@@ -18037,20 +19726,20 @@ var codex = defineCommand({
     showUsage(codex);
   }
 });
-var cursor = defineCommand({
+var cursor3 = defineCommand({
   meta: {
     name: "cursor",
     description: "Cursor-specific commands (packaging, scaffolding, distribution)"
   },
   subCommands: {
-    new: () => Promise.resolve().then(() => (init_new3(), exports_new3)).then((m) => m.default),
-    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
+    new: () => Promise.resolve().then(() => (init_new3(), exports_new3)).then((m2) => m2.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m2) => m2.default)
   },
   run() {
     const cliArgs = process.argv.slice(2);
     if (cliArgs[0] === "cursor" && cliArgs.length > 1)
       return;
-    showUsage(cursor);
+    showUsage(cursor3);
   }
 });
 var copilot = defineCommand({
@@ -18059,8 +19748,8 @@ var copilot = defineCommand({
     description: "Copilot CLI-specific commands (packaging, scaffolding, distribution)"
   },
   subCommands: {
-    new: () => Promise.resolve().then(() => (init_new4(), exports_new4)).then((m) => m.default),
-    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default)
+    new: () => Promise.resolve().then(() => (init_new4(), exports_new4)).then((m2) => m2.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m2) => m2.default)
   },
   run() {
     const cliArgs = process.argv.slice(2);
@@ -18102,7 +19791,7 @@ var ui2 = defineCommand({
     }
   },
   async run({ args }) {
-    await Promise.resolve().then(() => (init_ui(), exports_ui)).then((m) => m.default.run({ args }));
+    await Promise.resolve().then(() => (init_ui(), exports_ui)).then((m2) => m2.default.run({ args }));
   }
 });
 var doraemonArt = `
@@ -18124,19 +19813,19 @@ var main = defineCommand({
     description: "Scale your AI context for coding agents. Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents."
   },
   subCommands: {
-    validate: () => Promise.resolve().then(() => (init_validate_top(), exports_validate_top)).then((m) => m.default),
-    init: () => Promise.resolve().then(() => (init_init2(), exports_init2)).then((m) => m.default),
-    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m) => m.default),
-    update: () => Promise.resolve().then(() => (init_update3(), exports_update2)).then((m) => m.default),
-    providers: () => Promise.resolve().then(() => (init_providers2(), exports_providers)).then((m) => m.default),
-    completion: () => Promise.resolve().then(() => (init_completion(), exports_completion)).then((m) => m.default),
+    validate: () => Promise.resolve().then(() => (init_validate_top(), exports_validate_top)).then((m2) => m2.default),
+    init: () => Promise.resolve().then(() => (init_init2(), exports_init2)).then((m2) => m2.default),
+    bump: () => Promise.resolve().then(() => (init_bump(), exports_bump)).then((m2) => m2.default),
+    update: () => Promise.resolve().then(() => (init_update3(), exports_update2)).then((m2) => m2.default),
+    providers: () => Promise.resolve().then(() => (init_providers2(), exports_providers)).then((m2) => m2.default),
+    completion: () => Promise.resolve().then(() => (init_completion(), exports_completion)).then((m2) => m2.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
-    eval: () => Promise.resolve().then(() => (init_eval(), exports_eval)).then((m) => m.default),
+    eval: () => Promise.resolve().then(() => (init_eval(), exports_eval)).then((m2) => m2.default),
     config,
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),
-    cursor: () => Promise.resolve(cursor),
+    cursor: () => Promise.resolve(cursor3),
     copilot: () => Promise.resolve(copilot),
     ui: () => Promise.resolve(ui2)
   },

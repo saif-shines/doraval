@@ -57,6 +57,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@clack/prompts": "^1.6.0",
     "citty": "^0.2.2",
     "openai": "^6.44.0",
     "picocolors": "^1.1.1"

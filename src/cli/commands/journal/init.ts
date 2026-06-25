@@ -48,7 +48,7 @@ export default defineCommand({
 
   async run({ args }) {
     ui.write(
-      `\n  ${pc.bold(pc.white("dora journal init"))} (or top-level ${pc.dim(pc.gray("dora init"))}) — Set up your journal\n`
+      `\n  ${pc.bold(pc.white("dora journal init"))} (or top-level ${pc.dim(pc.gray("dora init"))}) — Set up decision memory (journal for scaling AI context)\n`
     );
 
     // ── 0. Check gh CLI is available ───────────────────────────────
@@ -97,7 +97,7 @@ export default defineCommand({
       const existingConfig = await readConfig();
       if (existingConfig?.journal.repo) {
         defaultRepo = existingConfig.journal.repo;
-        sourceNote = `  ${pc.dim("(from your previous journal setup)")}\n`;
+        sourceNote = `  ${pc.dim("(from your previous decision memory setup)")}\n`;
       }
 
       ui.write(`  Journal repo ${pc.dim(pc.gray("(owner/name)"))}`);
