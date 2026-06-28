@@ -57,9 +57,13 @@
   },
   "type": "module",
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.2",
+    "@ai-sdk/openai-compatible": "^3.0.1",
     "@clack/prompts": "^1.6.0",
+    "ai": "^7.0.4",
     "citty": "^0.2.2",
     "openai": "^6.44.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "zod": "^4.4.3"
   }
 }

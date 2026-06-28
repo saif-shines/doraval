@@ -1,24 +1,83 @@
-import OpenAI from "openai";
+import { generateObject } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { z } from "zod";
 import type { EvalConfig } from "./journal-config.js";
+import {
+  PROVIDERS,
+  ALL_PROVIDER_ENV_KEYS,
+  detectEnvProvider,
+  findProvider,
+  type ProviderDef,
+} from "./providers.js";
 
-// Shared JSON extraction (also used by CLI agent path for compatibility)
+export const DEFAULT_JUDGE_TIMEOUT_MS = 60_000;
+
+// ── Output schema ──────────────────────────────────────────────────────────────
+
+export const JudgeSchema = z.object({
+  verdict: z.enum(["PASS", "FAIL"]),
+  verdictReason: z.string(),
+  checklist: z.array(
+    z.object({
+      instruction: z.string(),
+      pass: z.boolean(),
+      detail: z.string().optional(),
+    })
+  ),
+  userFamiliarity: z.number().int().min(1).max(10),
+  userFamiliarityReason: z.string(),
+  closure: z.enum(["1-shot", "multi-turn", "incomplete"]),
+  userTurnsAfterSkill: z.number().int().min(0),
+});
+
+export type JudgeOutput = z.infer<typeof JudgeSchema>;
+
+export type JudgeErrorCode =
+  | "timeout"
+  | "network"
+  | "rate_limit"
+  | "auth"
+  | "model"
+  | "parse"
+  | "empty"
+  | "config";
+
+export type JudgeResult =
+  | { success: true; data: JudgeOutput }
+  | { success: false; error: string; code?: JudgeErrorCode };
+
+// ── JSON extraction for CLI agent path (stdout parsing) ────────────────────────
+
+/** Remove reasoning-model think blocks before JSON extraction. */
+export function stripReasoningArtifacts(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+}
+
+/** Extract JSON candidates from CLI agent stdout (not used for API path). */
 export function extractCandidates(text: string): Record<string, unknown>[] {
-  let cleaned = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
+  const cleaned = stripReasoningArtifacts(text)
+    .replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1")
+    .trim();
 
   const candidates: Record<string, unknown>[] = [];
-  const allMatches = cleaned.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
   const fullMatch = cleaned.match(/\{[\s\S]*\}/);
   if (fullMatch) {
-    try { candidates.push(JSON.parse(fullMatch[0]) as Record<string, unknown>); } catch {}
+    try {
+      candidates.push(JSON.parse(fullMatch[0]) as Record<string, unknown>);
+    } catch {}
   }
+  const allMatches = cleaned.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
   for (const m of allMatches) {
-    try { candidates.push(JSON.parse(m) as Record<string, unknown>); } catch {}
+    try {
+      candidates.push(JSON.parse(m) as Record<string, unknown>);
+    } catch {}
   }
-
-  if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
+  if (cleaned.startsWith("{") || cleaned.startsWith("[")) {
     try {
       const direct = JSON.parse(cleaned);
-      if (direct && typeof direct === 'object') candidates.push(direct as Record<string, unknown>);
+      if (direct && typeof direct === "object")
+        candidates.push(direct as Record<string, unknown>);
     } catch {}
   }
 
@@ -26,181 +85,212 @@ export function extractCandidates(text: string): Record<string, unknown>[] {
   for (const c of candidates) {
     if (c.result) {
       let inner = c.result;
-      if (typeof inner === "string") { try { inner = JSON.parse(inner); } catch {} }
-      if (inner && typeof inner === "object") unwrapped.push(inner as Record<string, unknown>);
+      if (typeof inner === "string") {
+        try {
+          inner = JSON.parse(inner);
+        } catch {}
+      }
+      if (inner && typeof inner === "object")
+        unwrapped.push(inner as Record<string, unknown>);
     }
     unwrapped.push(c);
   }
 
-  function collectObjects(obj: any, out: any[] = []): any[] {
-    if (!obj || typeof obj !== 'object') return out;
+  function collectObjects(obj: unknown, out: Record<string, unknown>[] = []): Record<string, unknown>[] {
+    if (!obj || typeof obj !== "object") return out;
     if (Array.isArray(obj)) {
       for (const item of obj) collectObjects(item, out);
     } else {
-      out.push(obj);
+      out.push(obj as Record<string, unknown>);
       for (const v of Object.values(obj)) collectObjects(v, out);
     }
     return out;
   }
 
   const nested: Record<string, unknown>[] = [];
-  for (const c of [...candidates, ...unwrapped]) {
-    collectObjects(c, nested);
-  }
+  for (const c of [...candidates, ...unwrapped]) collectObjects(c, nested);
 
   return [...unwrapped, ...nested];
 }
 
-export type JudgeResult =
-  | { success: true; data: Record<string, unknown> }
-  | { success: false; error: string };
+// ── Credential resolution ──────────────────────────────────────────────────────
 
-// Declarative provider configuration for maintainability.
-// We only need to know the base for glm* models; users on special plans
-// (e.g. GLM Coding Plan) can override with OPENAI_BASE_URL or eval.base_url.
-interface LLMProvider {
-  name: string;
-  prefixes: string[];
-  baseURL: string;
-  keyEnvVars: string[];
-}
+export type DirectCredentials = {
+  apiKey?: string;
+  baseUrl: string;
+  model: string;
+  providerName: string;
+};
 
-const PROVIDERS: LLMProvider[] = [
-  {
-    name: 'zai',
-    prefixes: ['glm', 'z.ai', 'zhipu'],
-    baseURL: 'https://api.z.ai/api/paas/v4',
-    keyEnvVars: ['ZAI_API_KEY', 'ZHIPU_API_KEY', 'GLM_API_KEY'],
-  },
-  // Future providers (OpenAI, Groq, etc.) can be added here declaratively.
-];
-
-function resolveProvider(model: string): LLMProvider | undefined {
-  const m = (model || '').toLowerCase();
-  return PROVIDERS.find((p) =>
-    p.prefixes.some((prefix) => m.includes(prefix))
-  );
-}
-
-function resolveApiKey(cfg: EvalConfig): string | undefined {
-  if (cfg.api_key) return cfg.api_key;
-
-  // Check in priority order from providers + common fallbacks
-  const allKeys = [
-    ...PROVIDERS.flatMap((p) => p.keyEnvVars),
-    'OPENAI_API_KEY',
-    'ANTHROPIC_API_KEY',
-  ];
-
-  for (const key of allKeys) {
-    const val = (process.env as Record<string, string | undefined>)[key];
+function resolveApiKey(evalCfg: Partial<EvalConfig>, providerDef: ProviderDef): string | undefined {
+  if (evalCfg.api_key) return evalCfg.api_key;
+  const keysToCheck = [providerDef.envKey, ...providerDef.altEnvKeys, ...ALL_PROVIDER_ENV_KEYS];
+  for (const k of keysToCheck) {
+    const val = process.env[k];
     if (val) return val;
   }
   return undefined;
 }
 
-function resolveBaseURL(cfg: EvalConfig, model: string): string {
-  if (cfg.base_url) return cfg.base_url;
-
-  // Support common ways users set custom base URLs (works from .env, shell, etc.).
-  // OPENAI_BASE_URL is the standard convention (OpenAI SDK, LiteLLM, etc.).
-  // ZAI_BASE_URL is also supported for users who prefer ZAI_* naming.
-  if (process.env.ZAI_BASE_URL) return process.env.ZAI_BASE_URL;
-  if (process.env.OPENAI_BASE_URL) return process.env.OPENAI_BASE_URL;
-
-  const provider = resolveProvider(model);
-  if (provider) {
-    // Default to the general endpoint for glm models.
-    // Users on special plans (e.g. GLM Coding Plan) or with proxies
-    // can override with OPENAI_BASE_URL / ZAI_BASE_URL or eval.base_url.
-    return provider.baseURL;
+function resolveProviderDef(evalCfg: Partial<EvalConfig>): ProviderDef {
+  if (evalCfg.provider) {
+    const p = findProvider(evalCfg.provider);
+    if (p) return p;
   }
-
-  return 'https://api.openai.com/v1';
+  // Detect from env
+  const detected = detectEnvProvider();
+  if (detected) return detected.provider;
+  // Fall back to custom (base_url may be set)
+  return findProvider("custom")!;
 }
 
-export function canUseApiJudge(evalCfg: EvalConfig): boolean {
+/** Shared credential resolution used by judge, init, and canUseApiJudge. */
+export function resolveDirectCredentials(evalCfg: Partial<EvalConfig>): DirectCredentials {
+  const model = (evalCfg.model ?? "").trim() || "gpt-4o-mini";
+  const providerDef = resolveProviderDef(evalCfg);
+  const baseUrl = evalCfg.base_url?.trim() || providerDef.baseUrl || "https://api.openai.com/v1";
+  return {
+    apiKey: resolveApiKey(evalCfg, providerDef),
+    baseUrl,
+    model,
+    providerName: providerDef.name,
+  };
+}
+
+/** True when direct API calls are plausible (key, base URL, or matching env var). */
+export function canUseApiJudge(evalCfg: Partial<EvalConfig>): boolean {
   if (evalCfg.base_url) return true;
   if (evalCfg.api_key) return true;
-
-  // Also enable API path if user has set a custom base URL via env
-  // (they likely intend to use direct API)
   if (process.env.ZAI_BASE_URL || process.env.OPENAI_BASE_URL) return true;
-
-  const provider = resolveProvider(evalCfg.model || '');
-  const envKeys = provider
-    ? provider.keyEnvVars
-    : ['ZAI_API_KEY', 'ZHIPU_API_KEY', 'GLM_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'];
-
-  return envKeys.some((k) => !!(process.env as any)[k]);
+  const creds = resolveDirectCredentials(evalCfg);
+  return !!creds.apiKey;
 }
 
+/** Alias for init UX: any env or config that enables the direct path. */
+export function hasDirectApiCredentials(evalCfg?: Partial<EvalConfig> | null): boolean {
+  return canUseApiJudge(evalCfg ?? {});
+}
+
+// ── Provider factory ───────────────────────────────────────────────────────────
+
+function makeProvider(baseUrl: string, apiKey: string, providerName: string) {
+  if (providerName === "openai" || baseUrl === "https://api.openai.com/v1") {
+    return createOpenAI({ apiKey, baseURL: baseUrl });
+  }
+  return createOpenAICompatible({
+    name: providerName,
+    apiKey,
+    baseURL: baseUrl.replace(/\/+$/, ""),
+  });
+}
+
+// ── Error mapping ──────────────────────────────────────────────────────────────
+
+function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: JudgeErrorCode } {
+  const err = e as {
+    name?: string;
+    message?: string;
+    code?: string;
+    status?: number;
+    hostname?: string;
+    response?: { data?: unknown };
+  };
+  const msg = typeof err?.message === "string" ? err.message : "Judge API request failed";
+  const lower = msg.toLowerCase();
+
+  if (
+    err?.name === "AbortError" ||
+    lower.includes("aborted") ||
+    lower.includes("this operation was aborted") ||
+    lower.includes("timeout")
+  ) {
+    return {
+      code: "timeout",
+      error: `Request timed out after ${Math.round(timeoutMs / 1000)}s. Try again, use a faster model, or set eval.judge=cli.`,
+    };
+  }
+  if (err?.code === "ENOTFOUND" || err?.code === "ECONNREFUSED" || err?.code === "ETIMEDOUT") {
+    const host = err.hostname ? ` (${err.hostname})` : "";
+    return {
+      code: "network",
+      error: `Cannot connect to judge API${host}. Check internet / eval.base_url / OPENAI_BASE_URL.`,
+    };
+  }
+  if (err?.status === 429) {
+    return {
+      code: "rate_limit",
+      error: "Rate limit exceeded. Wait and retry, or set eval.judge=cli.",
+    };
+  }
+  if (err?.status === 401 || err?.status === 403) {
+    return {
+      code: "auth",
+      error: "API rejected credentials (401/403). Check your API key matches the provider.",
+    };
+  }
+  if (
+    err?.status === 404 ||
+    (lower.includes("model") &&
+      (lower.includes("not found") || lower.includes("does not exist") || lower.includes("deprecated")))
+  ) {
+    return {
+      code: "model",
+      error: `Model not available or deprecated. Set eval.model to a supported id, or use eval.judge=cli.`,
+    };
+  }
+  let error = `Judge API error${err?.status ? ` (${err.status})` : ""}: ${msg}`;
+  if (err?.response?.data) {
+    try { error += ` — ${JSON.stringify(err.response.data).slice(0, 200)}`; } catch {}
+  }
+  return { code: "network", error };
+}
+
+// ── invokeJudge ────────────────────────────────────────────────────────────────
+
 /**
- * Calls an LLM directly via OpenAI-compatible API for eval judging.
- * Uses the official OpenAI SDK for broad compatibility (GLM, OpenAI, etc.).
- * We default glm models to Z.AI's general endpoint. Users don't need to
- * tell us their plan — they can override base_url if needed.
- * Returns a structured result instead of mutating global state.
+ * Calls an LLM directly via Vercel AI SDK for eval judging.
+ * Uses generateObject + Zod schema for typed, validated output.
+ * Supports any OpenAI-compatible provider via the PROVIDERS registry.
  */
 export async function invokeJudge(
   promptText: string,
-  evalCfg: EvalConfig
+  evalCfg: EvalConfig,
+  opts?: { timeoutMs?: number }
 ): Promise<JudgeResult> {
-  const model = (evalCfg.model || '').trim() || 'gpt-4o-mini';
-  const apiKey = resolveApiKey(evalCfg);
-  const baseURL = resolveBaseURL(evalCfg, model);
+  const timeoutMs = opts?.timeoutMs ?? DEFAULT_JUDGE_TIMEOUT_MS;
+  const { apiKey, baseUrl, model, providerName } = resolveDirectCredentials(evalCfg);
 
   if (!apiKey) {
+    const detected = detectEnvProvider();
+    const hint = detected
+      ? `Set ${detected.provider.envKey} in your environment.`
+      : `Set one of: ${PROVIDERS.filter((p) => p.requiresApiKey).map((p) => p.envKey).join(", ")}.`;
     return {
       success: false,
-      error: 'No API key for eval judge (set ZAI_API_KEY / OPENAI_API_KEY, or eval.api_key).',
+      code: "config",
+      error: `No API key for eval judge. ${hint} Or set eval.judge=cli to use your coding agent.`,
     };
   }
 
-  const client = new OpenAI({
-    apiKey,
-    baseURL: baseURL.replace(/\/+$/, ''),
-  });
+  const provider = makeProvider(baseUrl, apiKey, providerName);
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
 
   try {
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a strict evaluator. Return ONLY a single valid JSON object. No markdown, no prose, no fences.',
-        },
-        { role: 'user', content: promptText },
-      ],
+    const { object } = await generateObject({
+      model: provider(model),
+      schema: JudgeSchema,
+      system:
+        "You are a strict evaluator. Return ONLY a valid JSON object matching the schema exactly. No markdown, no prose.",
+      prompt: promptText,
       temperature: 0,
-      ...(model.startsWith('claude') ? {} : { response_format: { type: 'json_object' } }),
+      abortSignal: abortController.signal,
     });
-
-    const content: string = completion.choices?.[0]?.message?.content ?? '';
-
-    if (typeof content !== 'string' || !content.trim()) {
-      return { success: false, error: 'Judge API returned empty content' };
-    }
-
-    const candidates = extractCandidates(content);
-    for (const c of candidates) {
-      if ('verdict' in c || 'checklist' in c) {
-        return { success: true, data: c };
-      }
-    }
-    if (candidates[0]) {
-      return { success: true, data: candidates[0] };
-    }
-    return { success: false, error: 'No usable JSON found in judge response' };
-  } catch (e: any) {
-    const msg = e?.message || 'Judge API request failed';
-    const status = e?.status ? ` (status ${e.status})` : '';
-    let error = `Judge API error${status}: ${msg}`;
-    if (e?.response?.data) {
-      try {
-        error += ` — ${JSON.stringify(e.response.data).slice(0, 300)}`;
-      } catch {}
-    }
-    return { success: false, error };
+    return { success: true, data: object };
+  } catch (e: unknown) {
+    const mapped = mapJudgeError(e, timeoutMs);
+    return { success: false, error: mapped.error, code: mapped.code };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

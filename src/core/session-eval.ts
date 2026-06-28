@@ -1,6 +1,6 @@
 import type { AgentConfig } from "./agent-invoke.js";
 import { invokeAgent, getLastInvokeError } from "./agent-invoke.js";
-import { invokeJudge, canUseApiJudge, type JudgeResult } from "./llm-judge.js";
+import { invokeJudge, canUseApiJudge, type JudgeResult, type JudgeOutput } from "./llm-judge.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
 
@@ -125,8 +125,9 @@ export async function runEval(
 
   const preference = evalCfg.judge ?? 'auto';
 
-  let raw: Record<string, unknown> | null = null;
+  let judged: JudgeOutput | null = null;
   let judgeError: string | undefined;
+  let judgeCode: string | undefined;
 
   const shouldTryApi =
     preference !== 'cli' &&
@@ -136,35 +137,45 @@ export async function runEval(
   if (shouldTryApi) {
     const result: JudgeResult = await invokeJudge(prompt, evalCfg);
     if (result.success) {
-      raw = result.data;
+      judged = result.data;
     } else {
       judgeError = result.error;
+      judgeCode = result.code;
     }
   }
 
-  if (!raw && preference !== 'api') {
-    // Fallback to (or use) agent CLI
-    raw = await invokeAgent(prompt, agentCfg, ["verdict", "checklist"]);
+  // Fallback: CLI agent returns Record<string, unknown>; map it to JudgeOutput shape
+  if (!judged && preference !== 'api') {
+    const raw = await invokeAgent(prompt, agentCfg, ["verdict", "checklist"]);
+    if (raw && typeof raw.verdict === "string" && Array.isArray(raw.checklist)) {
+      judged = {
+        verdict: raw.verdict === "PASS" ? "PASS" : "FAIL",
+        verdictReason: typeof raw.verdictReason === "string" ? raw.verdictReason : "",
+        checklist: (raw.checklist as unknown[]).map((item) => {
+          const i = item as Record<string, unknown>;
+          return {
+            instruction: typeof i.instruction === "string" ? i.instruction : "unknown",
+            pass: i.pass === true,
+            detail: typeof i.detail === "string" ? i.detail : undefined,
+          };
+        }),
+        userFamiliarity: typeof raw.userFamiliarity === "number" ? raw.userFamiliarity : 0,
+        userFamiliarityReason: typeof raw.userFamiliarityReason === "string" ? raw.userFamiliarityReason : "",
+        closure: (raw.closure as JudgeOutput["closure"]) ?? "incomplete",
+        userTurnsAfterSkill: typeof raw.userTurnsAfterSkill === "number" ? raw.userTurnsAfterSkill : 0,
+      };
+    }
   }
 
-  if (!raw) {
+  if (!judged) {
     const err = judgeError || getLastInvokeError();
-    return makeUnknownResult(primitives, skillName, err ? `LLM call failed: ${err}` : "LLM call failed — no response");
+    const codeSuffix = judgeCode ? ` [${judgeCode}]` : "";
+    return makeUnknownResult(
+      primitives,
+      skillName,
+      err ? `LLM call failed${codeSuffix}: ${err}` : "LLM call failed — no response"
+    );
   }
-
-  // Validate shape
-  if (typeof raw.verdict !== "string" || !Array.isArray(raw.checklist)) {
-    return makeUnknownResult(primitives, skillName, "LLM returned malformed response");
-  }
-
-  const checklist: ChecklistItem[] = (raw.checklist as unknown[]).map((item) => {
-    const i = item as Record<string, unknown>;
-    return {
-      instruction: typeof i.instruction === "string" ? i.instruction : "unknown",
-      pass: i.pass === true,
-      detail: typeof i.detail === "string" ? i.detail : undefined,
-    };
-  });
 
   return {
     schemaVersion: 1,
@@ -174,14 +185,14 @@ export async function runEval(
     agent: primitives.agent,
     model: primitives.model,
     skill: skillName,
-    userFamiliarity: typeof raw.userFamiliarity === "number" ? raw.userFamiliarity : 0,
-    userFamiliarityReason: typeof raw.userFamiliarityReason === "string" ? raw.userFamiliarityReason : "",
-    closure: (raw.closure as EvalResult["closure"]) ?? "incomplete",
-    userTurnsAfterSkill: typeof raw.userTurnsAfterSkill === "number" ? raw.userTurnsAfterSkill : 0,
+    userFamiliarity: judged.userFamiliarity,
+    userFamiliarityReason: judged.userFamiliarityReason,
+    closure: judged.closure,
+    userTurnsAfterSkill: judged.userTurnsAfterSkill,
     skillsInvoked: primitives.skillsInvoked,
     toolCallCounts: primitives.toolCallCounts,
-    verdict: raw.verdict === "PASS" ? "PASS" : raw.verdict === "FAIL" ? "FAIL" : "UNKNOWN",
-    verdictReason: typeof raw.verdictReason === "string" ? raw.verdictReason : "",
-    checklist,
+    verdict: judged.verdict,
+    verdictReason: judged.verdictReason,
+    checklist: judged.checklist,
   };
 }

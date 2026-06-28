@@ -12,6 +12,8 @@ export interface ProjectMapping {
 
 export interface EvalConfig {
   model: string;
+  /** Provider name from the PROVIDERS registry (e.g. "openai", "zai", "groq"). */
+  provider?: string;
   api_key?: string;
   base_url?: string;
   max_tool_calls: number;

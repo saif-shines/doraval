@@ -1,5 +1,5 @@
 import { spawnSync } from "bun";
-import { extractCandidates, canUseApiJudge as _canUseApiJudge, invokeJudge as _invokeJudge } from "./llm-judge.js";
+import { canUseApiJudge as _canUseApiJudge, invokeJudge as _invokeJudge } from "./llm-judge.js";
 
 // Re-exports for backward compatibility during transition
 export { canUseApiJudge } from "./llm-judge.js";

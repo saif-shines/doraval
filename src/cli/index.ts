@@ -53,6 +53,21 @@ const journal = defineCommand({
 
 
 
+const evals = defineCommand({
+  meta: {
+    name: "evals",
+    description: "Manage eval configuration (LLM vendor, model, judge settings)",
+  },
+  subCommands: {
+    setup: () => import("./commands/evals/setup.js").then((m) => m.default),
+  },
+  run() {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "evals" && cliArgs.length > 1) return;
+    showUsage(evals);
+  },
+});
+
 // config command module already defines its own subCommands (set/get)
 const config = () => import("./commands/config.js").then((m) => m.default);
 
@@ -190,6 +205,7 @@ const main = defineCommand({
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
     eval: () => import("./commands/eval.js").then((m) => m.default),
+    evals: () => Promise.resolve(evals),
     config: config,
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),
