@@ -128,41 +128,60 @@ Results are saved (by default) under `~/.doraval/evals/`.
 `eval` requires an agent to be configured:
 
 ```bash
-dora init (sets up decision memory for scaling context)
+dora init
 ```
 
-During init you will be asked for the model to use for judging. You can also set it later:
+Step 3 of `init` walks you through choosing an LLM vendor for the judge. You can re-run just that step at any time:
 
 ```bash
-dora config set eval.model claude-sonnet-4-6
-dora config get eval.model
+dora evals setup
 ```
 
-The judge can use your coding agent CLI, **or call an LLM directly via API** (no proxy or gateway server required).
+See [evals setup](/commands/evals-setup/) for the full interactive flow.
 
-For cheap dev evals:
-- `doraval config set eval.model glm-5-turbo`
-- Set `ZAI_API_KEY` (or `ZHIPU_API_KEY`) in your environment
+### Supported vendors
 
-We default `glm*` models to the general Z.AI endpoint (`https://api.z.ai/api/paas/v4`).
+Any OpenAI-compatible provider works. These are built in (base URL auto-filled):
 
-You don't need to tell doraval which plan you're on.
+| Vendor | Env var | Notes |
+|--------|---------|-------|
+| **OpenAI** | `OPENAI_API_KEY` | `gpt-4o-mini` recommended for cost |
+| **Z.ai / GLM** | `ZAI_API_KEY` | `glm-4-flash` recommended — fast + cheap |
+| **Groq** | `GROQ_API_KEY` | `llama-3.1-8b-instant` for speed |
+| **OpenRouter** | `OPENROUTER_API_KEY` | Access Claude, Gemini, etc. via one key |
+| **Anthropic** | `ANTHROPIC_API_KEY` | Via OpenAI-compatible endpoint |
+| **Custom** | any | Provide your own base URL |
 
-To use a different endpoint (e.g. Coding Plan, self-hosted, LiteLLM proxy, etc.), set one of these:
+### Manual config
 
 ```bash
-OPENAI_BASE_URL=https://api.z.ai/api/coding/paas/v4
-# or
-ZAI_BASE_URL=https://api.z.ai/api/coding/paas/v4
+dora config set eval.model glm-4-flash
+dora config set eval.provider zai
+dora config get eval
 ```
 
-You can also set it permanently:
+To use a custom endpoint (self-hosted, LiteLLM proxy, etc.):
 
 ```bash
-doraval config set eval.base_url https://api.z.ai/api/coding/paas/v4
+OPENAI_BASE_URL=https://your-proxy.example.com/v1 dora eval
+# or permanently:
+dora config set eval.base_url https://your-proxy.example.com/v1
 ```
 
-`glm-5-turbo` is recommended for the judge (fast + cheap). See https://docs.z.ai for current model names. Works with any OpenAI-compatible provider. Falls back to your agent CLI if no API key is available.
+### Judge mode
+
+By default doraval prefers the direct API when credentials are present, and falls back to your coding agent CLI:
+
+```bash
+# Force direct API only (error if no key)
+dora config set eval.judge api
+
+# Force CLI only (uses your coding agent)
+dora config set eval.judge cli
+
+# Default: API if available, CLI fallback
+dora config set eval.judge auto
+```
 
 ## Options
 

@@ -1,0 +1,77 @@
+---
+title: evals setup
+description: Configure the LLM vendor and model doraval uses for eval judging.
+sidebar:
+  order: 2.6
+---
+
+`dora evals setup` lets you pick or change the LLM vendor for eval judging without re-running the full `dora init` flow.
+
+## Usage
+
+```bash
+dora evals setup
+```
+
+## What it does
+
+Walks an interactive wizard with three prompts:
+
+1. **Which LLM vendor?** — select from built-in providers or choose Custom.
+2. **API key** — skipped if a matching env var is already set (e.g. `ZAI_API_KEY`). Otherwise stored in `~/.doraval/config.yml`.
+3. **Which model?** — fetches a live model list from the provider's `/v1/models` endpoint after the key is resolved. Provider defaults appear at the top marked *recommended*. Falls back to hardcoded defaults if the fetch fails.
+
+The result is written to your existing `~/.doraval/config.yml` under `eval.provider` and `eval.model`.
+
+## Supported vendors
+
+| Vendor | Env var | Recommended model |
+|--------|---------|-------------------|
+| **OpenAI** | `OPENAI_API_KEY` | `gpt-4o-mini` |
+| **Z.ai / GLM** | `ZAI_API_KEY` | `glm-4-flash` |
+| **Groq** | `GROQ_API_KEY` | `llama-3.1-8b-instant` |
+| **OpenRouter** | `OPENROUTER_API_KEY` | `anthropic/claude-3-haiku` |
+| **Anthropic** | `ANTHROPIC_API_KEY` | `claude-3-5-haiku-20241022` |
+| **Custom** | any | — (you provide base URL) |
+
+## Example session
+
+```
+◆  Which LLM vendor for eval?
+│  ○ OpenAI
+│  ● Z.ai / GLM  (key detected)
+│  ○ Groq
+│  ○ OpenRouter
+│  ○ Anthropic (via compat)
+│  ○ Custom (OpenAI-compatible)
+│  ○ Cancel
+
+  Using ZAI_API_KEY from environment.
+
+  ◐  Fetching available models…
+  ✓  47 models available
+
+◆  Which model?
+│  ● glm-4-flash    recommended
+│  ○ glm-4          recommended
+│  ○ glm-4-plus
+│  ○ glm-4-air
+│  ○ …
+│  ○ Enter a different model ID
+
+  ✓  Eval configured — Z.ai / GLM / glm-4-flash
+```
+
+## Security note
+
+Prefer setting the API key in your environment (`ZAI_API_KEY`, `OPENAI_API_KEY`, etc.) rather than storing it in `config.yml`. The wizard skips the key prompt entirely when a matching env var is detected.
+
+## Prerequisites
+
+Requires an existing doraval config (run `dora init` first).
+
+## See also
+
+- [`dora init`](/commands/init/) — full one-time setup including journal and agent
+- [`dora eval`](/commands/eval/) — run eval on a real session
+- [`dora config`](/commands/eval/#configuration) — set eval options manually

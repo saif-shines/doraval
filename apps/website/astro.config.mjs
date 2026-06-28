@@ -51,6 +51,7 @@ export default defineConfig({
             "commands/validate",
             "commands/drift",
             "commands/eval",
+            "commands/evals-setup",
             "commands/judge",
             "commands/providers",
           ],
