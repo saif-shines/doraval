@@ -21,9 +21,9 @@ describe("buildAgentArgv", () => {
 
 describe("getDefaultPromptTemplate", () => {
   test("returns correct template for claude", () => {
-    expect(getDefaultPromptTemplate("claude")).toBe('-p "{{prompt}}" --output-format json --bare');
-    expect(getDefaultPromptTemplate("claude-code")).toBe('-p "{{prompt}}" --output-format json --bare');
-    expect(getDefaultPromptTemplate("/usr/local/bin/claude")).toBe('-p "{{prompt}}" --output-format json --bare');
+    expect(getDefaultPromptTemplate("claude")).toBe('-p "{{prompt}}" --output-format json');
+    expect(getDefaultPromptTemplate("claude-code")).toBe('-p "{{prompt}}" --output-format json');
+    expect(getDefaultPromptTemplate("/usr/local/bin/claude")).toBe('-p "{{prompt}}" --output-format json');
   });
 
   test("returns correct template for grok", () => {
@@ -45,14 +45,14 @@ describe("resolveAgentConfig", () => {
       prompt_template: '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen',
       cwd_flag: "--cwd",
     });
-    expect(resolved.prompt_template).toBe('-p "{{prompt}}" --output-format json --bare');
+    expect(resolved.prompt_template).toBe('-p "{{prompt}}" --output-format json');
     expect(resolved.cwd_flag).toBeUndefined();
   });
 
   test("strips json output format from grok template", () => {
     const resolved = resolveAgentConfig({
       command: "grok",
-      prompt_template: '-p "{{prompt}}" --output-format json --bare',
+      prompt_template: '-p "{{prompt}}" --output-format json',
     });
     expect(resolved.prompt_template).toBe(
       '-p "{{prompt}}" --no-auto-update --no-alt-screen --always-approve'
@@ -60,14 +60,14 @@ describe("resolveAgentConfig", () => {
   });
 
   test("keeps custom claude template when compatible", () => {
-    const custom = '-p "{{prompt}}" --output-format json --bare --model sonnet';
+    const custom = '-p "{{prompt}}" --output-format json --model sonnet';
     const resolved = resolveAgentConfig({ command: "claude", prompt_template: custom });
     expect(resolved.prompt_template).toBe(custom);
   });
 
   test("fills in default template when none set", () => {
     const resolved = resolveAgentConfig({ command: "claude" });
-    expect(resolved.prompt_template).toBe('-p "{{prompt}}" --output-format json --bare');
+    expect(resolved.prompt_template).toBe('-p "{{prompt}}" --output-format json');
   });
 });
 

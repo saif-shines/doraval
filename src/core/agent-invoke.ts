@@ -32,9 +32,9 @@ export function getDefaultPromptTemplate(command: string): string {
   const lower = (command || '').toLowerCase();
 
   if (lower.includes('claude')) {
-    // --output-format json produces a single JSON object {"result":"..."} wrapping the model's text.
-    // --bare skips hooks/plugins so the judge call is clean. extractCandidates unwraps c.result.
-    return '-p "{{prompt}}" --output-format json --bare';
+    // --output-format json produces {"type":"result","result":"..."} wrapping the model's text.
+    // extractCandidates unwraps result. --bare is intentionally omitted: it bypasses session auth.
+    return '-p "{{prompt}}" --output-format json';
   }
 
   if (lower.includes('grok')) {
