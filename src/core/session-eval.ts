@@ -27,6 +27,7 @@ export interface EvalResult {
   verdict: "PASS" | "FAIL" | "UNKNOWN";
   verdictReason: string;
   checklist: ChecklistItem[];
+  judgeMethod: "api" | "cli" | "unknown";
 }
 
 function toolCallSummary(call: ToolCall): string {
@@ -111,6 +112,7 @@ export function makeUnknownResult(
     verdict: "UNKNOWN",
     verdictReason: reason,
     checklist: [],
+    judgeMethod: "unknown",
   };
 }
 
@@ -128,6 +130,7 @@ export async function runEval(
   let judged: JudgeOutput | null = null;
   let judgeError: string | undefined;
   let judgeCode: string | undefined;
+  let usedMethod: "api" | "cli" | "unknown" = "unknown";
 
   const shouldTryApi =
     preference !== 'cli' &&
@@ -138,6 +141,7 @@ export async function runEval(
     const result: JudgeResult = await invokeJudge(prompt, evalCfg);
     if (result.success) {
       judged = result.data;
+      usedMethod = "api";
     } else {
       judgeError = result.error;
       judgeCode = result.code;
@@ -164,6 +168,7 @@ export async function runEval(
         closure: (raw.closure as JudgeOutput["closure"]) ?? "incomplete",
         userTurnsAfterSkill: typeof raw.userTurnsAfterSkill === "number" ? raw.userTurnsAfterSkill : 0,
       };
+      if (judged) usedMethod = "cli";
     }
   }
 
@@ -194,5 +199,6 @@ export async function runEval(
     verdict: judged.verdict,
     verdictReason: judged.verdictReason,
     checklist: judged.checklist,
+    judgeMethod: usedMethod,
   };
 }

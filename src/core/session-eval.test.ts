@@ -74,4 +74,19 @@ describe("makeUnknownResult", () => {
     expect(result.schemaVersion).toBe(1);
     expect(result.skill).toBe("superpowers:systematic-debugging");
   });
+
+  test("includes judgeMethod unknown", () => {
+    const prim = {
+      sessionId: "abc",
+      sessionTitle: undefined,
+      agent: "claude",
+      model: "claude-3",
+      toolCalls: [],
+      userMessages: [],
+      skillsInvoked: [],
+      toolCallCounts: {},
+    };
+    const result = makeUnknownResult(prim, "my-skill", "test reason");
+    expect(result.judgeMethod).toBe("unknown");
+  });
 });
