@@ -125,18 +125,21 @@ function mapCliRaw(raw: Record<string, unknown>): LintOutput | null {
   if (!Array.isArray(raw.findings)) return null;
 
   const findings: LintFinding[] = [];
-  for (const item of raw.findings as Record<string, unknown>[]) {
+  for (const item of raw.findings as unknown[]) {
     if (
-      typeof item.severity === "string" &&
-      typeof item.category === "string" &&
-      typeof item.finding === "string" &&
-      typeof item.suggestion === "string"
+      item !== null &&
+      typeof item === "object" &&
+      typeof (item as Record<string, unknown>).severity === "string" &&
+      typeof (item as Record<string, unknown>).category === "string" &&
+      typeof (item as Record<string, unknown>).finding === "string" &&
+      typeof (item as Record<string, unknown>).suggestion === "string"
     ) {
+      const f = item as Record<string, unknown>;
       findings.push({
-        severity: item.severity as LintFinding["severity"],
-        category: item.category as LintFinding["category"],
-        finding: item.finding,
-        suggestion: item.suggestion,
+        severity: f.severity as LintFinding["severity"],
+        category: f.category as LintFinding["category"],
+        finding: f.finding as string,
+        suggestion: f.suggestion as string,
       });
     }
   }
