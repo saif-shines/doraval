@@ -12,9 +12,9 @@ const skill = defineCommand({
   subCommands: {
     validate: () =>
       import("./commands/validate.js").then((m) => m.default),
+    lint: () => import("./commands/skill-lint.js").then((m) => m.default),
     drift: () => import("./commands/drift.js").then((m) => m.default),
     judge: () => import("./commands/judge.js").then((m) => m.default),
-
   },
   run() {
     const cliArgs = process.argv.slice(2);
