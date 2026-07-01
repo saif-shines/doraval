@@ -122,25 +122,8 @@ describe("doraval CLI", () => {
   });
 
   describe("skill drift", () => {
-    test("reports zero drift for minimal-good", () => {
+    test("session-grounded json output includes skill and session fields", () => {
       const skillDir = fixturePath("minimal-good");
-      const { exitCode, stdout, stderr } = runDoraval([
-        "skill",
-        "drift",
-        skillDir,
-        "--format",
-        "json",
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(stderr).toBe("");
-      const result = JSON.parse(stdout);
-      expect(result.driftCount).toBe(0);
-      expect(result.total).toBe(6);
-    });
-
-    test("exits 0 without --ci when drift exists", () => {
-      const skillDir = fixturePath("drifted");
       const { exitCode, stdout } = runDoraval([
         "skill",
         "drift",
@@ -151,11 +134,31 @@ describe("doraval CLI", () => {
 
       expect(exitCode).toBe(0);
       const result = JSON.parse(stdout);
-      expect(result.driftCount).toBeGreaterThan(0);
+      // New session-grounded format — old regex fields are gone
+      expect(result).toHaveProperty("skill");
+      expect(result).toHaveProperty("sessionsChecked");
+      expect(result).toHaveProperty("sessionsMatched");
+      expect(result).toHaveProperty("results");
+      expect(Array.isArray(result.results)).toBe(true);
     });
 
-    test("exits 1 with --ci when drift exists", () => {
-      const skillDir = fixturePath("drifted");
+    test("exits 0 when no sessions matched (no coding agent history)", () => {
+      // In CI / test environment there's no agent session history, so no sessions match.
+      const skillDir = fixturePath("minimal-good");
+      const { exitCode } = runDoraval([
+        "skill",
+        "drift",
+        skillDir,
+        "--format",
+        "json",
+      ]);
+
+      // Should always exit 0 when no drift found (0 DRIFTED items)
+      expect(exitCode).toBe(0);
+    });
+
+    test("exits 0 without --ci and no drift detected", () => {
+      const skillDir = fixturePath("minimal-good");
       const { exitCode } = runDoraval([
         "skill",
         "drift",
@@ -165,7 +168,8 @@ describe("doraval CLI", () => {
         "--ci",
       ]);
 
-      expect(exitCode).toBe(1);
+      // No sessions matched → no DRIFTED items → exit 0 even with --ci
+      expect(exitCode).toBe(0);
     });
 
     test("table mode writes drift output to stderr only", () => {
@@ -178,7 +182,7 @@ describe("doraval CLI", () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toBe("");
-      expect(stderr).toContain("Measuring rubric drift");
+      expect(stderr).toContain("session-grounded behavioral analysis");
     });
   });
 
