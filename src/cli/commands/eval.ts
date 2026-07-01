@@ -38,11 +38,12 @@ function renderResult(result: EvalResult, verbose: boolean, useDriftTerms = fals
   if (result.checklist.length > 0) {
     ui.write(`\n  Adherence:`);
     for (const item of result.checklist) {
-      const sym = item.pass ? pc.green("✓") : pc.red("✗");
+      const ok = item.itemVerdict === "ALIGNED" || item.itemVerdict === "JUSTIFIED";
+      const sym = ok ? pc.green("✓") : pc.red("✗");
       const detail = item.detail ? `  ${pc.dim(item.detail)}` : "";
       ui.write(`  ${sym} ${item.instruction}${detail}`);
     }
-    const passed = result.checklist.filter((c) => c.pass).length;
+    const passed = result.checklist.filter((c) => c.itemVerdict === "ALIGNED" || c.itemVerdict === "JUSTIFIED").length;
     ui.write(`\n  Result: ${passed}/${result.checklist.length}  [${verdictColor(displayV)}${result.verdictReason ? ` — ${result.verdictReason}` : ""}]`);
   } else if (result.verdictReason) {
     ui.write(`\n  ${verdictColor(displaySymbol)} ${result.verdictReason}`);

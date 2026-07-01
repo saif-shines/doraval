@@ -6,7 +6,9 @@ import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./sess
 
 export interface ChecklistItem {
   instruction: string;
-  pass: boolean;
+  bindingness: "MANDATORY" | "CONDITIONAL" | "DISCRETIONARY";
+  itemVerdict: "ALIGNED" | "DRIFTED" | "JUSTIFIED" | "UNCLEAR";
+  evidence: string;
   detail?: string;
 }
 
@@ -27,6 +29,7 @@ export interface EvalResult {
   verdict: "PASS" | "FAIL" | "UNKNOWN";
   verdictReason: string;
   checklist: ChecklistItem[];
+  ambiguityFlags: string[];
   judgeMethod: "api" | "cli" | "unknown";
 }
 
@@ -85,8 +88,15 @@ Return ONLY a valid JSON object with exactly these keys:
   "verdict": "<PASS|FAIL>",
   "verdictReason": "<one sentence>",
   "checklist": [
-    { "instruction": "<what skill said>", "pass": <true|false>, "detail": "<optional>" }
-  ]
+    {
+      "instruction": "<what skill said>",
+      "bindingness": "<MANDATORY|CONDITIONAL|DISCRETIONARY>",
+      "itemVerdict": "<ALIGNED|DRIFTED|JUSTIFIED|UNCLEAR>",
+      "evidence": "<tool-call index or agent quote; empty string if none>",
+      "detail": "<optional extra detail>"
+    }
+  ],
+  "ambiguityFlags": ["<instructions that came back UNCLEAR>"]
 }`;
 }
 
@@ -112,6 +122,7 @@ export function makeUnknownResult(
     verdict: "UNKNOWN",
     verdictReason: reason,
     checklist: [],
+    ambiguityFlags: [],
     judgeMethod: "unknown",
   };
 }
@@ -157,12 +168,23 @@ export async function runEval(
         verdictReason: typeof raw.verdictReason === "string" ? raw.verdictReason : "",
         checklist: (raw.checklist as unknown[]).map((item) => {
           const i = item as Record<string, unknown>;
+          const bindingness = (["MANDATORY", "CONDITIONAL", "DISCRETIONARY"] as const).includes(i.bindingness as never)
+            ? (i.bindingness as "MANDATORY" | "CONDITIONAL" | "DISCRETIONARY")
+            : "MANDATORY";
+          const itemVerdict = (["ALIGNED", "DRIFTED", "JUSTIFIED", "UNCLEAR"] as const).includes(i.itemVerdict as never)
+            ? (i.itemVerdict as "ALIGNED" | "DRIFTED" | "JUSTIFIED" | "UNCLEAR")
+            : "UNCLEAR";
           return {
             instruction: typeof i.instruction === "string" ? i.instruction : "unknown",
-            pass: i.pass === true,
+            bindingness,
+            itemVerdict,
+            evidence: typeof i.evidence === "string" ? i.evidence : "",
             detail: typeof i.detail === "string" ? i.detail : undefined,
           };
         }),
+        ambiguityFlags: Array.isArray(raw.ambiguityFlags)
+          ? (raw.ambiguityFlags as unknown[]).filter((f): f is string => typeof f === "string")
+          : [],
         userFamiliarity: typeof raw.userFamiliarity === "number" ? raw.userFamiliarity : 0,
         userFamiliarityReason: typeof raw.userFamiliarityReason === "string" ? raw.userFamiliarityReason : "",
         closure: (raw.closure as JudgeOutput["closure"]) ?? "incomplete",
@@ -199,6 +221,7 @@ export async function runEval(
     verdict: judged.verdict,
     verdictReason: judged.verdictReason,
     checklist: judged.checklist,
+    ambiguityFlags: judged.ambiguityFlags,
     judgeMethod: usedMethod,
   };
 }

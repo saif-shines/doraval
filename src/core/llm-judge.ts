@@ -16,15 +16,18 @@ export const DEFAULT_JUDGE_TIMEOUT_MS = 60_000;
 // ── Output schema ──────────────────────────────────────────────────────────────
 
 export const JudgeSchema = z.object({
-  verdict: z.enum(["PASS", "FAIL"]),
+  verdict: z.enum(["PASS", "FAIL"]),        // keep top-level binary (PASS = no DRIFTED items)
   verdictReason: z.string(),
   checklist: z.array(
     z.object({
       instruction: z.string(),
-      pass: z.boolean(),
+      bindingness: z.enum(["MANDATORY", "CONDITIONAL", "DISCRETIONARY"]),
+      itemVerdict: z.enum(["ALIGNED", "DRIFTED", "JUSTIFIED", "UNCLEAR"]),
+      evidence: z.string(),                  // tool-call index or agent quote; empty string if none
       detail: z.string().optional(),
     })
   ),
+  ambiguityFlags: z.array(z.string()),       // instructions that came back UNCLEAR (skill-quality feedback)
   userFamiliarity: z.number().int().min(1).max(10),
   userFamiliarityReason: z.string(),
   closure: z.enum(["1-shot", "multi-turn", "incomplete"]),

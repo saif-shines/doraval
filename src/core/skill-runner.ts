@@ -329,11 +329,12 @@ export function renderBatchResults(result: SkillRunResult, verbose = false): str
     const reset = "\x1b[0m";
     lines.push(`${i + 1}. ${color}[${displayV}]${reset} ${r.prompt.slice(0, 80)}${r.prompt.length > 80 ? "..." : ""}`);
     if (r.eval.checklist?.length) {
-      const passed = r.eval.checklist.filter((c) => c.pass).length;
+      const passed = r.eval.checklist.filter((c) => c.itemVerdict === "ALIGNED" || c.itemVerdict === "JUSTIFIED").length;
       lines.push(`   Score: ${passed}/${r.eval.checklist.length}`);
       if (verbose) {
         r.eval.checklist.forEach((c) => {
-          lines.push(`     ${c.pass ? "✓" : "✗"} ${c.instruction}`);
+          const ok = c.itemVerdict === "ALIGNED" || c.itemVerdict === "JUSTIFIED";
+          lines.push(`     ${ok ? "✓" : "✗"} ${c.instruction}`);
         });
       }
     }

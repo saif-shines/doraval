@@ -5,6 +5,7 @@ import {
   hasDirectApiCredentials,
   canUseApiJudge,
   resolveDirectCredentials,
+  JudgeSchema,
 } from "./llm-judge.js";
 
 describe("stripReasoningArtifacts", () => {
@@ -78,5 +79,136 @@ describe("hasDirectApiCredentials / resolveDirectCredentials", () => {
     const creds = resolveDirectCredentials({ model: "glm-4" });
     expect(creds.apiKey).toBe("sk-zai");
     expect(creds.baseUrl).toContain("z.ai");
+  });
+});
+
+describe("JudgeSchema — new 4-state checklist shape", () => {
+  const validObject = {
+    verdict: "PASS",
+    verdictReason: "All instructions followed",
+    checklist: [
+      {
+        instruction: "Invoke the Skill tool",
+        bindingness: "MANDATORY",
+        itemVerdict: "ALIGNED",
+        evidence: "tool-call index 0",
+        detail: "Skill was called first",
+      },
+      {
+        instruction: "Read the failing code",
+        bindingness: "CONDITIONAL",
+        itemVerdict: "JUSTIFIED",
+        evidence: "",
+      },
+    ],
+    ambiguityFlags: [],
+    userFamiliarity: 7,
+    userFamiliarityReason: "User provided precise paths",
+    closure: "1-shot",
+    userTurnsAfterSkill: 1,
+  };
+
+  test("parses a valid object with new fields", () => {
+    const result = JudgeSchema.safeParse(validObject);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.checklist[0]?.bindingness).toBe("MANDATORY");
+      expect(result.data.checklist[0]?.itemVerdict).toBe("ALIGNED");
+      expect(result.data.checklist[0]?.evidence).toBe("tool-call index 0");
+      expect(result.data.ambiguityFlags).toEqual([]);
+      expect(result.data.verdict).toBe("PASS");
+    }
+  });
+
+  test("parses all itemVerdict states", () => {
+    for (const itemVerdict of ["ALIGNED", "DRIFTED", "JUSTIFIED", "UNCLEAR"] as const) {
+      const obj = {
+        ...validObject,
+        checklist: [{ ...validObject.checklist[0]!, itemVerdict }],
+      };
+      const result = JudgeSchema.safeParse(obj);
+      expect(result.success).toBe(true);
+    }
+  });
+
+  test("parses all bindingness levels", () => {
+    for (const bindingness of ["MANDATORY", "CONDITIONAL", "DISCRETIONARY"] as const) {
+      const obj = {
+        ...validObject,
+        checklist: [{ ...validObject.checklist[0]!, bindingness }],
+      };
+      const result = JudgeSchema.safeParse(obj);
+      expect(result.success).toBe(true);
+    }
+  });
+
+  test("parses object with ambiguityFlags populated", () => {
+    const obj = { ...validObject, ambiguityFlags: ["Step 3 is vague", "No tool specified"] };
+    const result = JudgeSchema.safeParse(obj);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.ambiguityFlags).toHaveLength(2);
+    }
+  });
+
+  test("rejects object missing bindingness", () => {
+    const obj = {
+      ...validObject,
+      checklist: [{ instruction: "x", itemVerdict: "ALIGNED", evidence: "" }],
+    };
+    const result = JudgeSchema.safeParse(obj);
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects object missing itemVerdict", () => {
+    const obj = {
+      ...validObject,
+      checklist: [{ instruction: "x", bindingness: "MANDATORY", evidence: "" }],
+    };
+    const result = JudgeSchema.safeParse(obj);
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects old pass: boolean shape", () => {
+    const obj = {
+      ...validObject,
+      checklist: [{ instruction: "x", pass: true, bindingness: "MANDATORY", evidence: "" }],
+    };
+    // pass is not part of schema; but missing itemVerdict means it should fail
+    const result = JudgeSchema.safeParse(obj);
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects object missing ambiguityFlags", () => {
+    const { ambiguityFlags: _dropped, ...objWithout } = validObject;
+    const result = JudgeSchema.safeParse(objWithout);
+    expect(result.success).toBe(false);
+  });
+
+  test("evidence is required (not undefined)", () => {
+    const obj = {
+      ...validObject,
+      checklist: [{ instruction: "x", bindingness: "MANDATORY", itemVerdict: "ALIGNED" }],
+    };
+    const result = JudgeSchema.safeParse(obj);
+    expect(result.success).toBe(false);
+  });
+
+  test("evidence can be empty string", () => {
+    const obj = {
+      ...validObject,
+      checklist: [{ instruction: "x", bindingness: "MANDATORY", itemVerdict: "ALIGNED", evidence: "" }],
+    };
+    const result = JudgeSchema.safeParse(obj);
+    expect(result.success).toBe(true);
+  });
+
+  test("top-level verdict stays PASS|FAIL binary", () => {
+    const passObj = { ...validObject, verdict: "PASS" };
+    const failObj = { ...validObject, verdict: "FAIL" };
+    const unknownObj = { ...validObject, verdict: "UNKNOWN" };
+    expect(JudgeSchema.safeParse(passObj).success).toBe(true);
+    expect(JudgeSchema.safeParse(failObj).success).toBe(true);
+    expect(JudgeSchema.safeParse(unknownObj).success).toBe(false);
   });
 });
