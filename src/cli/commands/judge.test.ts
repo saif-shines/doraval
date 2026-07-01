@@ -43,13 +43,10 @@ describe("judge command smoke test", () => {
 
 describe("judge command is session-free", () => {
   test("judge.ts source does not import session-adapters", async () => {
-    // Read the compiled module's source via the raw import — we just check
-    // that the module graph does NOT pull in session-adapters by verifying
-    // it is not referenced in the module.
-    // The simplest approach: read the ts source directly.
-    const src = await Bun.file(
-      new URL("./judge.ts", import.meta.url).pathname
-    ).text();
+    // Read the source directly to verify the judge command does not pull in
+    // any session-related code (it must remain session-free).
+    // Use Bun.file with URL (cross-platform safe, avoids .pathname issues on Windows).
+    const src = await Bun.file(new URL("./judge.ts", import.meta.url)).text();
     expect(src).not.toContain("session-adapters");
     expect(src).not.toContain("parseSession");
     expect(src).not.toContain("runEval");

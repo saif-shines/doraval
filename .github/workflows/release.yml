@@ -12,76 +12,102 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.tag.outputs.tag }}
+  build-binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS runners are required for darwin native modules (@opentui/core etc.)
+          - os: macos-latest
+            target: bun-darwin-arm64
+            binary: doraval-darwin-arm64
+          - os: macos-latest
+            target: bun-darwin-x64
+            binary: doraval-darwin-x64
+
+          # Linux builds
+          - os: ubuntu-latest
+            target: bun-linux-x64
+            binary: doraval-linux-x64
+          - os: ubuntu-latest
+            target: bun-linux-arm64
+            binary: doraval-linux-arm64
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
-
       - uses: oven-sh/setup-bun@v2
-
       - run: bun install --frozen-lockfile
 
-      - name: Get tag name
-        id: tag
-        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+      - name: Build compiled binary
+        run: |
+          bun build ./src/cli/index.ts --compile --target ${{ matrix.target }} --outfile ${{ matrix.binary }}
 
-      - name: Build Bun CLI bundle
-        run: bun run build
-
-      - name: Upload bin artifact
+      - name: Upload binary
         uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary }}
+          path: ${{ matrix.binary }}
+
+  build-js-bundle:
+    # The non-compiled JS bundle + ui files (used by npm publish)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - uses: actions/upload-artifact@v4
         with:
           name: bin
           path: bin/
 
-      - name: Build compiled binaries
-        run: |
-          bun build ./src/cli/index.ts --compile --target bun-darwin-arm64 --outfile doraval-darwin-arm64
-          bun build ./src/cli/index.ts --compile --target bun-darwin-x64   --outfile doraval-darwin-x64
-          bun build ./src/cli/index.ts --compile --target bun-linux-x64    --outfile doraval-linux-x64
-          bun build ./src/cli/index.ts --compile --target bun-linux-arm64  --outfile doraval-linux-arm64
+  create-release:
+    needs: [build-binaries, build-js-bundle]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download compiled binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
-      - name: Generate release notes from recent commits
-        id: release-notes
+      - name: Generate release notes
+        id: notes
         run: |
-          TAG="${{ steps.tag.outputs.tag }}"
+          TAG="${GITHUB_REF#refs/tags/}"
           PREV_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG" 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
             BODY=$(git log --pretty=format:"* %s" -20)
-            CHANGELOG_LINK=""
           else
             BODY=$(git log --pretty=format:"* %s" "$PREV_TAG"..HEAD | grep -vE '^(chore\(release\)|chore: bump version)' || echo "* Bug fixes and improvements")
-            CHANGELOG_LINK="Full Changelog: https://github.com/saif-shines/doraval/compare/$PREV_TAG...$TAG"
           fi
           echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "## What's Changed" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "$BODY" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          if [ -n "$CHANGELOG_LINK" ]; then
-            echo "$CHANGELOG_LINK" >> $GITHUB_OUTPUT
-          fi
+          echo "## What's Changed"
+          echo ""
+          echo "$BODY"
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release and upload binaries
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: Release ${{ steps.tag.outputs.tag }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.notes.outputs.body }}
           files: |
-            doraval-darwin-arm64
-            doraval-darwin-x64
-            doraval-linux-x64
-            doraval-linux-arm64
-          body: ${{ steps.release-notes.outputs.body }}
+            artifacts/doraval-darwin-arm64
+            artifacts/doraval-darwin-x64
+            artifacts/doraval-linux-x64
+            artifacts/doraval-linux-arm64
           draft: false
           prerelease: false
           generate_release_notes: false
 
   publish-npm:
-    needs: build-and-release
+    needs: [build-binaries, build-js-bundle]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -112,7 +138,7 @@ jobs:
           command: npm publish --access public --provenance
 
   publish-jsr:
-    needs: build-and-release
+    needs: [build-binaries, build-js-bundle]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -124,7 +150,7 @@ jobs:
       - run: bunx jsr publish
 
   update-homebrew:
-    needs: build-and-release
+    needs: build-binaries
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -132,14 +158,14 @@ jobs:
 
       - name: Download macOS binaries from release
         env:
-          TAG: ${{ needs.build-and-release.outputs.tag }}
+          TAG: ${{ github.ref_name }}
         run: |
           curl -fsSL "https://github.com/saif-shines/doraval/releases/download/${TAG}/doraval-darwin-arm64" -o doraval-darwin-arm64
           curl -fsSL "https://github.com/saif-shines/doraval/releases/download/${TAG}/doraval-darwin-x64" -o doraval-darwin-x64
 
       - name: Compute SHAs and update formula
         env:
-          TAG: ${{ needs.build-and-release.outputs.tag }}
+          TAG: ${{ github.ref_name }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           VERSION=${TAG#v}
