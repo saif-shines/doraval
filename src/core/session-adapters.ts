@@ -199,6 +199,7 @@ const grokAdapter: SessionAdapter = {
         skillsInvoked: [],
         userMessages: userMessages.slice(0, 5),
         userTurnCount: userMessages.length,
+        assistantText: [],
       } as any;
     }
     // fallback for log
@@ -212,6 +213,7 @@ const grokAdapter: SessionAdapter = {
       skillsInvoked: [],
       userMessages: [text.slice(0, 200)],
       userTurnCount: 1,
+      assistantText: [],
     } as any;
   },
 };

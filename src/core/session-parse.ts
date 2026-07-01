@@ -18,6 +18,7 @@ export interface SessionPrimitives {
   userMessages: string[];
   userTurnCount: number;
   durationMs?: number;
+  assistantText: string[];
 }
 
 interface RawMessage {
@@ -70,6 +71,7 @@ export function parseSession(jsonlText: string): SessionPrimitives {
 
   const toolCalls: ToolCall[] = [];
   const userMessages: string[] = [];
+  const assistantText: string[] = [];
   let toolIndex = 0;
 
   // Collect skill names from modern client-driven invocations
@@ -144,6 +146,11 @@ export function parseSession(jsonlText: string): SessionPrimitives {
             timestamp: typeof msg.timestamp === "string" ? msg.timestamp : "",
             index: toolIndex++,
           });
+        } else if (b.type === "text" && typeof b.text === "string") {
+          const text = b.text.trim();
+          if (text) {
+            assistantText.push(text);
+          }
         }
       }
     }
@@ -188,6 +195,7 @@ export function parseSession(jsonlText: string): SessionPrimitives {
     userMessages,
     userTurnCount: userMessages.length,
     durationMs,
+    assistantText,
   };
 }
 

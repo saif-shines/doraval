@@ -107,6 +107,45 @@ describe("parseSession", () => {
     expect(result.skillsInvoked).not.toContain("claude-api");
     expect(result.skillsInvoked).toHaveLength(0);
   });
+
+  test("collects assistantText from text blocks in assistant messages", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"hello"},"sessionId":"text-test","cwd":"/tmp"}',
+      '{"type":"assistant","message":{"model":"claude-sonnet-4-6","content":[{"type":"text","text":"I will help you"},{"type":"tool_use","id":"t1","name":"Bash","input":{}}]},"sessionId":"text-test"}',
+      '{"type":"user","message":{"content":"next"},"sessionId":"text-test"}',
+      '{"type":"assistant","message":{"model":"claude-sonnet-4-6","content":[{"type":"text","text":"Here is the result"},{"type":"text","text":"All done"}]},"sessionId":"text-test"}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.assistantText).toHaveLength(3);
+    expect(result.assistantText[0]).toBe("I will help you");
+    expect(result.assistantText[1]).toBe("Here is the result");
+    expect(result.assistantText[2]).toBe("All done");
+  });
+
+  test("skips empty text blocks in assistantText", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"hello"},"sessionId":"empty-text","cwd":"/tmp"}',
+      '{"type":"assistant","message":{"model":"claude-sonnet-4-6","content":[{"type":"text","text":"   "},{"type":"text","text":""},{"type":"text","text":"Actual text"}]},"sessionId":"empty-text"}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.assistantText).toHaveLength(1);
+    expect(result.assistantText[0]).toBe("Actual text");
+  });
+
+  test("returns empty assistantText array when no text blocks present", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"hello"},"sessionId":"no-text","cwd":"/tmp"}',
+      '{"type":"assistant","message":{"model":"claude-sonnet-4-6","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{}}]},"sessionId":"no-text"}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.assistantText).toEqual([]);
+  });
+
+  test("extracts assistantText from mini fixture", () => {
+    const result = parseSession(miniFixture);
+    expect(result.assistantText).toBeDefined();
+    expect(Array.isArray(result.assistantText)).toBe(true);
+  });
 });
 
 describe("truncateToolCalls", () => {
