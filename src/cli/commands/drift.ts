@@ -135,14 +135,7 @@ async function runMode1(opts: {
   };
 
   const adapter = getAdapter();
-  if (!adapter) {
-    ui.fail(
-      "No supported coding agent detected. Install Claude Code (or Grok) and run a session."
-    );
-    process.exit(2);
-  }
-
-  const allSessions = adapter.listRecentSessions(process.cwd(), opts.limit);
+  const allSessions = adapter ? adapter.listRecentSessions(process.cwd(), opts.limit) : [];
   const totalChecked = allSessions.length;
 
   // Parse each session and filter by skill name
@@ -193,9 +186,10 @@ async function runMode1(opts: {
   );
 
   if (matched === 0) {
-    ui.write(
-      `\n  ${pc.dim("No sessions found that invoked this skill. Run a session with this skill first.")}`
-    );
+    const msg = adapter
+      ? "No sessions found that invoked this skill. Run a session with this skill first."
+      : "No supported coding agent detected. Install Claude Code (or Grok) to capture sessions.";
+    ui.write(`\n  ${pc.dim(msg)}`);
     return { driftedCount: 0, totalBinding: 0 };
   }
 
@@ -253,14 +247,7 @@ async function runMode3(opts: {
   };
 
   const adapter = getAdapter();
-  if (!adapter) {
-    ui.fail(
-      "No supported coding agent detected. Install Claude Code (or Grok) and run a session."
-    );
-    process.exit(2);
-  }
-
-  const allSessions = adapter.listRecentSessions(process.cwd(), opts.limit);
+  const allSessions = adapter ? adapter.listRecentSessions(process.cwd(), opts.limit) : [];
 
   const summaries: SkillDriftSummary[] = [];
 

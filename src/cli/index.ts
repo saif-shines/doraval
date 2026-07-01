@@ -199,6 +199,7 @@ const main = defineCommand({
     eval: () => import("./commands/judge.js").then((m) => m.default),
     // Dual: `evals setup` configures LLM; `evals <path>` aliases judge (see commands/evals.ts)
     evals: () => import("./commands/evals.js").then((m) => m.default),
+    drift: () => import("./commands/drift.js").then((m) => m.default),
     config: config,
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),
