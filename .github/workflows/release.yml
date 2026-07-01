@@ -17,28 +17,45 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS runners are required for darwin native modules (@opentui/core etc.)
-          - os: macos-latest
-            target: bun-darwin-arm64
-            binary: doraval-darwin-arm64
-          - os: macos-latest
+          # macOS x64 (Intel) - use macos-13 for x64 architecture so the darwin-x64 native dep is installed
+          - runner: macos-13
             target: bun-darwin-x64
             binary: doraval-darwin-x64
 
-          # Linux builds
-          - os: ubuntu-latest
+          # macOS arm64 (Apple Silicon)
+          - runner: macos-latest
+            target: bun-darwin-arm64
+            binary: doraval-darwin-arm64
+
+          # Linux x64 (glibc)
+          - runner: ubuntu-latest
             target: bun-linux-x64
             binary: doraval-linux-x64
-          - os: ubuntu-latest
+
+          # Linux arm64 (use arm runner so the arm64 native deps are installed)
+          - runner: ubuntu-24.04-arm
             target: bun-linux-arm64
             binary: doraval-linux-arm64
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+
+      - name: Ensure target-specific native bindings for @opentui/core
+        run: |
+          case "${{ matrix.target }}" in
+            bun-darwin-arm64)
+              bun add --optional @opentui/core-darwin-arm64 ;;
+            bun-darwin-x64)
+              bun add --optional @opentui/core-darwin-x64 ;;
+            bun-linux-x64)
+              bun add --optional @opentui/core-linux-x64 ;;
+            bun-linux-arm64)
+              bun add --optional @opentui/core-linux-arm64 @opentui/core-linux-arm64-musl ;;
+          esac
 
       - name: Build compiled binary
         run: |
