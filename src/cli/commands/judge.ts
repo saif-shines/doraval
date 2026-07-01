@@ -218,12 +218,17 @@ export default defineCommand({
 
     const output = result.data;
 
+    // Derive verdict programmatically to prevent LLM self-reporting contradictions
+    const derivedVerdict = output.checklist.some(
+      (c) => c.itemVerdict === "DRIFTED" && c.bindingness !== "DISCRETIONARY"
+    ) ? "FAIL" : "PASS";
+
     // ── Build signed verdict envelope ──────────────────────────────────────────
 
     const { apiKey: _key, baseUrl, model: modelId, providerName } = await resolveCredentials(evalCfg);
 
     const envelope = {
-      verdict: output.verdict,
+      verdict: derivedVerdict,
       verdictReason: output.verdictReason,
       rubricRef,
       model: modelId,
@@ -241,7 +246,7 @@ export default defineCommand({
       process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
     } else {
       renderTable(
-        output.verdict,
+        derivedVerdict,
         output.verdictReason,
         output.checklist,
         output.ambiguityFlags,
@@ -249,7 +254,7 @@ export default defineCommand({
       );
     }
 
-    if (args.ci && output.verdict === "FAIL") {
+    if (args.ci && derivedVerdict === "FAIL") {
       process.exit(1);
     }
   },

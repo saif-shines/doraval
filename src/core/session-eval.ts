@@ -231,6 +231,11 @@ export async function runEval(
     .filter((item) => item.itemVerdict === "UNCLEAR")
     .map((item) => item.instruction);
 
+  // Derive verdict programmatically to prevent LLM self-reporting contradictions
+  const derivedVerdict = judged.checklist.some(
+    (c) => c.itemVerdict === "DRIFTED" && c.bindingness !== "DISCRETIONARY"
+  ) ? "FAIL" : "PASS";
+
   return {
     schemaVersion: 1,
     sessionId: primitives.sessionId,
@@ -245,7 +250,7 @@ export async function runEval(
     userTurnsAfterSkill: judged.userTurnsAfterSkill,
     skillsInvoked: primitives.skillsInvoked,
     toolCallCounts: primitives.toolCallCounts,
-    verdict: judged.verdict,
+    verdict: derivedVerdict,
     verdictReason: judged.verdictReason,
     checklist: judged.checklist,
     ambiguityFlags,
