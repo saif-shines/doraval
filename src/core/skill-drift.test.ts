@@ -3,7 +3,7 @@ import {
   analyzeDrift,
   checkTrigger, checkStructure, checkVoice,
   checkExample, checkGuardrail, checkClarity,
-} from "./skill-drift.js";
+} from "./static-skill-checks.js";
 
 const alignedSkill = {
   description: "Use when running tests.",

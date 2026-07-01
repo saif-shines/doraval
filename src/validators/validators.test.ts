@@ -136,6 +136,19 @@ describe("claude:skill", () => {
     );
     expect(result.errors).toEqual([]);
   });
+
+  test("reports static check failures for a drifted skill", async () => {
+    const result = await claudeSkillValidator.validate(
+      resolve(fixtures, "skills/drifted"),
+      { format: "table", verbose: false, ci: false }
+    );
+    // drifted fixture has no steps, no code examples, no guardrails
+    expect(result.errors.some(e => e.text.includes("[static] Structure"))).toBe(true);
+    expect(result.errors.some(e => e.text.includes("[static] Example"))).toBe(true);
+    expect(result.errors.some(e => e.text.includes("[static] Guardrail"))).toBe(true);
+    // all static errors are prefixed with "[static]"
+    expect(result.errors.every(e => e.text.startsWith("[static]"))).toBe(true);
+  });
 });
 
 // ── Plugin validator ─────────────────────────────────────────────

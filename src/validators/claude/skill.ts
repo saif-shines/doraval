@@ -1,6 +1,7 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
 import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
+import { analyzeDrift } from "../../core/static-skill-checks.js";
 import type { Validator, ValidateResult, ValidateOptions } from "../types.js";
 
 export const claudeSkillValidator: Validator = {
@@ -22,6 +23,27 @@ export const claudeSkillValidator: Validator = {
         passes: [],
       };
     }
-    return validateSkillModel(loaded.model, { existingDirs: [...loaded.existingDirs] });
+
+    const base = validateSkillModel(loaded.model, { existingDirs: [...loaded.existingDirs] });
+
+    // Run static heuristic checks (no LLM required).
+    // Concatenate description + when_to_use as the trigger-detection input per spec.
+    const description = [
+      loaded.model.data.description,
+      loaded.model.data.when_to_use,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const driftResult = analyzeDrift({ description: String(description), content: loaded.model.content });
+    const driftErrors = driftResult.drifts
+      .filter(d => d.drifted)
+      .map(d => ({ text: `[static] ${d.category}: ${d.detail}` }));
+
+    return {
+      errors: [...base.errors, ...driftErrors],
+      warnings: base.warnings,
+      passes: base.passes,
+    };
   },
 };
