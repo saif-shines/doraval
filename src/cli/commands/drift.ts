@@ -36,9 +36,6 @@ function renderSessionResult(
   ui.write(`\n  Session ${pc.bold(shortId)}${pc.dim(title)}`);
 
   for (const item of result.checklist) {
-    const isBinding =
-      item.bindingness === "MANDATORY" ||
-      item.bindingness === "CONDITIONAL";
     // In non-verbose mode, skip ALIGNED/JUSTIFIED non-DRIFTED items unless UNCLEAR
     if (!verbose && item.itemVerdict !== "DRIFTED" && item.itemVerdict !== "UNCLEAR") {
       continue;
@@ -52,15 +49,9 @@ function renderSessionResult(
     }
   }
 
-  // In verbose mode, show all items
-  if (verbose) {
-    // Already shown above
-  }
-
   const drifted = result.checklist.filter((c) => c.itemVerdict === "DRIFTED");
-  const aligned = result.checklist.filter(
-    (c) => c.itemVerdict === "ALIGNED" || c.itemVerdict === "JUSTIFIED"
-  );
+  const alignedCount = result.checklist.filter((c) => c.itemVerdict === "ALIGNED").length;
+  const justifiedCount = result.checklist.filter((c) => c.itemVerdict === "JUSTIFIED").length;
   const unclear = result.checklist.filter((c) => c.itemVerdict === "UNCLEAR");
 
   if (!verbose && drifted.length === 0 && unclear.length === 0) {
@@ -69,7 +60,7 @@ function renderSessionResult(
 
   const total = result.checklist.length;
   if (total > 0) {
-    const summary = `${aligned.length} ALIGNED, ${drifted.length} DRIFTED, ${unclear.length} UNCLEAR`;
+    const summary = `${alignedCount} ALIGNED, ${drifted.length} DRIFTED, ${justifiedCount} JUSTIFIED, ${unclear.length} UNCLEAR`;
     ui.write(`    ${pc.dim(summary)}`);
   }
 }
@@ -174,14 +165,10 @@ async function runMode1(opts: {
       continue;
     }
 
-    if (!primitives.skillsInvoked.some((s) => s.includes(skillName) || skillName.includes(s))) {
+    if (!primitives.skillsInvoked.some((s) => s === skillName || s.includes(skillName))) {
       continue;
     }
     matched++;
-
-    if (opts.sessionFilter && matched === 0) {
-      // keep going
-    }
 
     const result = await runEval(primitives, skillName, skillContent, agentCfg, evalCfg);
     results.push(result);
@@ -296,7 +283,7 @@ async function runMode3(opts: {
       } catch {
         continue;
       }
-      if (!primitives.skillsInvoked.some((s) => s.includes(skillName) || skillName.includes(s))) {
+      if (!primitives.skillsInvoked.some((s) => s === skillName || s.includes(skillName))) {
         continue;
       }
       matched++;
@@ -411,7 +398,8 @@ export default defineCommand({
     const skillPath = args.path as string | undefined;
     const sessionFilter = args.session as string | undefined;
     const format = args.format as string;
-    const limit = parseInt(String(args.limit ?? "20"), 10) || 20;
+    const parsedLimit = parseInt(String(args.limit ?? "20"), 10);
+    const limit = Number.isNaN(parsedLimit) ? 20 : parsedLimit;
     const verbose = Boolean(args.verbose);
     const ci = Boolean(args.ci);
 

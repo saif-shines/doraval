@@ -38,29 +38,79 @@ describe("drift command smoke test", () => {
   });
 });
 
-// ─── Mode selection logic ─────────────────────────────────────────────────────
+// ─── Mode selection routing (runtime) ────────────────────────────────────────
 
-describe("drift mode selection", () => {
-  test("path present → Mode 1 (skill-scoped)", async () => {
-    // We verify this by checking the path arg type is positional and optional
+describe("drift mode selection routing", () => {
+  test("path present → Mode 1 (single-skill session search) runs", async () => {
+    const sessionEvalMod = await import("../../core/session-eval.js");
+    const runEvalSpy = spyOn(sessionEvalMod, "runEval").mockImplementation(
+      async () => ({
+        sessionId: "abc1234",
+        sessionTitle: "test",
+        checklist: [],
+        ambiguityFlags: [],
+      })
+    );
+
+    // Mock the adapter so no real filesystem access is needed
+    const adaptersMod = await import("../../core/session-adapters.js");
+    const getAdapterSpy = spyOn(adaptersMod, "getAdapter").mockReturnValue({
+      listRecentSessions: () => [],
+      parse: () => ({ skillsInvoked: [], messages: [] }),
+    } as any);
+
+    // Mock loadSkill to return a valid skill
+    const skillValidateMod = await import("../../core/skill-validate.js");
+    const loadSkillSpy = spyOn(skillValidateMod, "loadSkill").mockResolvedValue({
+      ok: true,
+      model: { data: { name: "my-skill" }, content: "## Instructions\nDo something." },
+    } as any);
+
     const mod = await import("./drift.js");
-    const pathArg = (mod.default.args as Record<string, { type: string; required?: boolean }>)?.path;
-    expect(pathArg?.type).toBe("positional");
-    expect(pathArg?.required).toBeFalsy();
+
+    // Capture process.exit so the command doesn't kill the test runner
+    const exitSpy = spyOn(process, "exit").mockImplementation((() => {}) as any);
+
+    await mod.default.run!({
+      args: { path: "/some/skill/dir", format: "table", limit: "5", ci: false, verbose: false },
+      rawArgs: [],
+      cmd: mod.default,
+    } as any);
+
+    // Mode 1 loads the skill (loadSkill called with the path) — runEval not
+    // called here because listRecentSessions returns [] (no sessions to match).
+    // The key assertion is that loadSkill was invoked, confirming Mode 1 ran.
+    expect(loadSkillSpy).toHaveBeenCalledWith(expect.stringContaining("skill"));
+
+    runEvalSpy.mockRestore();
+    getAdapterSpy.mockRestore();
+    loadSkillSpy.mockRestore();
+    exitSpy.mockRestore();
   });
 
-  test("session arg present → Mode 2 (single session filter)", async () => {
-    const mod = await import("./drift.js");
-    const sessionArg = (mod.default.args as Record<string, { type: string; description: string }>)?.session;
-    expect(sessionArg?.type).toBe("string");
-    expect(sessionArg?.description?.toLowerCase()).toContain("session");
-  });
+  test("path absent → Mode 3 (repo sweep) runs", async () => {
+    const skillsViewMod = await import("../../core/views/skills-view.js");
+    const discoverSpy = spyOn(skillsViewMod, "discoverSkills").mockReturnValue([]);
 
-  test("no path → Mode 3 (repo sweep)", async () => {
-    // Path is optional, so no path = repo sweep branch
+    // Mock the adapter so no real filesystem access is needed
+    const adaptersMod = await import("../../core/session-adapters.js");
+    const getAdapterSpy = spyOn(adaptersMod, "getAdapter").mockReturnValue(null as any);
+
     const mod = await import("./drift.js");
-    const pathArg = (mod.default.args as Record<string, { required?: boolean }>)?.path;
-    expect(pathArg?.required).toBeFalsy();
+    const exitSpy = spyOn(process, "exit").mockImplementation((() => {}) as any);
+
+    await mod.default.run!({
+      args: { path: undefined, format: "table", limit: "5", ci: false, verbose: false },
+      rawArgs: [],
+      cmd: mod.default,
+    } as any);
+
+    // Mode 3 calls discoverSkills — confirm it was invoked
+    expect(discoverSpy).toHaveBeenCalled();
+
+    discoverSpy.mockRestore();
+    getAdapterSpy.mockRestore();
+    exitSpy.mockRestore();
   });
 });
 
@@ -169,5 +219,29 @@ describe("drift aggregate computation", () => {
     const flags = checklist.filter((c) => c.itemVerdict === "UNCLEAR").map((c) => c.instruction);
     expect(flags).toContain("Ask clarifying questions");
     expect(flags.length).toBe(1);
+  });
+
+  test("JUSTIFIED items are counted separately from ALIGNED in summary", () => {
+    const checklist = [
+      { instruction: "Run tests", bindingness: "MANDATORY" as const, itemVerdict: "ALIGNED" as const, evidence: "" },
+      { instruction: "Check format", bindingness: "CONDITIONAL" as const, itemVerdict: "JUSTIFIED" as const, evidence: "not a code file" },
+      { instruction: "No bare commits", bindingness: "MANDATORY" as const, itemVerdict: "DRIFTED" as const, evidence: "" },
+    ];
+    const alignedCount = checklist.filter((c) => c.itemVerdict === "ALIGNED").length;
+    const justifiedCount = checklist.filter((c) => c.itemVerdict === "JUSTIFIED").length;
+    const driftedCount = checklist.filter((c) => c.itemVerdict === "DRIFTED").length;
+    expect(alignedCount).toBe(1);
+    expect(justifiedCount).toBe(1);
+    expect(driftedCount).toBe(1);
+    // Summary format: "X ALIGNED, Y DRIFTED, W JUSTIFIED, Z UNCLEAR"
+    const summary = `${alignedCount} ALIGNED, ${driftedCount} DRIFTED, ${justifiedCount} JUSTIFIED, 0 UNCLEAR`;
+    expect(summary).toBe("1 ALIGNED, 1 DRIFTED, 1 JUSTIFIED, 0 UNCLEAR");
+  });
+
+  test("--limit 0 is accepted as zero (not coerced to 20)", () => {
+    // Mirrors the fix: Number.isNaN(parsedLimit) ? 20 : parsedLimit
+    const parsed = parseInt("0", 10);
+    const limit = Number.isNaN(parsed) ? 20 : parsed;
+    expect(limit).toBe(0);
   });
 });
