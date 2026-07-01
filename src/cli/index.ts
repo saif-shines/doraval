@@ -63,7 +63,7 @@ const journal = defineCommand({
 const evals = defineCommand({
   meta: {
     name: "evals",
-    description: "Manage eval configuration (LLM vendor, model, judge settings)",
+    description: "Manage eval configuration (LLM vendor, model, judge settings) — alias for judge",
   },
   subCommands: {
     setup: () => import("./commands/evals/setup.js").then((m) => m.default),
@@ -211,7 +211,7 @@ const main = defineCommand({
     completion: () => import("./commands/completion.js").then((m) => m.default),
     skill: () => Promise.resolve(skill),
     journal: () => Promise.resolve(journal),
-    eval: () => import("./commands/eval.js").then((m) => m.default),
+    eval: () => import("./commands/judge.js").then((m) => m.default),
     evals: () => Promise.resolve(evals),
     config: config,
     claude: () => Promise.resolve(claude),

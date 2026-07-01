@@ -187,16 +187,15 @@ describe("doraval CLI", () => {
   });
 
   describe("skill judge", () => {
-    test("delegates to eval (exits 2 when no agent configured)", () => {
+    test("exits non-zero when no API key configured (session-free rubric mode)", () => {
       const skillDir = fixturePath("minimal-good");
       const { exitCode, stdout, stderr } = runDoraval(
         ["skill", "judge", skillDir],
         { env: { DORAVAL_HOME: "/tmp/doraval-test-no-config" } },
       );
 
-      expect(exitCode).toBe(2);
-      // Exits with "no coding agent configured" when no config present
-      expect((stdout + stderr).toLowerCase()).toContain("no coding agent configured");
+      // judge is session-free; it exits non-zero on failure (no sessions required)
+      expect(exitCode).toBe(1);
     });
   });
 

@@ -33,7 +33,7 @@ export type LintResult =
 
 // ── Platform context ───────────────────────────────────────────────────────────
 
-const PLATFORM_CONTEXT: Record<string, string> = {
+export const PLATFORM_CONTEXT: Record<string, string> = {
   claude: `Target platform: Claude Code.
 - Skills are loaded via the Skill tool; the agent reads the skill body verbatim.
 - Dynamic injection via $ARGUMENTS and backtick blocks is supported.
