@@ -67,6 +67,7 @@ export interface SkillRunOptions {
   real?: boolean;               // force real CLI even if simulation available
   cwd?: string;                 // base for isolation
   verbose?: boolean;
+  progress?: import("./eval-progress.js").EvalProgress;  // TUI dashboard hook — ignored by text path
 }
 
 export interface SkillRunResult {
@@ -140,6 +141,7 @@ export async function runSkillSessions(
     .map(p => String(p).trim())
     .filter(p => p.length > 10 && !p.includes('"type":"result"') && !p.includes('session_id') && !p.startsWith('{'));
 
+  opts.progress?.onPlan(prompts.length, skillName);
 
   const batchId = `run-${Date.now()}-${skillName.replace(/[^a-z0-9]/gi, "-")}`;
   const results: SkillRunResult["runs"] = [];
@@ -148,6 +150,7 @@ export async function runSkillSessions(
 
   for (let i = 0; i < prompts.length; i++) {
     const taskPrompt = prompts[i]!;
+    opts.progress?.onRunStart(i, taskPrompt);
     const fullPrompt = buildSkillPrompt(skillContent, taskPrompt, skillName);
 
     // Isolation dir for this run.
@@ -242,6 +245,7 @@ export async function runSkillSessions(
     }
 
     const evalResult = await runEval(primitives, skillName, skillContent, agentCfg, evalCfg);
+    opts.progress?.onRunDone(i, evalResult);
 
     results.push({
       prompt: taskPrompt,
@@ -266,6 +270,8 @@ export async function runSkillSessions(
       await Bun.write(join(evalsDir, fname), JSON.stringify({ ...r.eval, _batchId: batchId, _prompt: r.prompt }, null, 2));
     }
   } catch {}
+
+  opts.progress?.onDone(summary);
 
   return {
     batchId,

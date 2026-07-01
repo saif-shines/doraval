@@ -5,6 +5,10 @@ import { loadSkill } from "../../core/skill-validate.js";
 import { lintSkill, type LintFinding } from "../../core/skill-lint.js";
 import { detectCapabilities, describeCapabilities } from "../../core/capability-detect.js";
 import { readConfig, getEvalConfig } from "../../core/journal-config.js";
+import { resolveRenderMode } from "../render/mode.js";
+import { initBackend, currentMode, resetToText } from "../render/index.js";
+import type { TuiBackend } from "../render/tui-backend.js";
+import { noopWorkSink } from "../../core/work-events.js";
 
 function hasCommand(x: unknown): x is { command: string } {
   return !!x && typeof x === "object" && typeof (x as Record<string, unknown>).command === "string";
@@ -54,9 +58,17 @@ export default defineCommand({
   async run({ args }) {
     const skillPath = args.path as string;
     const format = args.format as string;
+    const mode = resolveRenderMode({ format, ci: Boolean(args.ci) });
+    const backend = await initBackend(mode);
+
+    const sink = currentMode() === "tui"
+      ? (backend as TuiBackend).createWorkProgress("dora skill lint")
+      : noopWorkSink;
 
     const loaded = await loadSkill(skillPath);
     if (!loaded.ok) {
+      await backend.destroy();
+      resetToText();
       ui.fail(`Cannot load skill at "${skillPath}": ${loaded.error}`);
       process.exit(1);
     }
@@ -68,24 +80,39 @@ export default defineCommand({
     const caps = detectCapabilities(evalCfg);
     const platform = args.for as string | undefined;
 
-    if (format === "table") {
+    if (format === "table" && currentMode() !== "tui") {
       const platformLabel = platform ? pc.dim(` · platform: ${platform}`) : "";
       ui.write(pc.dim(`  judge: ${describeCapabilities(caps)}`) + platformLabel);
     }
 
     if (caps.preferred === "none") {
+      await backend.destroy();
+      resetToText();
       ui.fail("No judge available. Set an API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) or install claude CLI.");
       process.exit(1);
     }
 
+    // Show spinner for the LLM call
+    const label = platform ? `quality check for ${platform}` : "quality check";
+    sink.emit({ kind: "start", index: 0, label });
+
     const result = await lintSkill(loaded.model, caps, agentCfg, evalCfg, platform);
 
     if (!result.ok) {
+      sink.emit({ kind: "done", label: `failed: ${result.error}` });
+      await backend.destroy();
+      resetToText();
       ui.fail(`Lint failed: ${result.error}`);
       process.exit(1);
     }
 
+    // Signal completion before rendering output
+    const doneLabel = result.output.overall === "pass" ? "✓ pass" : result.output.overall === "warn" ? "⚠ warn" : "✗ fail";
+    sink.emit({ kind: "done", label: doneLabel });
+
     if (format === "json") {
+      await backend.destroy();
+      resetToText();
       process.stdout.write(JSON.stringify({ ...result.output, method: result.method }, null, 2) + "\n");
       if (args.ci && result.output.overall !== "pass") process.exit(1);
       return;
@@ -110,6 +137,9 @@ export default defineCommand({
       }
     }
     ui.write("");
+
+    await backend.destroy();
+    resetToText();
 
     if (args.ci && result.output.overall !== "pass") process.exit(1);
   },

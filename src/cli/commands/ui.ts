@@ -10,7 +10,7 @@
  * - Uses Bun.serve (see bun skill)
  */
 
-import { existsSync, readdirSync, writeFileSync, unlinkSync, readFileSync, statSync } from "fs";
+import { existsSync, writeFileSync, unlinkSync, readFileSync } from "fs";
 import { join } from "path";
 import { spawn } from "child_process";
 import pc from "picocolors";
@@ -19,24 +19,18 @@ import { ui as cliUi } from "../out.js";
 import {
   readConfig,
   resolveProjectName,
-  getJournalsDir,
   getPendingProjectDir,
-  getPendingDir,
   ensureDoravalDirs,
   sanitizeProjectName,
   getDoravalDir,
-  getEvalsDir,
+  getJournalsDir,
 } from "../../core/journal-config.js";
+import { generateJournalContext } from "./journal/context.js";
 import {
-  parseJournalEntries,
-  type JournalEntry,
-} from "../../core/journal-parse.js";
-import {
-  generateJournalContext,
-} from "./journal/context.js";
-
-// Eval types (for dashboard display of learnings)
-import type { EvalResult } from "../../core/session-eval.js";
+  loadAllEntries,
+  writePendingEntry,
+} from "../../core/views/journal-view.js";
+import { loadEvals } from "../../core/views/evals-view.js";
 
 // Hook pure functions (exported from hook.ts)
 import {
@@ -47,125 +41,6 @@ import {
   getGlobalSettingsPath,
   readHookConfig,
 } from "./journal/hook.js";
-
-// --- Helpers (pure-ish, adapted from list + add for the dashboard) ---
-
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "untitled";
-}
-
-async function loadAllEntries(project: string | null) {
-  const journalsDir = getJournalsDir();
-  const entries: (JournalEntry & { _source?: string; _staged?: boolean })[] = [];
-
-  // Global
-  const globalPath = join(journalsDir, "global.md");
-  if (existsSync(globalPath)) {
-    try {
-      const raw = await Bun.file(globalPath).text();
-      const parsed = parseJournalEntries(raw);
-      parsed.forEach((e) => entries.push({ ...e, _source: "global" }));
-    } catch {}
-  }
-
-  // Project committed
-  if (project) {
-    const projPath = join(journalsDir, `${project}.md`);
-    if (existsSync(projPath)) {
-      try {
-        const raw = await Bun.file(projPath).text();
-        const parsed = parseJournalEntries(raw);
-        parsed.forEach((e) => entries.push({ ...e, _source: "project" }));
-      } catch {}
-    }
-  }
-
-  // Staged / pending
-  const staged: any[] = [];
-  try {
-    const pdir = project ? getPendingProjectDir(project) : null;
-    if (pdir && existsSync(pdir)) {
-      const files = readdirSync(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
-      for (const f of files) {
-        const txt = await Bun.file(join(pdir, f)).text();
-        const parsed = parseJournalEntries(txt);
-        parsed.forEach((e) => {
-          (e as any)._staged = true;
-          (e as any)._source = "staged";
-          (e as any)._filename = f;
-          staged.push(e);
-        });
-      }
-    }
-  } catch {}
-
-  return { committed: entries, staged };
-}
-
-async function writePendingEntry(
-  project: string,
-  input: { title: string; pushback: number; tags: string[]; rationale: string; author?: string }
-) {
-  ensureDoravalDirs();
-  const pendingDir = getPendingProjectDir(project);
-  if (!existsSync(pendingDir)) {
-    await Bun.write(join(pendingDir, ".gitkeep"), "");
-  }
-
-  const date = new Date().toISOString().split("T")[0];
-  const slug = slugify(input.title);
-  const filename = `${date}-${slug}.md`;
-  const filePath = join(pendingDir, filename);
-
-  const content = `## ${input.title}
-
-\`\`\`yaml
-pushback: ${input.pushback}
-tags: [${input.tags.join(", ")}]
-author: ${input.author || "human"}
-date: ${date}
-status: active
-\`\`\`
-
-${input.rationale}
-`;
-
-  await Bun.write(filePath, content);
-  return { filePath, filename };
-}
-
-async function loadEvals(limit = 30): Promise<(EvalResult & { _filename?: string })[]> {
-  const dir = getEvalsDir();
-  if (!existsSync(dir)) return [];
-
-  let files = readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .map((f) => ({ name: f, path: join(dir, f) }));
-
-  // Newest first by filename (contains timestamp suffix)
-  files.sort((a, b) => b.name.localeCompare(a.name));
-
-  const results: (EvalResult & { _filename?: string })[] = [];
-  for (const f of files.slice(0, limit)) {
-    try {
-      const raw = await Bun.file(f.path).text();
-      const parsed = JSON.parse(raw) as EvalResult;
-      if (parsed && (parsed.schemaVersion === 1 || parsed.verdict || parsed.skill)) {
-        results.push({ ...parsed, _filename: f.name });
-      }
-    } catch {
-      // ignore bad files
-    }
-  }
-
-  // Ensure sorted by timestamp desc
-  results.sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
-  return results.slice(0, limit);
-}
 
 // --- Server ---
 
@@ -402,7 +277,7 @@ export default {
         }
 
         if (url.pathname === "/api/evals") {
-          const evals = await loadEvals(25);
+          const evals = await loadEvals({ limit: 25 });
           return Response.json({ evals });
         }
 

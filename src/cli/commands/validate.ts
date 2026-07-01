@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
-import { ui, renderValidationReport, guidedError } from "../out.js";
+import { ui, renderValidationReport, guidedError, nextAction } from "../out.js";
 import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
 
 export default defineCommand({

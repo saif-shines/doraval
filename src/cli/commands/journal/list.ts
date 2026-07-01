@@ -1,16 +1,14 @@
 import { defineCommand } from "citty";
 import pc from "picocolors";
 import { ui } from "../../out.js";
-import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 import {
   readConfig,
   resolveProjectName,
   getJournalsDir,
-  getPendingProjectDir,
   sanitizeProjectName,
 } from "../../../core/journal-config.js";
-import { parseJournalEntries, type JournalEntry } from "../../../core/journal-parse.js";
+import { loadProjectEntries, type EntryWithMeta } from "../../../core/views/journal-view.js";
 
 export default defineCommand({
   meta: {
@@ -58,44 +56,14 @@ export default defineCommand({
 
     const journalRepo = config?.journal.repo ?? "(unknown)";
 
-    // Read from the canonical journals directory (respects DORAVAL_HOME)
     const journalsDir = getJournalsDir();
     const projectFile = join(journalsDir, `${project}.md`);
-    const globalFile = join(journalsDir, "global.md");
 
-    let raw = "";
-    try {
-      raw = await Bun.file(projectFile).text();
-    } catch {
-      // No local committed mirror yet (common for brand new projects or before first update/sync).
-      // We can still show any staged pendings; the error will only be fatal if there are zero staged too.
-      raw = "";
-    }
-
-    let allEntries = parseJournalEntries(raw);
+    const { committed: loadedCommitted, staged } = await loadProjectEntries(project);
+    let allEntries: EntryWithMeta[] = loadedCommitted;
 
     if (!args.all) {
       allEntries = allEntries.filter((e) => e.status === "active");
-    }
-
-    // Load any locally staged (pending) entries so that "add" then immediate "list"
-    // shows the fresh capture (including agent-enriched title/author) without requiring sync first.
-    let staged: Array<JournalEntry & { _staged: true }> = [];
-    try {
-      const pdir = getPendingProjectDir(project);
-      if (existsSync(pdir)) {
-        const files = readdirSync(pdir).filter((f) => f.endsWith(".md") && f !== ".gitkeep");
-        const stagedResults = await Promise.all(
-          files.map(async (f) => {
-            const txt = await Bun.file(join(pdir, f)).text();
-            const parsed = parseJournalEntries(txt);
-            return parsed.map((e) => ({ ...e, _staged: true as const }));
-          })
-        );
-        staged = stagedResults.flat();
-      }
-    } catch {
-      // best effort; don't block list on pending problems
     }
 
     if (args.format === "json") {
@@ -137,7 +105,7 @@ export default defineCommand({
     }
 
     // Helper to render one entry (colors agent authors, marks staged)
-    function printEntry(entry: JournalEntry & { _staged?: boolean }) {
+    function printEntry(entry: EntryWithMeta) {
       const pb = entry.pushback ?? 0;
       let pbColor = pc.green;
       // Color the pushback score to draw attention to entries that received heavy agent critique.

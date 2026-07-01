@@ -11,6 +11,10 @@ import { canUseApiJudge } from "../../core/llm-judge.js";
 import { loadSkill } from "../../core/skill-validate.js";
 import { prompt } from "../prompt.js";
 import { runSkillSessions, renderBatchResults, displayVerdict } from "../../core/skill-runner.js";
+import { resolveRenderMode } from "../render/mode.js";
+import { initBackend, currentMode, resetToText } from "../render/index.js";
+import type { TuiBackend } from "../render/tui-backend.js";
+import { noopWorkSink } from "../../core/work-events.js";
 
 function renderResult(result: EvalResult, verbose: boolean, useDriftTerms = false): void {
   const v = result.verdict;
@@ -158,6 +162,11 @@ export default defineCommand({
   },
 
   async run({ args }) {
+    // Resolve render mode but DO NOT init TUI here — createCliRenderer captures stdin, which
+    // would intercept the interactive session-selection readSync prompt below.
+    // TUI is initialized only for the --runs path (no interactive prompt) immediately before use.
+    const mode = resolveRenderMode({ format: args.format as string | undefined, ci: Boolean(args.ci) });
+
     const config = await readConfig();
     const evalCfg = getEvalConfig(config);
 
@@ -217,10 +226,20 @@ export default defineCommand({
         }
       }
 
-      ui.heading("doraval eval — Generated session runs + comparative results");
-      const workdirNote = args.workdir ? ` workdir=${args.workdir}` : "";
-      const driveCmd = agentCfg?.command || 'default';
-      ui.write(`  Running ${numRuns} sessions (generate=${Boolean(args.generate)}, real=${Boolean(args.real)}${workdirNote}, command=${driveCmd})... This can take a while for complex skills.`);
+      // --runs path: no interactive prompt — safe to init TUI now.
+      const backend = await initBackend(mode);
+
+      // TUI mode: progress drives the split-footer dashboard (no heading/status text).
+      // Text mode: print status and let results scroll normally.
+      let evalProgress = undefined;
+      if (currentMode() === "tui" && "createEvalProgress" in backend) {
+        evalProgress = (backend as any).createEvalProgress();
+      } else {
+        ui.heading("doraval eval — Generated session runs + comparative results");
+        const workdirNote = args.workdir ? ` workdir=${args.workdir}` : "";
+        const driveCmd = agentCfg?.command || "default";
+        ui.write(`  Running ${numRuns} sessions (generate=${Boolean(args.generate)}, real=${Boolean(args.real)}${workdirNote}, command=${driveCmd})... This can take a while for complex skills.`);
+      }
 
       const result = await runSkillSessions(skillPath, {
         runs: numRuns,
@@ -229,10 +248,18 @@ export default defineCommand({
         real: Boolean(args.real),
         verbose: Boolean(args.verbose),
         cwd: args.workdir ? resolve(String(args.workdir)) : undefined,
+        progress: evalProgress,
       });
 
       if (args.format === "json") {
         process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else if (currentMode() === "tui") {
+        // Results were already written to scrollback by the dashboard's onRunDone.
+        // Print the batch summary to scrollback and tear down.
+        const table = renderBatchResults(result, Boolean(args.verbose));
+        ui.write(table);
+        await backend.destroy();
+        resetToText();
       } else {
         ui.heading("doraval eval — Generated session runs + comparative results");
         for (let i = 0; i < result.runs.length; i++) {
@@ -250,15 +277,13 @@ export default defineCommand({
       process.exit(0);
     }
 
-    ui.heading("doraval eval — Session skill adherence");
+    // Session-judge path. TUI is NOT init'd yet — readSync prompt below owns stdin.
+    // We init TUI only after session selection resolves.
 
-    // Resolve session path(s)
     let sessionPaths: string[] = [];
     let discoveryAdapter: ReturnType<typeof getAdapter> = null;
 
     if (args.session) {
-      // Support comma or space separated for multiple sessions from CLI.
-      // Explicit --session does NOT require a supported coding agent (works for any compatible .jsonl).
       sessionPaths = String(args.session)
         .split(/[\s,]+/)
         .map((s) => s.trim())
@@ -296,9 +321,9 @@ export default defineCommand({
       if (recent.length === 1) {
         sessionPaths = [recent[0]!.path];
       } else if (!process.stdout.isTTY || !process.stdin.isTTY) {
-        // non-interactive: fall back to latest with skills
         sessionPaths = [recent[0]!.path];
       } else {
+        // readSync prompt — must happen before TUI init (renderer captures stdin)
         sessionPaths = selectRecentSessions(recent);
       }
     }
@@ -316,16 +341,15 @@ export default defineCommand({
       process.exit(2);
     }
 
-    const allResults: EvalResult[] = [];
+    // Parse all sessions up-front to know total skill count before TUI init.
+    type SessionWork = { path: string; primitives: SessionPrimitives; skills: string[] };
+    const workList: SessionWork[] = [];
     for (const sessionPath of sessionPaths) {
-      ui.info(`  Session: ${pc.dim(sessionPath)}`);
-
       let primitives: SessionPrimitives;
       try {
         if (discoveryAdapter) {
           primitives = discoveryAdapter.parse(sessionPath);
         } else {
-          // explicit --session path: parse directly (no adapter or detect required)
           const text = readFileSync(sessionPath, "utf8");
           primitives = parseSession(text);
         }
@@ -343,11 +367,10 @@ export default defineCommand({
       }
 
       if (primitives.skillsInvoked.length === 0) {
-        ui.warn("  No skills were invoked in this session. (eval only makes sense for sessions that used skills)");
+        ui.warn(`  No skills invoked in ${basename(sessionPath)} — skipping.`);
         continue;
       }
 
-      // Filter skills if --skill provided
       let skillsToEval = primitives.skillsInvoked;
       if (args.skill) {
         skillsToEval = skillsToEval.filter((s) => s.includes(args.skill!));
@@ -364,16 +387,47 @@ export default defineCommand({
         }
       }
 
-      // Privacy notice
-      const judgeVia = canUseApiJudge(evalCfg) && evalCfg.model ? "direct (no proxy)" : "your agent CLI";
-      ui.write(`  ${pc.dim("· Sending session summary (tool calls + 5 user messages) to")} ${pc.dim(evalCfg.model || "configured model")} ${pc.dim(`(${judgeVia})`)}${pc.dim(". Use --verbose to inspect.")}`);
+      workList.push({ path: sessionPath, primitives, skills: skillsToEval });
+    }
 
-      ensureDoravalDirs();
+    if (workList.length === 0) {
+      ui.warn("No skills to evaluate.");
+      process.exit(0);
+    }
+
+    // All session parsing done (no more readSync). Safe to init TUI now.
+    const backend = await initBackend(mode);
+
+    const totalSkills = workList.reduce((n, w) => n + w.skills.length, 0);
+    const sink = currentMode() === "tui"
+      ? (backend as TuiBackend).createWorkProgress("dora eval")
+      : noopWorkSink;
+
+    sink.emit({ kind: "plan", total: totalSkills, label: "session eval" });
+
+    if (currentMode() !== "tui") {
+      ui.heading("doraval eval — Session skill adherence");
+    }
+
+    ensureDoravalDirs();
+    const judgeVia = canUseApiJudge(evalCfg) && evalCfg.model ? "direct (no proxy)" : "your agent CLI";
+
+    const allResults: EvalResult[] = [];
+    let stepIndex = 0;
+
+    for (const { path: sessionPath, primitives, skills: skillsToEval } of workList) {
+      if (currentMode() !== "tui") {
+        ui.info(`  Session: ${pc.dim(sessionPath)}`);
+        ui.write(`  ${pc.dim("· Sending to")} ${pc.dim(evalCfg.model || "configured model")} ${pc.dim(`(${judgeVia})`)}`);
+      }
 
       for (const skillName of skillsToEval) {
-        ui.info(`\n  Evaluating: ${pc.bold(skillName)}`);
+        sink.emit({ kind: "start", index: stepIndex, label: skillName });
 
-        // Try to load skill content from cwd
+        if (currentMode() !== "tui") {
+          ui.info(`\n  Evaluating: ${pc.bold(skillName)}`);
+        }
+
         let skillContent = `Skill: ${skillName}\n(skill content not found locally — using skill name only for evaluation)`;
         const candidateDirs = [
           process.cwd(),
@@ -383,39 +437,51 @@ export default defineCommand({
         for (const dir of candidateDirs) {
           if (existsSync(join(dir, "SKILL.md"))) {
             const loaded = await loadSkill(dir);
-            if (loaded.ok) {
-              skillContent = loaded.model.content;
-              break;
-            }
+            if (loaded.ok) { skillContent = loaded.model.content; break; }
           }
         }
 
         const result = await runEval(primitives, skillName, skillContent, agentCfg, evalCfg);
         allResults.push(result);
 
-        // Save to history (use sanitized sessionId to prevent path traversal from untrusted JSONL)
         if (evalCfg.save_history) {
           const safeId = sanitizeSessionId(primitives.sessionId) || `unknown-${Date.now()}`;
           const evalPath = join(getEvalsDir(), `${safeId}-${Date.now()}.json`);
           await Bun.write(evalPath, JSON.stringify(result, null, 2));
         }
+
+        // Log result to scrollback (TUI) or inline (text)
+        if (currentMode() === "tui") {
+          const isPass = result.verdict === "PASS";
+          const isFail = result.verdict === "FAIL";
+          const sym = isPass ? "✓" : isFail ? "✗" : "?";
+          const label = isPass ? "ADHERES" : isFail ? "DRIFTS" : "UNKNOWN";
+          const reason = result.verdictReason ? `  ${result.verdictReason.slice(0, 60)}` : "";
+          const level = isPass ? "info" : isFail ? "fail" : "warn";
+          sink.emit({ kind: "log", level, text: `${sym} ${skillName}  ${label}${reason}` });
+        } else {
+          renderResult(result, Boolean(args.verbose));
+        }
+
+        stepIndex++;
       }
     }
+
+    sink.emit({ kind: "done", label: `${allResults.length} skill${allResults.length === 1 ? "" : "s"} evaluated` });
 
     if (args.format === "json") {
+      await backend.destroy();
+      resetToText();
       process.stdout.write(JSON.stringify(allResults, null, 2) + "\n");
     } else {
-      for (const result of allResults) {
-        renderResult(result, Boolean(args.verbose));
-      }
-      ui.blank();
+      if (currentMode() !== "tui") ui.blank();
+      await backend.destroy();
+      resetToText();
     }
 
-    // --ci: exit 1 if any FAIL (DRIFTS in generated mode)
     if (args.ci && allResults.some((r) => r.verdict === "FAIL")) {
       process.exit(1);
     }
-
     process.exit(0);
   },
 });

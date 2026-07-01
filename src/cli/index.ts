@@ -3,6 +3,13 @@ import { defineCommand, runMain, showUsage } from "citty";
 import pkg from "../../package.json" with { type: "json" };
 import pc from "picocolors";
 import { ui as uiHelper } from "./out.js";
+import { registerLifecycleHandlers } from "./render/exit.js";
+import { resolveRenderMode } from "./render/mode.js";
+
+// Register terminal-restore handlers before any command runs.
+// Ensures the terminal is always restored even on direct process.exit() calls
+// or uncaught errors, once a TUI backend is active.
+registerLifecycleHandlers();
 
 const skill = defineCommand({
   meta: {
@@ -213,15 +220,24 @@ const main = defineCommand({
     copilot: () => Promise.resolve(copilot),
     ui: () => Promise.resolve(ui),
   },
-  run() {
+  async run() {
     const cliArgs = process.argv.slice(2);
-    if (cliArgs.length > 0) return; // subcommand provided — do not leak banner/usage to stdout
+    if (cliArgs.length > 0) return; // subcommand provided
 
-    // Show Doraemon banner before the normal usage instructions (to stderr so it doesn't pollute data output or hooks)
+    // Bare `dora` on a real TTY → full-screen hub
+    if (resolveRenderMode() === "tui") {
+      try {
+        const { launchApp } = await import("./tui/app.js");
+        await launchApp();
+        return;
+      } catch {
+        // FFI unavailable or init error — fall through to banner
+      }
+    }
+
     if (process.stdout.isTTY) {
       uiHelper.write("\n" + pc.blue(doraemonArt) + "\n");
     }
-
     showUsage(main);
   },
 });

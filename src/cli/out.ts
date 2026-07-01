@@ -1,56 +1,55 @@
 import pc from "picocolors";
+import { currentBackend } from "./render/index.js";
 import type { ValidateResult } from "../validators/types.js";
-
-/** Write human UI to stderr without Bun's console.error red default. */
-function write(s: string) {
-  process.stderr.write(s.endsWith("\n") ? s : s + "\n");
-}
 
 /**
  * Semantic CLI output helpers.
  * Use these instead of console.error for human-facing messages on Bun.
  *
+ * All methods delegate to the active RenderBackend (text or TUI).
+ * The active backend is set by render/index.ts and resolved once per command
+ * based on TTY / --format json / --ci / CI env (see render/mode.ts).
+ *
  * Conventions (per nodejs-cli-best-practices + cli-developer):
- * - "table" format = human readable columnar text (pipe/grep friendly, no heavy deps)
  * - Always surface "Next:" action for developer guidance
- * - Prefer small footprint; use padEnd + icons for tables (see drift, eval-history)
- * - Decision: staying text-first for reports. Rich TUI (e.g. ink) only for interactive flows.
+ * - Non-TTY / --format json / --ci → text backend (byte-identical to before)
+ * - Interactive TTY → TUI backend (OpenTUI split-footer)
  */
 export const ui = {
   /** Escape hatch: pre-styled or multiline strings. */
-  write,
+  write: (s: string) => currentBackend().write(s),
 
   /** Neutral body text (prose, paths, labels). */
-  info: (s: string) => write(s),
+  info: (s: string) => currentBackend().info(s),
 
   /** Secondary / metadata. */
-  dim: (s: string) => write(pc.dim(pc.gray(s))),
+  dim: (s: string) => currentBackend().dim(s),
 
-  blank: () => write(""),
+  blank: () => currentBackend().blank(),
 
   /** Section headers. */
-  heading: (s: string) => write(`\n  ${pc.bold(pc.white(s))}\n`),
+  heading: (s: string) => currentBackend().heading(s),
 
   /** ✓ pass / completion lines (indented). */
-  success: (s: string) => write(`  ${pc.green("✓")} ${pc.white(s)}`),
+  success: (s: string) => currentBackend().success(s),
 
   /** ⚠ non-fatal issues (indented). */
-  warn: (s: string) => write(`  ${pc.yellow("⚠")} ${pc.white(s)}`),
+  warn: (s: string) => currentBackend().warn(s),
 
   /** ✗ fatal / validation errors. */
-  fail: (s: string) => write(`${pc.red("✗")} ${pc.white(s)}`),
+  fail: (s: string) => currentBackend().fail(s),
 
   /** Indented validation / list row helpers. */
-  pass: (s: string) => write(`  ${pc.green("✓")} ${pc.white(s)}`),
-  failItem: (s: string) => write(`  ${pc.red("✗")} ${pc.white(s)}`),
-  warnItem: (s: string) => write(`  ${pc.yellow("⚠")} ${pc.white(s)}`),
+  pass: (s: string) => currentBackend().pass(s),
+  failItem: (s: string) => currentBackend().failItem(s),
+  warnItem: (s: string) => currentBackend().warnItem(s),
 };
 
-export type CheckStatus = 'pass' | 'warn' | 'fail' | 'ok';
+export type CheckStatus = "pass" | "warn" | "fail" | "ok";
 
 const statusIcon = (s: CheckStatus) =>
-  s === 'pass' || s === 'ok' ? pc.green('✓') :
-  s === 'warn' ? pc.yellow('⚠') : pc.red('✗');
+  s === "pass" || s === "ok" ? pc.green("✓") :
+  s === "warn" ? pc.yellow("⚠") : pc.red("✗");
 
 /** Render one check row (lightweight columnar style, matches drift/eval-history pad patterns). */
 export function renderCheck(status: CheckStatus, text: string): string {
@@ -66,17 +65,17 @@ export function renderChecksTable(
   opts: { header?: boolean } = {}
 ): void {
   if (opts.header && checks.length > 0) {
-    write(`  ${pc.dim('Status')}  ${pc.dim('Check')}`);
+    ui.write(`  ${pc.dim("Status")}  ${pc.dim("Check")}`);
   }
   for (const c of checks) {
     const t = typeof c.text === "string" ? c.text : c.text.text;
-    write(renderCheck(c.status, t));
+    ui.write(renderCheck(c.status, t));
   }
 }
 
 /** Explicit "Next:" action line. Use for developer guidance (see skill + plan 019). */
 export function nextAction(s: string): void {
-  write(`\n  ${pc.white('Next:')} ${pc.dim(s)}`);
+  ui.write(`\n  ${pc.white("Next:")} ${pc.dim(s)}`);
 }
 
 /**
@@ -99,13 +98,13 @@ export function guidedError(opts: {
   if (opts.next) {
     nextAction(opts.next);
   } else {
-    write(""); // spacing
+    ui.blank();
   }
 }
 
 /** One-line summary (counts, totals, etc.). */
 export function summaryLine(s: string): void {
-  write(`  ${pc.dim(s)}`);
+  ui.write(`  ${pc.dim(s)}`);
 }
 
 /**
@@ -119,7 +118,6 @@ export function renderValidationReport(
 ): void {
   const totalErrors = allResults.reduce((n, r) => n + r.result.errors.length, 0);
   const totalWarnings = allResults.reduce((n, r) => n + r.result.warnings.length, 0);
-  const totalPasses = allResults.reduce((n, r) => n + r.result.passes.length, 0);
 
   ui.heading(`dora validate — ${allResults.length} validator(s)`);
   ui.info(`  Path:  ${opts.path}`);
@@ -130,7 +128,6 @@ export function renderValidationReport(
 
     const checks: Array<{ status: CheckStatus; text: string }> = [];
 
-    // errors first (high priority)
     for (const e of result.errors) {
       const item = typeof e === "string" ? { text: e } : e;
       const txt = item.code ? `${item.text} (${item.code})` : item.text;
@@ -157,7 +154,6 @@ export function renderValidationReport(
     }
   }
 
-  // Single overall next action (per nodejs-cli-best-practices + cli-developer guidance)
   if (totalErrors === 0 && totalWarnings === 0) {
     nextAction(`dora skill drift ${opts.path}   or   dora journal add "..."`);
   } else if (totalErrors > 0) {

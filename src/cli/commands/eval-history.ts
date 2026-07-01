@@ -1,10 +1,9 @@
 import { defineCommand } from "citty";
-import { existsSync, readdirSync } from "fs";
-import { join } from "path";
+import { existsSync } from "fs";
 import pc from "picocolors";
 import { ui, guidedError } from "../out.js";
 import { getEvalsDir } from "../../core/journal-config.js";
-import type { EvalResult } from "../../core/session-eval.js";
+import { loadEvals } from "../../core/views/evals-view.js";
 
 export default defineCommand({
   meta: {
@@ -44,28 +43,11 @@ export default defineCommand({
       process.exit(0);
     }
 
-    const files = readdirSync(evalsDir)
-      .filter((f) => f.endsWith(".json"))
-      .sort()
-      .reverse();
-
     const limit = parseInt(String(args.limit), 10) || 20;
-    const results: EvalResult[] = [];
-
-    for (const file of files) {
-      if (results.length >= limit) break;
-      try {
-        const raw = await Bun.file(join(evalsDir, file)).text();
-        const parsed = JSON.parse(raw) as EvalResult;
-        // Skip unknown schema versions
-        if (parsed.schemaVersion !== 1) continue;
-        // Filter by skill
-        if (args.skill && !parsed.skill.includes(args.skill)) continue;
-        results.push(parsed);
-      } catch {
-        // skip unreadable files
-      }
-    }
+    const results = await loadEvals({
+      limit,
+      skill: args.skill as string | undefined,
+    });
 
     if (results.length === 0) {
       ui.info("No eval results found.");
