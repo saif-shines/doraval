@@ -1,0 +1,75 @@
+---
+title: bump
+description: Bump semver versions in plugin and marketplace manifests.
+sidebar:
+  order: 8
+---
+
+`dora bump` increments version fields in `plugin.json` and `marketplace.json` files. Works across all supported agents — Claude, Codex, Cursor, Copilot.
+
+## Usage
+
+```bash
+dora bump [type] [path]
+dora claude bump [type] [path]
+dora codex bump [type] [path]
+dora cursor bump [type] [path]
+dora copilot bump [type] [path]
+```
+
+All five forms are identical. The agent-prefixed forms exist as muscle-memory shortcuts.
+
+## Bump types
+
+| Type | Effect | Example |
+|------|--------|---------|
+| `patch` (default) | Increment patch version | `1.2.3` → `1.2.4` |
+| `minor` | Increment minor, reset patch | `1.2.3` → `1.3.0` |
+| `major` | Increment major, reset minor + patch | `1.2.3` → `2.0.0` |
+| `x.y.z` | Set exact version | `1.2.3` → `2.0.0-rc.1` |
+
+## Examples
+
+```bash
+# Bump patch version in current directory
+dora bump
+
+# Bump minor version
+dora bump minor
+
+# Set exact version
+dora bump 2.0.0
+
+# Bump a specific plugin directory
+dora bump patch ./my-plugin
+
+# Patch, but only plugin manifests (skip marketplace.json)
+dora bump patch --only plugin
+```
+
+## What gets bumped
+
+`bump` walks the target directory (up to 6 levels deep) and updates:
+
+- `.claude-plugin/plugin.json` — Claude plugin manifests
+- `.codex-plugin/plugin.json` — Codex plugin manifests
+- `.cursor-plugin/plugin.json` — Cursor plugin manifests
+- `.github/plugin.json` — Copilot plugin manifests
+- `marketplace.json` — Unified marketplace listing
+
+For `marketplace.json` files that contain a `plugins[]` array (some formats), each entry's version is bumped independently.
+
+## Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--only <scope>` | | `all` (default), `plugin` (manifests only), `marketplace` (marketplace.json only) |
+
+## After bumping
+
+Run `dora validate .` to confirm the bumped manifests are still valid:
+
+```bash
+dora bump minor
+dora validate .
+```

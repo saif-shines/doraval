@@ -3,9 +3,12 @@
  * doraval-wrapper.js
  *
  * Runs under Node (≥ 14.18, ESM). Resolves a Bun binary in order:
- *   1. Managed cache  — <XDG_CACHE_HOME|~/.cache>/doraval/bun/bin/bun
- *   2. PATH bun       — user's own global install
- *   3. Neither        — prompt for consent, install into cache, then exec.
+ *   1. PATH bun       — if version ≥ MIN_BUN_VERSION (preferred; user-managed)
+ *   2. Managed cache  — <XDG_CACHE_HOME|~/.cache>/doraval/bun/bin/bun (if ≥ min)
+ *   3. Neither / too old — prompt for consent, install/upgrade cache, then exec.
+ *
+ * Bun.YAML (used for config.yml and frontmatter) requires Bun ≥ 1.3.0.
+ * Older managed caches (e.g. 1.2.0) must not win over a newer PATH install.
  *
  * The Bun installer is scoped to the cache dir (BUN_INSTALL env var) so it
  * never touches ~/.bun or shell rc files.
@@ -18,12 +21,15 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
-import { existsSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { createInterface } from 'node:readline'
 
 // Pinned managed-install version; bump this to update the cached Bun.
-const BUN_VERSION = '1.2.0'
+// Must be ≥ MIN_BUN_VERSION (Bun.YAML since 1.3.0).
+const BUN_VERSION = '1.3.14'
+/** Minimum Bun that exposes Bun.YAML — used by config / frontmatter / journal. */
+const MIN_BUN_VERSION = '1.3.0'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -34,31 +40,51 @@ function getCacheDir() {
   return join(base, 'doraval', 'bun')
 }
 
-/** Try the managed-cache bun binary; return its absolute path on success. */
-function bunFromCache() {
-  const bin = join(getCacheDir(), 'bin', 'bun')
-  if (!existsSync(bin)) return null
+/** Parse "1.2.3" / "1.2.3+hash" → [major, minor, patch] or null. */
+function parseSemver(raw) {
+  const m = String(raw).trim().match(/^(\d+)\.(\d+)\.(\d+)/)
+  if (!m) return null
+  return [Number(m[1]), Number(m[2]), Number(m[3])]
+}
+
+/** True if a ≥ b for semver triples (missing parts treated as 0). */
+function versionGte(a, b) {
+  const pa = parseSemver(a)
+  const pb = parseSemver(b)
+  if (!pa || !pb) return false
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] > pb[i]) return true
+    if (pa[i] < pb[i]) return false
+  }
+  return true
+}
+
+/** Run `bun --version` for a binary path or the name "bun". */
+function bunVersion(bin) {
   try {
-    execSync(`"${bin}" --version`, { stdio: 'ignore' })
-    return bin
+    const out = execSync(`"${bin}" --version`, { encoding: 'utf8' }).trim()
+    return parseSemver(out) ? out.split(/\s+/)[0] : null
   } catch {
     return null
   }
 }
 
-/** Try the PATH bun; return 'bun' on success. */
-function bunFromPath() {
-  try {
-    execSync('bun --version', { stdio: 'ignore' })
-    return 'bun'
-  } catch {
-    return null
-  }
-}
-
-/** Resolution order: managed cache first, then PATH. */
+/**
+ * Prefer a PATH install that meets the minimum (user can upgrade freely).
+ * Fall back to managed cache only when it also meets MIN_BUN_VERSION.
+ * Stale caches (e.g. 1.2.0 without Bun.YAML) are ignored so we upgrade.
+ */
 function resolveBun() {
-  return bunFromCache() || bunFromPath()
+  const pathVer = bunVersion('bun')
+  if (pathVer && versionGte(pathVer, MIN_BUN_VERSION)) return 'bun'
+
+  const cacheBin = join(getCacheDir(), 'bin', 'bun')
+  if (existsSync(cacheBin)) {
+    const cacheVer = bunVersion(cacheBin)
+    if (cacheVer && versionGte(cacheVer, MIN_BUN_VERSION)) return cacheBin
+  }
+
+  return null
 }
 
 function printGuidance() {
@@ -167,6 +193,13 @@ if (!bunCmd) {
     process.exit(1)
   }
 
+  // Drop a stale managed cache (e.g. 1.2.0 without Bun.YAML) before reinstall.
+  try {
+    rmSync(cacheDir, { recursive: true, force: true })
+  } catch {
+    // best-effort
+  }
+
   console.log(`\nInstalling Bun v${BUN_VERSION} into ${cacheDir} …`)
   const ok = installBun(cacheDir)
   if (!ok) {
@@ -175,7 +208,18 @@ if (!bunCmd) {
     process.exit(1)
   }
 
-  bunCmd = join(cacheDir, 'bin', 'bun')
+  const installed = join(cacheDir, 'bin', 'bun')
+  const installedVer = bunVersion(installed)
+  if (!installedVer || !versionGte(installedVer, MIN_BUN_VERSION)) {
+    console.error(
+      `\nInstalled Bun ${installedVer ?? '(unknown)'} is older than required ${MIN_BUN_VERSION} (needs Bun.YAML).\n` +
+        'Upgrade Bun manually, then re-run doraval.'
+    )
+    printGuidance()
+    process.exit(1)
+  }
+
+  bunCmd = installed
   console.log('Bun installed. Running doraval…\n')
 }
 

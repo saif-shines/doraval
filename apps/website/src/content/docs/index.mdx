@@ -137,27 +137,26 @@ npx @hacksmith/doraval claude new --yes --intent self my-skill
 
 <span class="home-fold-label">Drift</span>
 
-<p class="home-fold-lead">Measure rubric deviation before subjective failure — trigger phrases, structure, voice, examples, guardrails.</p>
+<p class="home-fold-lead">Session-grounded behavioral analysis — did the agent actually follow the skill in real transcripts? Rank skills by drift rate.</p>
 
 ```bash
-npx @hacksmith/doraval skill drift ./skills/my-skill/
+npx @hacksmith/doraval drift ./skills/my-skill/
+# or: dora drift   (repo sweep, highest drift first)
 ```
 
 ```text
-  dora skill drift — Measuring rubric drift
-  Path:  ./skills/my-skill/
+  dora drift — session-grounded behavioral analysis
 
-  · Trigger    Description includes activation phrases
-  ↗ Structure  No ordered steps or checklists
-  ↗ Voice      Passive or suggestive phrasing
-  ↗ Example    No code blocks found
-  ↗ Guardrail  No explicit constraints
-  · Clarity    No ambiguous language found
+  Skill: brainstorming   Sessions checked: 5   Sessions matched: 3
 
-  4/6 rubric areas have drifted.
+  Session a1b2c3 "Design a new feature"
+    ↗ DRIFTED     Run git log for churn signal   (no git log call found)
+    ? UNCLEAR     Ask clarifying questions first  (instruction too vague)
+
+  Aggregate drift rate: 1/8 binding instructions drifted (12%)
 ```
 
-<p class="home-fold-links"><a href="/commands/drift/">drift command</a> · run after <a href="/commands/validate/">validate</a></p>
+<p class="home-fold-links"><a href="/commands/drift/">drift command</a> · <a href="/concepts/three-tier-verification/">three-tier verification</a> · needs sessions + <a href="/commands/init/">init</a></p>
 
 </div>
 
@@ -221,39 +220,22 @@ dora journal list
 
 <div class="home-command home-command-wide">
 
-<span class="home-fold-label">Eval</span>
+<span class="home-fold-label">Judge</span>
 
-<p class="home-fold-lead"><code>validate</code> and <code>drift</code> check the document. <code>dora eval</code> checks reality — did the agent follow the skill in a real session transcript? Pick a recent session interactively or pass <code>--session</code>.</p>
+<p class="home-fold-lead">Artifact vs rubric in one LLM call — no sessions. <code>eval</code> / <code>evals</code> are aliases. Use <a href="/commands/drift/">drift</a> for session behavioral analysis.</p>
 
 ```bash
-dora eval
+dora judge ./skills/my-skill/
+# aliases: dora eval ./skills/my-skill/   dora evals ./skills/my-skill/
 ```
 
 ```text
-  Recent sessions for this directory:
-    1. 2026-06-20 "Explore improvement options" (1 skill)  41be1f09-….jsonl
-    2. 2026-06-19 "Summarize repo using CLI developer" (1 skill)  e5d77e7c-….jsonl
-
-  Select session(s) (e.g. 1,3 or latest):
-
-  doraval eval: Session skill adherence
-  Evaluating: improve
-
-  [FAIL] improve
-  agent:       claude-code
-  familiarity: 2/10
-  closure:     incomplete (1 turns)
-
-  Adherence:
-  ✓ Invoke the improve skill before responding
-  ✓ Phase 1: Read README, AGENTS.md, config files
-  ✗ Phase 2: Fan out parallel audit subagents
-  ✗ Phase 3: Present findings table to user
-
-  Result: 3/9  [FAIL: stopped mid-recon]
+  [PASS] Rubric alignment
+  All mandatory criteria met: activation phrase, ordered steps, imperative voice,
+  code examples, and explicit MUST / MUST NOT guardrails.
 ```
 
-<p class="home-fold-links"><a href="/commands/eval/">eval command</a> (includes <code>dora eval history</code>) · needs <a href="/commands/init/">init</a> for model config</p>
+<p class="home-fold-links"><a href="/commands/judge/">judge command</a> · <a href="/concepts/three-tier-verification/">three-tier verification</a> · needs <a href="/commands/init/">init</a> for model config</p>
 
 </div>
 

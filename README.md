@@ -123,7 +123,7 @@ npx @hacksmith/doraval validate .
 
 Bun runtime not found.
 doraval will download and run bun.sh/install (fetched over HTTPS from bun.sh / GitHub)
-to install Bun v1.2.0 into: ~/.cache/doraval/bun
+to install Bun v1.3.14 into: ~/.cache/doraval/bun
 
 Install now? [Y/n]
 ```

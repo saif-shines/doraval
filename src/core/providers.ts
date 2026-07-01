@@ -23,11 +23,15 @@ export const PROVIDERS: ProviderDef[] = [
   },
   {
     name: "zai",
+    // Coding Plan keys only work on /api/coding/paas/v4. The general
+    // /api/paas/v4 endpoint returns 1113 "Insufficient balance or no resource
+    // package" for subscription keys even when the plan is active — set
+    // eval.base_url to https://api.z.ai/api/paas/v4 for pay-as-you-go balance.
     displayName: "Z.ai / GLM",
-    baseUrl: "https://api.z.ai/api/paas/v4",
+    baseUrl: "https://api.z.ai/api/coding/paas/v4",
     envKey: "ZAI_API_KEY",
     altEnvKeys: ["ZHIPU_API_KEY", "GLM_API_KEY"],
-    defaultModels: ["glm-4-flash", "glm-4"],
+    defaultModels: ["glm-5-turbo", "glm-5", "glm-4.7", "glm-4-flash"],
     requiresApiKey: true,
   },
   {

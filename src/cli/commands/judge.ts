@@ -200,7 +200,9 @@ export default defineCommand({
 
     // ── Invoke judge ───────────────────────────────────────────────────────────
 
-    const result = await invokeJudge(promptText, evalCfg);
+    const timeoutMs = evalCfg.timeout_ms ?? 180_000;
+    ui.info(`  calling judge (${Math.round(timeoutMs / 1000)}s timeout) …`);
+    const result = await invokeJudge(promptText, evalCfg, { timeoutMs });
 
     if (!result.success) {
       if (isJson) {

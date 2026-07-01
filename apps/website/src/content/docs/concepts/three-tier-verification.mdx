@@ -1,0 +1,110 @@
+---
+title: Three-tier verification
+description: How validate, judge, and drift work together to cover static, quality, and behavioral checks.
+sidebar:
+  order: 1
+---
+
+doraval uses three verification tiers, separated by intelligence level and cost. Each answers a different question about your context engineering artifacts.
+
+## The three tiers
+
+| Command | Sessions? | AI? | Cost | Question answered |
+|---------|-----------|-----|------|-------------------|
+| [`validate`](/commands/validate/) | No | None | ~0 | Is it well-formed? (syntax, paths, schema) |
+| [`judge`](/commands/judge/) | No | 1 call | Light/fast | Is it well-authored vs a rubric? |
+| [`drift`](/commands/drift/) | Yes | 1 call per session | Heavy | Did the agent actually follow it? |
+
+Run them in sequence when authoring a new skill, or use them independently based on what you need to know right now.
+
+## validate — static checks
+
+```bash
+dora validate .
+dora validate . --for claude:skill
+```
+
+Deterministic, instant, no LLM. Validates syntax, required frontmatter fields, paths, schema rules, and content-quality heuristics (Trigger, Structure, Voice, Example, Guardrail, Clarity).
+
+Use when: committing a skill, CI gate, quick sanity check before running AI checks.
+
+## judge — rubric alignment
+
+```bash
+dora judge ./skills/brainstorming/
+dora eval  ./skills/brainstorming/   # alias
+```
+
+One LLM call. No session data required. Compares the skill artifact against a best-practices rubric (built-in or custom) and returns a signed verdict envelope.
+
+Use when: writing or reviewing a skill, checking against a custom standard, getting a fast AI quality signal.
+
+## drift — behavioral analysis
+
+```bash
+dora drift ./skills/brainstorming/
+dora drift                            # all skills, ranked by drift rate
+```
+
+Reads real session transcripts, identifies which skills were invoked, and judges whether the agent's actual behavior tracked the skill's instructions.
+
+Use when: a skill is in active use, measuring effectiveness in practice, diagnosing why an agent isn't following instructions.
+
+## When to run which
+
+```
+Writing a new skill
+  └─ validate        ← did I get the structure right?
+  └─ judge           ← is the content quality good?
+
+Skill in production
+  └─ drift           ← is the agent actually following it?
+  └─ judge           ← did I improve it correctly after fixing drift?
+```
+
+## Four-state verdicts
+
+`judge` and `drift` both produce per-instruction verdicts with four states:
+
+| Verdict | Symbol | Meaning |
+|---------|--------|---------|
+| **ALIGNED** | `✓` | Criterion / instruction satisfied |
+| **DRIFTED** | `↗` / `✗` | Violated — with cited evidence |
+| **JUSTIFIED** | `~` | Deviated with a valid reason |
+| **UNCLEAR** | `?` | Insufficient evidence to judge |
+
+`UNCLEAR` is treated as `ALIGNED` (benefit of the doubt) and surfaced as an ambiguity flag — a signal to tighten the instruction.
+
+## Instruction bindingness (drift)
+
+Before judging session behavior, `drift` classifies each instruction:
+
+| Bindingness | When judged |
+|-------------|-------------|
+| **MANDATORY** | Always — agent must follow |
+| **CONDITIONAL** | When the condition in the instruction applies |
+| **DISCRETIONARY** | Never causes DRIFTED — examples and suggestions |
+
+This prevents false positives. "Check 4 repos" is CONDITIONAL — if only 2 exist, the agent can be JUSTIFIED. Only non-DISCRETIONARY DRIFTED items contribute to the drift rate.
+
+## Ambiguity flags
+
+Instructions that come back `UNCLEAR` in either `judge` or `drift` are collected into an `ambiguityFlags` list. These are not failures — they receive the benefit of the doubt — but they indicate that the instruction is under-specified. Tighten these in the skill to improve future verdicts.
+
+## Signed verdict envelope
+
+`judge` (and by extension `eval`/`evals`) outputs a signed envelope in JSON mode:
+
+```json
+{
+  "verdict": "PASS",
+  "rubricRef": "built-in:claude",
+  "model": "glm-4-flash",
+  "provider": "zai",
+  "timestamp": "2026-07-01T10:00:00.000Z",
+  "doravalVersion": "0.4.1",
+  ...
+}
+```
+
+The envelope records which model and provider produced the verdict, making results auditable across time and team members.

@@ -1,0 +1,35 @@
+---
+title: codex new
+description: Create a new skill or plugin following Codex packaging rules.
+sidebar:
+  order: 6
+---
+
+`dora codex new` is a context-aware wizard that scaffolds a new skill or plugin for Codex, following its packaging conventions.
+
+```bash
+dora codex new
+dora codex new my-skill
+dora codex new --yes --intent distribute my-plugin
+```
+
+The interactive flow and outcomes are identical to [`dora claude new`](/commands/claude-new/) — context detection, intent selection (self / self-later / distribute), and scaffold. The difference is the manifest location:
+
+- **Plugin path**: creates `.codex-plugin/plugin.json` instead of `.claude-plugin/plugin.json`
+- **Standalone path**: creates skills under `.codex/skills/`
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--yes` | Skip interactive prompts (use defaults and flags) |
+| `--intent` | `self` \| `self-later` \| `distribute` |
+
+## After scaffolding
+
+```bash
+dora validate . --for codex
+dora validate . --for codex:plugin
+```
+
+See [`dora claude new`](/commands/claude-new/) for the full flow description and outcome examples.

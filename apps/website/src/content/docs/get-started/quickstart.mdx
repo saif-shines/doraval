@@ -31,9 +31,9 @@ This quickstart assumes doraval is installed. If not, see [Installation](/get-st
           ┌────────┴────────┐
           ▼                 ▼
    ┌─────────────┐   ┌─────────────┐
-   │journal flow │   │  dora eval  │
+   │journal flow │   │ dora drift  │
    │ add · sync  │   │ real sessions│
-   │ hook enable │   │ ADHERES/DRIFT│
+   │ hook enable │   │ ALIGN/DRIFT │
    └─────────────┘   └─────────────┘
           │                 │
           └────────┬────────┘
@@ -103,25 +103,26 @@ This quickstart assumes doraval is installed. If not, see [Installation](/get-st
 
    See [journal add](/commands/journal-add/), [journal sync](/commands/journal-sync/), and [Agent Journal](/concepts/agent-journal/).
 
-5. ### Measure adherence in real sessions
+5. ### Judge artifact quality (optional, AI)
 
-   `validate` checks the document. [`dora eval`](/commands/eval/) checks reality: did the agent actually follow your skill in a real transcript?
-
-   ```bash
-   dora eval
-   ```
-
-   Pick a recent session interactively, or target one skill with [`judge`](/commands/judge/). A `DRIFTED` verdict means the skill did not hold in practice — catch that before you scale context to more people.
-
-6. ### Scale evals across sessions <Badge text="Coming soon" variant="caution" size="small" />
-
-   When context reaches a team or community, you care about patterns across many sessions, not just one run.
+   After validate, [`dora judge`](/commands/judge/) runs one LLM call against a best-practices rubric — no sessions required:
 
    ```bash
-   dora eval --all --parallel
+   dora judge ./skills/my-skill/
    ```
 
-   Until then, run `dora eval` per session and use `dora eval history` to track drift over time.
+   Use a platform rubric (`--for codex`) or a custom file (`--rubric ./standards.md`). See [three-tier verification](/concepts/three-tier-verification/).
+
+6. ### Measure adherence in real sessions
+
+   `validate` and `judge` check the document. [`dora drift`](/commands/drift/) checks reality: did the agent actually follow your skill in a real transcript?
+
+   ```bash
+   dora drift ./skills/my-skill/     # one skill across recent sessions
+   dora drift                         # all skills, ranked by drift rate
+   ```
+
+   A `DRIFTED` verdict means a binding instruction was not followed — catch that before you scale context to more people.
 
 </Steps>
 

@@ -1,7 +1,13 @@
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
+
+/** Suppress noisy AI SDK warnings (e.g. Z.ai lacks structuredOutputs / responseFormat). */
+function silenceAiSdkWarnings(): void {
+  const g = globalThis as typeof globalThis & { AI_SDK_LOG_WARNINGS?: boolean };
+  g.AI_SDK_LOG_WARNINGS = false;
+}
 import type { EvalConfig } from "./journal-config.js";
 import {
   PROVIDERS,
@@ -11,7 +17,7 @@ import {
   type ProviderDef,
 } from "./providers.js";
 
-export const DEFAULT_JUDGE_TIMEOUT_MS = 60_000;
+export const DEFAULT_JUDGE_TIMEOUT_MS = 180_000; // 3 min — reasoning models on Z.ai/Groq etc. can be slow
 
 // ── Output schema ──────────────────────────────────────────────────────────────
 
@@ -209,7 +215,9 @@ function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: Ju
   ) {
     return {
       code: "timeout",
-      error: `Request timed out after ${Math.round(timeoutMs / 1000)}s. Try again, use a faster model, or set eval.judge=cli.`,
+      error:
+        `Request timed out after ${Math.round(timeoutMs / 1000)}s. ` +
+        `Try a faster model (glm-4.7 / glm-4-flash), increase with "dora config set eval.timeout_ms 300000", or set eval.judge=cli.`,
     };
   }
   if (err?.code === "ENOTFOUND" || err?.code === "ECONNREFUSED" || err?.code === "ETIMEDOUT") {
@@ -220,6 +228,21 @@ function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: Ju
     };
   }
   if (err?.status === 429) {
+    // Z.ai uses HTTP 429 + code 1113 for "wrong product endpoint / no package",
+    // not only rate limits — Coding Plan keys must use /api/coding/paas/v4.
+    if (
+      lower.includes("insufficient balance") ||
+      lower.includes("no resource package") ||
+      lower.includes("1113")
+    ) {
+      return {
+        code: "auth",
+        error:
+          "Z.ai rejected the call (1113: no balance/package on this endpoint). " +
+          "Coding Plan keys need: dora config set eval.base_url https://api.z.ai/api/coding/paas/v4 " +
+          "(pay-as-you-go uses https://api.z.ai/api/paas/v4). Or set eval.judge=cli.",
+      };
+    }
     return {
       code: "rate_limit",
       error: "Rate limit exceeded. Wait and retry, or set eval.judge=cli.",
@@ -248,18 +271,69 @@ function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: Ju
   return { code: "network", error };
 }
 
+// ── Response parsing (prompt-JSON path) ────────────────────────────────────────
+
+const JUDGE_SYSTEM_JSON = `You are a strict evaluator. Return ONLY a single valid JSON object (no markdown fences, no prose) with exactly these fields:
+{
+  "verdict": "PASS" | "FAIL",
+  "verdictReason": string,
+  "checklist": [
+    {
+      "instruction": string,
+      "bindingness": "MANDATORY" | "CONDITIONAL" | "DISCRETIONARY",
+      "itemVerdict": "ALIGNED" | "DRIFTED" | "JUSTIFIED" | "UNCLEAR",
+      "evidence": string,
+      "detail": string (optional)
+    }
+  ],
+  "ambiguityFlags": string[],
+  "userFamiliarity": integer 1-10,
+  "userFamiliarityReason": string,
+  "closure": "1-shot" | "multi-turn" | "incomplete",
+  "userTurnsAfterSkill": integer >= 0
+}
+For rubric/artifact judging (no session), use userFamiliarity=5, userFamiliarityReason="not applicable (rubric mode)", closure="1-shot", userTurnsAfterSkill=0.
+PASS only if no MANDATORY/CONDITIONAL checklist item has itemVerdict DRIFTED.`;
+
+/** Parse model text into JudgeOutput via extractCandidates + Zod. */
+export function parseJudgeText(text: string): JudgeResult {
+  const candidates = extractCandidates(text);
+  let lastIssue = "no JSON object found";
+  for (const c of candidates) {
+    const parsed = JudgeSchema.safeParse(c);
+    if (parsed.success) return { success: true, data: parsed.data };
+    lastIssue = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+  }
+  return {
+    success: false,
+    code: "parse",
+    error: `Judge returned unparseable JSON (${lastIssue}). Try another model or eval.judge=cli.`,
+  };
+}
+
+/**
+ * True when the provider is known to support OpenAI-style json_schema structured outputs.
+ * Z.ai Coding Plan (and most OpenAI-compat gateways) reject response_format json_schema —
+ * generateObject then fails with "No object generated: response did not match schema".
+ */
+function supportsStructuredOutputs(providerName: string, baseUrl: string): boolean {
+  if (providerName === "openai" && baseUrl.includes("api.openai.com")) return true;
+  return false;
+}
+
 // ── invokeJudge ────────────────────────────────────────────────────────────────
 
 /**
  * Calls an LLM directly via Vercel AI SDK for eval judging.
- * Uses generateObject + Zod schema for typed, validated output.
- * Supports any OpenAI-compatible provider via the PROVIDERS registry.
+ * Uses generateObject only on OpenAI; otherwise generateText + JSON parse
+ * (Z.ai / Groq / OpenRouter / custom often lack structuredOutputs).
  */
 export async function invokeJudge(
   promptText: string,
   evalCfg: EvalConfig,
   opts?: { timeoutMs?: number }
 ): Promise<JudgeResult> {
+  silenceAiSdkWarnings();
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_JUDGE_TIMEOUT_MS;
   const { apiKey, baseUrl, model, providerName } = resolveDirectCredentials(evalCfg);
 
@@ -278,18 +352,48 @@ export async function invokeJudge(
   const provider = makeProvider(baseUrl, apiKey, providerName);
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+  const modelRef = provider(model);
 
   try {
-    const { object } = await generateObject({
-      model: provider(model),
-      schema: JudgeSchema,
-      system:
-        "You are a strict evaluator. Return ONLY a valid JSON object matching the schema exactly. No markdown, no prose.",
+    if (supportsStructuredOutputs(providerName, baseUrl)) {
+      try {
+        const { object } = await generateObject({
+          model: modelRef,
+          schema: JudgeSchema,
+          system: JUDGE_SYSTEM_JSON,
+          prompt: promptText,
+          temperature: 0,
+          abortSignal: abortController.signal,
+        });
+        return { success: true, data: object };
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Fall through to text+parse for transient schema failures
+        if (!/object generated|schema|JSON|parse/i.test(msg)) {
+          const mapped = mapJudgeError(e, timeoutMs);
+          return { success: false, error: mapped.error, code: mapped.code };
+        }
+      }
+    }
+
+    const { text } = await generateText({
+      model: modelRef,
+      system: JUDGE_SYSTEM_JSON,
       prompt: promptText,
       temperature: 0,
       abortSignal: abortController.signal,
     });
-    return { success: true, data: object };
+
+    if (!text?.trim()) {
+      return {
+        success: false,
+        code: "empty",
+        error:
+          "Judge API returned empty text (common with reasoning models if only reasoning tokens were used). Try glm-4.7 / a non-reasoning model, or eval.judge=cli.",
+      };
+    }
+
+    return parseJudgeText(text);
   } catch (e: unknown) {
     const mapped = mapJudgeError(e, timeoutMs);
     return { success: false, error: mapped.error, code: mapped.code };

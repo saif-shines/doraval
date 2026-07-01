@@ -137,14 +137,14 @@ doraval journal sync
 
 `update` keeps the local `~/.doraval/journals/` mirror fresh. `sync` always refreshes first, then publishes anything in `pending/`.
 
-`journal check` and Principle drift integration into `skill drift` / `validate` are the major remaining pieces (see the [implementation plan](https://github.com/saif-shines/doraval/blob/main/docs/specs/2026-05-25-journal-implementation-plan.md)).
+`journal check` and Principle drift integration into `drift` / `validate` are the major remaining pieces (see the [implementation plan](https://github.com/saif-shines/doraval/blob/main/docs/specs/2026-05-25-journal-implementation-plan.md)).
 
 For a clear explanation of the mental model and why the journal is built this way, see [How the Agent Journal Works](/concepts/journal-rationale).
 
 See the individual command pages under **Commands** (e.g. [journal init](/commands/journal-init), [journal update](/commands/journal-update)) for flag details and examples.
 ## Integration with existing commands
 
-- `doraval skill drift` gains **Principle drift**: flags when a skill contradicts an active journal entry (planned).
+- `dora drift` gains **Principle drift**: flags when a skill contradicts an active journal entry (planned).
 - `doraval eval` / `skill judge` can be extended in the future to incorporate journal entries as additional context for the LLM judge.
 - Entries with `pushback >= 7` surface as warnings in `doraval skill validate` (planned).
 

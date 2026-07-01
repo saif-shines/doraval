@@ -719,7 +719,7 @@ function renderEval(e, container) {
   const date = (e.timestamp || '').slice(0, 10);
   const skillShort = (e.skill || '').slice(0, 28);
   const fam = typeof e.userFamiliarity === 'number' ? `${e.userFamiliarity}/10` : '';
-  const passed = e.checklist ? e.checklist.filter((c) => c.pass).length : 0;
+  const passed = e.checklist ? e.checklist.filter((c) => c.itemVerdict === "ALIGNED" || c.itemVerdict === "JUSTIFIED").length : 0;
   const total = e.checklist ? e.checklist.length : 0;
   const score = total > 0 ? `${passed}/${total}` : '';
 
@@ -792,7 +792,8 @@ function showEvalModal(e) {
 
   // Build rich rationale area with checklist
   const checklistHtml = (e.checklist || []).map((item) => {
-    const sym = item.pass ? '<span class="text-emerald-400">✓</span>' : '<span class="text-red-400">✗</span>';
+    const ok = item.itemVerdict === "ALIGNED" || item.itemVerdict === "JUSTIFIED";
+    const sym = ok ? '<span class="text-emerald-400">✓</span>' : '<span class="text-red-400">✗</span>';
     const detail = item.detail ? ` <span class="text-zinc-500 text-xs">— ${item.detail}</span>` : '';
     return `<div class="py-0.5">${sym} ${item.instruction}${detail}</div>`;
   }).join('');
@@ -804,7 +805,7 @@ function showEvalModal(e) {
       <div class="font-medium mb-1">Adherence checklist</div>
       <div class="space-y-0.5 text-[13px]">${checklistHtml || 'No checklist items.'}</div>
       ${reason}
-      <div class="mt-3 text-[11px] text-zinc-500">Result: ${e.checklist ? e.checklist.filter((c)=>c.pass).length : 0}/${(e.checklist||[]).length} — ${e.verdict}</div>
+      <div class="mt-3 text-[11px] text-zinc-500">Result: ${e.checklist ? e.checklist.filter((c)=>c.itemVerdict === "ALIGNED" || c.itemVerdict === "JUSTIFIED").length : 0}/${(e.checklist||[]).length} — ${e.verdict}</div>
     </div>
   `;
 

@@ -15,7 +15,7 @@ Whether you are optimizing context for yourself, your team, or a wider community
 
 **doraval** is pronounced *dor-uh-val* — stress the last syllable, like **Dora** + **eval**.
 
-The **Dora** comes from [Doraemon](https://en.wikipedia.org/wiki/Doraemon), the robot cat who pulls the right gadget for the job. The **-val** comes from **evaluation** — session evals that judge whether an agent actually followed your skills, not just whether the file parses. `validate` and `skill drift` check the document; `eval` checks reality. The shorter alias **`dora`** is the same CLI.
+The **Dora** comes from [Doraemon](https://en.wikipedia.org/wiki/Doraemon), the robot cat who pulls the right gadget for the job. The **-val** comes from **evaluation** — three tiers that go from static checks to real session behavior. `validate` checks the document (including static quality heuristics); `judge` scores the artifact against a rubric; `drift` checks reality in real transcripts. The shorter alias **`dora`** is the same CLI.
 
 ## The problem
 
@@ -33,7 +33,7 @@ doraval **left-shifts success**: catch breakage before the first session, not af
                         │
                         ▼
                  ┌─────────────┐
-                 │   doraval   │  validate · scaffold · journal · eval
+                 │   doraval   │  validate · judge · drift · journal
                  └─────────────┘
                         │
                         ▼
@@ -47,21 +47,22 @@ doraval **left-shifts success**: catch breakage before the first session, not af
 
 | Command | What it scales | Speed |
 |---------|----------------|-------|
-| `validate` | Catch broken skills, plugins, hooks, MCP before anyone uses them | Instant |
+| `validate` | Catch broken skills, plugins, hooks, MCP (plus static skill heuristics) before anyone uses them | Instant |
+| `judge` | Artifact quality vs a best-practices rubric (one LLM call; `eval` / `evals` aliases) | Seconds |
+| `drift` | Proof that agents followed your skills in real session transcripts | Minutes |
 | `claude new` / `cursor new` etc. | Scaffold resources that load correctly across agents | Instant |
 | `init` | One-time setup for decision memory (journal) + agent integration | Instant |
 | `journal` | Decisions that persist across sessions and people | Instant |
-| `eval` | Proof that agents followed your skills in real sessions | Minutes |
-| `skill drift` | Rubric deviation before subjective failure shows up | Instant |
+| `bump` / `config` | Semver manifests and dot-notation config | Instant |
 | `ui` | Local dashboard for capturing context without retyping | Instant |
 | `providers` | See which agents understand which packaging | Instant |
 
-`validate` is the workhorse. Point it at a directory or GitHub URL and it tells you what is broken before you scale context to anyone else.
+`validate` is the workhorse. Point it at a directory or GitHub URL and it tells you what is broken before you scale context to anyone else. See [three-tier verification](/concepts/three-tier-verification/) for how `validate`, `judge`, and `drift` fit together.
 
 ## What to do next
 
 - [Install](/get-started/installation/) doraval
-- [Quickstart](/get-started/quickstart/) — scaffold, validate, journal, eval in one path
+- [Quickstart](/get-started/quickstart/) — scaffold, validate, journal, judge, drift in one path
 - `doraval update` — stay current
 - `doraval providers` + `--for` — target the right agents
 

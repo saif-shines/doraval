@@ -20,6 +20,8 @@ export interface EvalConfig {
   save_history: boolean;
   /** Explicit judge backend preference. "auto" (default) prefers direct API when credentials available. */
   judge?: 'auto' | 'api' | 'cli';
+  /** Per-call timeout for direct API judge (ms). Default 180s for reasoning models. */
+  timeout_ms?: number;
 }
 
 export interface JournalConfig {
@@ -70,6 +72,7 @@ export function getEvalConfig(config: JournalConfig | null): EvalConfig {
     max_tool_calls: 200,
     save_history: true,
     judge: 'auto',
+    timeout_ms: 180_000,
   };
   return { ...defaults, ...(config?.eval ?? {}) };
 }

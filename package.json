@@ -15,7 +15,7 @@
   },
   "description": "Scale your AI context for coding agents. Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.",
   "engines": {
-    "bun": ">=1.2.0",
+    "bun": ">=1.3.0",
     "node": ">=14.18.0"
   },
   "files": [
@@ -57,13 +57,13 @@
   },
   "type": "module",
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.2",
-    "@ai-sdk/openai-compatible": "^3.0.1",
+    "@ai-sdk/openai": "^4.0.4",
+    "@ai-sdk/openai-compatible": "^3.0.2",
     "@clack/prompts": "^1.6.0",
     "@opentui/core": "^0.4.2",
-    "ai": "^7.0.4",
+    "ai": "^7.0.9",
     "citty": "^0.2.2",
-    "openai": "^6.44.0",
+    "openai": "^6.45.0",
     "picocolors": "^1.1.1",
     "zod": "^4.4.3"
   }

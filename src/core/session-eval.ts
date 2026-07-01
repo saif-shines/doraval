@@ -171,7 +171,8 @@ export async function runEval(
     !!evalCfg.model;
 
   if (shouldTryApi) {
-    const result: JudgeResult = await invokeJudge(prompt, evalCfg);
+    const timeoutMs = evalCfg.timeout_ms ?? 180_000;
+    const result: JudgeResult = await invokeJudge(prompt, evalCfg, { timeoutMs });
     if (result.success) {
       judged = result.data;
       usedMethod = "api";

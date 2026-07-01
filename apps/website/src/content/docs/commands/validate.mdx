@@ -38,7 +38,7 @@ doraval supports validators for multiple coding agents. Use `--for <provider>` o
 
 | Validator | Detects | What it checks |
 |---|---|---|
-| `claude:skill` | `SKILL.md` | Frontmatter (all known fields), body, supporting files, dynamic injection (!`...`, $ARGUMENTS, CLAUDE_* vars), advanced fields, unknown field warnings |
+| `claude:skill` | `SKILL.md` | Frontmatter (all known fields), body, supporting files, dynamic injection (!`...`, $ARGUMENTS, CLAUDE_* vars), advanced fields, unknown field warnings; 6 content-quality heuristics (Trigger, Structure, Voice, Example, Guardrail, Clarity) |
 | `claude:plugin` | `.claude-plugin/plugin.json` | Full manifest schema (name, version rules, displayName, author, license, keywords, defaultEnabled, userConfig, channels, dependencies, ...), path rules (./, replace vs augment), .claude-plugin/ purity (only manifest allowed inside), default dirs + co-existence warnings, root SKILL.md single-skill layout, unrecognized fields + suggestions, version pinning semantics |
 | `claude:marketplace` | `plugins/` | Plugin directory structure, README, LICENSE |
 | `claude:hooks` | `hooks/hooks.json` or `hooks.json` | All 30+ lifecycle events (full list), hook group structure (matcher + hooks[]), supported types (command/http/mcp_tool/prompt/agent), basic required fields per type, substitution notes |
@@ -60,6 +60,21 @@ dora validate . --for cursor:plugin
 # ...
 ✓ keywords: [foo, bar-baz]. If users mention any of these keywords, your plugin will get triggered in Cursor
 ```
+
+## Static skill heuristics
+
+When `claude:skill` runs, it also applies six content-quality checks to the skill body and frontmatter. Failures surface as errors prefixed `[static]`:
+
+| Check | What it looks for | Failure message |
+|-------|------------------|-----------------|
+| **Trigger** | `"use when"`, `"trigger"`, or `"invoke"` in description/when_to_use | `[static] Trigger: No trigger phrases found — add "Use when..." to description` |
+| **Structure** | Numbered lists (`1.`) or bullet lists (`-`, `*`) in body | `[static] Structure: No ordered steps or checklists — agent needs a clear sequence to follow` |
+| **Voice** | Imperative verbs (`Create`, `Add`, `Run`, `Install`, `Configure`, `Set`, `Build`, `Use`, `Check`, `Verify`, `Ensure`) | `[static] Voice: Passive or suggestive phrasing — use direct imperatives` |
+| **Example** | Fenced code blocks (` ``` `) in body | `[static] Example: No code blocks found — add examples if the skill involves code` |
+| **Guardrail** | `MUST` or `MUST NOT` (uppercase) in body | `[static] Guardrail: No explicit constraints — add MUST / MUST NOT guardrails` |
+| **Clarity** | Absence of `maybe`, `possibly`, `consider`, `you might want to`, `perhaps` | `[static] Clarity: Ambiguous language found — replace hedging with direct instructions` |
+
+These checks are fast and require no AI. They complement the LLM-based quality check in [`dora judge`](/commands/judge/).
 
 ## Remote URLs
 
@@ -97,7 +112,7 @@ Subdirectories are validated strictly – invalid or traversal paths (e.g. `../.
 
   ✓ All checks passed.
 
-  Next: dora skill drift https://github.com/obra/superpowers
+  Next: dora judge .   or   dora drift .
 ```
 
 ## `skill validate` (legacy)
