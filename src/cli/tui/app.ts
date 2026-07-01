@@ -4,7 +4,7 @@
  * Panes:
  *   1 Home     — project status
  *   2 Journal  — entries; a add, s sync
- *   3 Evals    — recent results; e run eval
+ *   3 Evals    — recent results; e run judge (artifact quality)
  *   4 Skills   — workspace skills; v validate, l lint
  *
  * Global: Tab/1-4 switch, ? help, : command palette, r refresh, q quit.
@@ -286,7 +286,7 @@ export async function launchApp(): Promise<void> {
       case "l": case "lint":
         switchPane("skills"); await runInAppLint(); break;
       case "e": case "eval":
-        switchPane("evals"); await runLatestEval(); break;
+        switchPane("evals"); await runInAppJudge(); break;
       default:
         setContent(`\n  Unknown command: ${cmd}\n\n  Press ? for help or : to try again.`);
     }
@@ -416,13 +416,19 @@ export async function launchApp(): Promise<void> {
     }
   }
 
-  // ─── latest eval run ─────────────────────────────────────────────────────
-  async function runLatestEval() {
-    startBusy("Running eval on latest session…");
-    appendBusyLine(`  ${SPINNER_FRAMES[0]} finding recent sessions…`);
+  // ─── in-app judge (Evals pane action: dora evals <skill>) ────────────────────
+  async function runInAppJudge() {
+    const skill = skills[0];
+    if (!skill) {
+      setContent("\n  No skill found in workspace.\n\n  Expected: .claude/skills/<name>/SKILL.md or skills/<name>/SKILL.md");
+      return;
+    }
+    startBusy(`Judging ${skill.name}…`);
+    appendBusyLine(`  ${SPINNER_FRAMES[0]} calling evals (judge)…`);
+
     try {
       const proc = Bun.spawn(
-        [process.execPath, process.argv[1]!, "eval", "--runs", "2"],
+        [process.execPath, process.argv[1]!, "evals", skill.dir],
         {
           cwd: process.cwd(),
           stdout: "pipe",
@@ -437,15 +443,15 @@ export async function launchApp(): Promise<void> {
       await proc.exited;
       const combined = stripAnsi((out + err).trim());
       stopBusy();
-      const resultLines = ["", "  Eval results:"];
+      const resultLines = ["", "  Evals / Judge result:"];
       for (const line of combined.split("\n").slice(0, 30)) {
         resultLines.push(`  ${line}`);
       }
       setContent(resultLines.join("\n"));
-      evals = await loadEvals({ limit: 20 }).catch(() => evals);
+      // loadEvals shows legacy session results (if any); new judge output is shown above.
     } catch (err) {
       stopBusy();
-      setContent(`\n  Eval failed: ${err}`);
+      setContent(`\n  Judge failed: ${err}`);
     }
   }
 
@@ -601,7 +607,7 @@ export async function launchApp(): Promise<void> {
     } else if (key.name === "s" && activePane === "journal") {
       void runJournalSync();
     } else if (key.name === "e" && activePane === "evals") {
-      void runLatestEval();
+      void runInAppJudge();
     } else if (key.name === "v" && activePane === "skills") {
       void runInAppValidate();
     } else if (key.name === "l" && activePane === "skills") {
@@ -633,7 +639,7 @@ function browseHint(pane: Pane): string {
   const extras: Record<Pane, string> = {
     home: "",
     journal: "   a add   s sync",
-    evals: "   e run eval",
+    evals: "   e judge skill",
     skills: "   v validate   l lint",
   };
   return `  q quit   Tab/1-4 switch${extras[pane]}   : cmd   ? help   r refresh`;
@@ -655,7 +661,7 @@ function buildHelp(): string {
     s                 sync staged entries to remote
 
   Evals pane
-    e                 run eval on latest session (--runs 2)
+    e                 judge primary skill via dora evals (rubric alignment)
 
   Skills pane
     v                 validate skill at cwd / first found
@@ -669,7 +675,7 @@ function buildHelp(): string {
   Command palette (:)
     sync / s          journal sync
     add / a           journal add form
-    eval / e          run eval
+    evals / e         judge primary skill (artifact quality)
     validate / v      validate skill
     lint / l          lint skill
     refresh / r       refresh data
@@ -763,7 +769,7 @@ function buildJournal(journal: JournalData): string {
 
 function buildEvals(evals: EvalResultWithMeta[]): string {
   if (evals.length === 0) {
-    return "\n  No eval results yet.\n\n  Press e to run eval on the latest session.";
+    return "\n  No eval results yet.\n\n  Press e to run dora evals on the primary skill.";
   }
   const lines: string[] = [""];
   lines.push(`  Recent evals  (${evals.length} results)`);

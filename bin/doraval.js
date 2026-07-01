@@ -52623,7 +52623,7 @@ async function launchApp() {
       case "e":
       case "eval":
         switchPane("evals");
-        await runLatestEval();
+        await runInAppJudge();
         break;
       default:
         setContent(`
@@ -52767,11 +52767,19 @@ async function launchApp() {
   Sync failed: ${err}`);
     }
   }
-  async function runLatestEval() {
-    startBusy("Running eval on latest session\u2026");
-    appendBusyLine(`  ${SPINNER_FRAMES3[0]} finding recent sessions\u2026`);
+  async function runInAppJudge() {
+    const skill = skills[0];
+    if (!skill) {
+      setContent(`
+  No skill found in workspace.
+
+  Expected: .claude/skills/<name>/SKILL.md or skills/<name>/SKILL.md`);
+      return;
+    }
+    startBusy(`Judging ${skill.name}\u2026`);
+    appendBusyLine(`  ${SPINNER_FRAMES3[0]} calling evals (judge)\u2026`);
     try {
-      const proc = Bun.spawn([process.execPath, process.argv[1], "eval", "--runs", "2"], {
+      const proc = Bun.spawn([process.execPath, process.argv[1], "evals", skill.dir], {
         cwd: process.cwd(),
         stdout: "pipe",
         stderr: "pipe",
@@ -52784,18 +52792,17 @@ async function launchApp() {
       await proc.exited;
       const combined = stripAnsi((out + err).trim());
       stopBusy();
-      const resultLines = ["", "  Eval results:"];
+      const resultLines = ["", "  Evals / Judge result:"];
       for (const line of combined.split(`
 `).slice(0, 30)) {
         resultLines.push(`  ${line}`);
       }
       setContent(resultLines.join(`
 `));
-      evals = await loadEvals({ limit: 20 }).catch(() => evals);
     } catch (err) {
       stopBusy();
       setContent(`
-  Eval failed: ${err}`);
+  Judge failed: ${err}`);
     }
   }
   async function runInAppValidate() {
@@ -52968,7 +52975,7 @@ async function launchApp() {
     } else if (key.name === "s" && activePane === "journal") {
       runJournalSync();
     } else if (key.name === "e" && activePane === "evals") {
-      runLatestEval();
+      runInAppJudge();
     } else if (key.name === "v" && activePane === "skills") {
       runInAppValidate();
     } else if (key.name === "l" && activePane === "skills") {
@@ -52998,7 +53005,7 @@ function browseHint(pane) {
   const extras = {
     home: "",
     journal: "   a add   s sync",
-    evals: "   e run eval",
+    evals: "   e judge skill",
     skills: "   v validate   l lint"
   };
   return `  q quit   Tab/1-4 switch${extras[pane]}   : cmd   ? help   r refresh`;
@@ -53017,7 +53024,7 @@ function buildHelp() {
     s                 sync staged entries to remote
 
   Evals pane
-    e                 run eval on latest session (--runs 2)
+    e                 judge primary skill via dora evals (rubric alignment)
 
   Skills pane
     v                 validate skill at cwd / first found
@@ -53031,7 +53038,7 @@ function buildHelp() {
   Command palette (:)
     sync / s          journal sync
     add / a           journal add form
-    eval / e          run eval
+    evals / e         judge primary skill (artifact quality)
     validate / v      validate skill
     lint / l          lint skill
     refresh / r       refresh data
@@ -53109,7 +53116,7 @@ function buildEvals(evals) {
     return `
   No eval results yet.
 
-  Press e to run eval on the latest session.`;
+  Press e to run dora evals on the primary skill.`;
   }
   const lines = [""];
   lines.push(`  Recent evals  (${evals.length} results)`);
