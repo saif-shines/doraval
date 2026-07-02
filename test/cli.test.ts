@@ -101,7 +101,7 @@ describe("doraval CLI", () => {
       expect(stderr).toContain("Structural validation");
       expect(stderr).toContain("minimal-good");
       expect(stderr).toContain("Next:");
-      expect(stderr).toContain("Status  Check");
+      expect(stderr).toContain("passed");
     });
 
     test("validates CRLF fixture on disk", () => {

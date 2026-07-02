@@ -6,6 +6,7 @@ import pc from "picocolors";
 import { join, basename, dirname } from "path";
 import { mkdirSync, writeFileSync, existsSync } from "fs";
 import { getProviderSpec } from "../../../providers/spec.js";
+import { exit } from "../../render/exit.js";
 
 export type Intent = "self" | "self-later" | "distribute";
 
@@ -57,12 +58,12 @@ export function decidePath(ctx: ReturnType<typeof import("./context.js").detectC
   return { path: decisionPath, targetDir, shouldCreateDir, migrateExisting };
 }
 
-export function scaffold(decision: Decision, ctx: any, migrateContent?: string) {
+export async function scaffold(decision: Decision, ctx: any, migrateContent?: string) {
   const { targetDir, path, shouldCreateDir } = decision;
 
   if (existsSync(targetDir) && shouldCreateDir) {
     ui.fail("Target already exists");
-    process.exit(1);
+    return await exit(1);
   }
 
   if (shouldCreateDir) {
@@ -195,7 +196,7 @@ export default defineCommand({
       required: false,
     },
   },
-  run({ args }) {
+  async run({ args }) {
     ui.heading("doraval codex new — Context-aware scaffolding");
     const ctx = detectContext();
     let intent: Intent = (args.intent as Intent) || "self-later";
@@ -213,7 +214,7 @@ export default defineCommand({
       migrateContent = "Content from your existing SKILL.md (user-confirmed).";
     }
 
-    scaffold(decision, ctx, migrateContent);
+    await scaffold(decision, ctx, migrateContent);
     ui.write(`\n  ${pc.green("✓")} Created ${decision.path} at ${pc.bold(decision.targetDir)}`);
     const cmdName = decision.path === "plugin" ? `/${basename(decision.targetDir)}:doraval` : "/doraval (local skill)";
     ui.info(`  Command: ${cmdName}`);
@@ -230,6 +231,6 @@ export default defineCommand({
     if (decision.path === "plugin" && decision.migrateExisting) {
       ui.info("  (Existing content migrated where confirmed.)");
     }
-    process.exit(0);
+    await exit(0);
   },
 });
