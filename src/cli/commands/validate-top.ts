@@ -6,6 +6,7 @@ import { ui, renderValidationReport, guidedError, nextAction } from "../out.js";
 import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
 import { parseRemoteUrl, cloneToTemp, hasGitCli, sanitizeSubpath } from "../../core/remote.js";
+import { normalizeSkillPath } from "../../core/skill-discovery.js";
 
 export default defineCommand({
   meta: {
@@ -97,6 +98,10 @@ export default defineCommand({
         process.exit(1);
       }
     }
+
+    // Accept a path pointing directly at a SKILL.md file (normalize to its directory)
+    // so every validator downstream can assume a directory, not a file.
+    fullPath = normalizeSkillPath(fullPath);
 
     try {
       const opts: ValidateOptions = {

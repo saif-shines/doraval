@@ -1,9 +1,14 @@
 import type { Validator } from "./types.js";
 import { adapters } from "../providers/index.js";
 import { supportedProviders } from "../providers/spec.js";
+import { agentskillsSkillValidator } from "./agentskills/skill.js";
 
-// Validators are sourced from ProviderAdapter[] (see src/providers/index.ts + spec.ts).
-export const validators: Validator[] = adapters.flatMap((a) => a.validators);
+// Validators are sourced from ProviderAdapter[] (see src/providers/index.ts + spec.ts),
+// plus any standalone validators that aren't tied to a packaging provider (no manifest/
+// marketplace/MCP concept of their own — e.g. the open agentskills.io spec profile).
+const standaloneValidators: Validator[] = [agentskillsSkillValidator];
+
+export const validators: Validator[] = [...adapters.flatMap((a) => a.validators), ...standaloneValidators];
 
 /**
  * Resolve --for flag to matching validators.

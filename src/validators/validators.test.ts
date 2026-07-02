@@ -27,6 +27,8 @@ import { copilotMarketplaceValidator } from "./copilot/marketplace.js";
 import { copilotMcpValidator } from "./copilot/mcp.js";
 import { copilotSkillValidator } from "./copilot/skill.js";
 
+import { agentskillsSkillValidator } from "./agentskills/skill.js";
+
 const fixtures = resolve(import.meta.dir, "../../test/fixtures");
 
 // ── Registry ─────────────────────────────────────────────────────
@@ -68,6 +70,11 @@ describe("registry", () => {
     expect(copilotIds).toContain("copilot:marketplace");
     expect(copilotIds).toContain("copilot:mcp");
     expect(copilotIds).toContain("copilot:skill");
+  });
+
+  test("has the standalone agentskills validator registered", () => {
+    const ids = validators.filter((v) => v.provider === "agentskills").map((v) => v.id);
+    expect(ids).toContain("agentskills:skill");
   });
 
   test("all validators have unique ids", () => {
@@ -118,6 +125,18 @@ describe("resolveFor", () => {
     const { matched } = resolveFor("codex:plugin");
     expect(matched.length).toBe(1);
     expect(matched[0]!.id).toBe("codex:plugin");
+  });
+
+  test("filters by agentskills provider (standalone, not from an adapter)", () => {
+    const { matched } = resolveFor("agentskills");
+    expect(matched.length).toBe(1);
+    expect(matched[0]!.id).toBe("agentskills:skill");
+  });
+
+  test("exact match by agentskills id", () => {
+    const { matched } = resolveFor("agentskills:skill");
+    expect(matched.length).toBe(1);
+    expect(matched[0]!.id).toBe("agentskills:skill");
   });
 });
 
@@ -685,5 +704,74 @@ describe("copilot:skill", () => {
       { format: "table", verbose: false, ci: false }
     );
     expect(result.errors).toEqual([]);
+  });
+});
+
+// ── Agent Skills (open spec) validator ──────────────────────────────
+
+describe("agentskills:skill", () => {
+  const opts = { format: "table" as const, verbose: false, ci: false };
+
+  test("detects a single skill directory", () => {
+    expect(agentskillsSkillValidator.detect(resolve(fixtures, "skills/agentskills-good"))).toBe(true);
+    expect(agentskillsSkillValidator.detect(resolve(fixtures, "claude-md"))).toBe(false);
+  });
+
+  test("detects a repo root containing skills (no SKILL.md at the root itself)", () => {
+    expect(agentskillsSkillValidator.detect(resolve(fixtures, "agentskills-repo"))).toBe(true);
+  });
+
+  test("validates a spec-conformant skill with no errors", async () => {
+    const result = await agentskillsSkillValidator.validate(resolve(fixtures, "skills/agentskills-good"), opts);
+    expect(result.errors).toEqual([]);
+    expect(result.passes.some((p) => p.text.includes("Level 1 (metadata)"))).toBe(true);
+    expect(result.passes.some((p) => p.text.includes("Level 2 (instructions)"))).toBe(true);
+    expect(result.passes.some((p) => p.text.includes("Level 3 (resources)"))).toBe(true);
+  });
+
+  test("accepts a path pointing directly at the SKILL.md file", async () => {
+    const result = await agentskillsSkillValidator.validate(
+      resolve(fixtures, "skills/agentskills-good/SKILL.md"),
+      opts
+    );
+    expect(result.errors).toEqual([]);
+  });
+
+  test("errors on missing description and an oversized name", async () => {
+    const result = await agentskillsSkillValidator.validate(resolve(fixtures, "skills/agentskills-bad"), opts);
+    expect(result.errors.some((e) => e.text.includes('Missing required "description"'))).toBe(true);
+    expect(result.errors.some((e) => e.text.includes("Name length out of range"))).toBe(true);
+  });
+
+  test("errors when name does not match the parent directory", async () => {
+    const result = await agentskillsSkillValidator.validate(resolve(fixtures, "skills/agentskills-name-mismatch"), opts);
+    expect(result.errors.some((e) => e.text.includes("does not match parent directory"))).toBe(true);
+  });
+
+  test("warns when the body exceeds the Level 2 line/token budget", async () => {
+    const result = await agentskillsSkillValidator.validate(resolve(fixtures, "skills/agentskills-oversized"), opts);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings.some((w) => w.text.includes("lines"))).toBe(true);
+  });
+
+  test("fans out over a repo with multiple skills, including nested ones", async () => {
+    const result = await agentskillsSkillValidator.validate(resolve(fixtures, "agentskills-repo"), opts);
+    expect(result.errors).toEqual([]);
+    const labels = result.passes.filter((p) => p.text.includes('name: "')).map((p) => p.text.split("]")[0] + "]");
+    expect(labels.some((l) => l.includes("skills/a"))).toBe(true);
+    expect(labels.some((l) => l.includes("skills/b"))).toBe(true);
+    expect(labels.some((l) => l.includes("packages/x/skills/c"))).toBe(true);
+  });
+
+  test("reports a clear notice (not an error) when no skills are found", async () => {
+    const tmp = resolve(import.meta.dir, "../../test/tmp-agentskills-empty");
+    try {
+      await Bun.write(resolve(tmp, "README.md"), "nothing here");
+      const result = await agentskillsSkillValidator.validate(tmp, opts);
+      expect(result.errors).toEqual([]);
+      expect(result.warnings.some((w) => w.text.includes("No skills found"))).toBe(true);
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
   });
 });
