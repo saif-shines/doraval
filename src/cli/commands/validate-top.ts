@@ -43,9 +43,10 @@ export default defineCommand({
   },
 
   async run({ args }) {
+    let cleanup: (() => void) | undefined;
+
     const remote = parseRemoteUrl(args.path);
     let fullPath: string;
-    let cleanup: (() => void) | undefined;
 
     if (remote) {
       if (!hasGitCli()) {
@@ -67,11 +68,11 @@ export default defineCommand({
         if (remote.subpath) {
           const safe = sanitizeSubpath(remote.subpath);
           if (!safe) {
-            if (cleanup) cleanup();
+            cleanup?.();
             ui.fail(`Invalid subdirectory in remote URL: ${remote.subpath}`);
             process.exit(1);
           }
-          fullPath = resolve(result.dir, safe);
+          fullPath = resolve(result.dir, safe as string);
         } else {
           fullPath = result.dir;
         }
@@ -82,7 +83,7 @@ export default defineCommand({
       }
 
       if (!existsSync(fullPath)) {
-        cleanup!();
+        cleanup?.();
         ui.fail(`Error (E-VAL-001): Subdirectory not found in repo: ${remote.subpath}`);
         nextAction("dora validate <valid-path-or-url>");
         process.exit(1);

@@ -52,24 +52,21 @@ const statusIcon = (s: CheckStatus) =>
   s === "warn" ? pc.yellow("⚠") : pc.red("✗");
 
 /** Render one check row (lightweight columnar style, matches drift/eval-history pad patterns). */
-export function renderCheck(status: CheckStatus, text: string): string {
-  return `  ${statusIcon(status)}  ${text}`;
+export function renderCheck(status: CheckStatus, text: string, indent = 2): void {
+  ui.write(`${" ".repeat(indent)}${statusIcon(status)}  ${text}`);
 }
 
-/** Render validation checks as a simple aligned table (Status + message).
+/** Render validation checks as a simple aligned list, indented to sit under a tree node.
  *  Use for --format table human output to avoid "pretty basic" flat lists.
  *  No extra deps (per nodejs-cli-best-practices §2.1).
  */
 export function renderChecksTable(
   checks: Array<{ status: CheckStatus; text: string | { text: string } }>,
-  opts: { header?: boolean } = {}
+  opts: { indent?: number } = {}
 ): void {
-  if (opts.header && checks.length > 0) {
-    ui.write(`  ${pc.dim("Status")}  ${pc.dim("Check")}`);
-  }
   for (const c of checks) {
     const t = typeof c.text === "string" ? c.text : c.text.text;
-    ui.write(renderCheck(c.status, t));
+    renderCheck(c.status, t, opts.indent);
   }
 }
 
@@ -124,34 +121,42 @@ export function renderValidationReport(
   summaryLine(`${allResults.length} validators • ${totalErrors} errors • ${totalWarnings} warnings\n`);
 
   for (const { id, name, result } of allResults) {
-    ui.write(`  ${pc.bold(name)} ${pc.dim(`(${id})`)}`);
+    const errCount = result.errors.length;
+    const warnCount = result.warnings.length;
+    const passCount = result.passes.length;
+    const hasIssues = errCount > 0 || warnCount > 0;
+    const expand = hasIssues || !!opts.verbose;
+
+    const countLabel = errCount > 0
+      ? pc.red(`${errCount} error${errCount === 1 ? "" : "s"}`)
+      : warnCount > 0
+      ? pc.yellow(`${warnCount} warning${warnCount === 1 ? "" : "s"}`)
+      : pc.green(`${passCount} passed`);
+
+    ui.write(`  ${pc.dim(expand ? "▾" : "▸")} ${pc.bold(name)} ${pc.dim(`(${id})`)}  ${countLabel}`);
+
+    if (!expand) continue;
 
     const checks: Array<{ status: CheckStatus; text: string }> = [];
 
     for (const e of result.errors) {
       const item = typeof e === "string" ? { text: e } : e;
       const txt = item.code ? `${item.text} (${item.code})` : item.text;
-      const full = item.hint ? `${txt} — ${item.hint}` : txt;
-      checks.push({ status: "fail", text: full });
+      checks.push({ status: "fail", text: item.hint ? `${txt} — ${item.hint}` : txt });
     }
     for (const w of result.warnings) {
       const item = typeof w === "string" ? { text: w } : w;
-      const full = item.hint ? `${item.text} — ${item.hint}` : item.text;
-      checks.push({ status: "warn", text: full });
+      checks.push({ status: "warn", text: item.hint ? `${item.text} — ${item.hint}` : item.text });
     }
-    for (const p of result.passes) {
-      const item = typeof p === "string" ? { text: p } : p;
-      checks.push({ status: "pass", text: item.text });
+    if (opts.verbose) {
+      for (const p of result.passes) {
+        const item = typeof p === "string" ? { text: p } : p;
+        checks.push({ status: "pass", text: item.text });
+      }
     }
 
-    const useHeader = checks.length > 2 || !!opts.verbose;
-    renderChecksTable(checks, { header: useHeader });
-
-    if (result.errors.length === 0 && result.warnings.length === 0) {
-      ui.write(`  ${pc.green("✓")} ${pc.white("All checks passed.")}\n`);
-    } else {
-      ui.info(`  Result: ${result.errors.length} error(s), ${result.warnings.length} warning(s)\n`);
-    }
+    renderChecksTable(checks, { indent: 4 });
+    ui.blank();
   }
 
   if (totalErrors === 0 && totalWarnings === 0) {

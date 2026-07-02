@@ -47,11 +47,26 @@ jobs:
 
       - name: Ensure target-specific native bindings for @opentui/core
         run: |
+          # bun/npm filter optionalDependencies by the HOST os/cpu, not the
+          # --target we're cross-compiling for. macos-latest runners are
+          # arm64, so `bun add @opentui/core-darwin-x64` (cpu:x64) silently
+          # no-ops there — the package never lands in node_modules and
+          # `bun build --compile` fails to resolve it. Fetch that one
+          # manually to bypass the host-platform check.
+          fetch_pkg() {
+            local pkg="$1" version tarball_name
+            version=$(node -pe "require('./node_modules/@opentui/core/package.json').optionalDependencies['$pkg']")
+            tarball_name=$(echo "$pkg" | sed 's/^@//; s/\//-/g')
+            mkdir -p "node_modules/$pkg"
+            npm pack "$pkg@$version" --silent --pack-destination /tmp
+            tar -xzf "/tmp/${tarball_name}-${version}.tgz" -C "node_modules/$pkg" --strip-components=1
+          }
+
           case "${{ matrix.target }}" in
             bun-darwin-arm64)
               bun add --optional @opentui/core-darwin-arm64 ;;
             bun-darwin-x64)
-              bun add --optional @opentui/core-darwin-x64 ;;
+              fetch_pkg "@opentui/core-darwin-x64" ;;
             bun-linux-x64)
               bun add --optional @opentui/core-linux-x64 ;;
             bun-linux-arm64)

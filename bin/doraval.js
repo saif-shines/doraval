@@ -599,7 +599,7 @@ var init_dist = __esm(() => {
 var require_package = __commonJS((exports, module) => {
   module.exports = {
     name: "@hacksmith/doraval",
-    version: "0.4.1",
+    version: "0.4.7",
     author: "Saif",
     repository: {
       type: "git",
@@ -1174,16 +1174,13 @@ var init_render = __esm(() => {
 });
 
 // src/cli/out.ts
-function renderCheck(status, text) {
-  return `  ${statusIcon(status)}  ${text}`;
+function renderCheck(status, text, indent = 2) {
+  ui.write(`${" ".repeat(indent)}${statusIcon(status)}  ${text}`);
 }
 function renderChecksTable(checks, opts = {}) {
-  if (opts.header && checks.length > 0) {
-    ui.write(`  ${import_picocolors2.default.dim("Status")}  ${import_picocolors2.default.dim("Check")}`);
-  }
   for (const c of checks) {
     const t = typeof c.text === "string" ? c.text : c.text.text;
-    ui.write(renderCheck(c.status, t));
+    renderCheck(c.status, t, opts.indent);
   }
 }
 function nextAction(s) {
@@ -1214,32 +1211,33 @@ function renderValidationReport(allResults, opts) {
   summaryLine(`${allResults.length} validators \u2022 ${totalErrors} errors \u2022 ${totalWarnings} warnings
 `);
   for (const { id, name, result } of allResults) {
-    ui.write(`  ${import_picocolors2.default.bold(name)} ${import_picocolors2.default.dim(`(${id})`)}`);
+    const errCount = result.errors.length;
+    const warnCount = result.warnings.length;
+    const passCount = result.passes.length;
+    const hasIssues = errCount > 0 || warnCount > 0;
+    const expand = hasIssues || !!opts.verbose;
+    const countLabel = errCount > 0 ? import_picocolors2.default.red(`${errCount} error${errCount === 1 ? "" : "s"}`) : warnCount > 0 ? import_picocolors2.default.yellow(`${warnCount} warning${warnCount === 1 ? "" : "s"}`) : import_picocolors2.default.green(`${passCount} passed`);
+    ui.write(`  ${import_picocolors2.default.dim(expand ? "\u25BE" : "\u25B8")} ${import_picocolors2.default.bold(name)} ${import_picocolors2.default.dim(`(${id})`)}  ${countLabel}`);
+    if (!expand)
+      continue;
     const checks = [];
     for (const e of result.errors) {
       const item = typeof e === "string" ? { text: e } : e;
       const txt = item.code ? `${item.text} (${item.code})` : item.text;
-      const full = item.hint ? `${txt} \u2014 ${item.hint}` : txt;
-      checks.push({ status: "fail", text: full });
+      checks.push({ status: "fail", text: item.hint ? `${txt} \u2014 ${item.hint}` : txt });
     }
     for (const w of result.warnings) {
       const item = typeof w === "string" ? { text: w } : w;
-      const full = item.hint ? `${item.text} \u2014 ${item.hint}` : item.text;
-      checks.push({ status: "warn", text: full });
+      checks.push({ status: "warn", text: item.hint ? `${item.text} \u2014 ${item.hint}` : item.text });
     }
-    for (const p of result.passes) {
-      const item = typeof p === "string" ? { text: p } : p;
-      checks.push({ status: "pass", text: item.text });
+    if (opts.verbose) {
+      for (const p of result.passes) {
+        const item = typeof p === "string" ? { text: p } : p;
+        checks.push({ status: "pass", text: item.text });
+      }
     }
-    const useHeader = checks.length > 2 || !!opts.verbose;
-    renderChecksTable(checks, { header: useHeader });
-    if (result.errors.length === 0 && result.warnings.length === 0) {
-      ui.write(`  ${import_picocolors2.default.green("\u2713")} ${import_picocolors2.default.white("All checks passed.")}
-`);
-    } else {
-      ui.info(`  Result: ${result.errors.length} error(s), ${result.warnings.length} warning(s)
-`);
-    }
+    renderChecksTable(checks, { indent: 4 });
+    ui.blank();
   }
   if (totalErrors === 0 && totalWarnings === 0) {
     nextAction(`dora skill drift ${opts.path}   or   dora journal add "..."`);
@@ -42566,11 +42564,7 @@ async function runMode1(opts) {
     command: cfg?.agent && typeof cfg.agent === "object" && "command" in cfg.agent ? String(cfg.agent.command) : "claude"
   };
   const adapter = getAdapter();
-  if (!adapter) {
-    ui.fail("No supported coding agent detected. Install Claude Code (or Grok) and run a session.");
-    process.exit(2);
-  }
-  const allSessions = adapter.listRecentSessions(process.cwd(), opts.limit);
+  const allSessions = adapter ? adapter.listRecentSessions(process.cwd(), opts.limit) : [];
   const totalChecked = allSessions.length;
   const results = [];
   let matched = 0;
@@ -42608,8 +42602,9 @@ async function runMode1(opts) {
   ui.write(`
   Skill: ${import_picocolors4.default.bold(skillName)}   Sessions checked: ${totalChecked}   Sessions matched: ${import_picocolors4.default.bold(String(matched))}`);
   if (matched === 0) {
+    const msg = adapter ? "No sessions found that invoked this skill. Run a session with this skill first." : "No supported coding agent detected. Install Claude Code (or Grok) to capture sessions.";
     ui.write(`
-  ${import_picocolors4.default.dim("No sessions found that invoked this skill. Run a session with this skill first.")}`);
+  ${import_picocolors4.default.dim(msg)}`);
     return { driftedCount: 0, totalBinding: 0 };
   }
   for (const result of results) {
@@ -42646,11 +42641,7 @@ async function runMode3(opts) {
     command: cfg?.agent && typeof cfg.agent === "object" && "command" in cfg.agent ? String(cfg.agent.command) : "claude"
   };
   const adapter = getAdapter();
-  if (!adapter) {
-    ui.fail("No supported coding agent detected. Install Claude Code (or Grok) and run a session.");
-    process.exit(2);
-  }
-  const allSessions = adapter.listRecentSessions(process.cwd(), opts.limit);
+  const allSessions = adapter ? adapter.listRecentSessions(process.cwd(), opts.limit) : [];
   const summaries = [];
   for (const skillEntry of skills) {
     const loaded = await loadSkill(skillEntry.dir);
@@ -49164,9 +49155,9 @@ var init_validate_top = __esm(() => {
       }
     },
     async run({ args }) {
+      let cleanup;
       const remote = parseRemoteUrl(args.path);
       let fullPath;
-      let cleanup;
       if (remote) {
         if (!hasGitCli()) {
           guidedError({
@@ -49188,8 +49179,7 @@ var init_validate_top = __esm(() => {
           if (remote.subpath) {
             const safe = sanitizeSubpath(remote.subpath);
             if (!safe) {
-              if (cleanup)
-                cleanup();
+              cleanup?.();
               ui.fail(`Invalid subdirectory in remote URL: ${remote.subpath}`);
               process.exit(1);
             }
@@ -49203,7 +49193,7 @@ var init_validate_top = __esm(() => {
           process.exit(1);
         }
         if (!existsSync48(fullPath)) {
-          cleanup();
+          cleanup?.();
           ui.fail(`Error (E-VAL-001): Subdirectory not found in repo: ${remote.subpath}`);
           nextAction("dora validate <valid-path-or-url>");
           process.exit(1);
@@ -53382,6 +53372,7 @@ var main = defineCommand({
     journal: () => Promise.resolve(journal),
     eval: () => Promise.resolve().then(() => (init_judge(), exports_judge)).then((m2) => m2.default),
     evals: () => Promise.resolve().then(() => (init_evals(), exports_evals)).then((m2) => m2.default),
+    drift: () => Promise.resolve().then(() => (init_drift(), exports_drift)).then((m2) => m2.default),
     config: config2,
     claude: () => Promise.resolve(claude),
     codex: () => Promise.resolve(codex),
