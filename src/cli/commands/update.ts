@@ -13,6 +13,7 @@ import {
   writeMarker,
 } from "../../core/update.js";
 import type { InstallMethod, DetectCtx, InstallMarker } from "../../core/update.js";
+import { exit } from "../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -72,7 +73,7 @@ export default defineCommand({
       } else {
         ui.fail(`Invalid --via value: "${f}". Valid: homebrew | npm | bun (or npx | bunx for transient).`);
         ui.info("Use --via to bypass detection for scripts/CI.");
-        process.exit(2);
+        return await exit(2);
       }
     } else {
       method = await detectInstallMethod(ctx);
@@ -94,19 +95,19 @@ export default defineCommand({
       ui.info("");
       ui.info("Bun:");
       ui.info("  bun add -g @hacksmith/doraval");
-      process.exit(0);
+      return await exit(0);
     }
 
     const latestInfo = await fetchLatestVersionInfo();
 
     if (!shouldUpdate(currentVersion, latestInfo.version)) {
       ui.success(`doraval is up to date (${currentVersion}).`);
-      process.exit(0);
+      return await exit(0);
     }
 
     if (args.check) {
       ui.info(`Update available: ${currentVersion} → ${latestInfo.version}`);
-      process.exit(1);
+      return await exit(1);
     }
 
     ui.heading("doraval update");
@@ -120,14 +121,14 @@ export default defineCommand({
       ui.fail(`Could not determine how doraval was installed: ${method.reason}`);
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         ui.info("Use --via homebrew|npm|bun to specify (non-interactive).");
-        process.exit(2);
+        return await exit(2);
       }
       const chosen = await promptInstallMethod();
       if (chosen) {
         method = { type: chosen, source: 'user' } as InstallMethod;
       } else {
         ui.info("Update cancelled.");
-        process.exit(0);
+        return await exit(0);
       }
     }
 
@@ -135,7 +136,7 @@ export default defineCommand({
       const confirmed = await confirmUpdate();
       if (!confirmed) {
         ui.info("Update cancelled.");
-        process.exit(0);
+        return await exit(0);
       }
     }
 
@@ -168,7 +169,7 @@ export default defineCommand({
         ui.info("  • Try running with appropriate permissions or check network.");
       }
       ui.info("\nRaw output above.");
-      process.exit(result.status ?? 1);
+      await exit(result.status ?? 1);
     }
   },
 });

@@ -9,6 +9,7 @@ import {
   sanitizeProjectName,
 } from "../../../core/journal-config.js";
 import { loadProjectEntries, type EntryWithMeta } from "../../../core/views/journal-view.js";
+import { exit } from "../../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -51,7 +52,7 @@ export default defineCommand({
         `${pc.yellow("⚠")} ${pc.yellow("No project mapping found.")}\n\n` +
           `Run ${pc.dim(pc.gray("dora init"))} (or ${pc.dim(pc.gray("doraval journal init"))}) first, or pass ${pc.dim(pc.gray("--project <name>"))}.`
       );
-      process.exit(1);
+      return await exit(1);
     }
 
     const journalRepo = config?.journal.repo ?? "(unknown)";
@@ -156,6 +157,6 @@ export default defineCommand({
     const totalShown = staged.length + allEntries.length;
     ui.write(`  ${pc.dim(pc.gray(`${totalShown} entries shown from ${journalRepo}.`))}\n`);
 
-    process.exit(0);
+    await exit(0);
   },
 });

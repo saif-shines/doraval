@@ -7,6 +7,7 @@ import { discoverSkills } from "../../core/views/skills-view.js";
 import { getAdapter } from "../../core/session-adapters.js";
 import { runEval, type EvalResult, type ChecklistItem } from "../../core/session-eval.js";
 import { readConfig, getEvalConfig } from "../../core/journal-config.js";
+import { exit } from "../render/exit.js";
 
 // ─── Verdict symbols and colors ───────────────────────────────────────────────
 
@@ -119,7 +120,7 @@ async function runMode1(opts: {
   const loaded = await loadSkill(fullPath);
   if (!loaded.ok) {
     ui.fail(`Cannot load skill at "${opts.skillPath}": ${loaded.error}`);
-    process.exit(1);
+    return await exit(1);
   }
   const { model } = loaded;
   const skillName = (model.data.name as string | undefined) ?? basename(fullPath);
@@ -169,7 +170,7 @@ async function runMode1(opts: {
 
   if (opts.sessionFilter && matched === 0) {
     ui.fail(`Session ${opts.sessionFilter} not found for skill ${skillName}`);
-    process.exit(1);
+    return await exit(1);
   }
 
   if (opts.format === "json") {
@@ -399,12 +400,12 @@ export default defineCommand({
         verbose,
         format,
       });
-      if (ci && driftedCount > 0) process.exit(1);
+      if (ci && driftedCount > 0) return await exit(1);
     } else {
       // Mode 3 — repo sweep
       const { totalDrifted } = await runMode3({ limit, verbose, format });
-      if (ci && totalDrifted > 0) process.exit(1);
+      if (ci && totalDrifted > 0) return await exit(1);
     }
-    process.exit(0);
+    await exit(0);
   },
 });

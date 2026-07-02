@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { ui, guidedError } from "../out.js";
 import { readConfig, writeConfig, ensureDoravalDirs } from "../../core/journal-config.js";
 import { YAML } from "bun";
+import { exit } from "../render/exit.js";
 
 function getNestedValue(obj: Record<string, unknown>, keyPath: string): unknown {
   const parts = keyPath.split(".");
@@ -49,7 +50,7 @@ const configSet = defineCommand({
     setNestedValue(config as unknown as Record<string, unknown>, String(args.key), coerced);
     await writeConfig(config as unknown as Parameters<typeof writeConfig>[0]);
     ui.success(`${args.key} = ${JSON.stringify(coerced)}`);
-    process.exit(0);
+    await exit(0);
   },
 });
 
@@ -69,11 +70,11 @@ const configGet = defineCommand({
         ],
         next: "dora init",
       });
-      process.exit(0);
+      return await exit(0);
     }
     if (!args.key) {
       process.stdout.write(YAML.stringify(config as unknown as Record<string, unknown>));
-      process.exit(0);
+      return await exit(0);
     }
     const value = getNestedValue(config as unknown as Record<string, unknown>, String(args.key));
     if (value === undefined) {
@@ -81,15 +82,15 @@ const configGet = defineCommand({
     } else {
       process.stdout.write(`${JSON.stringify(value)}\n`);
     }
-    process.exit(0);
+    await exit(0);
   },
 });
 
 export default defineCommand({
   meta: { name: "config", description: "Get or set doraval configuration (dot-notation keys)" },
   subCommands: { set: configSet, get: configGet },
-  run() {
+  async run() {
     ui.info("Usage: doraval config set <key> <value>  |  doraval config get [key]");
-    process.exit(0);
+    await exit(0);
   },
 });

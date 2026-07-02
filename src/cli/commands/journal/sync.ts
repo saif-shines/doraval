@@ -17,18 +17,19 @@ import {
   getRemoteJournalFileMeta,
   refreshLocalJournalFile,
 } from "../../../core/journal-remote.js";
+import { exit } from "../../render/exit.js";
 
 /**
  * Update or create a file on GitHub.
  * Uses the Contents API.
  */
-function updateGitHubFile(
+async function updateGitHubFile(
   repo: string,
   path: string,
   content: string,
   message: string,
   sha?: string
-): void {
+): Promise<void> {
   const payload = {
     message,
     content: Buffer.from(content, "utf8").toString("base64"),
@@ -57,13 +58,13 @@ function updateGitHubFile(
   } catch {
     ui.write(pc.red(`Failed to update ${path} on ${repo}:`));
     ui.write("GitHub CLI (gh) is not available.");
-    process.exit(1);
+    return await exit(1);
   }
 
   if (result.exitCode !== 0) {
     ui.write(pc.red(`Failed to update ${path} on ${repo}:`));
     ui.write(result.stderr.toString());
-    process.exit(1);
+    return await exit(1);
   }
 }
 
@@ -108,7 +109,7 @@ export default defineCommand({
         `${pc.yellow("⚠")} No project mapping found.\n\n` +
           `Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first, or pass ${pc.dim("--project <name>")}.`
       );
-      process.exit(1);
+      return await exit(1);
     }
 
     if (!config?.journal.repo) {
@@ -121,7 +122,7 @@ export default defineCommand({
         ],
         next: "dora init",
       });
-      process.exit(1);
+      return await exit(1);
     }
 
     const ghCheck = ensureGhCli();
@@ -133,7 +134,7 @@ export default defineCommand({
       ui.write(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
       ui.write(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
       ui.write(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
-      process.exit(1);
+      return await exit(1);
     }
 
     const journalRepo = config.journal.repo;
@@ -157,7 +158,7 @@ export default defineCommand({
       if (!refreshGlobalRes.isNotFound) {
         ui.write(pc.red(`Failed to fetch global.md from ${journalRepo}:`));
         ui.write(refreshGlobalRes.error);
-        process.exit(1);
+        return await exit(1);
       }
       // isNotFound: treat as not got, no output (matches prior behavior for absent global)
     }
@@ -171,7 +172,7 @@ export default defineCommand({
       if (!refreshProjectCacheRes.isNotFound) {
         ui.write(pc.red(`Failed to fetch ${remoteProjectPath} from ${journalRepo}:`));
         ui.write(refreshProjectCacheRes.error);
-        process.exit(1);
+        return await exit(1);
       }
     }
     const gotProjectCache = refreshProjectCacheRes.ok && refreshProjectCacheRes.value;
@@ -187,7 +188,7 @@ export default defineCommand({
 
     if (pendingFiles.length === 0) {
       ui.write(`\n  ${pc.yellow("⚠")} No pending entries. Local cache is now up to date.\n`);
-      process.exit(0);
+      return await exit(0);
     }
 
     ui.write(`  Found ${pendingFiles.length} pending entr${pendingFiles.length === 1 ? "y" : "ies"}\n`);
@@ -206,7 +207,7 @@ export default defineCommand({
       if (!metaRes.isNotFound) {
         ui.write(pc.red(`Failed to fetch ${remotePath} from ${journalRepo}:`));
         ui.write(metaRes.error);
-        process.exit(1);
+        return await exit(1);
       }
       // not found: currentFile stays null
     } else {
@@ -249,11 +250,11 @@ export default defineCommand({
     if (args.verbose) ui.write(`\n  ${pc.dim(pc.gray("Pushing to remote..."))}`);
 
     try {
-      updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
+      await updateGitHubFile(journalRepo, remotePath, newContent, commitMessage, currentSha);
       ui.write(`  ${pc.green("✓")} ${pc.white("Successfully pushed to")} ${pc.white(remotePath)}`);
     } catch (err) {
       ui.write(`${pc.red("✗")} ${pc.white("Failed to push to GitHub.")}`);
-      process.exit(1);
+      return await exit(1);
     }
 
     // 5. Clear pending directory
@@ -285,6 +286,6 @@ export default defineCommand({
       `\n  ${pc.green("Done!")} ${pc.white(pendingFiles.length + " entr" + (pendingFiles.length === 1 ? "y" : "ies") + " published.")}\n`
     );
 
-    process.exit(0);
+    await exit(0);
   },
 });

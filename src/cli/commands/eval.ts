@@ -15,6 +15,7 @@ import { resolveRenderMode } from "../render/mode.js";
 import { initBackend, currentMode, resetToText } from "../render/index.js";
 import type { TuiBackend } from "../render/tui-backend.js";
 import { noopWorkSink } from "../../core/work-events.js";
+import { exit } from "../render/exit.js";
 
 function renderResult(result: EvalResult, verbose: boolean, useDriftTerms = false): void {
   const v = result.verdict;
@@ -182,7 +183,7 @@ export default defineCommand({
         ],
         next: "dora init",
       });
-      process.exit(2);
+      return await exit(2);
     }
 
     // The point of eval is to reuse whatever agent the user already has configured.
@@ -204,7 +205,7 @@ export default defineCommand({
           ],
           next: "dora eval --runs 3 --skill ./path/to/skill",
         });
-        process.exit(1);
+        return await exit(1);
       }
       let skillInput = String(args.skill);
       // Normalize if user passed the SKILL.md file instead of the directory
@@ -223,7 +224,7 @@ export default defineCommand({
           prompts = content.split("\n").map((l) => l.trim()).filter(Boolean);
         } catch (e: any) {
           ui.fail(`Failed to read prompts file: ${e.message}`);
-          process.exit(1);
+          return await exit(1);
         }
       }
 
@@ -273,9 +274,9 @@ export default defineCommand({
       }
 
       if (args.ci && result.summary.drifts > 0) {
-        process.exit(1);
+        return await exit(1);
       }
-      process.exit(0);
+      return await exit(0);
     }
 
     // Session-judge path. TUI is NOT init'd yet — readSync prompt below owns stdin.
@@ -301,7 +302,7 @@ export default defineCommand({
           ],
           next: "dora eval --session ~/.claude/projects/.../latest.jsonl",
         });
-        process.exit(2);
+        return await exit(2);
       }
       let recent = discoveryAdapter.listRecentSessions(process.cwd(), 12);
       const withSkills = recent.filter((s: { skillCount: number }) => s.skillCount > 0);
@@ -317,7 +318,7 @@ export default defineCommand({
           ],
           next: "dora eval --session <path>",
         });
-        process.exit(2);
+        return await exit(2);
       }
       if (recent.length === 1) {
         sessionPaths = [recent[0]!.path];
@@ -339,7 +340,7 @@ export default defineCommand({
         ],
         next: "dora eval --session <path>",
       });
-      process.exit(2);
+      return await exit(2);
     }
 
     // Parse all sessions up-front to know total skill count before TUI init.
@@ -393,7 +394,7 @@ export default defineCommand({
 
     if (workList.length === 0) {
       ui.warn("No skills to evaluate.");
-      process.exit(0);
+      return await exit(0);
     }
 
     // All session parsing done (no more readSync). Safe to init TUI now.
@@ -481,8 +482,8 @@ export default defineCommand({
     }
 
     if (args.ci && allResults.some((r) => r.verdict === "FAIL")) {
-      process.exit(1);
+      await exit(1);
     }
-    process.exit(0);
+    await exit(0);
   },
 });

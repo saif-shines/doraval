@@ -7,6 +7,7 @@ import { validators, resolveFor } from "../../validators/index.js";
 import type { ValidateOptions, ValidateResult } from "../../validators/types.js";
 import { parseRemoteUrl, cloneToTemp, hasGitCli, sanitizeSubpath } from "../../core/remote.js";
 import { normalizeSkillPath } from "../../core/skill-discovery.js";
+import { exit } from "../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -60,7 +61,7 @@ export default defineCommand({
           ],
           next: "dora validate .",
         });
-        process.exit(1);
+        return await exit(1);
       }
       ui.info(`\n  Cloning ${pc.dim(args.path)}...`);
       try {
@@ -71,7 +72,7 @@ export default defineCommand({
           if (!safe) {
             cleanup?.();
             ui.fail(`Invalid subdirectory in remote URL: ${remote.subpath}`);
-            process.exit(1);
+            return await exit(1);
           }
           fullPath = resolve(result.dir, safe as string);
         } else {
@@ -80,14 +81,14 @@ export default defineCommand({
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         ui.fail(msg);
-        process.exit(1);
+        return await exit(1);
       }
 
       if (!existsSync(fullPath)) {
         cleanup?.();
         ui.fail(`Error (E-VAL-001): Subdirectory not found in repo: ${remote.subpath}`);
         nextAction("dora validate <valid-path-or-url>");
-        process.exit(1);
+        return await exit(1);
       }
     } else {
       fullPath = resolve(args.path);
@@ -95,7 +96,7 @@ export default defineCommand({
         ui.fail(`Error (E-VAL-001): Path not found: ${args.path}`);
         ui.info("  Check that the path is correct and the directory exists.");
         nextAction("dora validate .");
-        process.exit(1);
+        return await exit(1);
       }
     }
 
@@ -114,7 +115,7 @@ export default defineCommand({
       if (error) {
         ui.fail(error);
         nextAction("dora validate . --for claude   (or another provider)");
-        process.exit(1);
+        return await exit(1);
       }
 
       let matched;
@@ -143,7 +144,7 @@ export default defineCommand({
               return `    ${pc.bold(p)}\n` + pvs.map((v) => `      • ${pc.dim(v.id)} — ${v.description}`).join("\n");
             }).join("\n")
         );
-        process.exit(1);
+        return await exit(1);
       }
 
       const allResults: { id: string; name: string; result: ValidateResult }[] = [];
@@ -169,7 +170,7 @@ export default defineCommand({
         renderValidationReport(allResults, { path: args.path, verbose: !!args.verbose });
       }
 
-      process.exit(totalErrors > 0 ? 1 : 0);
+      return await exit(totalErrors > 0 ? 1 : 0);
     } finally {
       cleanup?.();
     }

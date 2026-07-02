@@ -11,31 +11,44 @@ import { resolveRenderMode } from "./render/mode.js";
 // or uncaught errors, once a TUI backend is active.
 registerLifecycleHandlers();
 
-const skill = defineCommand({
-  meta: {
-    name: "skill",
-    description: "Validate, measure drift, run sessions with prompts, and judge AI agent skills",
-  },
-  subCommands: {
+/**
+ * Define a command group that shows its own usage when invoked bare
+ * (e.g. `dora skill`) but defers to the matched subcommand otherwise.
+ * Collapses the repeated `run()` guard that used to be hand-written per group.
+ */
+function defineGroup(
+  name: string,
+  description: string,
+  subCommands: Parameters<typeof defineCommand>[0]["subCommands"]
+) {
+  const group = defineCommand({
+    meta: { name, description },
+    subCommands,
+    run() {
+      const cliArgs = process.argv.slice(2);
+      if (cliArgs[0] === name && cliArgs.length > 1) return;
+      showUsage(group);
+    },
+  });
+  return group;
+}
+
+const skill = defineGroup(
+  "skill",
+  "Validate, measure drift, run sessions with prompts, and judge AI agent skills",
+  {
     validate: () =>
       import("./commands/validate.js").then((m) => m.default),
     lint: () => import("./commands/skill-lint.js").then((m) => m.default),
     drift: () => import("./commands/drift.js").then((m) => m.default),
     judge: () => import("./commands/judge.js").then((m) => m.default),
-  },
-  run() {
-    const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "skill" && cliArgs.length > 1) return;
-    showUsage(skill);
-  },
-});
+  }
+);
 
-const journal = defineCommand({
-  meta: {
-    name: "journal",
-    description: "Decision & note memory (with optional pushback/tags) — record, view, and sync project principles and useful notes",
-  },
-  subCommands: {
+const journal = defineGroup(
+  "journal",
+  "Decision & note memory (with optional pushback/tags) — record, view, and sync project principles and useful notes",
+  {
     init: () =>
       import("./commands/journal/init.js").then((m) => m.default),
     list: () =>
@@ -50,82 +63,47 @@ const journal = defineCommand({
       import("./commands/journal/add.js").then((m) => m.default),
     sync: () =>
       import("./commands/journal/sync.js").then((m) => m.default),
-  },
-  run() {
-    const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "journal" && cliArgs.length > 1) return;
-    showUsage(journal);
-  },
-});
-
-
+  }
+);
 
 // config command module already defines its own subCommands (set/get)
 const config = () => import("./commands/config.js").then((m) => m.default);
 
-const claude = defineCommand({
-  meta: {
-    name: "claude",
-    description: "Claude Code-specific commands (packaging, scaffolding, distribution)",
-  },
-  subCommands: {
+const claude = defineGroup(
+  "claude",
+  "Claude Code-specific commands (packaging, scaffolding, distribution)",
+  {
     new: () => import("./commands/claude/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
-  },
-  run() {
-    const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "claude" && cliArgs.length > 1) return;
-    showUsage(claude);
-  },
-});
+  }
+);
 
-const codex = defineCommand({
-  meta: {
-    name: "codex",
-    description: "Codex (OpenAI)-specific commands (packaging, scaffolding, distribution)",
-  },
-  subCommands: {
+const codex = defineGroup(
+  "codex",
+  "Codex (OpenAI)-specific commands (packaging, scaffolding, distribution)",
+  {
     new: () => import("./commands/codex/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
-  },
-  run() {
-    const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "codex" && cliArgs.length > 1) return;
-    showUsage(codex);
-  },
-});
+  }
+);
 
-const cursor = defineCommand({
-  meta: {
-    name: "cursor",
-    description: "Cursor-specific commands (packaging, scaffolding, distribution)",
-  },
-  subCommands: {
+const cursor = defineGroup(
+  "cursor",
+  "Cursor-specific commands (packaging, scaffolding, distribution)",
+  {
     new: () => import("./commands/cursor/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
-  },
-  run() {
-    const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "cursor" && cliArgs.length > 1) return;
-    showUsage(cursor);
-  },
-});
+  }
+);
 
-const copilot = defineCommand({
-  meta: {
-    name: "copilot",
-    description: "Copilot CLI-specific commands (packaging, scaffolding, distribution)",
-  },
-  subCommands: {
+const copilot = defineGroup(
+  "copilot",
+  "Copilot CLI-specific commands (packaging, scaffolding, distribution)",
+  {
     new: () => import("./commands/copilot/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
-  },
-  run() {
-    const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "copilot" && cliArgs.length > 1) return;
-    showUsage(copilot);
-  },
-});
+  }
+);
 
 const ui = defineCommand({
   meta: {

@@ -31,6 +31,7 @@ import {
   writePendingEntry,
 } from "../../core/views/journal-view.js";
 import { loadEvals } from "../../core/views/evals-view.js";
+import { exit } from "../render/exit.js";
 
 // Hook pure functions (exported from hook.ts)
 import {
@@ -307,7 +308,7 @@ export default {
     } catch (err: any) {
       removePid(port);
       cliUi.write(`  Failed to start dashboard on port ${port}: ${err?.message || err}`);
-      process.exit(1);
+      return await exit(1);
     }
 
     const url = `http://${host === "0.0.0.0" ? "localhost" : host}:${server.port}`;
@@ -337,11 +338,11 @@ export default {
       }
     }
 
-    const cleanup = () => {
+    const cleanup = async () => {
       removePid(port);
       cliUi.write("\n  Stopping dashboard...");
       server.stop();
-      process.exit(0);
+      await exit(0);
     };
 
     // Keep process alive + cleanup pid

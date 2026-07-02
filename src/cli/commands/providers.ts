@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import pc from "picocolors";
 import { ui } from "../out.js";
 import { supportedProviders, getProviderSpec } from "../../providers/spec.js";
+import { exit } from "../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -15,7 +16,7 @@ export default defineCommand({
       default: false,
     },
   },
-  run({ args }) {
+  async run({ args }) {
     if (args.json) {
       console.log(JSON.stringify(
         supportedProviders.map((id) => {
@@ -25,7 +26,7 @@ export default defineCommand({
         null,
         2
       ));
-      process.exit(0);
+      return await exit(0);
     }
 
     ui.heading("doraval providers — Supported platforms");
@@ -42,6 +43,6 @@ export default defineCommand({
 
     ui.write(`\n  Use --json for machine-readable output.`);
     ui.write(`  Tip: Add a "keywords" array to your plugin manifest for better agent discovery.`);
-    process.exit(0);
+    await exit(0);
   },
 });

@@ -8,6 +8,7 @@ import { loadSkill } from "../../core/skill-validate.js";
 import { invokeJudge } from "../../core/llm-judge.js";
 import { PLATFORM_CONTEXT } from "../../core/skill-lint.js";
 import { readConfig, getEvalConfig } from "../../core/journal-config.js";
+import { exit } from "../render/exit.js";
 
 // ── Valid platforms ────────────────────────────────────────────────────────────
 
@@ -161,7 +162,7 @@ export default defineCommand({
         ui.fail(`Cannot load skill: ${loadResult.error}`);
         ui.info(`Path: ${skillPath}`);
       }
-      process.exit(1);
+      return await exit(1);
     }
 
     const { model } = loadResult;
@@ -179,7 +180,7 @@ export default defineCommand({
         } else {
           ui.fail(`Rubric file not found: ${rubricPath}`);
         }
-        process.exit(1);
+        return await exit(1);
       }
       rubricText = readFileSync(rubricPath, "utf8");
       rubricRef = rubricPath;
@@ -215,7 +216,7 @@ export default defineCommand({
           ui.info("Run: dora evals setup  — to configure your judge LLM.");
         }
       }
-      process.exit(1);
+      return await exit(1);
     }
 
     const output = result.data;
@@ -257,7 +258,7 @@ export default defineCommand({
     }
 
     if (args.ci && derivedVerdict === "FAIL") {
-      process.exit(1);
+      await exit(1);
     }
   },
 });

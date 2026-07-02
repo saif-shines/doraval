@@ -14,6 +14,7 @@ import {
   text,
   password,
 } from "@clack/prompts";
+import { exit } from "../../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -32,7 +33,7 @@ export default defineCommand({
     const existingCfg = await readConfig();
     if (!existingCfg) {
       ui.warn("No doraval config found. Run dora init first to set up journal + agent.\n");
-      process.exit(1);
+      return await exit(1);
     }
 
     if (isInteractive) {
@@ -56,7 +57,7 @@ export default defineCommand({
 
     if (!isInteractive) {
       ui.info("  Non-interactive — set eval.provider and eval.model via dora config set.\n");
-      process.exit(0);
+      return await exit(0);
     }
 
     const providerOptions = [
@@ -76,7 +77,7 @@ export default defineCommand({
     });
     if (isCancel(providerChoice) || providerChoice === "skip") {
       cancel("Cancelled.");
-      process.exit(0);
+      return await exit(0);
     }
 
     evalProviderName = providerChoice as string;
@@ -90,7 +91,7 @@ export default defineCommand({
         initialValue: currentEval?.base_url ?? "",
         validate: (v) => (!v?.trim() ? "Base URL is required for custom provider" : undefined),
       });
-      if (isCancel(base)) { cancel("Cancelled."); process.exit(0); }
+      if (isCancel(base)) { cancel("Cancelled."); return await exit(0); }
       directBaseUrl = (base as string).trim();
     } else {
       directBaseUrl = chosenProvider.baseUrl;
@@ -107,7 +108,7 @@ export default defineCommand({
       const key = await password({
         message: `${chosenProvider.displayName} API key (stored in ~/.doraval/config.yml).${envHint}`,
       });
-      if (isCancel(key)) { cancel("Cancelled."); process.exit(0); }
+      if (isCancel(key)) { cancel("Cancelled."); return await exit(0); }
       directApiKey = typeof key === "string" ? key.trim() : "";
     } else {
       ui.dim(`  Using ${detectedEnv!.key} from environment.\n`);
@@ -142,17 +143,17 @@ export default defineCommand({
         ],
         initialValue: initialModel,
       });
-      if (isCancel(modelChoice)) { cancel("Cancelled."); process.exit(0); }
+      if (isCancel(modelChoice)) { cancel("Cancelled."); return await exit(0); }
       if (modelChoice === "__custom__") {
         const custom = await text({ message: "Model ID", placeholder: allModels[0] ?? "gpt-4o-mini" });
-        if (isCancel(custom)) { cancel("Cancelled."); process.exit(0); }
+        if (isCancel(custom)) { cancel("Cancelled."); return await exit(0); }
         evalModelAnswer = (custom as string).trim() || (allModels[0] ?? "gpt-4o-mini");
       } else {
         evalModelAnswer = modelChoice as string;
       }
     } else {
       const modelResult = await text({ message: "Model ID", placeholder: "gpt-4o-mini" });
-      if (isCancel(modelResult)) { cancel("Cancelled."); process.exit(0); }
+      if (isCancel(modelResult)) { cancel("Cancelled."); return await exit(0); }
       evalModelAnswer = (modelResult as string).trim() || "gpt-4o-mini";
     }
 
@@ -174,6 +175,6 @@ export default defineCommand({
     const displayProvider = chosenProvider?.displayName ?? evalProviderName;
     outro(`Eval configured — ${pc.bold(displayProvider + " / " + evalModelAnswer)}${directApiKey ? " (key saved — prefer env vars long-term)" : ""}`);
 
-    process.exit(0);
+    await exit(0);
   },
 });

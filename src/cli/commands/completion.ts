@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import { exit } from "../render/exit.js";
 
 const commands = [
   "validate", "init", "bump", "update", "providers",
@@ -32,7 +33,7 @@ export default defineCommand({
       required: true,
     },
   },
-  run({ args }) {
+  async run({ args }) {
     const shell = String(args.shell).toLowerCase();
 
     if (shell === "bash") {
@@ -124,8 +125,8 @@ complete -c doraval -n '__fish_seen_subcommand_from claude codex cursor copilot'
 `);
     } else {
       console.error(`Unsupported shell: ${shell}. Supported: bash, zsh, fish`);
-      process.exit(1);
+      return await exit(1);
     }
-    process.exit(0);
+    await exit(0);
   },
 });

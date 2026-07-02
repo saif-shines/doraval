@@ -3,6 +3,7 @@ import { ui } from "../out.js";
 import pc from "picocolors";
 import { resolve, join, dirname, relative } from "path";
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from "fs";
+import { exit } from "../render/exit.js";
 
 type Scope = "all" | "plugin" | "marketplace";
 
@@ -162,7 +163,7 @@ export default defineCommand({
       default: "all",
     },
   },
-  run({ args }) {
+  async run({ args }) {
     let rawType = (args.type as string) || "patch";
     let targetPath = (args.path as string) || ".";
     const scopeInput = ((args.only as string) || "all").toLowerCase();
@@ -170,7 +171,7 @@ export default defineCommand({
 
     if (!["all", "plugin", "marketplace"].includes(scopeInput)) {
       ui.fail(`Invalid --only "${args.only}". Allowed: all, plugin, marketplace.`);
-      process.exit(1);
+      return await exit(1);
     }
 
     // Forgiving UX: `dora bump ./my-plugin-dir` should mean "patch on that dir"
@@ -183,13 +184,13 @@ export default defineCommand({
       rawType = "patch";
     } else if (!isKnownType) {
       ui.fail(`Unknown bump type "${rawType}". Use patch | minor | major | 1.2.3`);
-      process.exit(1);
+      return await exit(1);
     }
 
     const root = resolve(targetPath);
     if (!existsSync(root)) {
       ui.fail(`Path does not exist: ${root}`);
-      process.exit(1);
+      return await exit(1);
     }
 
     ui.heading("doraval bump");
@@ -221,7 +222,7 @@ export default defineCommand({
       ui.info("    dora bump minor ./my-claude-plugin");
       ui.info("    dora bump --only plugin .          # only the manifests");
       ui.info("    dora bump --only marketplace ./marketplaces-root   # bumps metadata.version + plugins[].version (Copilot/Cursor)");
-      process.exit(1);
+      return await exit(1);
     }
 
     ui.info(`  matched ${targets.length} file(s)`);
@@ -241,7 +242,7 @@ export default defineCommand({
         next = bumpVersion(current, rawType);
       } catch (err: any) {
         ui.fail(err.message || String(err));
-        process.exit(1);
+        return await exit(1);
       }
 
       const relPath = relative(root, t.file);
@@ -293,6 +294,6 @@ export default defineCommand({
       ui.info(`Done. Bumped ${bumpedCount} file(s).`);
       ui.dim("  Next: doraval validate " + (targetPath === "." ? "." : targetPath));
     }
-    process.exit(0);
+    await exit(0);
   },
 });

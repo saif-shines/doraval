@@ -14,6 +14,7 @@ import {
   ensureGhCli,
   refreshLocalJournalFile,
 } from "../../../core/journal-remote.js";
+import { exit } from "../../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -43,7 +44,7 @@ export default defineCommand({
       ui.write(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
       ui.write(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
       ui.write(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
-      process.exit(1);
+      return await exit(1);
     }
 
     const config = await readConfig();
@@ -51,7 +52,7 @@ export default defineCommand({
       ui.write(
         `${pc.red("✗")} No journal repo configured. Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first.`
       );
-      process.exit(1);
+      return await exit(1);
     }
 
     const journalRepo = config.journal.repo;
@@ -81,7 +82,7 @@ export default defineCommand({
           projectsToUpdate.push(sanitizeProjectName(project));
         } catch {
           ui.write(`${pc.red("✗")} Invalid project name: ${project}`);
-          process.exit(1);
+          return await exit(1);
         }
       }
     }
@@ -96,7 +97,7 @@ export default defineCommand({
       } else {
         ui.write(`${pc.red("✗")} Failed to fetch global.md from ${journalRepo}:`);
         ui.write(refreshGlobalRes.error);
-        process.exit(1);
+        return await exit(1);
       }
     } else {
       gotGlobal = refreshGlobalRes.value;
@@ -131,7 +132,7 @@ export default defineCommand({
         } else {
           ui.write(`${pc.red("✗")} Failed to fetch ${remotePath} from ${journalRepo}:`);
           ui.write(refreshRes.error);
-          process.exit(1);
+          return await exit(1);
         }
       } else {
         got = refreshRes.value;

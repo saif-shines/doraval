@@ -4,6 +4,7 @@ import pc from "picocolors";
 import { ui, guidedError } from "../out.js";
 import { getEvalsDir } from "../../core/journal-config.js";
 import { loadEvals } from "../../core/views/evals-view.js";
+import { exit } from "../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -40,7 +41,7 @@ export default defineCommand({
         ],
         next: "dora eval",
       });
-      process.exit(0);
+      return await exit(0);
     }
 
     const limit = parseInt(String(args.limit), 10) || 20;
@@ -51,7 +52,7 @@ export default defineCommand({
 
     if (results.length === 0) {
       ui.info("No eval results found.");
-      process.exit(0);
+      return await exit(0);
     }
 
     if (args.format === "json") {
@@ -70,6 +71,6 @@ export default defineCommand({
       ui.blank();
     }
 
-    process.exit(0);
+    await exit(0);
   },
 });

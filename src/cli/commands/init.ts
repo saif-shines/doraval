@@ -34,6 +34,7 @@ import {
   note,
   password,
 } from '@clack/prompts';
+import { exit } from "../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -84,7 +85,7 @@ export default defineCommand({
       ui.info(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
       ui.info(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
       ui.info(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
-      process.exit(1);
+      return await exit(1);
     }
 
     let repo = (args.repo as string | undefined) || process.env.DORAVAL_JOURNAL_REPO;
@@ -111,7 +112,7 @@ export default defineCommand({
         sourceNote = `  ${pc.dim("(from your active gh account)")}\n`;
       } else {
         ui.warn(`Not logged in to GitHub. Run ${pc.dim("gh auth login")} first.\n`);
-        process.exit(1);
+        return await exit(1);
       }
 
       const existingConfig = await readConfig();
@@ -142,7 +143,7 @@ export default defineCommand({
         });
         if (isCancel(accountChoice)) {
           cancel('Setup cancelled.');
-          process.exit(0);
+          return await exit(0);
         }
         if (accountChoice === ghLogin) {
           defaultRepo = `${ghLogin}/${ghLogin}.md`;
@@ -170,7 +171,7 @@ export default defineCommand({
         });
         if (isCancel(result)) {
           cancel('Setup cancelled.');
-          process.exit(0);
+          return await exit(0);
         }
         repo = result;
       } else {
@@ -195,7 +196,7 @@ export default defineCommand({
         });
         if (isCancel(result)) {
           cancel('Setup cancelled.');
-          process.exit(0);
+          return await exit(0);
         }
         project = result;
       } else {
@@ -217,7 +218,7 @@ export default defineCommand({
         ui.info(`  Create it first:\n`);
         ui.info(`    ${pc.dim(`gh repo create ${repo} --private --description "Personal journal for agent decisions"`)}\n`);
       }
-      process.exit(1);
+      return await exit(1);
     }
 
     const existing = await readConfig();
@@ -262,7 +263,7 @@ export default defineCommand({
         if (isInteractive) s.stop('Failed');
         ui.fail(`Failed to fetch global.md from ${effectiveRepo}:`);
         ui.info(refreshGlobalRes.error);
-        process.exit(1);
+        return await exit(1);
       }
     } else {
       wroteGlobal = refreshGlobalRes.value;
@@ -283,7 +284,7 @@ export default defineCommand({
         if (isInteractive) s.stop('Failed');
         ui.fail(`Failed to fetch ${remotePath} from ${effectiveRepo}:`);
         ui.info(refreshProjectRes.error);
-        process.exit(1);
+        return await exit(1);
       }
     } else {
       wroteProject = refreshProjectRes.value;
@@ -315,7 +316,7 @@ export default defineCommand({
         });
         if (isCancel(change)) {
           cancel('Setup cancelled.');
-          process.exit(0);
+          return await exit(0);
         }
         reconfigureAgent = !!change;
       }
@@ -386,7 +387,7 @@ export default defineCommand({
         });
         if (isCancel(agentChoice)) {
           cancel('Setup cancelled.');
-          process.exit(0);
+          return await exit(0);
         }
 
         if (agentChoice === 'custom') {
@@ -396,7 +397,7 @@ export default defineCommand({
           });
           if (isCancel(custom)) {
             cancel('Setup cancelled.');
-            process.exit(0);
+            return await exit(0);
           }
           agentCmd = custom;
         } else {
@@ -414,7 +415,7 @@ export default defineCommand({
         });
         if (isCancel(tpl)) {
           cancel('Setup cancelled.');
-          process.exit(0);
+          return await exit(0);
         }
         template = tpl;
 
@@ -425,7 +426,7 @@ export default defineCommand({
           });
           if (isCancel(flag)) {
             cancel('Setup cancelled.');
-            process.exit(0);
+            return await exit(0);
           }
           cwdFlag = flag;
         }
@@ -484,7 +485,7 @@ export default defineCommand({
       });
       if (isCancel(providerChoice)) {
         cancel('Setup cancelled.');
-        process.exit(0);
+        return await exit(0);
       }
 
       if (providerChoice !== 'skip') {
@@ -501,7 +502,7 @@ export default defineCommand({
           });
           if (isCancel(base)) {
             cancel('Setup cancelled.');
-            process.exit(0);
+            return await exit(0);
           }
           directBaseUrl = (base as string).trim();
         } else {
@@ -522,7 +523,7 @@ export default defineCommand({
           });
           if (isCancel(key)) {
             cancel('Setup cancelled.');
-            process.exit(0);
+            return await exit(0);
           }
           directApiKey = typeof key === 'string' ? key.trim() : '';
         } else {
@@ -568,7 +569,7 @@ export default defineCommand({
           });
           if (isCancel(modelChoice)) {
             cancel('Setup cancelled.');
-            process.exit(0);
+            return await exit(0);
           }
           if (modelChoice === '__custom__') {
             const custom = await text({
@@ -577,7 +578,7 @@ export default defineCommand({
             });
             if (isCancel(custom)) {
               cancel('Setup cancelled.');
-              process.exit(0);
+              return await exit(0);
             }
             evalModelAnswer = (custom as string).trim() || (allModels[0] ?? 'gpt-4o-mini');
           } else {
@@ -591,7 +592,7 @@ export default defineCommand({
           });
           if (isCancel(modelResult)) {
             cancel('Setup cancelled.');
-            process.exit(0);
+            return await exit(0);
           }
           evalModelAnswer = (modelResult as string).trim() || 'gpt-4o-mini';
         }
@@ -635,6 +636,6 @@ export default defineCommand({
       ui.info(`  Next: ${pc.dim(pc.gray("dora journal add \"..\""))} to record decisions while scaling context.\n`);
     }
 
-    process.exit(0);
+    await exit(0);
   },
 });

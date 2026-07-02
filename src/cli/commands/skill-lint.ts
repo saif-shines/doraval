@@ -9,6 +9,7 @@ import { resolveRenderMode } from "../render/mode.js";
 import { initBackend, currentMode, resetToText } from "../render/index.js";
 import type { TuiBackend } from "../render/tui-backend.js";
 import { noopWorkSink } from "../../core/work-events.js";
+import { exit } from "../render/exit.js";
 
 function hasCommand(x: unknown): x is { command: string } {
   return !!x && typeof x === "object" && typeof (x as Record<string, unknown>).command === "string";
@@ -70,7 +71,7 @@ export default defineCommand({
       await backend.destroy();
       resetToText();
       ui.fail(`Cannot load skill at "${skillPath}": ${loaded.error}`);
-      process.exit(1);
+      return await exit(1);
     }
 
     const cfg = await readConfig().catch(() => null);
@@ -89,7 +90,7 @@ export default defineCommand({
       await backend.destroy();
       resetToText();
       ui.fail("No judge available. Set an API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) or install claude CLI.");
-      process.exit(1);
+      return await exit(1);
     }
 
     // Show spinner for the LLM call
@@ -103,7 +104,7 @@ export default defineCommand({
       await backend.destroy();
       resetToText();
       ui.fail(`Lint failed: ${result.error}`);
-      process.exit(1);
+      return await exit(1);
     }
 
     // Signal completion before rendering output
@@ -114,7 +115,7 @@ export default defineCommand({
       await backend.destroy();
       resetToText();
       process.stdout.write(JSON.stringify({ ...result.output, method: result.method }, null, 2) + "\n");
-      if (args.ci && result.output.overall !== "pass") process.exit(1);
+      if (args.ci && result.output.overall !== "pass") return await exit(1);
       return;
     }
 
@@ -141,6 +142,6 @@ export default defineCommand({
     await backend.destroy();
     resetToText();
 
-    if (args.ci && result.output.overall !== "pass") process.exit(1);
+    if (args.ci && result.output.overall !== "pass") await exit(1);
   },
 });

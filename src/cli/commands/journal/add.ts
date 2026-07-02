@@ -13,6 +13,7 @@ import {
 import { validateEntry } from "../../../core/journal-validate.js";
 import type { JournalEntry } from "../../../core/journal-parse.js";
 import { invokeAgent } from "../../../core/agent-invoke.js";
+import { exit } from "../../render/exit.js";
 
 
 function slugify(title: string): string {
@@ -106,7 +107,7 @@ export default defineCommand({
         `${pc.yellow("⚠")} No project mapping found.\n\n` +
           `Run ${pc.dim("dora init")} (or ${pc.dim("doraval journal init")}) first, or pass ${pc.dim("--project <name>")}.`
       );
-      process.exit(1);
+      return await exit(1);
     }
 
     // ── 1. Highest precedence: --json (for agents / scripts / the internal on-the-fly path)
@@ -146,7 +147,7 @@ export default defineCommand({
         if (parsed.date) date = String(parsed.date);
       } catch (e) {
         ui.write(`${pc.red("✗")} Failed to parse --json input: ${(e as Error).message}`);
-        process.exit(1);
+        return await exit(1);
       }
     }
 
@@ -178,7 +179,7 @@ export default defineCommand({
         rawBody = rawBody.replace(/^#+\s+(.+?)(?:\r?\n|$)/m, "").trimStart();
       } else {
         ui.write(`${pc.red("✗")} --raw-markdown provided without a TITLE and without a leading '# Heading' in the markdown.`);
-        process.exit(1);
+        return await exit(1);
       }
     }
 
@@ -277,7 +278,7 @@ If you cannot produce exactly this, output the JSON with the best you can and se
       for (const err of validation.errors) {
         ui.write(`  ${pc.red("•")} ${err}`);
       }
-      process.exit(1);
+      return await exit(1);
     }
     for (const warn of validation.warnings) {
       if ((warn.includes("not supplied") || warn.includes("empty")) && attemptedAgent) {
@@ -349,6 +350,6 @@ ${rationale}
       }
     }
 
-    process.exit(0);
+    await exit(0);
   },
 });

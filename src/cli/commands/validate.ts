@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import { ui, renderValidationReport, guidedError, nextAction } from "../out.js";
 import { loadSkillFromDir, validateSkillModel } from "../../core/skill-validate.js";
+import { exit } from "../render/exit.js";
 
 export default defineCommand({
   meta: {
@@ -46,7 +47,7 @@ export default defineCommand({
       ui.fail(`Error (E-VAL-001): Path not found: ${targetPath}`);
       ui.info("  Check that the path is correct and the directory exists.");
       nextAction("dora skill validate .");
-      process.exit(1);
+      return await exit(1);
     }
 
     const loaded = await loadSkillFromDir(fullPath);
@@ -73,7 +74,7 @@ export default defineCommand({
           ],
         });
       }
-      process.exit(1);
+      return await exit(1);
     }
 
     const { model: parsed, existingDirs } = loaded;
@@ -94,9 +95,9 @@ export default defineCommand({
     }
 
     if (errors.length > 0) {
-      process.exit(1);
+      await exit(1);
     }
 
-    process.exit(0);
+    await exit(0);
   },
 });

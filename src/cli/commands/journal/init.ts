@@ -20,6 +20,7 @@ import {
   repoExists,
 } from "../../../core/journal-remote.js";
 import { prompt } from "../../prompt.js";
+import { exit } from "../../render/exit.js";
 
 // ── Command ────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ export default defineCommand({
       ui.write(`    Linux:   ${pc.dim("https://github.com/cli/cli/blob/trunk/docs/install_linux.md")}`);
       ui.write(`    Windows: ${pc.dim("winget install --id GitHub.cli")}\n`);
       ui.write(`  Then authenticate: ${pc.dim("gh auth login")}\n`);
-      process.exit(1);
+      return await exit(1);
     }
 
     // ── 1. Resolve repo ────────────────────────────────────────────
@@ -90,7 +91,7 @@ export default defineCommand({
         ui.write(
           `  ${pc.yellow("⚠")} Not logged in to GitHub. Run ${pc.dim("gh auth login")} first.\n`
         );
-        process.exit(1);
+        return await exit(1);
       }
 
       // If we already have a config, prefer the previously used journal repo as default.
@@ -128,7 +129,7 @@ export default defineCommand({
       ui.write(
         `  The repo should be private. doraval will populate it on first ${pc.dim("dora journal sync")}.\n`
       );
-      process.exit(1);
+      return await exit(1);
     }
 
     // ── 4. Check if already initialized ────────────────────────────
@@ -151,7 +152,7 @@ export default defineCommand({
           `  (init --refresh still works for compatibility.)\n` +
           `  Or remove the project from ${pc.dim(pc.gray("~/.doraval/config.yml"))} to fully re-initialize.\n`
       );
-      process.exit(0);
+      return await exit(0);
     }
 
     // ── 5. Prepare paths and config ────────────────────────────────
@@ -187,7 +188,7 @@ export default defineCommand({
       } else {
         ui.write(`  ${pc.red("✗")} Failed to fetch global.md from ${effectiveRepo}:`);
         ui.write(refreshGlobalRes.error);
-        process.exit(1);
+        return await exit(1);
       }
     } else {
       wroteGlobal = refreshGlobalRes.value;
@@ -207,7 +208,7 @@ export default defineCommand({
       } else {
         ui.write(`  ${pc.red("✗")} Failed to fetch ${remotePath} from ${effectiveRepo}:`);
         ui.write(refreshProjectRes.error);
-        process.exit(1);
+        return await exit(1);
       }
     } else {
       wroteProject = refreshProjectRes.value;
@@ -232,6 +233,6 @@ export default defineCommand({
       `  Use ${pc.dim(pc.gray("dora journal add"))} to propose decisions and ${pc.dim(pc.gray("dora journal list"))} to view them.\n`
     );
 
-    process.exit(0);
+    await exit(0);
   },
 });

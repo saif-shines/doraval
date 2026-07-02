@@ -14,6 +14,7 @@ import {
   buildJournalHookCommand,
   journalHookGroup,
 } from "../../../core/journal-hook.js";
+import { exit } from "../../render/exit.js";
 
 export function formatJournalHookJson(contextText: string): string {
   return JSON.stringify({
@@ -257,7 +258,7 @@ export default defineCommand({
       ui.write("\nTip: Use `dora journal hook enable` to install the hook automatically.");
       ui.write("     Use `dora journal hook disable` to remove it.");
       ui.write("     (sh -c wrapper ensures shell features like redir work reliably.)");
-      process.exit(0);
+      return await exit(0);
     }
 
     const config = await readConfig();
@@ -331,6 +332,6 @@ export default defineCommand({
     }
 
     // Always succeed for hook / automation safety.
-    process.exit(0);
+    await exit(0);
   },
 });
