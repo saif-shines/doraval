@@ -17,8 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS x64 (Intel) - use macos-13 for x64 architecture so the darwin-x64 native dep is installed
-          - runner: macos-13
+          # macOS x64 (Intel) - bun cross-compiles the target regardless of host arch;
+          # macos-13 (Intel) hosted runner pool is retired/unassignable, use macos-latest
+          - runner: macos-latest
             target: bun-darwin-x64
             binary: doraval-darwin-x64
 
