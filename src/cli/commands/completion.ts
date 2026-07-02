@@ -1,25 +1,41 @@
 import { defineCommand } from "citty";
 import { exit } from "../render/exit.js";
-
-const commands = [
-  "validate", "init", "bump", "update", "providers",
-  "skill", "journal", "ui", "eval", "config",
-  "claude", "codex", "cursor", "copilot"
-];
+import { topLevelSubCommands, skill, journal, claude, codex, cursor, copilot } from "../command-tree.js";
 
 const uiFlags = ["--port", "--open", "--no-open", "--host", "--status", "--force"];
 
-const subCommands: Record<string, string[]> = {
-  skill: ["validate", "drift", "judge"],
-  journal: ["init", "list", "context", "hook", "update", "add", "sync"],
-  eval: ["history"],
-  config: ["set", "get"],
-  hook: ["enable", "disable", "status"],
-  claude: ["new", "bump"],
-  codex: ["new", "bump"],
-  cursor: ["new", "bump"],
-  copilot: ["new", "bump"],
-};
+/**
+ * Command names, derived from command-tree.ts instead of hand-maintained
+ * lists — the actual source of drift that made completions go stale before
+ * (missing `drift`, `lint`, offering the dead `eval history`). Groups
+ * (skill/journal/claude/...) are already-resolved objects (citty's
+ * defineCommand is an identity function), so their subcommand names read
+ * off `.subCommands` without invoking any lazy import.
+ */
+const commands = Object.keys(topLevelSubCommands);
+const providerGroups: Record<string, typeof claude> = { claude, codex, cursor, copilot };
+
+async function subCommandNames(name: string): Promise<string[]> {
+  if (name === "skill") return Object.keys(skill.subCommands ?? {});
+  if (name === "journal") return Object.keys(journal.subCommands ?? {});
+  if (name in providerGroups) return Object.keys(providerGroups[name]!.subCommands ?? {});
+  // `config` is a real citty subCommand tree — resolve the (already lazy) import once.
+  if (name === "config") {
+    const mod = await topLevelSubCommands.config();
+    return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
+  }
+  // `evals setup` is dispatched manually inside evals.ts's run() (not a citty
+  // subCommand — see command-tree.ts docblock), so it can't be introspected.
+  if (name === "evals") return ["setup"];
+  return [];
+}
+
+async function hookSubCommandNames(): Promise<string[]> {
+  const hookLoader = (journal.subCommands as Record<string, () => Promise<unknown>>)?.hook;
+  if (!hookLoader) return [];
+  const mod = await hookLoader();
+  return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
+}
 
 export default defineCommand({
   meta: {
@@ -36,6 +52,12 @@ export default defineCommand({
   async run({ args }) {
     const shell = String(args.shell).toLowerCase();
 
+    const subCommands: Record<string, string[]> = {};
+    for (const name of ["skill", "journal", "config", "evals", "claude", "codex", "cursor", "copilot"]) {
+      subCommands[name] = await subCommandNames(name);
+    }
+    subCommands.hook = await hookSubCommandNames();
+
     if (shell === "bash") {
       console.log(`# doraval bash completion
 _doraval_completions() {
@@ -50,7 +72,7 @@ _doraval_completions() {
     case "$prev" in
       skill) COMPREPLY=( $(compgen -W "${(subCommands.skill ?? []).join(" ")}" -- "$cur") ) ;;
       journal) COMPREPLY=( $(compgen -W "${(subCommands.journal ?? []).join(" ")}" -- "$cur") ) ;;
-      eval) COMPREPLY=( $(compgen -W "${(subCommands.eval ?? []).join(" ")}" -- "$cur") ) ;;
+      evals) COMPREPLY=( $(compgen -W "${(subCommands.evals ?? []).join(" ")}" -- "$cur") ) ;;
       config) COMPREPLY=( $(compgen -W "${(subCommands.config ?? []).join(" ")}" -- "$cur") ) ;;
       hook) COMPREPLY=( $(compgen -W "${(subCommands.hook ?? []).join(" ")}" -- "$cur") ) ;;
       ui) COMPREPLY=( $(compgen -W "${uiFlags.join(" ")}" -- "$cur") ) ;;
@@ -66,7 +88,7 @@ complete -F _doraval_completions doraval
 
 _doraval() {
   local -a commands sub
-  commands=(validate init bump update providers skill journal ui eval config claude codex cursor copilot)
+  commands=(${commands.join(" ")})
   _arguments -C \\
     '1: :->cmd' \\
     '*::arg:->args'
@@ -78,25 +100,25 @@ _doraval() {
     args)
       case $words[1] in
         skill)
-          _describe 'subcommand' (validate drift judge)
+          _describe 'subcommand' (${(subCommands.skill ?? []).join(" ")})
           ;;
         journal)
-          _describe 'subcommand' (init list context hook update add sync)
+          _describe 'subcommand' (${(subCommands.journal ?? []).join(" ")})
           ;;
-        eval)
-          _describe 'subcommand' (history)
+        evals)
+          _describe 'subcommand' (${(subCommands.evals ?? []).join(" ")})
           ;;
         config)
-          _describe 'subcommand' (set get)
+          _describe 'subcommand' (${(subCommands.config ?? []).join(" ")})
           ;;
         hook)
-          _describe 'subcommand' (enable disable status)
+          _describe 'subcommand' (${(subCommands.hook ?? []).join(" ")})
           ;;
         ui)
-          _describe 'flag' (${uiFlags})
+          _describe 'flag' (${uiFlags.join(" ")})
           ;;
         claude|codex|cursor|copilot)
-          _describe 'subcommand' (new bump)
+          _describe 'subcommand' (${(subCommands.claude ?? []).join(" ")})
           ;;
       esac
       ;;
@@ -108,20 +130,20 @@ _doraval "$@"
     } else if (shell === "fish") {
       console.log(`# doraval fish completion
 complete -c doraval -f
-complete -c doraval -n '__fish_use_subcommand' -a 'validate init bump update providers skill journal ui eval config claude codex cursor copilot'
+complete -c doraval -n '__fish_use_subcommand' -a '${commands.join(" ")}'
 
-complete -c doraval -n '__fish_seen_subcommand_from skill' -a 'validate drift judge'
-complete -c doraval -n '__fish_seen_subcommand_from journal' -a 'init list context hook update add sync'
-complete -c doraval -n '__fish_seen_subcommand_from eval' -a 'history'
-complete -c doraval -n '__fish_seen_subcommand_from config' -a 'set get'
-complete -c doraval -n '__fish_seen_subcommand_from hook' -a 'enable disable status'
+complete -c doraval -n '__fish_seen_subcommand_from skill' -a '${(subCommands.skill ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from journal' -a '${(subCommands.journal ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from evals' -a '${(subCommands.evals ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from config' -a '${(subCommands.config ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from hook' -a '${(subCommands.hook ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l port -d 'Port'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l open -d 'Open browser'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l no-open -d 'Do not open browser'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l host -d 'Host'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l status -d 'Show status only'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l force -d 'Force restart'
-complete -c doraval -n '__fish_seen_subcommand_from claude codex cursor copilot' -a 'new bump'
+complete -c doraval -n '__fish_seen_subcommand_from claude codex cursor copilot' -a '${(subCommands.claude ?? []).join(" ")}'
 `);
     } else {
       console.error(`Unsupported shell: ${shell}. Supported: bash, zsh, fish`);

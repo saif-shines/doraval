@@ -41,7 +41,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "bun build ./src/cli/index.ts --outfile ./bin/doraval.js --target bun --external @opentui/core && rm -rf bin/ui && cp -r src/ui bin/ui",
+    "build": "rm -rf bin/doraval.js bin/chunk-*.js bin/ui && bun build ./src/cli/index.ts --outdir ./bin --splitting --entry-naming=doraval.js --target bun --external @opentui/core && cp -r src/ui bin/ui",
     "dev": "bun run ./src/cli/index.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit --skipLibCheck",

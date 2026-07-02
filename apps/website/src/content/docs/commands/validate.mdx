@@ -61,6 +61,19 @@ dora validate . --for cursor:plugin
 ✓ keywords: [foo, bar-baz]. If users mention any of these keywords, your plugin will get triggered in Cursor
 ```
 
+### Open specs
+
+Not every SKILL.md is written for Claude Code. `agentskills:skill` validates against the open [agentskills.io specification](https://agentskills.io/specification) — a distinct, stricter profile with no packaging/manifest concept of its own.
+
+| Validator | Detects | What it checks |
+|---|---|---|
+| `agentskills:skill` | `SKILL.md` | Required `name`/`description` (both mandatory, unlike Claude's), `name` must exactly match the parent directory, lowercase-alphanumeric-hyphen format, length caps (name ≤ 64, description ≤ 1024, compatibility ≤ 500), progressive-disclosure budgets (body ≤ 5000 tokens / 500 lines), Claude-only fields (`when_to_use`, `model`, `hooks`, ...) flagged as unknown |
+
+```bash
+dora validate . --for agentskills:skill
+dora validate . --for agentskills
+```
+
 ## Static skill heuristics
 
 When `claude:skill` runs, it also applies six content-quality checks to the skill body and frontmatter. Failures surface as errors prefixed `[static]`:
@@ -126,6 +139,8 @@ dora skill validate <path> [options]
 This validates a single skill directory (must contain `SKILL.md`). The top-level `dora validate` is now the recommended command; it auto-detects and runs all applicable validators including `claude:skill`.
 
 `skill validate` (and `claude:skill`) now treats `name` and `description` as recommended rather than hard requirements (missing values produce warnings). It also detects advanced frontmatter fields (e.g. `allowed-tools`, `context`, `when_to_use`, `disable-model-invocation`), dynamic context injection (`!` `command` `` and ```! blocks), and substitutions (`$ARGUMENTS`, `$0`, `${CLAUDE_SKILL_DIR}`, etc.).
+
+For an LLM-based read on clarity and contradictions (schema checks can't catch those), see [`dora skill lint`](/commands/lint/).
 
 ## Options
 

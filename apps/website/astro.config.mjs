@@ -49,6 +49,7 @@ export default defineConfig({
           label: "Validate & check",
           items: [
             "commands/validate",
+            "commands/lint",
             "commands/drift",
             "commands/eval",
             "commands/evals-setup",
@@ -77,6 +78,8 @@ export default defineConfig({
           label: "CLI reference",
           items: [
             "commands/ui",
+            "commands/config",
+            "commands/bump",
             "commands/completion",
             { label: "update", link: "/commands/update/" },
           ],

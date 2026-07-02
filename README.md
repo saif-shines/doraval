@@ -87,8 +87,11 @@ doraval journal add "Validate before shipping skill changes"
 doraval journal sync
 doraval journal hook enable
 
-# 5. Measure adherence in real agent sessions
-doraval eval
+# 5. Judge skill quality — fast, no sessions needed
+doraval judge ./skills/my-skill/
+
+# 6. Measure real adherence once agent sessions exist
+doraval drift
 ```
 
 Full walkthrough: [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/)
@@ -179,6 +182,7 @@ doraval validate . --for claude:plugin    # one validator
 | `claude:subagent` | `agents/*.md` | Frontmatter, disallowed security fields, non-empty body |
 | `claude:command` | `commands/*.md` | Frontmatter, body, advanced fields |
 | `claude:memory` | `CLAUDE.md` | Non-empty, length limit, `@path` import resolution |
+| `agentskills:skill` | `SKILL.md` | The open [agentskills.io](https://agentskills.io/specification) spec: required `name`/`description`, name-matches-directory, length caps, progressive-disclosure token/line budgets |
 
 ### `claude new` / `cursor new` / …: scaffold by construction
 
@@ -191,40 +195,52 @@ doraval claude new --yes --intent self my-context        # personal / team
 doraval cursor new / doraval codex new / doraval copilot new
 ```
 
-### `skill validate` / `skill drift`: one skill, two lenses
-
-Structural check vs. rubric deviation:
+### `skill validate` / `skill lint`: structure vs. LLM quality read
 
 ```bash
-doraval skill validate ./skills/my-skill/
-doraval skill drift ./skills/my-skill/
+doraval skill validate ./skills/my-skill/   # structural check, no LLM
+doraval skill lint ./skills/my-skill/       # LLM-based clarity/contradiction check
 ```
 
-`drift` measures six rubric areas: trigger phrases, step-by-step structure, imperative voice, examples, guardrails (`MUST` / `MUST NOT`), and clarity.
+`lint` catches what schema checks can't: vague triggers, self-contradicting steps, unclear guardrails.
 
-### `eval`: did the agent actually follow the skill?
+### `judge`: is the skill well-authored?
 
-`validate` and `drift` check the document. `eval` checks reality: it reads a real session transcript, finds which skills were invoked, and runs an LLM judge for a per-skill **PASS / FAIL** with a dynamic checklist, familiarity score, and closure info.
-
-Example judgment:
+One LLM call against a best-practices rubric — no sessions needed. Point it at a skill directory, get a **PASS / FAIL** verdict with a per-criterion checklist.
 
 ```
-[FAIL] improve
-  familiarity: 2/10  (prompt was very vague)
-  ✓ Invoke the improve skill before responding
-  ✗ Phase 1: Run git log for churn signal
-  ✗ Phase 2: Fan out parallel subagents
-  Result: 3/9 checks — stopped after initial recon.
+[PASS] Rubric alignment
+All mandatory criteria met: activation phrase, ordered steps, imperative voice,
+code examples, and explicit MUST / MUST NOT guardrails.
 ```
 
 ```bash
-doraval eval                    # pick from recent sessions interactively
-doraval eval --verbose
-doraval judge ./skills/improve/ # alias: eval for one skill
-doraval eval history            # past verdicts
+doraval judge ./skills/my-skill/
+doraval eval  ./skills/my-skill/   # alias
+doraval evals ./skills/my-skill/   # alias
 ```
 
-Requires `doraval init` first. See [eval docs](https://doraval.thehacksmith.dev/commands/eval/).
+### `drift`: did the agent actually follow the skill?
+
+`judge` checks the document. `drift` checks reality: it reads real session transcripts, finds which skills were invoked, and runs an LLM judge per instruction — **ALIGNED / DRIFTED / JUSTIFIED / UNCLEAR** — with evidence citations.
+
+```
+Session a1b2c3 "Design a new feature"
+  ✓ ALIGNED     Invoke the skill before responding
+  ↗ DRIFTED     Run git log for churn signal          (no git log call found)
+  ~ JUSTIFIED   Check 4 repos                          (only 2 repos match scope)
+
+Aggregate drift rate: 1/8 binding instructions drifted (12%)
+```
+
+```bash
+doraval drift ./skills/my-skill/   # one skill, all matching sessions
+doraval drift --session <id>       # one skill, one session
+doraval drift                      # repo sweep — every discovered skill, ranked by drift rate
+doraval drift --verbose
+```
+
+Both need a judge LLM configured — `doraval init` sets this up, or run `doraval evals setup` on its own. See [judge docs](https://doraval.thehacksmith.dev/commands/judge/) and [drift docs](https://doraval.thehacksmith.dev/commands/drift/).
 
 ### `journal`: decision memory that survives sessions
 
@@ -264,6 +280,8 @@ doraval config set eval.model claude-sonnet-4-20250514
 ```bash
 doraval update              # self-update to latest
 doraval providers           # which agents understand which keywords
+doraval bump                # bump semver in plugin.json / marketplace.json
+doraval completion zsh >> ~/.zshrc   # shell completions (bash | zsh | fish)
 ```
 
 ## Options
@@ -280,15 +298,15 @@ doraval providers           # which agents understand which keywords
 ```bash
 doraval validate . --for claude --format json --ci
 doraval skill validate ./my-skill/ --format json --ci
-doraval skill drift ./my-skill/ --format json --ci
-doraval eval --ci --format json
+doraval judge ./my-skill/ --format json --ci
+doraval drift --format json --ci
 ```
 
 Exits with code `1` when errors are found. Pipe `--format json` to `jq` or consume programmatically.
 
 ## Providers
 
-Claude Code, Cursor, Codex, Copilot CLI, and Grok validators and scaffolding built in. OpenCode support is experimental.
+Claude Code, Cursor, Codex, Copilot CLI, and Grok validators and scaffolding built in. OpenCode support is experimental. The open [agentskills.io](https://agentskills.io/specification) SKILL.md spec is validated as a standalone profile (`agentskills:skill`) — no packaging/manifest concept, just the skill file itself.
 
 ## Links
 
