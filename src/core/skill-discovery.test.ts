@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "path";
+import { resolve, sep } from "path";
 import { normalizeSkillPath, isSkillDir, findSkillDirs } from "./skill-discovery.js";
 
 const fixtures = resolve(import.meta.dir, "../../test/fixtures");
@@ -32,7 +32,7 @@ describe("findSkillDirs", () => {
   const repo = resolve(fixtures, "agentskills-repo");
 
   test("finds skills nested under multiple subtrees", () => {
-    const dirs = findSkillDirs(repo).map((d) => d.slice(repo.length + 1));
+    const dirs = findSkillDirs(repo).map((d) => d.slice(repo.length + 1).split(sep).join("/"));
     expect(dirs.sort()).toEqual(["packages/x/skills/c", "skills/a", "skills/b"].sort());
   });
 

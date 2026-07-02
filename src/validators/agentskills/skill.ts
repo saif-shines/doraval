@@ -1,4 +1,4 @@
-import { relative } from "path";
+import { relative, sep } from "path";
 import { loadSkillFromDir } from "../../core/skill-validate.js";
 import { validateAgentSkill } from "../../core/agentskills-validate.js";
 import { normalizeSkillPath, isSkillDir, findSkillDirs } from "../../core/skill-discovery.js";
@@ -50,7 +50,7 @@ export const agentskillsSkillValidator: Validator = {
     }
 
     const results = await Promise.all(
-      skillDirs.map((skillDir) => validateOne(skillDir, relative(root, skillDir) || "."))
+      skillDirs.map((skillDir) => validateOne(skillDir, relative(root, skillDir).split(sep).join("/") || "."))
     );
 
     return results.reduce<ValidateResult>(
