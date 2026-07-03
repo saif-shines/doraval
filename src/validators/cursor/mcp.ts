@@ -1,6 +1,7 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
 import type { Validator, ValidateResult, ValidateOptions } from "../types.js";
+import { normalizeMcpConfig } from "../shared/mcp.js";
 
 export const cursorMcpValidator: Validator = {
   id: "cursor:mcp",
@@ -30,17 +31,13 @@ export const cursorMcpValidator: Validator = {
       return { errors, warnings, passes };
     }
 
-    // Cursor's observed format in real projects often wraps under "mcpServers"
-    let config: Record<string, unknown>;
-    if (rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig) && rawConfig.mcpServers && typeof rawConfig.mcpServers === "object") {
-      config = rawConfig.mcpServers as Record<string, unknown>;
-      passes.push("mcp.json uses mcpServers wrapper (normalized)");
-    } else if (typeof rawConfig === "object" && !Array.isArray(rawConfig)) {
-      config = rawConfig;
-    } else {
-      errors.push("mcp.json must be an object (or contain mcpServers object)");
+    const normalized = normalizeMcpConfig(rawConfig, "mcp.json");
+    errors.push(...normalized.errors);
+    passes.push(...normalized.passes);
+    if (!normalized.config) {
       return { errors, warnings, passes };
     }
+    const config = normalized.config;
 
     const serverNames = Object.keys(config);
     if (serverNames.length === 0) {

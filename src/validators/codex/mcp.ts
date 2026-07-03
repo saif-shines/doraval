@@ -1,6 +1,7 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
 import type { Validator, ValidateResult, ValidateOptions } from "../types.js";
+import { normalizeMcpConfig } from "../shared/mcp.js";
 
 export const codexMcpValidator: Validator = {
   id: "codex:mcp",
@@ -19,20 +20,23 @@ export const codexMcpValidator: Validator = {
 
     const mcpPath = resolve(dir, ".mcp.json");
 
-    let config: Record<string, unknown>;
+    let rawConfig: unknown;
     try {
       const raw = await Bun.file(mcpPath).text();
-      config = JSON.parse(raw);
+      rawConfig = JSON.parse(raw);
       passes.push(".mcp.json is valid JSON");
     } catch {
       errors.push(".mcp.json is missing or invalid JSON");
       return { errors, warnings, passes };
     }
 
-    if (typeof config !== "object" || Array.isArray(config)) {
-      errors.push(".mcp.json must be a JSON object with server name keys");
+    const normalized = normalizeMcpConfig(rawConfig, ".mcp.json");
+    errors.push(...normalized.errors);
+    passes.push(...normalized.passes);
+    if (!normalized.config) {
       return { errors, warnings, passes };
     }
+    const config = normalized.config;
 
     const serverNames = Object.keys(config);
     if (serverNames.length === 0) {

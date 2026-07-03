@@ -307,6 +307,22 @@ describe("claude:mcp", () => {
     expect(result.errors).toEqual([]);
     expect(result.passes).toContain("1 server(s) defined");
   });
+
+  test("validates .mcp.json wrapped in mcpServers", async () => {
+    const tmp = resolve(import.meta.dir, "../../test/tmp-claude-mcp-wrapped");
+    try {
+      await Bun.write(resolve(tmp, ".mcp.json"), JSON.stringify({
+        mcpServers: {
+          scalekit: { type: "http", url: "https://mcp.scalekit.com" }
+        }
+      }, null, 2));
+      const result = await claudeMcpValidator.validate(tmp, { format: "table", verbose: false, ci: false });
+      expect(result.errors).toEqual([]);
+      expect(result.passes).toContain("1 server(s) defined");
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
+  });
 });
 
 // ── Subagent validator ───────────────────────────────────────────
@@ -450,6 +466,22 @@ describe("codex:mcp", () => {
     );
     expect(result.errors).toEqual([]);
     expect(result.passes).toContain("1 server(s) defined");
+  });
+
+  test("validates .mcp.json wrapped in mcpServers", async () => {
+    const tmp = resolve(import.meta.dir, "../../test/tmp-codex-mcp-wrapped");
+    try {
+      await Bun.write(resolve(tmp, ".mcp.json"), JSON.stringify({
+        mcpServers: {
+          scalekit: { type: "http", url: "https://mcp.scalekit.com" }
+        }
+      }, null, 2));
+      const result = await codexMcpValidator.validate(tmp, { format: "table", verbose: false, ci: false });
+      expect(result.errors).toEqual([]);
+      expect(result.passes).toContain("1 server(s) defined");
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
   });
 });
 
