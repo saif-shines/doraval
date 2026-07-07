@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, mock, spyOn } from "bun:test";
 import { reviewSkill, reviewAll } from "./review.js";
 import { resolve } from "path";
 
@@ -40,10 +40,19 @@ describe("reviewSkill", () => {
   });
 
   test("deep mode without LLM throws PrerequisiteError", async () => {
+    // Mock detectCapabilities to return "none" — avoids real CLI probe + LLM call
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: false, preferred: "none",
+      cliCommand: undefined, apiProvider: undefined,
+    } as any);
     try {
       await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), { deep: true });
+      expect(true).toBe(false); // should not reach here
     } catch (e: any) {
       expect(e.code).toBe("E-PRE-002");
+    } finally {
+      spy.mockRestore();
     }
   });
 });

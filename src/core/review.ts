@@ -5,6 +5,7 @@ import { findSkillDirs } from "./skill-discovery.js";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { detectCapabilities } from "./capability-detect.js";
 import { PrerequisiteError } from "./errors.js";
+import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -131,10 +132,28 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     ...(d.drifted ? { fix: { type: "content" as const, description: d.detail } } : {}),
   }));
 
+  // Tier 2b: principle keyword checks (free, from dora memory)
+  const principles = loadPrinciples(opts.cwd ?? process.cwd());
+  const principleViolations = checkPrinciplesAgainstContent(principles, model.content);
+  for (const v of principleViolations) {
+    const sev = v.principle.weight >= 7 ? "error" as const : "warning" as const;
+    heurFindings.push({
+      id: `heur-${pad(hIdx++)}`,
+      tier: "heuristics" as const,
+      severity: sev,
+      message: `violates "${v.principle.title}" (w${v.principle.weight}) — ${v.detail}`,
+      fixable: false,
+    });
+  }
+
+  const heurErrors = heurFindings.filter(f => f.severity === "error").length;
+  const heurWarnings = heurFindings.filter(f => f.severity === "warning").length;
+  const heurPassed = heurFindings.filter(f => f.severity === "pass").length;
+
   const heurTier: TierResult = {
-    passed: drift.drifts.filter((d) => !d.drifted).length,
-    warnings: drift.driftCount,
-    errors: 0,
+    passed: heurPassed,
+    warnings: heurWarnings,
+    errors: heurErrors,
     findings: heurFindings,
   };
 
@@ -152,7 +171,10 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       }
       tiers.llm = { available: false, findings: [] };
     } else {
-      const result = await lintSkill(model, caps, { command: "" }, {});
+      // Inject project principles into the LLM prompt as additional rubric context
+      const rubricText = buildPrincipleRubric(principles);
+      const platform = rubricText || undefined;
+      const result = await lintSkill(model, caps, { command: "" }, {}, platform);
       if (result.ok) {
         let lIdx = 1;
         tiers.llm = {

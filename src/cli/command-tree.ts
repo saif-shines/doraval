@@ -52,6 +52,15 @@ export const journal = defineGroup(
   }
 );
 
+export const memory = defineGroup(
+  "memory",
+  "Project principles — capture, enforce in review, promote to AGENTS.md",
+  {
+    add: () => import("./commands/memory/add.js").then((m) => m.default),
+    list: () => import("./commands/memory/list.js").then((m) => m.default),
+  }
+);
+
 // config command module already defines its own subCommands (set/get)
 export const config = () => import("./commands/config.js").then((m) => m.default);
 
@@ -139,6 +148,7 @@ export const topLevelSubCommands = {
   providers: () => import("./commands/providers.js").then((m) => m.default),
   completion: () => import("./commands/completion.js").then((m) => m.default),
   journal: () => Promise.resolve(journal),
+  memory: () => Promise.resolve(memory),
   config,
   claude: () => Promise.resolve(claude),
   codex: () => Promise.resolve(codex),
