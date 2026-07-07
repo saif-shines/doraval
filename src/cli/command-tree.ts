@@ -152,7 +152,6 @@ export const topLevelSubCommands = {
   scan: () => import("./commands/scan.js").then((m) => m.default),
   validate: () =>
     import("./commands/validate-top.js").then((m) => m.default),
-  init: () => import("./commands/init.js").then((m) => m.default),
   bump: () => import("./commands/bump.js").then((m) => m.default),
   update: () => import("./commands/update.js").then((m) => m.default),
   providers: () => import("./commands/providers.js").then((m) => m.default),
