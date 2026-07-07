@@ -1,6 +1,7 @@
 import pc from "picocolors";
 import { currentBackend } from "./render/index.js";
 import type { ValidateResult } from "../validators/types.js";
+import { errorToJson, isDoravalError } from "../core/errors.js";
 
 /**
  * Semantic CLI output helpers.
@@ -166,4 +167,57 @@ export function renderValidationReport(
   } else {
     nextAction(`dora validate ${opts.path} --for claude`);
   }
+}
+
+// ── Output mode + machine contract (plan items B6, A5) ─────────────────────
+
+export interface OutputMode {
+  format: "table" | "json";
+  ci: boolean;
+}
+
+/** Single place that decides table vs json. `--ci` implies json. */
+export function resolveOutputMode(args?: { format?: string; ci?: boolean }): OutputMode {
+  const ci = args?.ci === true;
+  const format: OutputMode["format"] =
+    ci || args?.format === "json" ? "json" : "table";
+  return { format, ci };
+}
+
+/** Data channel: pretty JSON to stdout (never colored, never decorated). */
+export function outJson(data: unknown): void {
+  process.stdout.write(JSON.stringify(data, null, 2) + "\n");
+}
+
+/**
+ * Diagnostics channel: render any thrown error to stderr.
+ * DoravalError → guided text (table mode) or JSON error object (json mode).
+ * Unknown errors → wrapped as E-INT-000 (internal).
+ */
+export function emitError(e: unknown, mode: OutputMode): void {
+  const derr = isDoravalError(e)
+    ? e
+    : {
+        code: "E-INT-000",
+        message: e instanceof Error ? e.message : String(e),
+        suggestion: "Re-run with --verbose; report with `dora report` if it persists",
+        context: undefined as string | undefined,
+        docUrl: undefined as string | undefined,
+      };
+
+  if (mode.format === "json") {
+    process.stderr.write(
+      JSON.stringify(
+        isDoravalError(e) ? errorToJson(e) : { error: { code: derr.code, message: derr.message, suggestion: derr.suggestion } }
+      ) + "\n"
+    );
+    return;
+  }
+
+  guidedError({
+    context: derr.context ?? "running doraval",
+    problem: `${derr.message} (${derr.code})`,
+    solutions: derr.suggestion ? [derr.suggestion] : ["Re-run with --verbose for details"],
+    next: derr.docUrl,
+  });
 }
