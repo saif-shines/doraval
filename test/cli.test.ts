@@ -313,6 +313,18 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
+    test("bare invocation accepts --format json in both space and equals form", () => {
+      const dir = emptyRepo();
+      const spaceForm = runDoraval(["--format", "json", "--cwd", dir]);
+      expect(spaceForm.exitCode).toBe(0);
+      expect(JSON.parse(spaceForm.stdout).empty).toBe(true);
+
+      const equalsForm = runDoraval(["--format=json", "--cwd", dir]);
+      expect(equalsForm.exitCode).toBe(0);
+      expect(JSON.parse(equalsForm.stdout).empty).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
     test("human output ends with Next actions", () => {
       const dir = emptyRepo();
       const { stdout, stderr } = runDoraval(["scan", "--cwd", dir]);

@@ -20,21 +20,21 @@ const main = defineCommand({
       "Reads your repo and tells you what's broken, missing, or contradictory in your agent context — for every coding agent you use.",
   },
   subCommands: topLevelSubCommands,
-  async run() {
+  // Declared so citty's own parser consumes "--format json" / "--format=json"
+  // correctly on the bare invocation — without these, an undeclared root flag's
+  // value token gets left as a stray positional and misrouted as a subcommand.
+  args: {
+    format: { type: "string", description: "Output format: table | json", default: "table" },
+    ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
+    cwd: { type: "string", description: "Directory to scan (for CI and coding agents)" },
+  },
+  async run({ args }) {
     const cliArgs = process.argv.slice(2);
     if (cliArgs.length > 0 && !cliArgs[0]!.startsWith("-")) return; // subcommand provided
 
     // Bare `dora` (possibly with flags like --format json) → the scan IS the product.
     const scan = await import("./commands/scan.js").then((m) => m.default);
-    await scan.run!({
-      args: {
-        format: cliArgs.includes("--format")
-          ? cliArgs[cliArgs.indexOf("--format") + 1] ?? "table"
-          : cliArgs.includes("--ci") ? "json" : "table",
-        ci: cliArgs.includes("--ci"),
-        cwd: cliArgs.includes("--cwd") ? cliArgs[cliArgs.indexOf("--cwd") + 1] : undefined,
-      },
-    } as never);
+    await scan.run!({ args } as never);
   },
 });
 
