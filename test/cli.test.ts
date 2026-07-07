@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import pkg from "../package.json" with { type: "json" };
 import { fixturePath, runDoraval } from "./helpers/spawn-cli.js";
 import { join } from "path";
-import { rmSync, mkdirSync, writeFileSync, existsSync } from "fs";
+import { tmpdir } from "os";
+import { rmSync, mkdirSync, mkdtempSync, writeFileSync, existsSync } from "fs";
 
 describe("doraval CLI", () => {
   describe("help and version", () => {
@@ -281,5 +282,79 @@ describe("doraval CLI", () => {
     const output = stdout + stderr;
     expect(exitCode).toBe(0);
     expect(output).toContain("up to date");
+  });
+
+  describe("dora scan (bare default)", () => {
+    function emptyRepo(): string {
+      const dir = mkdtempSync(join(tmpdir(), "dora-cli-scan-"));
+      mkdirSync(join(dir, ".git"));
+      return dir;
+    }
+
+    test("scan --format json on an empty repo: valid JSON, exit 0, empty=true", () => {
+      const dir = emptyRepo();
+      const { stdout, exitCode } = runDoraval(["scan", "--format", "json", "--cwd", dir]);
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.empty).toBe(true);
+      expect(Array.isArray(parsed.agents)).toBe(true);
+      expect(parsed.suggestions[0].command).toContain("dora new");
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("scan exits 1 when a skill fails validation", () => {
+      const dir = emptyRepo();
+      const skill = join(dir, ".claude", "skills", "broken");
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(join(skill, "SKILL.md"), "---\nname: Bad_Name\ndescription: bad name format\n---\nbody");
+      const { exitCode, stdout } = runDoraval(["scan", "--format", "json", "--cwd", dir]);
+      expect(exitCode).toBe(1);
+      expect(JSON.parse(stdout).summary.failed).toBe(1);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("human output ends with Next actions", () => {
+      const dir = emptyRepo();
+      const { stdout, stderr } = runDoraval(["scan", "--cwd", dir]);
+      expect(stdout).toBe(""); // table mode: diagnostics on stderr, stdout stays JSON-only
+      expect(stderr).toContain("No agent context found");
+      expect(stderr).toContain("dora new");
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
+
+  describe("dora init removal", () => {
+    test("top-level init is gone", () => {
+      const { exitCode, stderr } = runDoraval(["init"]);
+      expect(exitCode).not.toBe(0);
+      expect(stderr.toLowerCase()).toContain("unknown command");
+    });
+
+    test("journal init still exists", () => {
+      const { stdout, stderr } = runDoraval(["journal", "--help"]);
+      expect(stdout + stderr).toContain("init");
+    });
+  });
+
+  describe("bare dora", () => {
+    test("no args runs the scan, not the banner", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-bare-"));
+      mkdirSync(join(dir, ".git"));
+      const { stdout, stderr, exitCode } = runDoraval([], { cwd: dir });
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain("No agent context found");
+      expect(stdout + stderr).not.toContain("⣿"); // Doraemon ASCII art is gone
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
+
+  describe("dora --capabilities", () => {
+    test("emits a valid manifest", () => {
+      const { stdout, exitCode } = runDoraval(["--capabilities"]);
+      expect(exitCode).toBe(0);
+      const m = JSON.parse(stdout);
+      expect(m.commands.some((c: { name: string }) => c.name === "scan")).toBe(true);
+      expect(m.intelligence.mechanical).toBe(true);
+    });
   });
 });
