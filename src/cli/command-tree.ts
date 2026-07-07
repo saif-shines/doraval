@@ -150,6 +150,7 @@ export const ui = defineCommand({
 /** The exact subCommands map used to build the root `doraval` command. */
 export const topLevelSubCommands = {
   scan: () => import("./commands/scan.js").then((m) => m.default),
+  review: () => import("./commands/review.js").then((m) => m.default),
   validate: () =>
     import("./commands/validate-top.js").then((m) => m.default),
   bump: () => import("./commands/bump.js").then((m) => m.default),
