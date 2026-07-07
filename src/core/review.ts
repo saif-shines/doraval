@@ -6,6 +6,7 @@ import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { detectCapabilities } from "./capability-detect.js";
 import { PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
+import { loadScenarios } from "./scenarios.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ export interface ReviewResult {
     llm?: { available: boolean; method?: string; findings: ReviewFinding[] };
     sessions?: { available: boolean; count?: number; findings: ReviewFinding[] };
   };
+  scenarioCount?: number;
   summary: { passed: number; warnings: number; errors: number };
 }
 
@@ -112,10 +114,28 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     })),
   ];
 
+  // Tier 1b: scenario file validation
+  const scenarioResult = loadScenarios(dir);
+  let scenarioCount = 0;
+  if (!scenarioResult.ok) {
+    structFindings.push({
+      id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
+      severity: "error" as const, message: scenarioResult.error, fixable: false,
+    });
+  } else if (scenarioResult.scenarios.length > 0) {
+    scenarioCount = scenarioResult.scenarios.length;
+    structFindings.push({
+      id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
+      severity: "info" as const,
+      message: `${scenarioCount} scenario(s) loaded from scenarios.yaml`,
+      fixable: false,
+    });
+  }
+
   const structTier: TierResult = {
     passed: validation.passes.length,
-    warnings: validation.warnings.length,
-    errors: validation.errors.length,
+    warnings: validation.warnings.length + (scenarioResult.ok ? 0 : 0),
+    errors: validation.errors.length + (!scenarioResult.ok ? 1 : 0),
     findings: structFindings,
   };
 
@@ -208,6 +228,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     path: dir,
     origin,
     tiers,
+    ...(scenarioCount > 0 ? { scenarioCount } : {}),
     summary: {
       passed: all.filter((f) => f.severity === "pass").length,
       warnings: all.filter((f) => f.severity === "warning").length,
