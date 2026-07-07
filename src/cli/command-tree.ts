@@ -6,12 +6,6 @@
  * defineCommand is an identity function, so this reads names without
  * invoking any lazy import) to generate shell completions. Add a command
  * here once and both the CLI and its completions pick it up.
- *
- * `evals setup` is the one exception: citty subCommand matching rejects a
- * bare path like `.` as an unknown command, so `evals` dispatches "setup"
- * vs. a skill path manually inside its own `run()` (see commands/evals.ts)
- * instead of via `subCommands`. It won't show up in Object.keys(evals) —
- * completion.ts lists it by hand for that reason.
  */
 import { defineCommand, showUsage } from "citty";
 
@@ -36,18 +30,6 @@ export function defineGroup(
   });
   return group;
 }
-
-export const skill = defineGroup(
-  "skill",
-  "Validate, measure drift, run sessions with prompts, and judge AI agent skills",
-  {
-    validate: () =>
-      import("./commands/validate.js").then((m) => m.default),
-    lint: () => import("./commands/skill-lint.js").then((m) => m.default),
-    drift: () => import("./commands/drift.js").then((m) => m.default),
-    judge: () => import("./commands/judge.js").then((m) => m.default),
-  }
-);
 
 export const journal = defineGroup(
   "journal",
@@ -152,18 +134,11 @@ export const topLevelSubCommands = {
   scan: () => import("./commands/scan.js").then((m) => m.default),
   review: () => import("./commands/review.js").then((m) => m.default),
   fix: () => import("./commands/fix.js").then(m => m.default),
-  validate: () =>
-    import("./commands/validate-top.js").then((m) => m.default),
   bump: () => import("./commands/bump.js").then((m) => m.default),
   update: () => import("./commands/update.js").then((m) => m.default),
   providers: () => import("./commands/providers.js").then((m) => m.default),
   completion: () => import("./commands/completion.js").then((m) => m.default),
-  skill: () => Promise.resolve(skill),
   journal: () => Promise.resolve(journal),
-  eval: () => import("./commands/judge.js").then((m) => m.default),
-  // Dual: `evals setup` configures LLM; `evals <path>` aliases judge (see commands/evals.ts)
-  evals: () => import("./commands/evals.js").then((m) => m.default),
-  drift: () => import("./commands/drift.js").then((m) => m.default),
   config,
   claude: () => Promise.resolve(claude),
   codex: () => Promise.resolve(codex),

@@ -7,11 +7,12 @@ import { rmSync, mkdirSync, mkdtempSync, writeFileSync, existsSync } from "fs";
 
 describe("doraval CLI", () => {
   describe("help and version", () => {
-    test("--help lists skill subcommands", () => {
+    test("--help lists core commands", () => {
       const { exitCode, stdout } = runDoraval(["--help"]);
       expect(exitCode).toBe(0);
-      expect(stdout).toContain("skill");
-      expect(stdout).toMatch(/validate|drift|judge/);
+      expect(stdout).toContain("scan");
+      expect(stdout).toContain("review");
+      expect(stdout).toContain("fix");
     });
 
     test("--version prints package version", () => {
@@ -21,183 +22,7 @@ describe("doraval CLI", () => {
       expect(output).toContain(pkg.version);
     });
 
-    test("skill --help lists subcommands", () => {
-      const { exitCode, stdout } = runDoraval(["skill", "--help"]);
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain("validate");
-      expect(stdout).toContain("drift");
-      expect(stdout).toContain("judge");
-    });
-  });
 
-  describe("skill validate", () => {
-    test("passes minimal-good fixture with JSON on stdout", () => {
-      const skillDir = fixturePath("minimal-good");
-      const { exitCode, stdout, stderr } = runDoraval([
-        "skill",
-        "validate",
-        skillDir,
-        "--format",
-        "json",
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(stderr).toBe("");
-      const result = JSON.parse(stdout);
-      expect(result.errors).toEqual([]);
-      expect(result.passes.some((p: any) => p.text === 'name: "minimal-good"')).toBe(true);
-    });
-
-    test("reports missing name as warning and exits 0", () => {
-      const skillDir = fixturePath("missing-name");
-      const { exitCode, stdout } = runDoraval([
-        "skill",
-        "validate",
-        skillDir,
-        "--format",
-        "json",
-      ]);
-
-      expect(exitCode).toBe(0);
-      const result = JSON.parse(stdout);
-      expect(result.errors).toEqual([]);
-      expect(result.warnings.some((w: any) => w.text.includes("name"))).toBe(true);
-    });
-
-    test("exits 1 for invalid YAML frontmatter", () => {
-      const skillDir = fixturePath("bad-frontmatter");
-      const { exitCode, stderr } = runDoraval([
-        "skill",
-        "validate",
-        skillDir,
-      ]);
-
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Failed to parse YAML frontmatter in SKILL.md");
-      expect(stderr).toContain("Fix the YAML syntax");
-    });
-
-    test("exits 1 for missing path", () => {
-      const { exitCode, stderr } = runDoraval([
-        "skill",
-        "validate",
-        "/nonexistent/doraval-test-path",
-      ]);
-
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("E-VAL-001");
-      expect(stderr).toContain("Path not found");
-    });
-
-    test("table mode writes diagnostics to stderr only", () => {
-      const skillDir = fixturePath("minimal-good");
-      const { exitCode, stdout, stderr } = runDoraval([
-        "skill",
-        "validate",
-        skillDir,
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(stdout).toBe("");
-      expect(stderr).toContain("Structural validation");
-      expect(stderr).toContain("minimal-good");
-      expect(stderr).toContain("Next:");
-      expect(stderr).toContain("passed");
-    });
-
-    test("validates CRLF fixture on disk", () => {
-      const skillDir = fixturePath("crlf-lines");
-      const { exitCode, stdout } = runDoraval([
-        "skill",
-        "validate",
-        skillDir,
-        "--format",
-        "json",
-      ]);
-
-      expect(exitCode).toBe(0);
-      const result = JSON.parse(stdout);
-      expect(result.errors).toEqual([]);
-      expect(result.passes.some((p: any) => p.text === 'name: "crlf-lines"')).toBe(true);
-    });
-  });
-
-  describe("skill drift", () => {
-    test("session-grounded json output includes skill and session fields", () => {
-      const skillDir = fixturePath("minimal-good");
-      const { exitCode, stdout } = runDoraval([
-        "skill",
-        "drift",
-        skillDir,
-        "--format",
-        "json",
-      ]);
-
-      expect(exitCode).toBe(0);
-      const result = JSON.parse(stdout);
-      // New session-grounded format — old regex fields are gone
-      expect(result).toHaveProperty("skill");
-      expect(result).toHaveProperty("sessionsChecked");
-      expect(result).toHaveProperty("sessionsMatched");
-      expect(result).toHaveProperty("results");
-      expect(Array.isArray(result.results)).toBe(true);
-    });
-
-    test("exits 0 when no sessions matched (no coding agent history)", () => {
-      // In CI / test environment there's no agent session history, so no sessions match.
-      const skillDir = fixturePath("minimal-good");
-      const { exitCode } = runDoraval([
-        "skill",
-        "drift",
-        skillDir,
-        "--format",
-        "json",
-      ]);
-
-      // Should always exit 0 when no drift found (0 DRIFTED items)
-      expect(exitCode).toBe(0);
-    });
-
-    test("exits 0 without --ci and no drift detected", () => {
-      const skillDir = fixturePath("minimal-good");
-      const { exitCode } = runDoraval([
-        "skill",
-        "drift",
-        skillDir,
-        "--format",
-        "json",
-        "--ci",
-      ]);
-
-      // No sessions matched → no DRIFTED items → exit 0 even with --ci
-      expect(exitCode).toBe(0);
-    });
-
-    test("table mode writes drift output to stderr only", () => {
-      const skillDir = fixturePath("minimal-good");
-      const { exitCode, stdout, stderr } = runDoraval([
-        "skill",
-        "drift",
-        skillDir,
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(stdout).toBe("");
-      expect(stderr).toContain("session-grounded behavioral analysis");
-    });
-  });
-
-  describe("skill judge", () => {
-    test("exits non-zero when no API key configured (session-free rubric mode)", () => {
-      const skillDir = fixturePath("minimal-good");
-      const { exitCode, stdout, stderr } = runDoraval(
-        ["skill", "judge", skillDir],
-        { env: { DORAVAL_HOME: "/tmp/doraval-test-no-config" } },
-      );
-
-      // judge is session-free; it exits non-zero on failure (no sessions required)
-      expect(exitCode).toBe(1);
-    });
   });
 
   test("claude new --yes scaffolds plugin in temp dir", () => {
@@ -332,6 +157,30 @@ describe("doraval CLI", () => {
       expect(stderr).toContain("No agent context found");
       expect(stderr).toContain("dora new");
       rmSync(dir, { recursive: true, force: true });
+    });
+  });
+
+  describe("B13 command cleanup — removed commands", () => {
+    test("skill group is gone", () => {
+      const { exitCode, stderr } = runDoraval(["skill", "validate", "."]);
+      expect(exitCode).not.toBe(0);
+    });
+
+    test("top-level validate is gone", () => {
+      const { exitCode } = runDoraval(["validate", "."]);
+      expect(exitCode).not.toBe(0);
+    });
+
+    test("eval/evals are gone", () => {
+      const r1 = runDoraval(["eval", "."]);
+      expect(r1.exitCode).not.toBe(0);
+      const r2 = runDoraval(["evals", "."]);
+      expect(r2.exitCode).not.toBe(0);
+    });
+
+    test("top-level drift is gone", () => {
+      const { exitCode } = runDoraval(["drift", "."]);
+      expect(exitCode).not.toBe(0);
     });
   });
 

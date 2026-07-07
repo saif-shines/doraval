@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
 import { exit } from "../render/exit.js";
-import { topLevelSubCommands, skill, journal, claude, codex, cursor, copilot } from "../command-tree.js";
+import { topLevelSubCommands, journal, claude, codex, cursor, copilot } from "../command-tree.js";
 
 const uiFlags = ["--port", "--open", "--no-open", "--host", "--status", "--force"];
 
@@ -16,7 +16,6 @@ const commands = Object.keys(topLevelSubCommands);
 const providerGroups: Record<string, typeof claude> = { claude, codex, cursor, copilot };
 
 async function subCommandNames(name: string): Promise<string[]> {
-  if (name === "skill") return Object.keys(skill.subCommands ?? {});
   if (name === "journal") return Object.keys(journal.subCommands ?? {});
   if (name in providerGroups) return Object.keys(providerGroups[name]!.subCommands ?? {});
   // `config` is a real citty subCommand tree — resolve the (already lazy) import once.
@@ -24,9 +23,6 @@ async function subCommandNames(name: string): Promise<string[]> {
     const mod = await topLevelSubCommands.config();
     return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
   }
-  // `evals setup` is dispatched manually inside evals.ts's run() (not a citty
-  // subCommand — see command-tree.ts docblock), so it can't be introspected.
-  if (name === "evals") return ["setup"];
   return [];
 }
 
@@ -53,7 +49,7 @@ export default defineCommand({
     const shell = String(args.shell).toLowerCase();
 
     const subCommands: Record<string, string[]> = {};
-    for (const name of ["skill", "journal", "config", "evals", "claude", "codex", "cursor", "copilot"]) {
+    for (const name of ["journal", "config", "claude", "codex", "cursor", "copilot"]) {
       subCommands[name] = await subCommandNames(name);
     }
     subCommands.hook = await hookSubCommandNames();
@@ -70,9 +66,7 @@ _doraval_completions() {
     COMPREPLY=( $(compgen -W "${commands.join(" ")}" -- "$cur") )
   elif [ $COMP_CWORD -eq 2 ]; then
     case "$prev" in
-      skill) COMPREPLY=( $(compgen -W "${(subCommands.skill ?? []).join(" ")}" -- "$cur") ) ;;
       journal) COMPREPLY=( $(compgen -W "${(subCommands.journal ?? []).join(" ")}" -- "$cur") ) ;;
-      evals) COMPREPLY=( $(compgen -W "${(subCommands.evals ?? []).join(" ")}" -- "$cur") ) ;;
       config) COMPREPLY=( $(compgen -W "${(subCommands.config ?? []).join(" ")}" -- "$cur") ) ;;
       hook) COMPREPLY=( $(compgen -W "${(subCommands.hook ?? []).join(" ")}" -- "$cur") ) ;;
       ui) COMPREPLY=( $(compgen -W "${uiFlags.join(" ")}" -- "$cur") ) ;;
@@ -99,14 +93,8 @@ _doraval() {
       ;;
     args)
       case $words[1] in
-        skill)
-          _describe 'subcommand' (${(subCommands.skill ?? []).join(" ")})
-          ;;
         journal)
           _describe 'subcommand' (${(subCommands.journal ?? []).join(" ")})
-          ;;
-        evals)
-          _describe 'subcommand' (${(subCommands.evals ?? []).join(" ")})
           ;;
         config)
           _describe 'subcommand' (${(subCommands.config ?? []).join(" ")})
@@ -132,9 +120,7 @@ _doraval "$@"
 complete -c doraval -f
 complete -c doraval -n '__fish_use_subcommand' -a '${commands.join(" ")}'
 
-complete -c doraval -n '__fish_seen_subcommand_from skill' -a '${(subCommands.skill ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from journal' -a '${(subCommands.journal ?? []).join(" ")}'
-complete -c doraval -n '__fish_seen_subcommand_from evals' -a '${(subCommands.evals ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from config' -a '${(subCommands.config ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from hook' -a '${(subCommands.hook ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l port -d 'Port'

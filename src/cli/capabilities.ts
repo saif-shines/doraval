@@ -54,12 +54,33 @@ export function buildCapabilities(): CapabilitiesManifest {
         examples: ["dora --format json", "dora scan --cwd /path/to/repo --format json"],
       },
       {
-        name: "validate",
-        description: "Validate agent context artifacts (skills, plugins, hooks, MCP configs).",
-        args: [{ name: "path", required: true, type: "string" }],
-        flags: { ...COMMON_FLAGS },
+        name: "review",
+        description:
+          "4-tier quality gate: structure → heuristics → LLM → sessions. Replaces validate/drift/judge.",
+        args: [{ name: "path", required: false, type: "string" }],
+        flags: {
+          ...COMMON_FLAGS,
+          "--quick": { description: "Tiers 1–2 only (no LLM)" },
+          "--deep": { description: "All tiers including LLM judge" },
+          "--all": { description: "Review every discovered skill" },
+          "--fail-on": { description: "Minimum severity to exit 1", values: ["error", "warning", "info"], default: "error" },
+        },
         exit_codes: EXIT_CODES,
-        examples: ["dora validate .", "dora validate . --ci --format json"],
+        examples: ["dora review .", "dora review --all --quick --ci"],
+      },
+      {
+        name: "fix",
+        description:
+          "Apply mechanical fixes from review findings or emit agent-ready briefs for judgment fixes.",
+        args: [{ name: "path", required: false, type: "string" }],
+        flags: {
+          ...COMMON_FLAGS,
+          "--yes": { description: "Apply fixes without prompting" },
+          "--dry-run": { description: "Show what would change, don't write" },
+          "--brief": { description: "Emit agent-ready prompt for judgment fixes" },
+        },
+        exit_codes: EXIT_CODES,
+        examples: ["dora fix . --dry-run", "dora fix --brief"],
       },
     ],
     intelligence: {
