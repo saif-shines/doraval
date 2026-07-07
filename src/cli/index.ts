@@ -6,6 +6,12 @@ import { topLevelSubCommands } from "./command-tree.js";
 
 registerLifecycleHandlers();
 
+if (process.argv.includes("--capabilities")) {
+  const { buildCapabilities } = await import("./capabilities.js");
+  process.stdout.write(JSON.stringify(buildCapabilities(), null, 2) + "\n");
+  process.exit(0);
+}
+
 const main = defineCommand({
   meta: {
     name: "doraval",
