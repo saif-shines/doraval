@@ -9,7 +9,9 @@ export interface Capabilities {
   preferred: "api" | "cli" | "none";
 }
 
-const CLI_CANDIDATES = ["claude", "grok"];
+// Agent CLI first (B9): user already pays for their coding agent subscription.
+// Probe order: most capable judge CLIs first.
+const CLI_CANDIDATES = ["claude", "grok", "codex", "copilot", "cursor"];
 
 export function detectCliCommand(): string | null {
   for (const cmd of CLI_CANDIDATES) {
@@ -27,7 +29,8 @@ export function detectCapabilities(evalCfg?: Partial<EvalConfig>): Capabilities 
   const api = canUseApiJudge(evalCfg ?? {});
   const cliCommand = detectCliCommand();
   const cli = cliCommand !== null;
-  const preferred: Capabilities["preferred"] = api ? "api" : cli ? "cli" : "none";
+  // B9: agent CLI first, API key second — use the subscription they already pay for.
+  const preferred: Capabilities["preferred"] = cli ? "cli" : api ? "api" : "none";
   return { api, cli, cliCommand, preferred };
 }
 

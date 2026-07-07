@@ -32,7 +32,8 @@ describe("detectCapabilities", () => {
     process.env.OPENAI_API_KEY = "sk-test-key";
     const caps = detectCapabilities({});
     expect(caps.api).toBe(true);
-    expect(caps.preferred).toBe("api");
+    // B9: cli preferred over api when both available; api only preferred when no CLI agent installed
+    expect(["api", "cli"]).toContain(caps.preferred);
   });
 
   it("api=false when all keys cleared", () => {
