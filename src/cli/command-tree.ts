@@ -151,6 +151,7 @@ export const ui = defineCommand({
 export const topLevelSubCommands = {
   scan: () => import("./commands/scan.js").then((m) => m.default),
   review: () => import("./commands/review.js").then((m) => m.default),
+  fix: () => import("./commands/fix.js").then(m => m.default),
   validate: () =>
     import("./commands/validate-top.js").then((m) => m.default),
   bump: () => import("./commands/bump.js").then((m) => m.default),
