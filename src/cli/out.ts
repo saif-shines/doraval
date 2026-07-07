@@ -161,11 +161,11 @@ export function renderValidationReport(
   }
 
   if (totalErrors === 0 && totalWarnings === 0) {
-    nextAction(`dora skill drift ${opts.path}   or   dora journal add "..."`);
+    nextAction(`dora review ${opts.path}   or   dora journal add "..."`);
   } else if (totalErrors > 0) {
-    nextAction(`dora validate ${opts.path} --verbose`);
+    nextAction(`dora review ${opts.path} --deep`);
   } else {
-    nextAction(`dora validate ${opts.path} --for claude`);
+    nextAction(`dora review ${opts.path} --quick`);
   }
 }
 

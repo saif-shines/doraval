@@ -63,7 +63,7 @@ export function buildCapabilities(): CapabilitiesManifest {
           "--quick": { description: "Tiers 1–2 only (no LLM)" },
           "--deep": { description: "All tiers including LLM judge" },
           "--all": { description: "Review every discovered skill" },
-          "--fail-on": { description: "Minimum severity to exit 1", values: ["error", "warning", "info"], default: "error" },
+          "--fail-on": { description: "Minimum severity to exit 1", values: ["error", "warning"], default: "error" },
         },
         exit_codes: EXIT_CODES,
         examples: ["dora review .", "dora review --all --quick --ci"],

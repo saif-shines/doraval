@@ -4,7 +4,7 @@ import { resolve } from "path";
 import pc from "picocolors";
 import { reviewSkill, reviewAll } from "../../core/review.js";
 import { collectFixes, type FixEdit, type FixResult } from "../../core/fix-engine.js";
-import { isDoravalError } from "../../core/errors.js";
+
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../out.js";
 import { exit } from "../render/exit.js";
 
@@ -31,7 +31,7 @@ function renderMechanical(edits: FixEdit[], dryRun: boolean, yes: boolean): numb
       applied++;
       ui.write(`  ${pc.green("✓")} Applied: ${edit.description}`);
     } else {
-      ui.write(`  Apply? [Y/n] → use ${pc.bold("--yes")} to auto-approve`);
+      ui.write(`  ${pc.dim("skipped")} — re-run with ${pc.bold("--yes")} to apply`);
     }
   }
   return applied;
@@ -94,16 +94,21 @@ export default defineCommand({
         totalMech += fix.mechanical.length;
         allJudgments.push(...fix.judgment);
 
-        if (mode.format === "table" && fix.mechanical.length > 0) {
-          ui.blank();
-          ui.heading(`dora fix ${r.path}`);
-          summaryLine(`${fix.mechanical.length} fixable issue${fix.mechanical.length === 1 ? "" : "s"} found.`);
-          totalApplied += renderMechanical(fix.mechanical, dryRun, yes);
+        if (fix.mechanical.length > 0) {
+          if (mode.format === "table") {
+            ui.blank();
+            ui.heading(`dora fix ${r.path}`);
+            summaryLine(`${fix.mechanical.length} fixable issue${fix.mechanical.length === 1 ? "" : "s"} found.`);
+            totalApplied += renderMechanical(fix.mechanical, dryRun, yes);
+          } else if (!dryRun && yes) {
+            // JSON mode: apply silently, count
+            for (const edit of fix.mechanical) { edit.apply(); totalApplied++; }
+          }
         }
       }
 
       if (mode.format === "json") {
-        outJson({ mechanical: totalMech, judgment: allJudgments, applied: !dryRun && yes });
+        outJson({ mechanical: totalMech, judgment: allJudgments, applied: dryRun ? 0 : totalApplied });
         await exit(allJudgments.length > 0 ? 1 : 0);
         return;
       }
@@ -119,7 +124,9 @@ export default defineCommand({
         ui.blank();
         ui.write(`  ${allJudgments.length} issue${allJudgments.length === 1 ? "" : "s"} need${allJudgments.length === 1 ? "s" : ""} judgment (not auto-fixable):`);
         if (brief) {
-          const prompt = buildBriefPrompt(allJudgments, target);
+          // Use the first skill's path for single-skill mode, target for multi
+          const briefTarget = results.length === 1 ? results[0]!.path : target;
+          const prompt = buildBriefPrompt(allJudgments, briefTarget);
           ui.blank();
           ui.write(prompt);
         } else {
@@ -132,7 +139,7 @@ export default defineCommand({
       await exit(allJudgments.length > 0 ? 1 : 0);
     } catch (e) {
       emitError(e, mode);
-      await exit(isDoravalError(e) ? 2 : 1);
+      await exit(2); // could-not-run (internal error or unmet prerequisite)
     }
   },
 });

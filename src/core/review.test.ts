@@ -59,7 +59,7 @@ describe("reviewAll", () => {
     const results = await reviewAll(resolve(FIXTURES), { quick: true });
     if (results.length > 1) {
       for (let i = 1; i < results.length; i++) {
-        expect(results[i - 1].summary.errors).toBeGreaterThanOrEqual(results[i].summary.errors);
+        expect(results[i - 1]!.summary.errors).toBeGreaterThanOrEqual(results[i]!.summary.errors);
       }
     }
   });

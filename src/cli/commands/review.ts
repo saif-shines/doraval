@@ -3,7 +3,7 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
 import { reviewSkill, reviewAll, type ReviewResult, type ReviewFinding } from "../../core/review.js";
-import { isDoravalError } from "../../core/errors.js";
+
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
 import { exit } from "../render/exit.js";
 
@@ -107,12 +107,12 @@ export default defineCommand({
   meta: { name: "review", description: "Deep multi-tier review of skills: structure, heuristics, LLM, sessions" },
   args: {
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
-    quick: { type: "boolean", description: "Tier 1 (structure) only", default: false },
+    quick: { type: "boolean", description: "Tiers 1–2 only (structure + heuristics, no LLM)", default: false },
     deep: { type: "boolean", description: "Require LLM tier; exit 2 if no judge", default: false },
     sessions: { type: "boolean", description: "Require session tier", default: false },
     all: { type: "boolean", description: "Review every artifact under the path", default: false },
-    for: { type: "string", description: "Filter by agent name" },
-    agent: { type: "string", description: "Session filter (plumbed to opts)" },
+    for: { type: "string", description: "Filter by agent name (planned)" },
+    agent: { type: "string", description: "Session filter (planned)" },
     "fail-on": { type: "string", description: "Exit 1 trigger: error (default) | warning", default: "error" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
@@ -127,6 +127,7 @@ export default defineCommand({
       deep: args.deep as boolean,
       sessions: args.sessions as boolean,
       agent: args.agent as string | undefined,
+      cwd: root,
     };
 
     try {
@@ -138,9 +139,9 @@ export default defineCommand({
         : [await reviewSkill(target, opts)];
 
       if (mode.format === "json") {
-        outJson(results.length === 1 && !args.all ? results[0] : results);
+        outJson(results.length === 1 && !args.all ? results[0]! : results);
       } else if (results.length === 1 && !args.all) {
-        renderSingle(results[0]);
+        renderSingle(results[0]!);
       } else {
         renderAggregate(results);
       }
@@ -152,7 +153,7 @@ export default defineCommand({
       await exit(shouldFail ? 1 : 0);
     } catch (e) {
       emitError(e, mode);
-      await exit(isDoravalError(e) ? 2 : 1);
+      await exit(2); // could-not-run (internal error or unmet prerequisite)
     }
   },
 });

@@ -45,6 +45,7 @@ export interface ReviewOptions {
   deep?: boolean;
   sessions?: boolean;
   agent?: string;
+  cwd?: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ function makeFix(text: string): ReviewFinding["fix"] | undefined {
 // ── reviewSkill ────────────────────────────────────────────────────────────────
 
 export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<ReviewResult> {
-  const origin = classifySkillDir(dir, { cwd: process.cwd() });
+  const origin = classifySkillDir(dir, { cwd: opts.cwd ?? process.cwd() });
   const loaded = await loadSkillFromDir(dir);
 
   if (!loaded.ok) {
@@ -151,7 +152,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       }
       tiers.llm = { available: false, findings: [] };
     } else {
-      const result = await lintSkill(model, caps, {} as any, {});
+      const result = await lintSkill(model, caps, { command: "" }, {});
       if (result.ok) {
         let lIdx = 1;
         tiers.llm = {
@@ -197,6 +198,16 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
 
 export async function reviewAll(root: string, opts: ReviewOptions = {}): Promise<ReviewResult[]> {
   const dirs = findSkillDirs(root);
-  const results = await Promise.all(dirs.map((d) => reviewSkill(d, opts)));
+  const optsWithCwd = { ...opts, cwd: opts.cwd ?? root };
+
+  // Sequential when LLM tier is active (non-quick) to avoid rate limits.
+  // Parallel for quick mode (tiers 1–2 are CPU-only).
+  let results: ReviewResult[];
+  if (opts.quick) {
+    results = await Promise.all(dirs.map((d) => reviewSkill(d, optsWithCwd)));
+  } else {
+    results = [];
+    for (const d of dirs) results.push(await reviewSkill(d, optsWithCwd));
+  }
   return results.sort((a, b) => b.summary.errors - a.summary.errors);
 }

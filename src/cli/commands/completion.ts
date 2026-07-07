@@ -70,7 +70,10 @@ _doraval_completions() {
       config) COMPREPLY=( $(compgen -W "${(subCommands.config ?? []).join(" ")}" -- "$cur") ) ;;
       hook) COMPREPLY=( $(compgen -W "${(subCommands.hook ?? []).join(" ")}" -- "$cur") ) ;;
       ui) COMPREPLY=( $(compgen -W "${uiFlags.join(" ")}" -- "$cur") ) ;;
-      claude|codex|cursor|copilot) COMPREPLY=( $(compgen -W "${(subCommands.claude ?? []).join(" ")}" -- "$cur") ) ;;
+      claude) COMPREPLY=( $(compgen -W "${(subCommands.claude ?? []).join(" ")}" -- "$cur") ) ;;
+      codex) COMPREPLY=( $(compgen -W "${(subCommands.codex ?? []).join(" ")}" -- "$cur") ) ;;
+      cursor) COMPREPLY=( $(compgen -W "${(subCommands.cursor ?? []).join(" ")}" -- "$cur") ) ;;
+      copilot) COMPREPLY=( $(compgen -W "${(subCommands.copilot ?? []).join(" ")}" -- "$cur") ) ;;
     esac
   fi
 }
@@ -105,8 +108,17 @@ _doraval() {
         ui)
           _describe 'flag' (${uiFlags.join(" ")})
           ;;
-        claude|codex|cursor|copilot)
+        claude)
           _describe 'subcommand' (${(subCommands.claude ?? []).join(" ")})
+          ;;
+        codex)
+          _describe 'subcommand' (${(subCommands.codex ?? []).join(" ")})
+          ;;
+        cursor)
+          _describe 'subcommand' (${(subCommands.cursor ?? []).join(" ")})
+          ;;
+        copilot)
+          _describe 'subcommand' (${(subCommands.copilot ?? []).join(" ")})
           ;;
       esac
       ;;
@@ -129,7 +141,10 @@ complete -c doraval -n '__fish_seen_subcommand_from ui' -l no-open -d 'Do not op
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l host -d 'Host'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l status -d 'Show status only'
 complete -c doraval -n '__fish_seen_subcommand_from ui' -l force -d 'Force restart'
-complete -c doraval -n '__fish_seen_subcommand_from claude codex cursor copilot' -a '${(subCommands.claude ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from claude' -a '${(subCommands.claude ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from codex' -a '${(subCommands.codex ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from cursor' -a '${(subCommands.cursor ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from copilot' -a '${(subCommands.copilot ?? []).join(" ")}'
 `);
     } else {
       console.error(`Unsupported shell: ${shell}. Supported: bash, zsh, fish`);
