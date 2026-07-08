@@ -1,12 +1,17 @@
 import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
-import { lintSkill } from "./skill-lint.js";
+import { lintSkill, type LintResult } from "./skill-lint.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { detectCapabilities } from "./capability-detect.js";
-import { PrerequisiteError } from "./errors.js";
+import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios } from "./scenarios.js";
+import { readConfig, getEvalConfig } from "./journal-config.js";
+import type { SkillModel } from "./skill-validate.js";
+import type { Capabilities } from "./capability-detect.js";
+import type { AgentConfig } from "./agent-invoke.js";
+import type { EvalConfig } from "./journal-config.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -49,6 +54,15 @@ export interface ReviewOptions {
   sessions?: boolean;
   agent?: string;
   cwd?: string;
+  /** Test seam: overrides the lintSkill call for the LLM tier. */
+  lintFn?: (
+    model: SkillModel,
+    caps: Capabilities,
+    agentCfg: AgentConfig,
+    evalCfg: Partial<EvalConfig>,
+    platform?: string,
+    extraRubric?: string
+  ) => Promise<LintResult>;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -181,7 +195,13 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
 
   // Tier 3: llm
   if (!opts.quick) {
-    const caps = detectCapabilities();
+    // Honor credentials/model/judge-preference stored via `dora config set eval.*`,
+    // not just env vars — and use the configured agent command when present.
+    const cfg = await readConfig();
+    const evalCfg = getEvalConfig(cfg);
+    const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
+
+    const caps = detectCapabilities(evalCfg);
     if (caps.preferred === "none") {
       if (opts.deep) {
         throw new PrerequisiteError({
@@ -191,10 +211,11 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       }
       tiers.llm = { available: false, findings: [] };
     } else {
-      // Inject project principles into the LLM prompt as additional rubric context
-      const rubricText = buildPrincipleRubric(principles);
-      const platform = rubricText || undefined;
-      const result = await lintSkill(model, caps, { command: "" }, {}, platform);
+      // Principles go in as an explicit rubric section the judge must enforce
+      // (NOT via the platform slot — that's a PLATFORM_CONTEXT lookup key).
+      const rubricText = buildPrincipleRubric(principles) || undefined;
+      const lint = opts.lintFn ?? lintSkill;
+      const result = await lint(model, caps, agentCfg, evalCfg, undefined, rubricText);
       if (result.ok) {
         let lIdx = 1;
         tiers.llm = {
@@ -209,6 +230,15 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
           })),
         };
       } else {
+        // A judge exists but the call failed. Under --deep that is
+        // "could not run", not a silent downgrade to tiers 1-2.
+        if (opts.deep) {
+          throw new NetworkError({
+            code: "E-NET-002",
+            message: `LLM judge failed: ${result.error}`,
+            suggestion: "Re-run, check the judge CLI/API credentials, or drop --deep to review without the LLM tier",
+          });
+        }
         tiers.llm = { available: false, findings: [] };
       }
     }

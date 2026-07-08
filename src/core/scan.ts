@@ -19,6 +19,7 @@ import { findSkillDirs } from "./skill-discovery.js";
 import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
 import { detectCapabilities } from "./capability-detect.js";
+import { readConfig, getEvalConfig } from "./journal-config.js";
 
 export interface HealthItem {
   text: string;
@@ -111,7 +112,9 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
     failed: health.filter((h) => h.status === "fail").length,
   };
 
-  const caps = detectCapabilities();
+  // Include config-stored eval credentials, not just env vars
+  const cfg = await readConfig().catch(() => null);
+  const caps = detectCapabilities(getEvalConfig(cfg));
   const intelligence: IntelligenceStatus =
     caps.preferred === "api"
       ? { judge: "api", detail: "API key detected — deep review ready" }
@@ -134,7 +137,7 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
     suggestions.push({
       kind: "fix",
       title: `Fix ${h.path}: ${h.errors[0]?.text ?? "validation error"}`,
-      command: `dora review ${h.path}`,
+      command: `dora fix ${h.path}`,
     });
   }
   if (!empty && intelligence.judge !== "none" && summary.warnings + summary.failed > 0) {

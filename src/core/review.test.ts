@@ -55,6 +55,80 @@ describe("reviewSkill", () => {
       spy.mockRestore();
     }
   });
+
+  test("deep mode with a judge that FAILS throws E-NET-002 instead of silently degrading", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+    try {
+      await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), {
+        deep: true,
+        lintFn: async () => ({ ok: false, error: "judge timed out" }),
+      });
+      expect(true).toBe(false); // should not reach here
+    } catch (e: any) {
+      expect(e.code).toBe("E-NET-002");
+      expect(e.message).toContain("judge timed out");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("non-deep mode with a failing judge degrades gracefully (llm unavailable, no throw)", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+    try {
+      const result = await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), {
+        lintFn: async () => ({ ok: false, error: "judge timed out" }),
+      });
+      expect(result.tiers.llm).toEqual({ available: false, findings: [] });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("principles rubric reaches the LLM prompt as extraRubric, not as the platform key", async () => {
+    // Point DORAVAL_HOME at a temp dir with a recorded principle, then capture
+    // exactly what the LLM tier passes to lintSkill.
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import("fs");
+    const { tmpdir } = await import("os");
+    const { join } = await import("path");
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = home;
+    const globalDir = join(home, "memory", "repo", "global");
+    mkdirSync(globalDir, { recursive: true });
+    writeFileSync(
+      join(globalDir, "principles.md"),
+      `## Never use default exports\n\n\`\`\`yaml\nid: t1\nweight: 9\ntags: []\ndate: 2026-07-08\nstatus: active\n\`\`\`\n\nDefault exports break re-export ergonomics.\n`
+    );
+
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+
+    let seenPlatform: string | undefined = "sentinel";
+    let seenRubric: string | undefined;
+    try {
+      await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), {
+        lintFn: async (_m, _c, _a, _e, platform, extraRubric) => {
+          seenPlatform = platform;
+          seenRubric = extraRubric;
+          return { ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } };
+        },
+      });
+      expect(seenPlatform).toBeUndefined();
+      expect(seenRubric).toContain("Never use default exports");
+    } finally {
+      spy.mockRestore();
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+    }
+  });
 });
 
 describe("reviewAll", () => {

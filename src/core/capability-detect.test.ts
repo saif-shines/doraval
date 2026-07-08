@@ -53,4 +53,31 @@ describe("detectCapabilities", () => {
     const caps = detectCapabilities({ api_key: "sk-from-config" });
     expect(caps.api).toBe(true);
   });
+
+  it("explicit eval.judge=api wins over an installed CLI", () => {
+    process.env.OPENAI_API_KEY = "sk-test-key";
+    const caps = detectCapabilities({ judge: "api" });
+    expect(caps.api).toBe(true);
+    // Even if a CLI is installed on this machine, the user's explicit preference governs.
+    expect(caps.preferred).toBe("api");
+  });
+
+  it("explicit eval.judge=api with no credentials falls through (no dead end)", () => {
+    for (const k of ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GROQ_API_KEY", "ZAI_API_KEY",
+                     "OPENROUTER_API_KEY", "ZAI_BASE_URL", "OPENAI_BASE_URL"]) {
+      delete (process.env as Record<string, string | undefined>)[k];
+    }
+    const caps = detectCapabilities({ judge: "api" });
+    // No API credentials: preference can't be honored — fall back to whatever exists.
+    expect(["cli", "none"]).toContain(caps.preferred);
+  });
+});
+
+describe("CLI candidate list", () => {
+  it("only probes CLIs that agent-invoke has working judge templates for", async () => {
+    // codex/copilot/cursor have no --output-format handling in getDefaultPromptTemplate;
+    // selecting them as judge produces unparseable output. Guard the list.
+    const mod = await import("./capability-detect.js");
+    expect(mod.CLI_CANDIDATES).toEqual(["claude", "grok"]);
+  });
 });

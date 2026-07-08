@@ -64,7 +64,7 @@ export const PLATFORM_CONTEXT: Record<string, string> = {
 
 // ── Prompt ─────────────────────────────────────────────────────────────────────
 
-export function buildLintPrompt(model: SkillModel, platform?: string): string {
+export function buildLintPrompt(model: SkillModel, platform?: string, extraRubric?: string): string {
   const frontmatter = Object.entries(model.data)
     .map(([k, v]) => `${k}: ${v}`)
     .join("\n");
@@ -73,8 +73,14 @@ export function buildLintPrompt(model: SkillModel, platform?: string): string {
     ? `\nPLATFORM CONTEXT:\n${PLATFORM_CONTEXT[platform]}\n`
     : "";
 
+  // Project principles recorded via `dora memory` — the judge must enforce them,
+  // not just see them (B13a rubric integration).
+  const rubricSection = extraRubric?.trim()
+    ? `\nPROJECT PRINCIPLES (recorded by this team via dora memory — flag any instruction in the skill that violates one, citing the principle):\n${extraRubric}\n`
+    : "";
+
   return `You are a skill linter for AI coding agents. Analyze this skill and identify quality issues.
-${platformSection}
+${platformSection}${rubricSection}
 FRONTMATTER:
 ${frontmatter}
 
@@ -199,9 +205,10 @@ export async function lintSkill(
   caps: Capabilities,
   agentCfg: AgentConfig,
   evalCfg: Partial<EvalConfig>,
-  platform?: string
+  platform?: string,
+  extraRubric?: string
 ): Promise<LintResult> {
-  const prompt = buildLintPrompt(model, platform);
+  const prompt = buildLintPrompt(model, platform, extraRubric);
 
   if (caps.preferred === "api") {
     const result = await lintViaApi(prompt, evalCfg);

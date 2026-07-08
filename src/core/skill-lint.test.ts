@@ -47,6 +47,26 @@ describe("buildLintPrompt", () => {
     const prompt = buildLintPrompt(exampleModel, "unknown-platform");
     expect(prompt).not.toContain("PLATFORM CONTEXT");
   });
+
+  it("injects project principles rubric when provided", () => {
+    const rubric = "## Project Principles\n- [w9] never use default exports";
+    const prompt = buildLintPrompt(exampleModel, undefined, rubric);
+    expect(prompt).toContain("PROJECT PRINCIPLES");
+    expect(prompt).toContain("never use default exports");
+    // The rubric must come with an instruction that tells the judge to enforce it.
+    expect(prompt.toLowerCase()).toContain("violat");
+  });
+
+  it("rubric and platform sections compose", () => {
+    const prompt = buildLintPrompt(exampleModel, "claude", "- [w8] prefer named exports");
+    expect(prompt).toContain("PLATFORM CONTEXT");
+    expect(prompt).toContain("PROJECT PRINCIPLES");
+  });
+
+  it("no principles section when rubric omitted or empty", () => {
+    expect(buildLintPrompt(exampleModel)).not.toContain("PROJECT PRINCIPLES");
+    expect(buildLintPrompt(exampleModel, undefined, "")).not.toContain("PROJECT PRINCIPLES");
+  });
 });
 
 describe("LintOutput shape (type safety smoke test)", () => {
