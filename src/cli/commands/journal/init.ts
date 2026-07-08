@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
 import { existsSync } from "fs";
-import { basename, join } from "path";
+import { basename, join, resolve } from "path";
 import { spawnSync } from "bun";
 import pc from "picocolors";
 import { ui } from "../../out.js";
@@ -137,11 +137,21 @@ export default defineCommand({
     const existing = await readConfig();
     const alreadyRegistered = existing?.journal.projects[project];
     const isRefresh = alreadyRegistered && args.refresh;
+    const sourceDir = resolve(process.cwd());
+    const registeredElsewhere =
+      alreadyRegistered?.source_dir !== undefined && alreadyRegistered.source_dir !== sourceDir;
 
     if (alreadyRegistered && !isRefresh) {
       ui.write(
         `  ${pc.yellow("⚠")} Project ${pc.bold(pc.white(project))} is already registered.\n`
       );
+      if (registeredElsewhere) {
+        ui.write(
+          `  ${pc.yellow("⚠")} ...to a different directory: ${pc.dim(alreadyRegistered.source_dir!)}\n` +
+            `  You're standing in: ${pc.dim(sourceDir)}\n` +
+            `  If these are unrelated projects, re-run with a distinguishing name: ${pc.dim(pc.gray(`dora journal init --project <other-name>`))}\n`
+        );
+      }
       ui.write(
         `  Repo:   ${pc.gray(existing.journal.repo)}`
       );
@@ -171,6 +181,7 @@ export default defineCommand({
     config.journal.projects[project] = {
       remote_path: remotePath,
       local_path: localPath,
+      source_dir: sourceDir,
     };
 
     // ── 6. Create directories ──────────────────────────────────────

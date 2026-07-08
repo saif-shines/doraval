@@ -8,6 +8,15 @@ import { YAML } from "bun";
 export interface ProjectMapping {
   remote_path: string;
   local_path: string;
+  /**
+   * Absolute path of the project directory this mapping was registered
+   * from (added after the original release — may be absent on entries
+   * written by older versions). Lets resolveProjectName match on the
+   * actual directory instead of guessing that the registration key
+   * equals the current directory's basename, which silently collides
+   * when two different projects share a basename (e.g. two "api" repos).
+   */
+  source_dir?: string;
 }
 
 export interface EvalConfig {
@@ -110,18 +119,33 @@ function serializeConfig(config: JournalConfig): string {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-export function resolveProjectName(config: JournalConfig | null): string | null {
+export function resolveProjectName(config: JournalConfig | null, cwd: string = process.cwd()): string | null {
   if (!config) return null;
-  const cwd = process.cwd();
+
+  // Prefer an exact match on the recorded source directory — precise,
+  // and doesn't collide when two different projects share a basename.
+  for (const [name, mapping] of Object.entries(config.journal.projects)) {
+    if (mapping.source_dir && mapping.source_dir === cwd) {
+      try {
+        return sanitizeProjectName(name);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  // Legacy fallback for entries registered before source_dir existed:
+  // guess that the registration key equals the current basename.
   const base = cwd.split("/").pop() ?? "";
-  if (config.journal.projects[base]) {
-    // Return sanitized version from config for safety
+  const legacy = config.journal.projects[base];
+  if (legacy && !legacy.source_dir) {
     try {
       return sanitizeProjectName(base);
     } catch {
       return null;
     }
   }
+
   return null;
 }
 
