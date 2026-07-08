@@ -4,7 +4,7 @@
  * Panes:
  *   1 Home     — project status
  *   2 Journal  — entries; a add, s sync
- *   3 Evals    — recent results; e run judge (artifact quality)
+ *   3 Evals    — recent results; e run dora review (artifact quality)
  *   4 Skills   — workspace skills; v validate, l lint
  *
  * Global: Tab/1-4 switch, ? help, : command palette, r refresh, q quit.
@@ -416,19 +416,19 @@ export async function launchApp(): Promise<void> {
     }
   }
 
-  // ─── in-app judge (Evals pane action: dora evals <skill>) ────────────────────
+  // ─── in-app judge (Evals pane action: dora review <skill>) ───────────────────
   async function runInAppJudge() {
     const skill = skills[0];
     if (!skill) {
       setContent("\n  No skill found in workspace.\n\n  Expected: .claude/skills/<name>/SKILL.md or skills/<name>/SKILL.md");
       return;
     }
-    startBusy(`Judging ${skill.name}…`);
-    appendBusyLine(`  ${SPINNER_FRAMES[0]} calling evals (judge)…`);
+    startBusy(`Reviewing ${skill.name}…`);
+    appendBusyLine(`  ${SPINNER_FRAMES[0]} calling dora review…`);
 
     try {
       const proc = Bun.spawn(
-        [process.execPath, process.argv[1]!, "evals", skill.dir],
+        [process.execPath, process.argv[1]!, "review", skill.dir],
         {
           cwd: process.cwd(),
           stdout: "pipe",
@@ -443,7 +443,7 @@ export async function launchApp(): Promise<void> {
       await proc.exited;
       const combined = stripAnsi((out + err).trim());
       stopBusy();
-      const resultLines = ["", "  Evals / Judge result:"];
+      const resultLines = ["", "  Review result:"];
       for (const line of combined.split("\n").slice(0, 30)) {
         resultLines.push(`  ${line}`);
       }
@@ -661,7 +661,7 @@ function buildHelp(): string {
     s                 sync staged entries to remote
 
   Evals pane
-    e                 judge primary skill via dora evals (rubric alignment)
+    e                 review primary skill via dora review (multi-tier)
 
   Skills pane
     v                 validate skill at cwd / first found
@@ -675,7 +675,7 @@ function buildHelp(): string {
   Command palette (:)
     sync / s          journal sync
     add / a           journal add form
-    evals / e         judge primary skill (artifact quality)
+    evals / e         review primary skill (dora review)
     validate / v      validate skill
     lint / l          lint skill
     refresh / r       refresh data
@@ -769,7 +769,7 @@ function buildJournal(journal: JournalData): string {
 
 function buildEvals(evals: EvalResultWithMeta[]): string {
   if (evals.length === 0) {
-    return "\n  No eval results yet.\n\n  Press e to run dora evals on the primary skill.";
+    return "\n  No eval results yet.\n\n  Press e to run dora review on the primary skill.";
   }
   const lines: string[] = [""];
   lines.push(`  Recent evals  (${evals.length} results)`);

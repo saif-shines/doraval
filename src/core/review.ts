@@ -141,14 +141,14 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     structFindings.push({
       id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
       severity: "info" as const,
-      message: `${scenarioCount} scenario(s) loaded from scenarios.yaml`,
+      message: `${scenarioCount} scenario(s) validated from scenarios.yaml (structure only — behavioral evaluation lands with the coverage tier)`,
       fixable: false,
     });
   }
 
   const structTier: TierResult = {
     passed: validation.passes.length,
-    warnings: validation.warnings.length + (scenarioResult.ok ? 0 : 0),
+    warnings: validation.warnings.length,
     errors: validation.errors.length + (!scenarioResult.ok ? 1 : 0),
     findings: structFindings,
   };
