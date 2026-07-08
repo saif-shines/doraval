@@ -1,12 +1,12 @@
 import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
-import { lintSkill, type LintResult } from "./skill-lint.js";
+import { lintSkill, runJudge, type LintResult } from "./skill-lint.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { detectCapabilities } from "./capability-detect.js";
 import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
-import { loadScenarios } from "./scenarios.js";
+import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
 import { readConfig, getEvalConfig } from "./journal-config.js";
 import type { SkillModel } from "./skill-validate.js";
 import type { Capabilities } from "./capability-detect.js";
@@ -67,6 +67,13 @@ export interface ReviewOptions {
   ) => Promise<LintResult>;
   /** Test seam: overrides the judge call for memory-file review's LLM tier. */
   memoryLintFn?: (
+    prompt: string,
+    caps: Capabilities,
+    agentCfg: AgentConfig,
+    evalCfg: Partial<EvalConfig>
+  ) => Promise<LintResult>;
+  /** Test seam: overrides the judge call for scenario-coverage checking. */
+  scenarioLintFn?: (
     prompt: string,
     caps: Capabilities,
     agentCfg: AgentConfig,
@@ -150,7 +157,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     structFindings.push({
       id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
       severity: "info" as const,
-      message: `${scenarioCount} scenario(s) validated from scenarios.yaml (structure only — behavioral evaluation lands with the coverage tier)`,
+      message: `${scenarioCount} scenario(s) validated from scenarios.yaml (structure only — behavioral coverage checked in the LLM tier when a judge is available)`,
       fixable: false,
     });
   }
@@ -228,16 +235,47 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       const result = await lint(model, caps, agentCfg, evalCfg, undefined, rubricText);
       if (result.ok) {
         let lIdx = 1;
+        const llmFindings: ReviewFinding[] = result.output.findings.map((f) => ({
+          id: `llm-${pad(lIdx++)}`,
+          tier: "llm" as const,
+          severity: f.severity,
+          message: f.finding,
+          fixable: false,
+        }));
+
+        // Scenario coverage: a second, separate judge pass — buildScenarioPrompt
+        // asks a different question (does the skill handle each documented
+        // scenario?) than the skill-quality lint above, so it's kept as its
+        // own call rather than merged into one prompt.
+        const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
+        if (scenarios.length > 0) {
+          opts.onProgress?.(`Scenario coverage (${caps.preferred}) · ${dir}`);
+          const scenarioPrompt = buildScenarioPrompt(scenarios, model.content);
+          const scenarioJudge = opts.scenarioLintFn ?? runJudge;
+          const scenarioJudgeResult = await scenarioJudge(scenarioPrompt, caps, agentCfg, evalCfg);
+          if (scenarioJudgeResult.ok) {
+            llmFindings.push(
+              ...scenarioJudgeResult.output.findings.map((f) => ({
+                id: `llm-${pad(lIdx++)}`,
+                tier: "llm" as const,
+                severity: f.severity,
+                message: f.finding,
+                fixable: false,
+              }))
+            );
+          } else if (opts.deep) {
+            throw new NetworkError({
+              code: "E-NET-002",
+              message: `Scenario coverage judge failed: ${scenarioJudgeResult.error}`,
+              suggestion: "Re-run, check the judge CLI/API credentials, or drop --deep to review without the LLM tier",
+            });
+          }
+        }
+
         tiers.llm = {
           available: true,
           method: result.method,
-          findings: result.output.findings.map((f) => ({
-            id: `llm-${pad(lIdx++)}`,
-            tier: "llm" as const,
-            severity: f.severity,
-            message: f.finding,
-            fixable: false,
-          })),
+          findings: llmFindings,
         };
       } else {
         // A judge exists but the call failed. Under --deep that is

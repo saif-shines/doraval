@@ -159,6 +159,92 @@ describe("reviewSkill", () => {
   });
 });
 
+describe("reviewSkill — scenario coverage (tier 3)", () => {
+  test("scenario coverage findings from scenarioLintFn appear in the llm tier", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+    try {
+      const result = await reviewSkill(resolve(FIXTURES, "skills/with-scenarios"), {
+        lintFn: async () => ({ ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }),
+        scenarioLintFn: async () => ({
+          ok: true, method: "cli",
+          output: {
+            overall: "warn", summary: "one uncovered",
+            findings: [{ severity: "warning", category: "coverage", finding: 'Scenario 1 ("deploy with failing tests") is UNCOVERED: no guardrail mentioned', suggestion: "add a MUST NOT guardrail" }],
+          },
+        }),
+      });
+      expect(result.tiers.llm?.findings.some(f => f.message.includes("UNCOVERED"))).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("scenarioLintFn is not called when the skill has no scenarios.yaml", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+    let called = false;
+    try {
+      await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), {
+        lintFn: async () => ({ ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }),
+        scenarioLintFn: async () => { called = true; return { ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }; },
+      });
+      expect(called).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("scenarioLintFn is not called when quick mode is on", async () => {
+    let called = false;
+    await reviewSkill(resolve(FIXTURES, "skills/with-scenarios"), {
+      quick: true,
+      scenarioLintFn: async () => { called = true; return { ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }; },
+    });
+    expect(called).toBe(false);
+  });
+
+  test("scenarioLintFn is not attempted when the main skill lint already failed", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+    let called = false;
+    try {
+      await reviewSkill(resolve(FIXTURES, "skills/with-scenarios"), {
+        lintFn: async () => ({ ok: false, error: "judge timed out" }),
+        scenarioLintFn: async () => { called = true; return { ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }; },
+      });
+      expect(called).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("deep mode with a failing scenario judge throws E-NET-002 even though main lint succeeded", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+    try {
+      await reviewSkill(resolve(FIXTURES, "skills/with-scenarios"), {
+        deep: true,
+        lintFn: async () => ({ ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }),
+        scenarioLintFn: async () => ({ ok: false, error: "judge timed out" }),
+      });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("E-NET-002");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
 describe("reviewAll", () => {
   test("reviews all skills found under a root", async () => {
     const results = await reviewAll(resolve(FIXTURES), { quick: true });
