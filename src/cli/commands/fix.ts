@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
+import { confirm, isCancel } from "@clack/prompts";
 import { reviewSkill, reviewAll } from "../../core/review.js";
 import { collectFixes, type FixEdit, type FixResult } from "../../core/fix-engine.js";
 
@@ -16,7 +17,22 @@ function renderDiff(diff: string): void {
   }
 }
 
-function renderMechanical(edits: FixEdit[], dryRun: boolean, yes: boolean): number {
+/** Interactive confirm is only offered to a human at a real terminal. */
+export function canPromptInteractively(
+  yes: boolean,
+  dryRun: boolean,
+  format: string,
+  tty: boolean = process.stdin.isTTY === true && process.stderr.isTTY === true
+): boolean {
+  return !yes && !dryRun && format !== "json" && tty;
+}
+
+async function renderMechanical(
+  edits: FixEdit[],
+  dryRun: boolean,
+  yes: boolean,
+  interactive: boolean
+): Promise<number> {
   let applied = 0;
   for (const edit of edits) {
     ui.blank();
@@ -30,6 +46,22 @@ function renderMechanical(edits: FixEdit[], dryRun: boolean, yes: boolean): numb
       edit.apply();
       applied++;
       ui.write(`  ${pc.green("✓")} Applied: ${edit.description}`);
+    } else if (interactive) {
+      const ok = await confirm({
+        message: `Apply: ${edit.description}?`,
+        output: process.stderr,
+      });
+      if (isCancel(ok)) {
+        ui.write(`  ${pc.dim("cancelled")}`);
+        break;
+      }
+      if (ok) {
+        edit.apply();
+        applied++;
+        ui.write(`  ${pc.green("✓")} Applied: ${edit.description}`);
+      } else {
+        ui.write(`  ${pc.dim("skipped")}`);
+      }
     } else {
       ui.write(`  ${pc.dim("skipped")} — re-run with ${pc.bold("--yes")} to apply`);
     }
@@ -86,6 +118,7 @@ export default defineCommand({
     const dryRun = (args["dry-run"] as boolean) || false;
     const yes = (args.yes as boolean) || false;
     const brief = (args.brief as boolean) || false;
+    const interactive = canPromptInteractively(yes, dryRun, mode.format);
 
     try {
       const isSkillDir = existsSync(resolve(target, "SKILL.md"));
@@ -115,7 +148,7 @@ export default defineCommand({
             ui.blank();
             ui.heading(`dora fix ${r.path}`);
             summaryLine(`${fix.mechanical.length} fixable issue${fix.mechanical.length === 1 ? "" : "s"} found.`);
-            totalApplied += renderMechanical(fix.mechanical, dryRun, yes);
+            totalApplied += await renderMechanical(fix.mechanical, dryRun, yes, interactive);
           } else if (!dryRun && yes) {
             // JSON mode: apply silently, count
             for (const edit of fix.mechanical) { edit.apply(); totalApplied++; }
