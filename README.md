@@ -162,6 +162,7 @@ dora review .                          # structure + heuristics (+ LLM tier when
 dora review --quick .                  # tiers 1–2 only — fast, CI-friendly
 dora review --deep ./skills/my-skill   # require the LLM tier; exit 2 if no judge
 dora review --all                      # every skill under the path, aggregate report
+dora review CLAUDE.md                  # review a memory file directly (structure + heuristics + LLM)
 ```
 
 The LLM judge auto-detects: an installed `claude` CLI (your existing subscription) first, API keys second (`OPENAI_API_KEY`, `dora config set eval.*`). Principles recorded via `dora memory` are enforced as review rubric.
