@@ -71,3 +71,30 @@ export function listSessions(
   // sessions seconds apart within the same minute would otherwise tie.
   return withMtime.sort((a, b) => b.mtime - a.mtime).map((x) => x.entry);
 }
+
+export function findSession(
+  cwd: string,
+  id: string,
+  opts: { agent?: string; adapters?: SessionAdapter[] } = {}
+): { entry: SessionListEntry; primitives: SessionPrimitives } | null {
+  const pool = opts.adapters ?? getAllAdapters();
+  const targetAgent = opts.agent ? resolveAgentAlias(opts.agent) : undefined;
+  const adapters = targetAgent ? pool.filter((a) => a.agent === targetAgent) : pool;
+
+  for (const adapter of adapters) {
+    const sessions = adapter.listRecentSessions(cwd, 50);
+    for (const s of sessions) {
+      try {
+        const primitives = adapter.parse(s.path);
+        const fileId = basename(s.path).replace(extname(s.path), "");
+        if (primitives.sessionId === id || fileId === id) {
+          return { entry: toEntry(adapter, s.path, s.mtime, primitives), primitives };
+        }
+      } catch {
+        // Skip unparseable sessions.
+      }
+    }
+  }
+
+  return null;
+}
