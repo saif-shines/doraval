@@ -121,7 +121,11 @@ export default defineCommand({
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
-    const root = (args.cwd as string) || process.cwd();
+    // Resolve --cwd to an absolute path: it's hashed into the memory
+    // project slug (getProjectSlug), so a relative string here would give
+    // the same physical project two different slugs depending on how the
+    // caller happened to spell --cwd.
+    const root = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const target = resolve(root, (args.path as string) || ".");
     const useSpinner =
       mode.format !== "json" && !args.quick && process.stderr.isTTY === true;
