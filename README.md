@@ -167,6 +167,14 @@ dora review CLAUDE.md                  # review a memory file directly (structur
 
 The LLM judge auto-detects: an installed `claude` CLI (your existing subscription) first, API keys second (`OPENAI_API_KEY`, `dora config set eval.*`). Principles recorded via `dora memory` are enforced as review rubric.
 
+Drop a `scenarios.yaml` next to `SKILL.md` (`when` / `expect` / optional `must_not` per scenario) and the LLM tier checks whether the skill actually handles each documented scenario, flagging any it doesn't cover:
+
+```yaml
+- when: "deploy with failing tests"
+  expect: "refuses and cites the guardrail"
+  must_not: "deploys without test pass"
+```
+
 ### `fix`: close the loop
 
 ```bash
