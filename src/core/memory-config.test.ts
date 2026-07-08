@@ -51,6 +51,19 @@ describe("getProjectSlug", () => {
     expect(slug).toMatch(/^my-project-[a-f0-9]+$/);
   });
 
+  test("never produces a leading hyphen when the basename sanitizes to empty", () => {
+    // cwd "/" -> basename "" -> sanitize("") -> "" -> would otherwise yield "-<hash>",
+    // a leading-hyphen path segment that some shells/CLIs misparse as a flag.
+    const slug = getProjectSlug("/");
+    expect(slug.startsWith("-")).toBe(false);
+    expect(slug).toMatch(/^project-[a-f0-9]+$/);
+  });
+
+  test("falls back to 'project' when basename is all-special-chars", () => {
+    const slug = getProjectSlug("/Users/dev/___");
+    expect(slug).toMatch(/^project-[a-f0-9]+$/);
+  });
+
   test("handles paths with trailing slashes", () => {
     // path.split("/").pop() on trailing slash gives empty string → "unknown"
     const slug = getProjectSlug("/Users/dev/project/");

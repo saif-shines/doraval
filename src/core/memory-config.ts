@@ -20,7 +20,10 @@ export function getProjectSlug(cwd: string): string {
   // git-root basename + short path hash (collision-safe)
   const basename = cwd.split("/").pop() ?? "unknown";
   const hash = shortHash(cwd);
-  return `${sanitize(basename)}-${hash}`;
+  // sanitize() can return "" for a degenerate basename (cwd is "/", or all
+  // special chars) — fall back rather than emit a leading-hyphen path segment.
+  const safeName = sanitize(basename) || "project";
+  return `${safeName}-${hash}`;
 }
 
 // ── Internal helpers ───────────────────────────────────────────────
