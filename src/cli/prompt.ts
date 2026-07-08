@@ -31,7 +31,11 @@ export async function promptSelect<T extends string>(
   fallback: T
 ): Promise<T> {
   if (!process.stdin.isTTY || !process.stderr.isTTY) return fallback;
-  const ans = await select({
+  // Call select<string> (not <T>) — clack's Option<Value> is a conditional
+  // type that won't resolve against an unresolved generic T, even though
+  // T extends string. Widening to string here sidesteps that; the return
+  // is narrowed back to T below.
+  const ans = await select<string>({
     message: label,
     options,
     initialValue: fallback,
