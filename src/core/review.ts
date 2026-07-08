@@ -65,6 +65,13 @@ export interface ReviewOptions {
     platform?: string,
     extraRubric?: string
   ) => Promise<LintResult>;
+  /** Test seam: overrides the judge call for memory-file review's LLM tier. */
+  memoryLintFn?: (
+    prompt: string,
+    caps: Capabilities,
+    agentCfg: AgentConfig,
+    evalCfg: Partial<EvalConfig>
+  ) => Promise<LintResult>;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

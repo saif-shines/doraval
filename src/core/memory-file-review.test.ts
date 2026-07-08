@@ -77,3 +77,72 @@ describe("reviewMemoryFile — tier 2 (heuristics)", () => {
     expect(result.tiers.heuristics.findings.some(f => f.message.includes("Claude-only"))).toBe(false);
   });
 });
+
+describe("reviewMemoryFile — tier 3 (llm)", () => {
+  test("deep mode without a judge throws PrerequisiteError", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: false, cliCommand: null, preferred: "none",
+    });
+    try {
+      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { deep: true });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("E-PRE-002");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("quick mode never invokes the judge", async () => {
+    let called = false;
+    await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      quick: true,
+      memoryLintFn: async () => { called = true; return { ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }; },
+    });
+    expect(called).toBe(false);
+  });
+
+  test("judge findings map into the llm tier with sequential ids", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    });
+    try {
+      const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+        memoryLintFn: async () => ({
+          ok: true, method: "cli",
+          output: { overall: "warn", summary: "one issue", findings: [
+            { severity: "warning", category: "contradiction", finding: "conflicting rules", suggestion: "pick one" },
+          ] },
+        }),
+      });
+      expect(result.tiers.llm?.available).toBe(true);
+      expect(result.tiers.llm?.findings[0]?.id).toBe("llm-001");
+      expect(result.tiers.llm?.findings[0]?.message).toBe("conflicting rules");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("deep mode with a failing judge throws E-NET-002", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    });
+    try {
+      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+        deep: true,
+        memoryLintFn: async () => ({ ok: false, error: "judge timed out" }),
+      });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("E-NET-002");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

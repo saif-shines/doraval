@@ -2,6 +2,12 @@ import { readFileSync, existsSync } from "fs";
 import { dirname, resolve, basename } from "path";
 import { classifySkillDir } from "./skill-classify.js";
 import type { ReviewFinding, ReviewOptions, ReviewResult } from "./review.js";
+import { runJudge, type LintResult } from "./skill-lint.js";
+import { detectCapabilities, type Capabilities } from "./capability-detect.js";
+import { readConfig, getEvalConfig, type EvalConfig } from "./journal-config.js";
+import { loadPrinciples, buildPrincipleRubric } from "./memory-rubric.js";
+import { PrerequisiteError, NetworkError } from "./errors.js";
+import type { AgentConfig } from "./agent-invoke.js";
 
 export const MEMORY_FILE_NAMES = new Set([
   "CLAUDE.md",
@@ -21,6 +27,44 @@ const CLAUDE_ONLY_MARKERS: { pattern: RegExp; label: string }[] = [
 
 function pad(n: number): string {
   return String(n).padStart(3, "0");
+}
+
+export function buildMemoryLintPrompt(content: string, fileLabel: string, extraRubric?: string): string {
+  const rubricSection = extraRubric?.trim()
+    ? `\nPROJECT PRINCIPLES (recorded by this team via dora memory — flag any instruction that violates one, citing the principle):\n${extraRubric}\n`
+    : "";
+
+  return `You are reviewing ${fileLabel}, an always-loaded memory/instruction file for AI coding agents.
+${rubricSection}
+CONTENT:
+${content}
+
+Evaluate across exactly two dimensions:
+1. CONTRADICTION: Do any instructions conflict with each other?
+2. CLARITY (vagueness): Are instructions specific and unambiguous, or vague enough that two engineers/agents would interpret them differently?
+
+Rules:
+- "error" = the file will likely cause an agent to do the wrong thing
+- "warning" = the file may be interpreted inconsistently across sessions/agents
+- "info" = improvement opportunity
+- If no issues found in a category, omit it from findings (do not invent problems)
+- Only use category "contradiction" or "clarity" — no other categories apply here
+- overall = "fail" if any errors, "warn" if any warnings, "pass" otherwise
+
+CRITICAL: Return ONLY a JSON object. No markdown, no prose. First char '{', last char '}'.
+
+{
+  "overall": "pass" | "warn" | "fail",
+  "summary": "<one sentence>",
+  "findings": [
+    {
+      "severity": "error" | "warning" | "info",
+      "category": "contradiction" | "clarity",
+      "finding": "<what the issue is>",
+      "suggestion": "<concrete fix>"
+    }
+  ]
+}`;
 }
 
 function buildHeuristicsFindings(content: string, path: string, dir: string): ReviewFinding[] {
@@ -154,13 +198,58 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     findings: heurFindings,
   };
 
-  const tiers: ReviewResult["tiers"] = {
-    structure: structTier,
-    heuristics: heurTier,
-    sessions: { available: false, findings: [] },
-  };
+  const tiers: ReviewResult["tiers"] = { structure: structTier, heuristics: heurTier };
 
-  const all = [...structTier.findings, ...heurTier.findings];
+  if (!opts.quick) {
+    const cfg = await readConfig();
+    const evalCfg: Partial<EvalConfig> = getEvalConfig(cfg);
+    const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
+    const caps: Capabilities = detectCapabilities(evalCfg);
+
+    if (caps.preferred === "none") {
+      if (opts.deep) {
+        throw new PrerequisiteError({
+          code: "E-PRE-002",
+          message: "Deep review requires an LLM judge",
+        });
+      }
+      tiers.llm = { available: false, findings: [] };
+    } else {
+      const principles = loadPrinciples(opts.cwd ?? process.cwd());
+      const rubricText = buildPrincipleRubric(principles) || undefined;
+      const prompt = buildMemoryLintPrompt(content, basename(path), rubricText);
+      const judge = opts.memoryLintFn ?? runJudge;
+      const result: LintResult = await judge(prompt, caps, agentCfg, evalCfg);
+
+      if (result.ok) {
+        let lIdx = 1;
+        tiers.llm = {
+          available: true,
+          method: result.method,
+          findings: result.output.findings.map((f) => ({
+            id: `llm-${pad(lIdx++)}`,
+            tier: "llm" as const,
+            severity: f.severity,
+            message: f.finding,
+            fixable: false,
+          })),
+        };
+      } else {
+        if (opts.deep) {
+          throw new NetworkError({
+            code: "E-NET-002",
+            message: `LLM judge failed: ${result.error}`,
+            suggestion: "Re-run, check the judge CLI/API credentials, or drop --deep to review without the LLM tier",
+          });
+        }
+        tiers.llm = { available: false, findings: [] };
+      }
+    }
+  }
+
+  tiers.sessions = { available: false, findings: [] };
+
+  const all = [...structTier.findings, ...heurTier.findings, ...(tiers.llm?.findings ?? [])];
 
   return {
     path,
