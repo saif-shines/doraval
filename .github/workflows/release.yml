@@ -38,6 +38,11 @@ jobs:
             target: bun-linux-arm64
             binary: doraval-linux-arm64
 
+          # Windows x64 (native host — no cross-compile dance needed)
+          - runner: windows-latest
+            target: bun-windows-x64
+            binary: doraval-win32-x64.exe
+
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -46,6 +51,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - name: Ensure target-specific native bindings for @opentui/core
+        shell: bash
         run: |
           # bun/npm filter optionalDependencies by the HOST os/cpu, not the
           # --target we're cross-compiling for. macos-latest runners are
@@ -71,9 +77,12 @@ jobs:
               bun add --optional @opentui/core-linux-x64 ;;
             bun-linux-arm64)
               bun add --optional @opentui/core-linux-arm64 @opentui/core-linux-arm64-musl ;;
+            bun-windows-x64)
+              bun add --optional @opentui/core-win32-x64 ;;
           esac
 
       - name: Build compiled binary
+        shell: bash
         run: |
           bun build ./src/cli/index.ts --compile --target ${{ matrix.target }} --outfile ${{ matrix.binary }}
 
@@ -83,21 +92,38 @@ jobs:
           name: ${{ matrix.binary }}
           path: ${{ matrix.binary }}
 
-  build-js-bundle:
-    # The non-compiled JS bundle + ui files (used by npm publish)
-    runs-on: ubuntu-latest
+  smoke-binaries:
+    needs: build-binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # darwin-arm64 host is available; darwin-x64 has no free native runner
+          # and ships without a pre-publish smoke run (covered by the
+          # post-publish npx verification in publish-npm instead).
+          - runner: macos-latest
+            binary: doraval-darwin-arm64
+          - runner: ubuntu-latest
+            binary: doraval-linux-x64
+          - runner: ubuntu-24.04-arm
+            binary: doraval-linux-arm64
+          - runner: windows-latest
+            binary: doraval-win32-x64.exe
+    runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: bin
-          path: bin/
+          name: ${{ matrix.binary }}
+      - name: Run the real binary — version + JSON scan, non-TTY
+        shell: bash
+        run: |
+          chmod +x ${{ matrix.binary }} 2>/dev/null || true
+          ./${{ matrix.binary }} --version
+          mkdir -p smoke-repo/.git && cd smoke-repo
+          ../${{ matrix.binary }} --format json | grep -q '"empty"'
 
   create-release:
-    needs: [build-binaries, build-js-bundle]
+    needs: [build-binaries, smoke-binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -139,43 +165,61 @@ jobs:
             artifacts/doraval-darwin-x64
             artifacts/doraval-linux-x64
             artifacts/doraval-linux-arm64
+            artifacts/doraval-win32-x64.exe
           draft: false
           prerelease: false
           generate_release_notes: false
 
   publish-npm:
-    needs: [build-binaries, build-js-bundle]
+    needs: [build-binaries, smoke-binaries]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: oven-sh/setup-bun@v2
-
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-
       - run: bun install --frozen-lockfile
 
-      - name: Download bin artifact
+      - name: Download compiled binaries
         uses: actions/download-artifact@v4
         with:
-          name: bin
-          path: bin/
+          path: artifacts
+          merge-multiple: true
 
-      - name: Publish to npm (with retry)
+      - name: Assemble platform packages
+        run: |
+          VERSION=$(node -pe "require('./package.json').version")
+          bun run scripts/platform-packages.ts "$VERSION" artifacts platform-packages
+
+      - name: Publish platform packages (all five, then main)
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 5
+          timeout_minutes: 10
           max_attempts: 3
           retry_wait_seconds: 30
-          command: npm publish --access public --provenance
+          command: |
+            for dir in platform-packages/*/; do
+              (cd "$dir" && npm publish --access public --provenance)
+            done
+            bun run scripts/prepare-npm-publish.ts
+            npm publish --access public --provenance
+
+      - name: Post-publish install verification (the real user path)
+        run: |
+          VERSION=$(node -pe "require('./package.json').version")
+          mkdir -p /tmp/verify/.git && cd /tmp/verify
+          for i in 1 2 3 4 5; do
+            npx -y @hacksmith/doraval@"$VERSION" --version && break
+            echo "registry not consistent yet, retry $i" && sleep 20
+          done
+          npx -y @hacksmith/doraval@"$VERSION" --format json | grep -q '"empty"'
 
   publish-jsr:
-    needs: [build-binaries, build-js-bundle]
+    needs: [build-binaries, smoke-binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: read
