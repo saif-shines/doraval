@@ -297,4 +297,21 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
   });
+
+  describe("dora review <memory-file>", () => {
+    test("reviews CLAUDE.md directly, not as a skill directory scan", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-memfile-"));
+      writeFileSync(join(dir, "CLAUDE.md"), "# Instructions\n\n@missing.md\n");
+      const { stdout, exitCode } = runDoraval(
+        ["review", "CLAUDE.md", "--quick", "--format", "json", "--cwd", dir]
+      );
+      const results = JSON.parse(stdout);
+      expect(Array.isArray(results)).toBe(true);
+      expect(results).toHaveLength(1);
+      expect(results[0].tiers.structure.errors).toBeGreaterThan(0);
+      expect(results[0].tiers.structure.findings.some((f: any) => f.message.includes("missing.md"))).toBe(true);
+      expect(exitCode).toBe(1);
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
 });

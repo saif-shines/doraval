@@ -1,9 +1,10 @@
 import { defineCommand } from "citty";
-import { existsSync } from "fs";
-import { resolve } from "path";
+import { existsSync, statSync } from "fs";
+import { resolve, basename } from "path";
 import pc from "picocolors";
 import { spinner } from "@clack/prompts";
 import { reviewSkill, reviewAll, type ReviewResult, type ReviewFinding } from "../../core/review.js";
+import { reviewMemoryFile, MEMORY_FILE_NAMES } from "../../core/memory-file-review.js";
 
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
 import { exit } from "../render/exit.js";
@@ -141,10 +142,14 @@ export default defineCommand({
 
     try {
       spin?.start("Reviewing");
-      const isSkillDir = existsSync(resolve(target, "SKILL.md"));
-      const useAll = (args.all as boolean) || !isSkillDir;
+      const isMemoryFile =
+        existsSync(target) && statSync(target).isFile() && MEMORY_FILE_NAMES.has(basename(target));
+      const isSkillDir = !isMemoryFile && existsSync(resolve(target, "SKILL.md"));
+      const useAll = !isMemoryFile && ((args.all as boolean) || !isSkillDir);
 
-      const results: ReviewResult[] = useAll
+      const results: ReviewResult[] = isMemoryFile
+        ? [await reviewMemoryFile(target, opts)]
+        : useAll
         ? await reviewAll(target, opts)
         : [await reviewSkill(target, opts)];
       spin?.stop("Review complete");
