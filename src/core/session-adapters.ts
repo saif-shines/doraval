@@ -93,7 +93,7 @@ export const claudeCodeAdapter: SessionAdapter = {
 // Basic Grok adapter (sessions stored under ~/.grok/sessions).
 // For test-run generated traces we primarily capture stdout; this allows
 // post-hoc eval of grok sessions when they exist.
-const grokAdapter: SessionAdapter = {
+export const grokAdapter: SessionAdapter = {
   agent: "grok",
 
   detect(): boolean {
