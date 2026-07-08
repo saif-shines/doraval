@@ -37,21 +37,35 @@ function renderMechanical(edits: FixEdit[], dryRun: boolean, yes: boolean): numb
   return applied;
 }
 
-function buildBriefPrompt(judgments: string[], skillDir: string): string {
-  const skillMd = resolve(skillDir, "SKILL.md");
-  const content = existsSync(skillMd) ? readFileSync(skillMd, "utf-8") : "";
-  const issues = judgments.map((j) => `- ${j}`).join("\n");
-  return [
-    "# Fix these skill issues (judgment required)",
+interface SkillJudgments {
+  path: string;
+  judgments: string[];
+}
+
+function buildBriefPrompt(perSkill: SkillJudgments[]): string {
+  const sections: string[] = ["# Fix these skill issues (judgment required)"];
+  for (const s of perSkill) {
+    if (s.judgments.length === 0) continue;
+    const skillMd = resolve(s.path, "SKILL.md");
+    const content = existsSync(skillMd) ? readFileSync(skillMd, "utf-8") : "";
+    sections.push(
+      "",
+      `## Skill: ${s.path}`,
+      "",
+      "### Issues",
+      s.judgments.map((j) => `- ${j}`).join("\n"),
+      "",
+      "### Current SKILL.md",
+      "```markdown",
+      content,
+      "```"
+    );
+  }
+  sections.push(
     "",
-    "## Issues",
-    issues,
-    "",
-    "## Current SKILL.md",
-    "```markdown",
-    content,
-    "```",
-  ].join("\n");
+    "When done, verify with: dora review <skill-path> (zero errors expected)."
+  );
+  return sections.join("\n");
 }
 
 export default defineCommand({
@@ -82,6 +96,7 @@ export default defineCommand({
       let totalMech = 0;
       let totalApplied = 0;
       const allJudgments: string[] = [];
+      const perSkill: SkillJudgments[] = [];
 
       for (const r of results) {
         const allFindings = [
@@ -93,6 +108,7 @@ export default defineCommand({
         const fix: FixResult = collectFixes(allFindings, r.path);
         totalMech += fix.mechanical.length;
         allJudgments.push(...fix.judgment);
+        perSkill.push({ path: r.path, judgments: fix.judgment });
 
         if (fix.mechanical.length > 0) {
           if (mode.format === "table") {
@@ -107,9 +123,14 @@ export default defineCommand({
         }
       }
 
+      // Exit contract: 1 = issues remain (judgment items OR mechanical fixes
+      // found but not applied, e.g. --dry-run or interactive decline). 0 = clean.
+      const unapplied = dryRun ? totalMech : totalMech - totalApplied;
+      const exitCode = allJudgments.length > 0 || unapplied > 0 ? 1 : 0;
+
       if (mode.format === "json") {
         outJson({ mechanical: totalMech, judgment: allJudgments, applied: dryRun ? 0 : totalApplied });
-        await exit(allJudgments.length > 0 ? 1 : 0);
+        await exit(exitCode);
         return;
       }
 
@@ -124,9 +145,7 @@ export default defineCommand({
         ui.blank();
         ui.write(`  ${allJudgments.length} issue${allJudgments.length === 1 ? "" : "s"} need${allJudgments.length === 1 ? "s" : ""} judgment (not auto-fixable):`);
         if (brief) {
-          // Use the first skill's path for single-skill mode, target for multi
-          const briefTarget = results.length === 1 ? results[0]!.path : target;
-          const prompt = buildBriefPrompt(allJudgments, briefTarget);
+          const prompt = buildBriefPrompt(perSkill);
           ui.blank();
           ui.write(prompt);
         } else {
@@ -136,7 +155,7 @@ export default defineCommand({
       }
 
       ui.blank();
-      await exit(allJudgments.length > 0 ? 1 : 0);
+      await exit(exitCode);
     } catch (e) {
       emitError(e, mode);
       await exit(2); // could-not-run (internal error or unmet prerequisite)

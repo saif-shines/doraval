@@ -139,7 +139,9 @@ export default defineCommand({
         : [await reviewSkill(target, opts)];
 
       if (mode.format === "json") {
-        outJson(results.length === 1 && !args.all ? results[0]! : results);
+        // Machine contract: top-level shape is ALWAYS an array — never flips
+        // to a bare object when exactly one skill is discovered.
+        outJson(results);
       } else if (results.length === 1 && !args.all) {
         renderSingle(results[0]!);
       } else {

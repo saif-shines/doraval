@@ -218,4 +218,83 @@ describe("doraval CLI", () => {
       expect(m.intelligence.mechanical).toBe(true);
     });
   });
+
+  describe("dora fix exit contract", () => {
+    function fixableSkillRepo(): string {
+      const dir = mkdtempSync(join(tmpdir(), "dora-fix-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, ".claude", "skills", "nodesc");
+      mkdirSync(skill, { recursive: true });
+      // Missing "description" → mechanical add_field fix
+      writeFileSync(
+        join(skill, "SKILL.md"),
+        '---\nname: nodesc\n---\n\n1. Use when testing. Run the thing.\n\nMUST do it. Example:\n```bash\necho ok\n```\n'
+      );
+      return dir;
+    }
+
+    test("--dry-run with outstanding mechanical fixes exits 1, not 0", () => {
+      const dir = fixableSkillRepo();
+      const { exitCode, stdout } = runDoraval(
+        ["fix", ".", "--dry-run", "--format", "json", "--cwd", dir]
+      );
+      const parsed = JSON.parse(stdout);
+      expect(parsed.mechanical).toBeGreaterThan(0);
+      expect(parsed.applied).toBe(0);
+      expect(exitCode).toBe(1); // issues present but not applied
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--yes applies fixes and exits 0 when nothing remains", () => {
+      const dir = fixableSkillRepo();
+      const { exitCode, stdout } = runDoraval(
+        ["fix", ".", "--yes", "--format", "json", "--cwd", dir]
+      );
+      const parsed = JSON.parse(stdout);
+      expect(parsed.applied).toBe(parsed.mechanical);
+      if (parsed.judgment.length === 0) expect(exitCode).toBe(0);
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
+
+  describe("dora fix --brief multi-skill", () => {
+    test("brief attributes issues per skill and never reads a nonexistent root SKILL.md", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-brief-"));
+      mkdirSync(join(dir, ".git"));
+      for (const name of ["alpha", "beta"]) {
+        const skill = join(dir, ".claude", "skills", name);
+        mkdirSync(skill, { recursive: true });
+        // Passive voice + no trigger phrases → judgment (content) findings
+        writeFileSync(
+          join(skill, "SKILL.md"),
+          `---\nname: ${name}\ndescription: "some things could maybe be done"\n---\n\nIt might be considered that things could be handled.\n`
+        );
+      }
+      const { stdout, stderr } = runDoraval(["fix", ".", "--brief", "--cwd", dir]);
+      const out = stdout + stderr;
+      // Each skill gets its own attributed section with its own content
+      expect(out).toContain("alpha");
+      expect(out).toContain("beta");
+      expect(out).not.toContain("## Current SKILL.md\n```markdown\n\n```"); // no empty root read
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
+
+  describe("dora review JSON shape", () => {
+    test("top-level JSON is always an array, regardless of skill count", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-shape-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, ".claude", "skills", "solo");
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(
+        join(skill, "SKILL.md"),
+        '---\nname: solo\ndescription: "Use when testing shapes"\n---\n\n1. Run it\n'
+      );
+      const { stdout } = runDoraval(["review", ".", "--quick", "--format", "json", "--cwd", dir]);
+      const parsed = JSON.parse(stdout);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.length).toBe(1);
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
 });
