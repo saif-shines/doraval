@@ -12,9 +12,74 @@ export const MEMORY_FILE_NAMES = new Set([
 
 const SIZE_BUDGET_LINES = 200;
 const IMPORT_LINE_RE = /^@([^\s]+)\s*$/gm;
+const MARKDOWN_LINK_RE = /\[([^\]]*)\]\(([^)]+)\)/g;
+const CLAUDE_ONLY_MARKERS: { pattern: RegExp; label: string }[] = [
+  { pattern: /\$ARGUMENTS/, label: "$ARGUMENTS" },
+  { pattern: /\$\{CLAUDE_/, label: "${CLAUDE_*}" },
+  { pattern: /^@[^\s]+\s*$/m, label: "@import" },
+];
 
 function pad(n: number): string {
   return String(n).padStart(3, "0");
+}
+
+function buildHeuristicsFindings(content: string, path: string, dir: string): ReviewFinding[] {
+  let hIdx = 1;
+  const findings: ReviewFinding[] = [];
+
+  // Dead markdown-link references
+  let linkMatch: RegExpExecArray | null;
+  MARKDOWN_LINK_RE.lastIndex = 0;
+  while ((linkMatch = MARKDOWN_LINK_RE.exec(content)) !== null) {
+    const target = linkMatch[2]!.trim();
+    if (target.startsWith("http://") || target.startsWith("https://") || target.startsWith("#")) continue;
+    const resolved = resolve(dir, target);
+    if (!existsSync(resolved)) {
+      findings.push({
+        id: `heur-${pad(hIdx++)}`, tier: "heuristics", severity: "warning",
+        message: `Dead link reference: ${target} (resolved to ${resolved})`, fixable: false,
+      });
+    }
+  }
+
+  // Exact-after-normalize duplicate lines (skip blank lines and headings)
+  const seen = new Map<string, number>();
+  for (const line of content.split("\n")) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine || trimmedLine.startsWith("#")) continue;
+    const normalized = trimmedLine.toLowerCase().replace(/\s+/g, " ");
+    seen.set(normalized, (seen.get(normalized) ?? 0) + 1);
+  }
+  for (const [normalized, count] of seen) {
+    if (count > 1) {
+      findings.push({
+        id: `heur-${pad(hIdx++)}`, tier: "heuristics", severity: "warning",
+        message: `Duplicate instruction appears ${count} times: "${normalized}"`, fixable: false,
+      });
+    }
+  }
+
+  // Claude-only syntax leaking into the shared AGENTS.md
+  if (basename(path) === "AGENTS.md") {
+    for (const marker of CLAUDE_ONLY_MARKERS) {
+      if (marker.pattern.test(content)) {
+        findings.push({
+          id: `heur-${pad(hIdx++)}`, tier: "heuristics", severity: "warning",
+          message: `Claude-only syntax (${marker.label}) found in AGENTS.md — Cursor, Codex, and Copilot won't process this`,
+          fixable: false,
+        });
+      }
+    }
+  }
+
+  if (findings.length === 0) {
+    findings.push({
+      id: `heur-${pad(hIdx++)}`, tier: "heuristics", severity: "pass",
+      message: "no dead links, duplicate lines, or agent-specific syntax found", fixable: false,
+    });
+  }
+
+  return findings;
 }
 
 export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): Promise<ReviewResult> {
@@ -81,7 +146,13 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     findings: structFindings,
   };
 
-  const heurTier = { passed: 0, warnings: 0, errors: 0, findings: [] as ReviewFinding[] };
+  const heurFindings = buildHeuristicsFindings(content, path, dir);
+  const heurTier = {
+    passed: heurFindings.filter(f => f.severity === "pass").length,
+    warnings: heurFindings.filter(f => f.severity === "warning").length,
+    errors: heurFindings.filter(f => f.severity === "error").length,
+    findings: heurFindings,
+  };
 
   const tiers: ReviewResult["tiers"] = {
     structure: structTier,

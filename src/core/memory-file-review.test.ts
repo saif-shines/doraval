@@ -47,3 +47,33 @@ describe("reviewMemoryFile — tier 1 (structure)", () => {
     expect(result.tiers.sessions).toEqual({ available: false, findings: [] });
   });
 });
+
+describe("reviewMemoryFile — tier 2 (heuristics)", () => {
+  test("dead markdown link produces a heuristics warning", async () => {
+    const result = await reviewMemoryFile(resolve(FIXTURES, "heuristics-CLAUDE.md"), { quick: true });
+    expect(result.tiers.heuristics.findings.some(
+      f => f.severity === "warning" && f.message.includes("missing-style-guide.md")
+    )).toBe(true);
+  });
+
+  test("duplicate line produces a heuristics warning", async () => {
+    const result = await reviewMemoryFile(resolve(FIXTURES, "heuristics-CLAUDE.md"), { quick: true });
+    expect(result.tiers.heuristics.findings.some(
+      f => f.severity === "warning" && f.message.toLowerCase().includes("duplicate")
+    )).toBe(true);
+  });
+
+  test("AGENTS.md with $ARGUMENTS gets flagged as Claude-only syntax in a shared file", async () => {
+    const result = await reviewMemoryFile(resolve(FIXTURES, "claude-syntax-shared/AGENTS.md"), { quick: true });
+    expect(result.tiers.heuristics.findings.some(
+      f => f.severity === "warning" && f.message.includes("$ARGUMENTS")
+    )).toBe(true);
+  });
+
+  test("CLAUDE.md itself is NOT flagged for Claude-only syntax", async () => {
+    // valid-CLAUDE.md contains an @import — Claude-only syntax — but since
+    // the file IS CLAUDE.md (not the shared AGENTS.md), this check doesn't apply.
+    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    expect(result.tiers.heuristics.findings.some(f => f.message.includes("Claude-only"))).toBe(false);
+  });
+});
