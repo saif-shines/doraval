@@ -118,13 +118,13 @@ Scale your AI context for coding agents. Make your next context work (skills, pl
 
 When you need to check a skill or plugin:
 
-- Validate the current directory: \`doraval validate .\`
-- Validate a specific plugin: \`doraval validate .\ --for claude:plugin\`
-- Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
-- Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
-- Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
+- Scan the current directory: \`dora\`
+- Review everything: \`dora review --all\`
+- Review one skill: \`dora review ./skills/${demoSkillName}/\`
+- Apply mechanical fixes: \`dora fix ./skills/${demoSkillName}/\`
+- Get an AI quality judgment: \`dora review --deep ./skills/${demoSkillName}/\`
 
-Always run \`doraval validate\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
+Always run \`dora review\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
     }
 
     writeFileSync(join(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
@@ -193,7 +193,7 @@ export default defineCommand({
       ui.info(`  Marketplace: marketplace.json (unified / cross-provider listings)`);
     }
     ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
-    ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+    ui.info(`  Review: dora review ${decision.targetDir}`);
     if (decision.path === "plugin") {
       ui.info(`  Keywords: keywords array added for discovery — run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
     }

@@ -127,12 +127,12 @@ Scale your AI context for coding agents. Make your next context work (skills, pl
 
 When you need to check a skill or Copilot plugin:
 
-- Validate the current directory: \`doraval validate .\`
-- Validate one skill: \`doraval skill validate ./skills/${demoSkillName}/\`
-- Check for rubric drift: \`doraval skill drift ./skills/${demoSkillName}/\`
-- Get an AI quality judgment: \`doraval skill judge ./skills/${demoSkillName}/\`
+- Scan the current directory: \`dora\`
+- Review one skill: \`dora review ./skills/${demoSkillName}/\`
+- Apply mechanical fixes: \`dora fix ./skills/${demoSkillName}/\`
+- Get an AI quality judgment: \`dora review --deep ./skills/${demoSkillName}/\`
 
-Always run \`doraval validate\` before sharing or publishing a plugin.
+Always run \`dora review\` before sharing or publishing a plugin.
 
 This skill demonstrates a complete, self-referential example of using doraval inside a generated Copilot plugin.
 
@@ -204,7 +204,7 @@ export default defineCommand({
       ui.info(`  Marketplace catalog: .github/plugin/marketplace.json`);
     }
     ui.info(`  Test (local): configure local plugin source in Copilot and reload`);
-    ui.info(`  Validate: doraval validate ${decision.targetDir}`);
+    ui.info(`  Review: dora review ${decision.targetDir}`);
     if (decision.path === "plugin") {
       ui.info(`  Keywords: keywords array added for discovery — run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
     }

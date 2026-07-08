@@ -10,7 +10,7 @@ You scale AI context — skills, plugins, decisions — so agents (and humans) s
 
 **The problem:** context you cannot trust until someone has already wasted a day debugging it.
 
-**The win:** validate, scaffold, journal, and eval so the first attempt succeeds across Claude, Cursor, Codex, Copilot, Grok, and whatever comes next.
+**The win:** scan, review, fix, and remember so the first attempt succeeds across Claude, Cursor, Codex, Copilot, Grok, and whatever comes next.
 
 doraval is the toolkit for **context engineering** — authoring, validating, and evolving reliable context that works the first time.
 
@@ -20,28 +20,31 @@ doraval is the toolkit for **context engineering** — authoring, validating, an
 > brew tap saif-shines/tap
 > brew trust saif-shines/tap
 > brew install doraval
-> doraval validate .
+> dora
 >
 > # Everyone else: no install required
-> npx @hacksmith/doraval validate .
+> npx @hacksmith/doraval
 > ```
 
-`validate` auto-detects what you built and tells you what's broken before anyone burns a session on it.
+Bare `dora` scans the repo: which agents are configured, every skill's health, and the exact next command to run — zero config, no API key needed.
 
 Typical first run:
 
 ```
-dora validate .
-  dora validate — 1 validator(s)
-  Path:  .
-  1 validators • 0 errors • 0 warnings
-  Claude Skill (claude:skill)
-  Status  Check
-  ✓  YAML frontmatter present and parseable
-  ✓  name: "my-skill"
-  ✓  description field present
-  ✓  uses dynamic context injection
-  ✓ All checks passed.
+dora
+  doraval v0.4.14
+
+  Agent surfaces
+  ✓  claude    CLAUDE.md  .claude/skills
+  ⚠  cursor    not configured
+
+  Health
+  ✓  .claude/skills/review    valid
+  ✗  .claude/skills/deploy    Missing "description"
+
+  Next
+  1. dora fix .claude/skills/deploy
+  2. dora review --all
 ```
 
 ## Who it's for
@@ -53,7 +56,7 @@ Anyone scaling AI context for coding agents — yourself, your team, or your com
                         │
                         ▼
                  ┌─────────────┐
-                 │   doraval   │  validate · scaffold · journal · eval
+                 │   doraval   │  scan · review · fix · memory
                  └─────────────┘
                         │
                         ▼
@@ -63,7 +66,7 @@ Anyone scaling AI context for coding agents — yourself, your team, or your com
               first attempt succeeds
 ```
 
-Same loop everywhere: scaffold → validate → journal → eval. [Quickstart →](https://doraval.thehacksmith.dev/get-started/quickstart/)
+Same loop everywhere: scan → review → fix → green. [Quickstart →](https://doraval.thehacksmith.dev/get-started/quickstart/)
 
 Give 10 engineers (or agents) a skill and only 3/10 succeed on the first try. doraval **left-shifts success**: catch breakage before the first session, not after the third debugging thread.
 
@@ -72,26 +75,26 @@ Give 10 engineers (or agents) a skill and only 3/10 succeed on the first try. do
 One path whether you are tuning your own agent, onboarding a team, or shipping to a community:
 
 ```bash
-# 1. Scaffold
+# 1. Scan — see what you have and what's broken
+dora
+
+# 2. Scaffold
 doraval claude new --yes --intent self my-context      # personal / team
 doraval claude new --yes --intent distribute my-plugin # ship to others
 
-# 2. Validate before anyone relies on it
-doraval validate .
+# 3. Review before anyone relies on it (structure + heuristics + LLM when available)
+dora review .
 
-# 3. One-time setup (decision memory + agent integration for scaling AI context)
-doraval init
+# 4. Apply the mechanical fixes (always shows the diff, always asks)
+dora fix .
 
-# 4. Record decisions that persist across sessions
+# 5. Record principles dora enforces in every future review
+dora memory add "Run tests before shipping skill changes" --weight 8
+
+# 6. Decision journal that persists across sessions
 doraval journal add "Validate before shipping skill changes"
 doraval journal sync
 doraval journal hook enable
-
-# 5. Judge skill quality — fast, no sessions needed
-doraval judge ./skills/my-skill/
-
-# 6. Measure real adherence once agent sessions exist
-doraval drift
 ```
 
 Full walkthrough: [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/)
@@ -113,7 +116,7 @@ On some systems, run `brew trust saif-shines/tap` (or `brew trust --formula saif
 ### npm / npx
 
 ```bash
-npx @hacksmith/doraval validate .        # run without installing
+npx @hacksmith/doraval                   # run without installing (scans the repo)
 npm install -g @hacksmith/doraval        # or install globally
 ```
 
@@ -122,7 +125,7 @@ Requires Node.js. If Bun is missing, the wrapper prompts you to install it autom
 **First-run flow (no Bun installed):**
 
 ```
-npx @hacksmith/doraval validate .
+npx @hacksmith/doraval
 
 Bun runtime not found.
 doraval will download and run bun.sh/install (fetched over HTTPS from bun.sh / GitHub)
@@ -149,7 +152,7 @@ curl -fsSL https://bun.sh/install | bash   # macOS / Linux
 After the installer finishes, **restart your terminal** (or run `source ~/.zshrc` / `source ~/.bashrc`), then:
 
 ```bash
-bunx @hacksmith/doraval validate .
+bunx @hacksmith/doraval
 bun add -g @hacksmith/doraval
 ```
 
@@ -157,16 +160,48 @@ bun add -g @hacksmith/doraval
 
 ## Commands
 
-### `validate`: catch breakage before anyone uses it
+### `dora` (bare): scan the repo
 
-Point at a directory or GitHub URL. doraval finds what's there and checks it.
+Zero-config diagnosis: agent surfaces, skill health, and numbered next actions. Works in any repo, no setup, no API key.
 
 ```bash
-doraval validate .                                          # local directory
-doraval validate https://github.com/obra/superpowers        # remote repo
-doraval validate . --for claude           # all Claude validators
-doraval validate . --for claude:plugin    # one validator
+dora                        # scan from the current directory
+dora --format json          # full scan as structured JSON (for coding agents / CI)
+dora scan --cwd /path/repo  # explicit form
 ```
+
+### `review`: the quality gate
+
+Four tiers, later tiers auto-skip when their prerequisite is missing — nothing ever blocks.
+
+```bash
+dora review .                          # structure + heuristics (+ LLM tier when a judge exists)
+dora review --quick .                  # tiers 1–2 only — fast, CI-friendly
+dora review --deep ./skills/my-skill   # require the LLM tier; exit 2 if no judge
+dora review --all                      # every skill under the path, aggregate report
+```
+
+The LLM judge auto-detects: an installed `claude` CLI (your existing subscription) first, API keys second (`OPENAI_API_KEY`, `dora config set eval.*`). Principles recorded via `dora memory` are enforced as review rubric.
+
+### `fix`: close the loop
+
+```bash
+dora fix .              # show diffs for mechanical fixes, ask before applying
+dora fix . --yes        # pre-approve (agents/CI) — still prints every diff
+dora fix . --dry-run    # show what would change, write nothing
+dora fix . --brief      # emit an agent-ready prompt for judgment-only issues
+```
+
+Exits 1 while fixable or judgment issues remain, 0 when clean.
+
+### `memory`: principles dora enforces
+
+```bash
+dora memory add "never use default exports" --weight 8
+dora memory list
+```
+
+High-weight principles show up as errors in every future `dora review` on this project.
 
 #### Validators (Claude)
 
@@ -195,59 +230,14 @@ doraval claude new --yes --intent self my-context        # personal / team
 doraval cursor new / doraval codex new / doraval copilot new
 ```
 
-### `skill validate` / `skill lint`: structure vs. LLM quality read
-
-```bash
-doraval skill validate ./skills/my-skill/   # structural check, no LLM
-doraval skill lint ./skills/my-skill/       # LLM-based clarity/contradiction check
-```
-
-`lint` catches what schema checks can't: vague triggers, self-contradicting steps, unclear guardrails.
-
-### `judge`: is the skill well-authored?
-
-One LLM call against a best-practices rubric — no sessions needed. Point it at a skill directory, get a **PASS / FAIL** verdict with a per-criterion checklist.
-
-```
-[PASS] Rubric alignment
-All mandatory criteria met: activation phrase, ordered steps, imperative voice,
-code examples, and explicit MUST / MUST NOT guardrails.
-```
-
-```bash
-doraval judge ./skills/my-skill/
-doraval eval  ./skills/my-skill/   # alias
-doraval evals ./skills/my-skill/   # alias
-```
-
-### `drift`: did the agent actually follow the skill?
-
-`judge` checks the document. `drift` checks reality: it reads real session transcripts, finds which skills were invoked, and runs an LLM judge per instruction — **ALIGNED / DRIFTED / JUSTIFIED / UNCLEAR** — with evidence citations.
-
-```
-Session a1b2c3 "Design a new feature"
-  ✓ ALIGNED     Invoke the skill before responding
-  ↗ DRIFTED     Run git log for churn signal          (no git log call found)
-  ~ JUSTIFIED   Check 4 repos                          (only 2 repos match scope)
-
-Aggregate drift rate: 1/8 binding instructions drifted (12%)
-```
-
-```bash
-doraval drift ./skills/my-skill/   # one skill, all matching sessions
-doraval drift --session <id>       # one skill, one session
-doraval drift                      # repo sweep — every discovered skill, ranked by drift rate
-doraval drift --verbose
-```
-
-Both need a judge LLM configured — `doraval init` sets this up, or run `doraval evals setup` on its own. See [judge docs](https://doraval.thehacksmith.dev/commands/judge/) and [drift docs](https://doraval.thehacksmith.dev/commands/drift/).
+> The old `validate`, `skill lint`, `judge`/`eval`/`evals`, and `drift` commands were folded into `dora review` (structure = tier 1, heuristics = tier 2, LLM = tier 3; session-adherence analysis returns as the review sessions tier).
 
 ### `journal`: decision memory that survives sessions
 
 Record project principles so future you (and agents) don't contradict past choices. SessionStart hooks inject the journal before the first message.
 
 ```bash
-doraval init                  # journal repo + agent config (Claude or Grok)
+doraval journal init          # one-time: journal repo + agent config
 doraval journal list          # view active principles
 doraval journal add "..."     # propose a decision
 doraval journal sync          # publish pending entries
@@ -296,13 +286,13 @@ doraval completion zsh >> ~/.zshrc   # shell completions (bash | zsh | fish)
 ### CI/CD
 
 ```bash
-doraval validate . --for claude --format json --ci
-doraval skill validate ./my-skill/ --format json --ci
-doraval judge ./my-skill/ --format json --ci
-doraval drift --format json --ci
+npx @hacksmith/doraval review --all --quick --ci     # structural gate, no LLM cost
+dora review . --ci                                   # full gate (LLM tier when available)
+dora fix . --dry-run --ci                            # fail if auto-fixable issues exist
+dora --format json | jq '.summary'                   # scan as JSON
 ```
 
-Exits with code `1` when errors are found. Pipe `--format json` to `jq` or consume programmatically.
+Exit codes everywhere: `0` clean · `1` issues found · `2` could not run. Pipe `--format json` to `jq` or consume programmatically.
 
 ## Providers
 
