@@ -200,16 +200,12 @@ async function lintViaCli(prompt: string, agentCfg: AgentConfig): Promise<LintRe
 
 // ── Public entry point ─────────────────────────────────────────────────────────
 
-export async function lintSkill(
-  model: SkillModel,
+export async function runJudge(
+  prompt: string,
   caps: Capabilities,
   agentCfg: AgentConfig,
-  evalCfg: Partial<EvalConfig>,
-  platform?: string,
-  extraRubric?: string
+  evalCfg: Partial<EvalConfig>
 ): Promise<LintResult> {
-  const prompt = buildLintPrompt(model, platform, extraRubric);
-
   if (caps.preferred === "api") {
     const result = await lintViaApi(prompt, evalCfg);
     if (result.ok) return result;
@@ -228,4 +224,15 @@ export async function lintSkill(
     ok: false,
     error: "No judge available. Set an API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) or install claude CLI.",
   };
+}
+
+export async function lintSkill(
+  model: SkillModel,
+  caps: Capabilities,
+  agentCfg: AgentConfig,
+  evalCfg: Partial<EvalConfig>,
+  platform?: string,
+  extraRubric?: string
+): Promise<LintResult> {
+  return runJudge(buildLintPrompt(model, platform, extraRubric), caps, agentCfg, evalCfg);
 }

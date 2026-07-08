@@ -96,3 +96,19 @@ describe("LintOutput shape (type safety smoke test)", () => {
     expect(result.findings[0]!.severity).toBe("error");
   });
 });
+
+describe("runJudge", () => {
+  it("returns 'no judge available' error when caps.preferred is 'none'", async () => {
+    const { runJudge } = await import("./skill-lint.js");
+    const result = await runJudge(
+      "irrelevant prompt",
+      { api: false, cli: false, cliCommand: null, preferred: "none" },
+      { command: "" },
+      {}
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("No judge available");
+    }
+  });
+});
