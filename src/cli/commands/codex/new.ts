@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { ui } from "../../out.js";
 import { detectContext } from "./context.js";
-import { prompt } from "../../prompt.js";
+import { promptSelect } from "../../prompt.js";
 import pc from "picocolors";
 import { join, basename, dirname } from "path";
 import { mkdirSync, writeFileSync, existsSync } from "fs";
@@ -201,8 +201,11 @@ export default defineCommand({
     const ctx = detectContext();
     let intent: Intent = (args.intent as Intent) || "self-later";
     if (!args.yes) {
-      const ans = prompt("  Intent (self | self-later | distribute)", intent);
-      intent = (ans as Intent) || intent;
+      intent = await promptSelect<Intent>("Intent", [
+        { value: "self", label: "self", hint: "use in this repo now" },
+        { value: "self-later", label: "self-later", hint: "personal now, promote later" },
+        { value: "distribute", label: "distribute", hint: "ship to others" },
+      ], intent);
     }
 
     const decision = decidePath(ctx, intent, args.name as string | undefined);

@@ -101,9 +101,10 @@ export default defineCommand({
         sourceNote = `  ${pc.dim("(from your previous decision memory setup)")}\n`;
       }
 
-      ui.write(`  Journal repo ${pc.dim(pc.gray("(owner/name)"))}`);
-      if (sourceNote) ui.write(sourceNote);
-      repo = prompt("  >", defaultRepo);
+      repo = await prompt(
+        sourceNote ? "Journal repo (owner/name, from your previous setup)" : "Journal repo (owner/name)",
+        defaultRepo
+      );
     }
 
     // ── 2. Resolve project name ────────────────────────────────────
@@ -111,7 +112,7 @@ export default defineCommand({
     let project = (args.project as string | undefined) || process.env.DORAVAL_PROJECT;
     if (!project) {
       const defaultProject = basename(process.cwd());
-      project = prompt("  Project name", defaultProject);
+      project = await prompt("Project name", defaultProject);
     }
 
     // Sanitize for safety (filesystem + GitHub paths)
