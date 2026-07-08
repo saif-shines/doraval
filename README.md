@@ -230,17 +230,6 @@ doraval journal hook enable   # inject journal on every SessionStart
 
 Requires the GitHub CLI (`gh`). Journal lives in a private GitHub repo you control.
 
-### `ui`: local dashboard
-
-```bash
-doraval ui                 # start dashboard (opens browser)
-doraval ui --port 4921
-doraval ui --status        # check if running
-doraval ui --force         # force restart
-```
-
-Re-running `doraval ui` is idempotent (PID tracking). Sidebar navigation, loading states, and open-dir support ship in recent releases.
-
 ### `config`: dot-notation settings
 
 ```bash

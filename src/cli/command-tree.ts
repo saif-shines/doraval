@@ -100,44 +100,6 @@ export const copilot = defineGroup(
   }
 );
 
-export const ui = defineCommand({
-  meta: {
-    name: "ui",
-    description: "Launch the local doraval web dashboard (no more typing commands for common tasks)",
-  },
-  args: {
-    port: {
-      type: "string",
-      description: "Port to run the local UI server on (default 3737)",
-      default: "3737",
-    },
-    open: {
-      type: "boolean",
-      description: "Automatically open the dashboard in your browser",
-      default: true,
-    },
-    host: {
-      type: "string",
-      description: "Host to bind (default 127.0.0.1 for local only)",
-      default: "127.0.0.1",
-    },
-    status: {
-      type: "boolean",
-      description: "Check if a dashboard is running and print its URL (no start)",
-      default: false,
-    },
-    force: {
-      type: "boolean",
-      description: "Force start/restart even if one is already running",
-      default: false,
-    },
-  },
-  async run({ args }) {
-    // Always delegate for `dora ui` (with or without flags). The old guard pattern was only for groups that show usage.
-    await import("./commands/ui.js").then((m) => m.default.run({ args }));
-  },
-});
-
 /** The exact subCommands map used to build the root `doraval` command. */
 export const topLevelSubCommands = {
   scan: () => import("./commands/scan.js").then((m) => m.default),
@@ -154,5 +116,4 @@ export const topLevelSubCommands = {
   codex: () => Promise.resolve(codex),
   cursor: () => Promise.resolve(cursor),
   copilot: () => Promise.resolve(copilot),
-  ui: () => Promise.resolve(ui),
 };

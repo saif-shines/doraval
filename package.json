@@ -40,7 +40,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "rm -rf bin/doraval.js bin/chunk-*.js bin/ui && bun build ./src/cli/index.ts --outdir ./bin --splitting --entry-naming=doraval.js --target bun --external @opentui/core && cp -r src/ui bin/ui",
+    "build": "rm -rf bin/doraval.js bin/chunk-*.js && bun build ./src/cli/index.ts --outdir ./bin --splitting --entry-naming=doraval.js --target bun --external @opentui/core",
     "dev": "bun run ./src/cli/index.ts",
     "test": "bun test && bun run scripts/check-ci-status.ts",
     "typecheck": "bunx tsc --noEmit --skipLibCheck",
