@@ -193,4 +193,17 @@ describe("buildScenarioPrompt", () => {
     expect(prompt).toContain("# Deploy Skill");
     expect(prompt).toContain("Always run tests before deploying.");
   });
+
+  test("requests the standard LintOutput JSON shape (overall/summary/findings), not a bespoke results array", () => {
+    // buildScenarioPrompt's output is dispatched through runJudge, which is
+    // hard-coupled to LintSchema ({overall, summary, findings}) on both the
+    // API path (zod generateObject) and the CLI path (mapCliRaw). A prompt
+    // asking for any other shape would silently get coerced/rejected.
+    const prompt = buildScenarioPrompt(scenarios, skillContent);
+    expect(prompt).toContain('"overall"');
+    expect(prompt).toContain('"summary"');
+    expect(prompt).toContain('"findings"');
+    expect(prompt).toContain('"coverage"');
+    expect(prompt).not.toContain('"results"');
+  });
 });

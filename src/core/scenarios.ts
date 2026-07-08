@@ -92,7 +92,25 @@ export function buildScenarioPrompt(scenarios: Scenario[], skillContent: string)
     lines.push(`${i + 1}. When: "${s.when}" → Expected: "${s.expect}"${s.must_not ? ` | Must NOT: "${s.must_not}"` : ""}`);
   }
 
-  lines.push("", 'Respond with JSON: { "results": [{ "scenario": 1, "verdict": "COVERED"|"UNCOVERED", "reason": "..." }] }');
+  lines.push(
+    "",
+    "Only report UNCOVERED scenarios as findings — do not invent problems for COVERED ones.",
+    "",
+    "CRITICAL: Return ONLY a JSON object. No markdown, no prose. First char '{', last char '}'.",
+    "",
+    "{",
+    '  "overall": "pass" | "warn" | "fail",',
+    '  "summary": "<one sentence>",',
+    '  "findings": [',
+    "    {",
+    '      "severity": "warning",',
+    '      "category": "coverage",',
+    '      "finding": "Scenario N (\\"<when>\\") is UNCOVERED: <reason>",',
+    '      "suggestion": "<concrete fix>"',
+    "    }",
+    "  ]",
+    "}",
+  );
 
   return lines.join("\n");
 }

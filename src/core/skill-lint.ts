@@ -13,7 +13,7 @@ import type { Capabilities } from "./capability-detect.js";
 
 export const LintFindingSchema = z.object({
   severity: z.enum(["error", "warning", "info"]),
-  category: z.enum(["clarity", "actionability", "contradiction", "trigger", "scope"]),
+  category: z.enum(["clarity", "actionability", "contradiction", "trigger", "scope", "coverage"]),
   finding: z.string(),
   suggestion: z.string(),
 });
