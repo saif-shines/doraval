@@ -129,6 +129,34 @@ describe("reviewSkill", () => {
       else process.env.DORAVAL_HOME = prev;
     }
   });
+
+  test("onProgress fires before the LLM tier runs, with the skill path", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    } as any);
+    const calls: string[] = [];
+    const skillDir = resolve(FIXTURES, "skills/minimal-good");
+    try {
+      await reviewSkill(skillDir, {
+        lintFn: async () => ({ ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }),
+        onProgress: (msg) => calls.push(msg),
+      });
+      expect(calls.length).toBe(1);
+      expect(calls[0]).toContain(skillDir);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("onProgress does NOT fire in quick mode", async () => {
+    const calls: string[] = [];
+    await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), {
+      quick: true,
+      onProgress: (msg) => calls.push(msg),
+    });
+    expect(calls).toEqual([]);
+  });
 });
 
 describe("reviewAll", () => {

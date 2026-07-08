@@ -54,6 +54,8 @@ export interface ReviewOptions {
   sessions?: boolean;
   agent?: string;
   cwd?: string;
+  /** Called before each skill's LLM tier runs (progress reporting). */
+  onProgress?: (msg: string) => void;
   /** Test seam: overrides the lintSkill call for the LLM tier. */
   lintFn?: (
     model: SkillModel,
@@ -215,6 +217,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       // (NOT via the platform slot — that's a PLATFORM_CONTEXT lookup key).
       const rubricText = buildPrincipleRubric(principles) || undefined;
       const lint = opts.lintFn ?? lintSkill;
+      opts.onProgress?.(`LLM judge (${caps.preferred}) · ${dir}`);
       const result = await lint(model, caps, agentCfg, evalCfg, undefined, rubricText);
       if (result.ok) {
         let lIdx = 1;

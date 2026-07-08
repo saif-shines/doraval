@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { existsSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
+import { spinner } from "@clack/prompts";
 import { reviewSkill, reviewAll, type ReviewResult, type ReviewFinding } from "../../core/review.js";
 
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
@@ -122,21 +123,27 @@ export default defineCommand({
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
     const root = (args.cwd as string) || process.cwd();
     const target = resolve(root, (args.path as string) || ".");
+    const useSpinner =
+      mode.format !== "json" && !args.quick && process.stderr.isTTY === true;
+    const spin = useSpinner ? spinner({ output: process.stderr }) : null;
     const opts = {
       quick: args.quick as boolean,
       deep: args.deep as boolean,
       sessions: args.sessions as boolean,
       agent: args.agent as string | undefined,
       cwd: root,
+      onProgress: spin ? (msg: string) => spin.message(msg) : undefined,
     };
 
     try {
+      spin?.start("Reviewing");
       const isSkillDir = existsSync(resolve(target, "SKILL.md"));
       const useAll = (args.all as boolean) || !isSkillDir;
 
       const results: ReviewResult[] = useAll
         ? await reviewAll(target, opts)
         : [await reviewSkill(target, opts)];
+      spin?.stop("Review complete");
 
       if (mode.format === "json") {
         // Machine contract: top-level shape is ALWAYS an array — never flips
@@ -154,6 +161,7 @@ export default defineCommand({
       const shouldFail = hasErrors || (failOn === "warning" && hasWarnings);
       await exit(shouldFail ? 1 : 0);
     } catch (e) {
+      spin?.stop("Review failed");
       emitError(e, mode);
       await exit(2); // could-not-run (internal error or unmet prerequisite)
     }
