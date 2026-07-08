@@ -120,26 +120,9 @@ npx @hacksmith/doraval                   # run without installing (scans the rep
 npm install -g @hacksmith/doraval        # or install globally
 ```
 
-Requires Node.js. If Bun is missing, the wrapper prompts you to install it automatically — no manual setup required. On macOS it also suggests Homebrew as an alternative.
-
-**First-run flow (no Bun installed):**
-
-```
-npx @hacksmith/doraval
-
-Bun runtime not found.
-doraval will download and run bun.sh/install (fetched over HTTPS from bun.sh / GitHub)
-to install Bun v1.3.14 into: ~/.cache/doraval/bun
-
-Install now? [Y/n]
-```
-
-Answering **Y** (the default) installs Bun into `~/.cache/doraval/bun` — your shell rc files are **not** modified. Subsequent runs skip the prompt and use the cached Bun directly.
-
-| Environment variable | Effect |
-|---|---|
-| `DORAVAL_AUTO_INSTALL_BUN=1` | Skip prompt, always install (useful in CI) |
-| `DORAVAL_AUTO_INSTALL_BUN=0` | Skip prompt, never install; print guidance instead |
+Requires Node.js ≥ 14.18. npm downloads a prebuilt binary for your platform
+(macOS arm64/x64, Linux x64/arm64, Windows x64) — no other runtime, no prompts,
+works in CI. Alpine/musl users: run from source with Bun (below).
 
 ### Bun
 

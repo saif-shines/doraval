@@ -39,7 +39,7 @@ function probePathBinary(name: string): string | null {
 function resolvePackagedBinary(): string | null {
   try {
     const here = dirname(fileURLToPath(import.meta.url));
-    for (const candidate of ["doraval-wrapper.js", "doraval.js"]) {
+    for (const candidate of ["doraval.cjs", "doraval.js"]) {
       const path = join(here, "../../bin", candidate);
       if (existsSync(path)) return path;
     }
