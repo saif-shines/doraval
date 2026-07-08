@@ -40,7 +40,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "rm -rf bin/doraval.js bin/chunk-*.js && bun build ./src/cli/index.ts --outdir ./bin --splitting --entry-naming=doraval.js --target bun --external @opentui/core",
+    "build": "rm -rf bin/doraval.js bin/chunk-*.js && bun build ./src/cli/index.ts --outdir ./bin --splitting --entry-naming=doraval.js --target bun",
     "dev": "bun run ./src/cli/index.ts",
     "test": "bun test && bun run scripts/check-ci-status.ts",
     "typecheck": "bunx tsc --noEmit --skipLibCheck",
@@ -59,7 +59,6 @@
     "@ai-sdk/openai": "^4.0.4",
     "@ai-sdk/openai-compatible": "^3.0.2",
     "@clack/prompts": "^1.6.0",
-    "@opentui/core": "^0.4.2",
     "ai": "^7.0.9",
     "citty": "^0.2.2",
     "openai": "^6.45.0",
