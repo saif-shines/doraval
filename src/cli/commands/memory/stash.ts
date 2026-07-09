@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { resolve } from "path";
 import { multiselect, isCancel } from "@clack/prompts";
-import { listStashCandidates, stashFile, formatBytes } from "../../../core/memory-artifacts.js";
+import { listStashCandidates, stashFile } from "../../../core/memory-artifacts.js";
 import { getProjectSlug } from "../../../core/memory-config.js";
 import { canPromptInteractively } from "../fix.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine } from "../../out.js";
@@ -19,6 +19,7 @@ export default defineCommand({
     const mode = resolveOutputMode({ format: args.format as string, ci: false });
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const slug = getProjectSlug(cwd);
+    const yes = (args.yes as boolean) || false;
 
     try {
       let targets: string[];
@@ -34,7 +35,7 @@ export default defineCommand({
           return;
         }
 
-        const interactive = canPromptInteractively(false, false, mode.format);
+        const interactive = canPromptInteractively(yes, false, mode.format);
         if (!interactive) {
           emitError(new Error("Bare `memory stash` requires an interactive terminal — pass a file explicitly (e.g. `dora memory stash notes.md`) in CI."), mode);
           await exit(2);
