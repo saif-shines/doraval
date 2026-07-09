@@ -6,6 +6,8 @@ import {
   shortHash,
   getGlobalPrinciplesPath,
   getProjectPrinciplesPath,
+  getArtifactsDir,
+  getManifestPath,
 } from "./memory-config.js";
 import { getDoravalDir } from "./journal-config.js";
 import { join } from "path";
@@ -29,6 +31,24 @@ describe("getProjectPrinciplesPath", () => {
     const result = getProjectPrinciplesPath("my-project-abc123");
     expect(result).toBe(
       join(getDoravalDir(), "memory", "repo", "projects", "my-project-abc123", "principles.md"),
+    );
+  });
+});
+
+describe("getArtifactsDir", () => {
+  test("returns path under memory/repo/projects/<slug>/artifacts", () => {
+    const result = getArtifactsDir("my-project-abc123");
+    expect(result).toBe(
+      join(getDoravalDir(), "memory", "repo", "projects", "my-project-abc123", "artifacts"),
+    );
+  });
+});
+
+describe("getManifestPath", () => {
+  test("returns manifest.yml inside the artifacts dir", () => {
+    const result = getManifestPath("my-project-abc123");
+    expect(result).toBe(
+      join(getDoravalDir(), "memory", "repo", "projects", "my-project-abc123", "artifacts", "manifest.yml"),
     );
   });
 });

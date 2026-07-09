@@ -16,6 +16,14 @@ export function getProjectPrinciplesPath(slug: string): string {
   return join(getMemoryDir(), "repo", "projects", slug, "principles.md");
 }
 
+export function getArtifactsDir(slug: string): string {
+  return join(getMemoryDir(), "repo", "projects", slug, "artifacts");
+}
+
+export function getManifestPath(slug: string): string {
+  return join(getArtifactsDir(slug), "manifest.yml");
+}
+
 export function getProjectSlug(cwd: string): string {
   // git-root basename + short path hash (collision-safe)
   const basename = cwd.split("/").pop() ?? "unknown";
@@ -53,4 +61,9 @@ export function ensureMemoryDirs(slug?: string): void {
   for (const d of dirs) {
     if (!existsSync(d)) mkdirSync(d, { recursive: true });
   }
+}
+
+export function ensureArtifactsDir(slug: string): void {
+  const dir = getArtifactsDir(slug);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
