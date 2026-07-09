@@ -11,7 +11,6 @@ export default defineCommand({
   meta: { name: "stash", description: "Copy a gitignored/untracked file into project memory (survives a clean clone)" },
   args: {
     file: { type: "positional", description: "File to stash (relative to cwd)", required: false },
-    yes: { type: "boolean", description: "Skip confirmation (still requires an explicit --file on non-interactive terminals)", default: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     cwd: { type: "string", description: "Working directory override" },
   },
@@ -19,7 +18,6 @@ export default defineCommand({
     const mode = resolveOutputMode({ format: args.format as string, ci: false });
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const slug = getProjectSlug(cwd);
-    const yes = (args.yes as boolean) || false;
 
     try {
       let targets: string[];
@@ -35,7 +33,7 @@ export default defineCommand({
           return;
         }
 
-        const interactive = canPromptInteractively(yes, false, mode.format);
+        const interactive = canPromptInteractively(false, false, mode.format);
         if (!interactive) {
           emitError(new Error("Bare `memory stash` requires an interactive terminal — pass a file explicitly (e.g. `dora memory stash notes.md`) in CI."), mode);
           await exit(2);
