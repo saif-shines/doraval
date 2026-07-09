@@ -22,6 +22,10 @@ async function subCommandNames(name: string): Promise<string[]> {
     const mod = await topLevelSubCommands.config();
     return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
   }
+  if (name === "sessions") {
+    const mod = await topLevelSubCommands.sessions();
+    return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
+  }
   return [];
 }
 
@@ -48,7 +52,7 @@ export default defineCommand({
     const shell = String(args.shell).toLowerCase();
 
     const subCommands: Record<string, string[]> = {};
-    for (const name of ["journal", "memory", "config", "claude", "codex", "cursor", "copilot"]) {
+    for (const name of ["journal", "memory", "config", "claude", "codex", "cursor", "copilot", "sessions"]) {
       subCommands[name] = await subCommandNames(name);
     }
     subCommands.hook = await hookSubCommandNames();
@@ -73,6 +77,7 @@ _doraval_completions() {
       codex) COMPREPLY=( $(compgen -W "${(subCommands.codex ?? []).join(" ")}" -- "$cur") ) ;;
       cursor) COMPREPLY=( $(compgen -W "${(subCommands.cursor ?? []).join(" ")}" -- "$cur") ) ;;
       copilot) COMPREPLY=( $(compgen -W "${(subCommands.copilot ?? []).join(" ")}" -- "$cur") ) ;;
+      sessions) COMPREPLY=( $(compgen -W "${(subCommands.sessions ?? []).join(" ")}" -- "$cur") ) ;;
     esac
   fi
 }
@@ -119,6 +124,9 @@ _doraval() {
         copilot)
           _describe 'subcommand' (${(subCommands.copilot ?? []).join(" ")})
           ;;
+        sessions)
+          _describe 'subcommand' (${(subCommands.sessions ?? []).join(" ")})
+          ;;
       esac
       ;;
   esac
@@ -139,6 +147,7 @@ complete -c doraval -n '__fish_seen_subcommand_from claude' -a '${(subCommands.c
 complete -c doraval -n '__fish_seen_subcommand_from codex' -a '${(subCommands.codex ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from cursor' -a '${(subCommands.cursor ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from copilot' -a '${(subCommands.copilot ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from sessions' -a '${(subCommands.sessions ?? []).join(" ")}'
 `);
     } else {
       console.error(`Unsupported shell: ${shell}. Supported: bash, zsh, fish`);

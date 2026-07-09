@@ -314,4 +314,37 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
   });
+
+  describe("dora sessions", () => {
+    test("lists sessions from an injected-free real run (no adapters detected in a scratch dir is fine — just must not crash)", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-sessions-"));
+      const { stdout, exitCode } = runDoraval(["sessions", "--format", "json"], { cwd: dir });
+      const parsed = JSON.parse(stdout);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(exitCode).toBe(0);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("unknown --agent name gets an empty list, not a crash", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-sessions-"));
+      const { stdout, exitCode } = runDoraval(["sessions", "--agent", "codex", "--format", "json"], { cwd: dir });
+      const parsed = JSON.parse(stdout);
+      expect(parsed).toEqual([]);
+      expect(exitCode).toBe(0);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("show with an id that doesn't exist exits 1", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-sessions-"));
+      const { exitCode } = runDoraval(["sessions", "show", "no-such-session-id"], { cwd: dir });
+      expect(exitCode).toBe(1);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("sessions --help does not accidentally run show", () => {
+      const { stdout, stderr, exitCode } = runDoraval(["sessions", "--help"]);
+      expect(exitCode).toBe(0);
+      expect((stdout + stderr)).toContain("show");
+    });
+  });
 });

@@ -116,4 +116,5 @@ export const topLevelSubCommands = {
   codex: () => Promise.resolve(codex),
   cursor: () => Promise.resolve(cursor),
   copilot: () => Promise.resolve(copilot),
+  sessions: () => import("./commands/sessions.js").then((m) => m.default),
 };
