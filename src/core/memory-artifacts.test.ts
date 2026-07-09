@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, symlinkSync } from "fs";
 import { join, relative } from "path";
 import { tmpdir } from "os";
 import { spawnSync } from "bun";
@@ -166,6 +166,20 @@ describe("stashFile", () => {
     if (!result.ok) throw new Error("unreachable");
     expect(result.relativePath).toBe("..hidden.md");
   });
+
+  test("refuses a symlink inside the repo pointing outside it", () => {
+    const outsideTarget = join(tmpdir(), `doraval-symlink-target-${Date.now()}.txt`);
+    writeFileSync(outsideTarget, "secret outside content");
+    const linkPath = join(repoDir, "escape-link.txt");
+    symlinkSync(outsideTarget, linkPath);
+
+    const result = stashFile(repoDir, "slug-b", linkPath);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("unreachable");
+    expect(result.error).toContain("symlink");
+
+    rmSync(outsideTarget, { force: true });
+  });
 });
 
 describe("planRestore / applyRestore", () => {
@@ -196,5 +210,9 @@ describe("planRestore / applyRestore", () => {
   test("planRestore errors when nothing was ever stashed for that path", () => {
     const plan = planRestore(repoDir, "slug-d", "never-stashed.md");
     expect(plan.ok).toBe(false);
+  });
+
+  test("applyRestore throws on a path-traversal relativePath", () => {
+    expect(() => applyRestore(repoDir, "slug-c", "../escape.txt")).toThrow();
   });
 });

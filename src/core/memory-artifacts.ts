@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, statSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  copyFileSync,
+  statSync,
+  lstatSync,
+} from "fs";
 import { join, relative, dirname, sep } from "path";
 import { spawnSync } from "bun";
 import { YAML } from "bun";
@@ -122,6 +130,12 @@ export function stashFile(cwd: string, slug: string, absPath: string): StashResu
   if (!existsSync(absPath)) {
     return { ok: false, error: `No such file: ${absPath}` };
   }
+  if (lstatSync(absPath).isSymbolicLink()) {
+    return {
+      ok: false,
+      error: `${relativePath} is a symlink — refusing to stash symlinks (they may point outside the project root)`,
+    };
+  }
 
   const stat = statSync(absPath);
   if (stat.size > REFUSE_BYTES) {
@@ -181,6 +195,9 @@ export function planRestore(cwd: string, slug: string, relativePath: string): Re
 }
 
 export function applyRestore(cwd: string, slug: string, relativePath: string): void {
+  if (relativePath === ".." || relativePath.startsWith("../") || relativePath.startsWith("/")) {
+    throw new Error(`applyRestore: "${relativePath}" escapes the project root — refusing to restore`);
+  }
   const artifactPath = join(getArtifactsDir(slug), relativePath);
   const destPath = join(cwd, relativePath);
   mkdirSync(dirname(destPath), { recursive: true });
