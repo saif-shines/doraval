@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
-import { join } from "path";
+import { join, relative } from "path";
 import { tmpdir } from "os";
 import { spawnSync } from "bun";
 import {
@@ -151,6 +151,20 @@ describe("stashFile", () => {
     const result = stashFile(repoDir, "slug-b", outsidePath);
     expect(result.ok).toBe(false);
     rmSync(outsidePath, { force: true });
+  });
+
+  test("accepts a dot-prefixed filename that is genuinely inside the project root", () => {
+    const absPath = join(repoDir, "..hidden.md");
+    // Confirm this path actually resolves inside repoDir (join does not
+    // collapse a literal leading-dot filename the way a ".." path segment
+    // would) before asserting the naive prefix check doesn't reject it.
+    expect(relative(repoDir, absPath)).toBe("..hidden.md");
+    writeFileSync(absPath, "hidden notes");
+
+    const result = stashFile(repoDir, "slug-b", absPath);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("unreachable");
+    expect(result.relativePath).toBe("..hidden.md");
   });
 });
 

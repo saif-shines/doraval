@@ -69,6 +69,18 @@ function isDocLike(relativePath: string): boolean {
   return DOC_LIKE_EXTENSIONS.some((ext) => relativePath.endsWith(ext));
 }
 
+function tryGitStatus(cwd: string) {
+  try {
+    const result = spawnSync(["git", "-C", cwd, "status", "--ignored", "--porcelain"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    return { ok: true as const, result };
+  } catch {
+    return { ok: false as const };
+  }
+}
+
 /**
  * Lists gitignored-but-present and untracked files as stash candidates.
  * Directory entries (git collapses a wholly-untracked/ignored directory to
@@ -76,10 +88,9 @@ function isDocLike(relativePath: string): boolean {
  * files; stash the files inside a directory explicitly.
  */
 export function listStashCandidates(cwd: string): StashCandidate[] {
-  const result = spawnSync(["git", "-C", cwd, "status", "--ignored", "--porcelain"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const r = tryGitStatus(cwd);
+  if (!r.ok) return [];
+  const result = r.result;
   if (result.exitCode !== 0) return [];
 
   const candidates: StashCandidate[] = [];
@@ -105,7 +116,7 @@ export function listStashCandidates(cwd: string): StashCandidate[] {
 
 export function stashFile(cwd: string, slug: string, absPath: string): StashResult {
   const relativePath = relative(cwd, absPath).split(sep).join("/");
-  if (relativePath.startsWith("..") || relativePath === "") {
+  if (relativePath === ".." || relativePath.startsWith("../") || relativePath === "") {
     return { ok: false, error: `${absPath} is outside the project root (${cwd})` };
   }
   if (!existsSync(absPath)) {
