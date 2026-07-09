@@ -1,159 +1,42 @@
+/**
+ * Thin wrapper — prefer `dora new --for cursor`.
+ * Kept so existing `dora cursor new` invocations and tests keep working
+ * while B12 migrates the world to the unified command.
+ */
 import { defineCommand } from "citty";
-import { ui } from "../../out.js";
-import { detectContext } from "./context.js";
-import { promptSelect } from "../../prompt.js";
 import pc from "picocolors";
-import { join, basename, dirname } from "path";
-import { mkdirSync, writeFileSync, existsSync } from "fs";
-import { getProviderSpec } from "../../../providers/spec.js";
+import { basename } from "path";
+import { ui } from "../../out.js";
+import { promptSelect } from "../../prompt.js";
 import { exit } from "../../render/exit.js";
+import {
+  decidePath,
+  detectScaffoldContext,
+  type Intent,
+} from "../../../core/scaffold-wizard.js";
+import { writeScaffold } from "../../../core/scaffold.js";
+import { getProviderSpec } from "../../../providers/spec.js";
 
-export type Intent = "self" | "self-later" | "distribute";
+export type { Intent } from "../../../core/scaffold-wizard.js";
+export { decidePath } from "../../../core/scaffold-wizard.js";
 
-export interface Decision {
-  path: "standalone" | "plugin";
-  targetDir: string;
-  shouldCreateDir: boolean;
-  migrateExisting: boolean;
-}
-
-export function decidePath(ctx: ReturnType<typeof import("./context.js").detectContext>, intent: Intent | undefined, providedName?: string): Decision {
-  const rawName = providedName || "";
-  let decisionPath: "standalone" | "plugin" = "standalone";
-  let targetDir = ctx.cwd;
-  let shouldCreateDir = false;
-  let migrateExisting = false;
-
-  const useCurrentDirAsRoot = rawName === "." || rawName === basename(ctx.cwd) || !rawName;
-
-  if (intent === "distribute" || (intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasPluginManifest)) {
-    decisionPath = "plugin";
-    if (useCurrentDirAsRoot) {
-      targetDir = ctx.cwd;
-      shouldCreateDir = false;
-    } else {
-      targetDir = join(ctx.cwd, rawName);
-      shouldCreateDir = true;
-    }
-    migrateExisting = ctx.looseSkillFiles.length > 0;
-  } else if (intent === "self-later" && !ctx.hasPluginManifest) {
-    decisionPath = "plugin";
-    if (useCurrentDirAsRoot) {
-      targetDir = ctx.cwd;
-      shouldCreateDir = false;
-    } else {
-      targetDir = join(ctx.cwd, rawName);
-      shouldCreateDir = true;
-    }
-  } else if (decisionPath === "standalone") {
-    if (useCurrentDirAsRoot) {
-      targetDir = ctx.cwd;
-      shouldCreateDir = false;
-    } else {
-      targetDir = join(ctx.cwd, rawName);
-      shouldCreateDir = true;
-    }
-  }
-
-  return { path: decisionPath, targetDir, shouldCreateDir, migrateExisting };
-}
-
-export async function scaffold(decision: Decision, ctx: any, migrateContent?: string) {
-  const { targetDir, path, shouldCreateDir } = decision;
-
-  if (existsSync(targetDir) && shouldCreateDir) {
-    ui.fail("Target already exists");
+/** @deprecated Use writeScaffold from core/scaffold.js */
+export async function scaffold(
+  decision: ReturnType<typeof decidePath>,
+  _ctx?: unknown,
+  migrateContent?: string,
+) {
+  const result = writeScaffold(decision, migrateContent);
+  if (!result.ok) {
+    ui.fail(result.error);
     return await exit(1);
-  }
-
-  if (shouldCreateDir) {
-    mkdirSync(targetDir, { recursive: true });
-  }
-
-  if (path === "plugin") {
-    const pluginName = basename(targetDir);
-
-    const cursorSpec = getProviderSpec("cursor");
-    const cursorManifestDir = dirname(cursorSpec.manifestPath);
-
-    // .cursor-plugin/plugin.json for Cursor (skills as directory string)
-    const pluginJson = {
-      name: pluginName,
-      version: "0.1.0",
-      description: "Scaffolded by doraval cursor new",
-      skills: "./skills/",
-      displayName: pluginName,
-      keywords: ["example-keyword", "another-keyword"],
-    };
-    mkdirSync(join(targetDir, cursorManifestDir), { recursive: true });
-    writeFileSync(join(targetDir, cursorSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-
-    // marketplace.json inside .cursor-plugin per Cursor spec
-    const marketplaceDir = dirname(cursorSpec.marketplacePath);
-    mkdirSync(join(targetDir, marketplaceDir), { recursive: true });
-    const marketplaceJson = {
-      name: pluginName,
-      version: "0.1.0",
-      description: "Scaffolded by doraval cursor new",
-      author: { name: "" },
-      homepage: "",
-      repository: "",
-      license: "MIT",
-      keywords: ["cursor", "skills", "plugin"],
-    };
-    writeFileSync(join(targetDir, cursorSpec.marketplacePath), JSON.stringify(marketplaceJson, null, 2));
-
-    // The first skill in a generated plugin is a self-referential demo of using doraval itself.
-    const demoSkillName = "doraval";
-    mkdirSync(join(targetDir, "skills", demoSkillName), { recursive: true });
-
-    let skillContent: string;
-    if (migrateContent) {
-      skillContent = migrateContent;
-    } else {
-      skillContent = `---
-name: ${demoSkillName}
-description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents (works for Cursor too).
----
-
-# Use Doraval (Cursor edition)
-
-Scale your AI context for coding agents. Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.
-
-When you need to check a skill or Cursor plugin:
-
-- Scan the current directory: \`dora\`
-- Review one skill: \`dora review ./skills/${demoSkillName}/\`
-- Apply mechanical fixes: \`dora fix ./skills/${demoSkillName}/\`
-- Get an AI quality judgment: \`dora review --deep ./skills/${demoSkillName}/\`
-
-Always run \`dora review\` before sharing or publishing a plugin.
-
-This skill demonstrates a complete, self-referential example of using doraval inside a generated Cursor plugin.
-
-To test in Cursor:
-1. Open the plugin directory or add via marketplace.
-2. The demo skill will be available.`;
-    }
-
-    writeFileSync(join(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-
-    const readmePath = join(targetDir, "README.md");
-    if (!existsSync(readmePath)) {
-      writeFileSync(readmePath, "# " + pluginName + "\n\nCursor plugin scaffolded by doraval.");
-    }
-  } else {
-    // "standalone" / local skill start for Cursor
-    mkdirSync(join(targetDir, "skills", "doraval"), { recursive: true });
-    const skillBody = migrateContent || "# My Skill\n\nBasic starter for Cursor.";
-    writeFileSync(join(targetDir, "skills", "doraval", "SKILL.md"), `---\nname: doraval\ndescription: Starter (local skill)\n---\n\n${skillBody}`);
   }
 }
 
 export default defineCommand({
   meta: {
     name: "new",
-    description: "Create a new skill or plugin following Cursor packaging rules",
+    description: `Create a new skill or plugin for cursor (prefer: dora new --for cursor)`,
   },
   args: {
     name: {
@@ -173,18 +56,30 @@ export default defineCommand({
     },
   },
   async run({ args }) {
-    ui.heading("doraval cursor new — Context-aware scaffolding");
-    const ctx = detectContext();
+    ui.heading(`doraval cursor new — use \`dora new --for cursor\` going forward`);
+    const cwd = process.cwd();
+    const ctx = detectScaffoldContext(cwd, "cursor");
     let intent: Intent = (args.intent as Intent) || "self-later";
     if (!args.yes) {
-      intent = await promptSelect<Intent>("Intent", [
-        { value: "self", label: "self", hint: "use in this repo now" },
-        { value: "self-later", label: "self-later", hint: "personal now, promote later" },
-        { value: "distribute", label: "distribute", hint: "ship to others" },
-      ], intent);
+      intent = await promptSelect<Intent>(
+        "Intent",
+        [
+          { value: "self", label: "self", hint: "use in this repo now" },
+          { value: "self-later", label: "self-later", hint: "personal now, promote later" },
+          { value: "distribute", label: "distribute", hint: "ship to others" },
+        ],
+        intent,
+      );
     }
 
-    const decision = decidePath(ctx, intent, args.name as string | undefined);
+    const decision = decidePath({
+      type: "skill",
+      provider: "cursor",
+      intent,
+      name: args.name as string | undefined,
+      cwd,
+      ctx,
+    });
 
     ui.info(`  Decision: path=${decision.path}, target=${decision.targetDir}`);
 
@@ -193,22 +88,20 @@ export default defineCommand({
       migrateContent = "Content from your existing SKILL.md (user-confirmed).";
     }
 
-    await scaffold(decision, ctx, migrateContent);
+    const result = writeScaffold(decision, migrateContent);
+    if (!result.ok) {
+      ui.fail(result.error);
+      return await exit(1);
+    }
+
     ui.write(`\n  ${pc.green("✓")} Created ${decision.path} at ${pc.bold(decision.targetDir)}`);
-    const cmdName = decision.path === "plugin" ? `/${basename(decision.targetDir)}:doraval` : "/doraval (local skill)";
-    ui.info(`  Command: ${cmdName}`);
     if (decision.path === "plugin") {
-      ui.info(`  Cursor manifest: .cursor-plugin/plugin.json`);
-      ui.info(`  Marketplace catalog: .cursor-plugin/marketplace.json`);
+      const spec = getProviderSpec("cursor");
+      ui.info(`  Manifest: ${spec.manifestPath}`);
+      ui.info(`  Marketplace: ${spec.marketplacePath}`);
     }
-    ui.info(`  Test (local): add the plugin dir in Cursor settings or use local skills`);
     ui.info(`  Review: dora review ${decision.targetDir}`);
-    if (decision.path === "plugin") {
-      ui.info(`  Keywords: keywords array added for discovery — run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
-    }
-    if (decision.path === "plugin" && decision.migrateExisting) {
-      ui.info("  (Existing content migrated where confirmed.)");
-    }
+    ui.info(`  Prefer: dora new skill --for cursor --yes`);
     await exit(0);
   },
 });

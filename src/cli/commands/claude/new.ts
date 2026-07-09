@@ -1,150 +1,42 @@
+/**
+ * Thin wrapper — prefer `dora new --for claude`.
+ * Kept so existing `dora claude new` invocations and tests keep working
+ * while B12 migrates the world to the unified command.
+ */
 import { defineCommand } from "citty";
-import { ui } from "../../out.js";
-import { detectContext } from "./context.js";
-import { promptSelect } from "../../prompt.js";
 import pc from "picocolors";
-import { join, basename, dirname } from "path";
-import { mkdirSync, writeFileSync, existsSync } from "fs";
-import { getProviderSpec } from "../../../providers/spec.js";
+import { basename } from "path";
+import { ui } from "../../out.js";
+import { promptSelect } from "../../prompt.js";
 import { exit } from "../../render/exit.js";
+import {
+  decidePath,
+  detectScaffoldContext,
+  type Intent,
+} from "../../../core/scaffold-wizard.js";
+import { writeScaffold } from "../../../core/scaffold.js";
+import { getProviderSpec } from "../../../providers/spec.js";
 
-export type Intent = "self" | "self-later" | "distribute";
+export type { Intent } from "../../../core/scaffold-wizard.js";
+export { decidePath } from "../../../core/scaffold-wizard.js";
 
-export interface Decision {
-  path: "standalone" | "plugin";
-  targetDir: string;
-  shouldCreateDir: boolean;
-  migrateExisting: boolean;
-}
-
-export function decidePath(ctx: ReturnType<typeof import("./context.js").detectContext>, intent: Intent | undefined, providedName?: string): Decision {
-  const rawName = providedName || "";
-  let decisionPath: "standalone" | "plugin" = "standalone";
-  let targetDir = ctx.cwd;
-  let shouldCreateDir = false;
-  let migrateExisting = false;
-
-  const useCurrentDirAsRoot = rawName === "." || rawName === basename(ctx.cwd) || !rawName;
-
-  if (intent === "distribute" || (intent === "self-later" && ctx.looseSkillFiles.length > 0 && !ctx.hasClaudeDir)) {
-    decisionPath = "plugin";
-    if (useCurrentDirAsRoot) {
-      // User is already in the target dir (or passed .), scaffold plugin structure directly here
-      targetDir = ctx.cwd;
-      shouldCreateDir = false;
-    } else {
-      targetDir = join(ctx.cwd, rawName);
-      shouldCreateDir = true;
-    }
-    migrateExisting = ctx.looseSkillFiles.length > 0;
-  } else if (intent === "self-later" && !ctx.hasClaudeDir) {
-    decisionPath = "plugin";
-    if (useCurrentDirAsRoot) {
-      targetDir = ctx.cwd;
-      shouldCreateDir = false;
-    } else {
-      targetDir = join(ctx.cwd, rawName);
-      shouldCreateDir = true;
-    }
-  } else if (decisionPath === "standalone") {
-    // For standalone, support in-place too if . or no name
-    if (useCurrentDirAsRoot) {
-      targetDir = ctx.cwd;
-      shouldCreateDir = false;
-    } else {
-      targetDir = join(ctx.cwd, rawName);
-      shouldCreateDir = true;
-    }
-  }
-
-  return { path: decisionPath, targetDir, shouldCreateDir, migrateExisting };
-}
-
-export async function scaffold(decision: Decision, ctx: any, migrateContent?: string) {
-  const { targetDir, path, shouldCreateDir } = decision;
-
-  if (existsSync(targetDir) && shouldCreateDir) {
-    ui.fail("Target already exists");
+/** @deprecated Use writeScaffold from core/scaffold.js */
+export async function scaffold(
+  decision: ReturnType<typeof decidePath>,
+  _ctx?: unknown,
+  migrateContent?: string,
+) {
+  const result = writeScaffold(decision, migrateContent);
+  if (!result.ok) {
+    ui.fail(result.error);
     return await exit(1);
-  }
-
-  if (shouldCreateDir) {
-    mkdirSync(targetDir, { recursive: true });
-  }
-
-  if (path === "plugin") {
-    const pluginName = basename(targetDir);
-    const claudeSpec = getProviderSpec("claude");
-    const claudeManifestDir = dirname(claudeSpec.manifestPath);
-    const pluginJson = {
-      name: pluginName,
-      description: "Scaffolded by doraval claude new",
-      version: "0.1.0",
-      keywords: ["example-keyword", "another-keyword"],
-    };
-    mkdirSync(join(targetDir, claudeManifestDir), { recursive: true });
-    writeFileSync(join(targetDir, claudeSpec.manifestPath), JSON.stringify(pluginJson, null, 2));
-
-    // marketplace.json for cross-provider / Build-with-AI marketplace distribution
-    // (pairs with .claude-plugin/plugin.json; used for unified marketplace metadata, install commands, categories etc.)
-    const marketplaceJson = {
-      name: pluginName,
-      version: "0.1.0",
-      description: "Scaffolded by doraval claude new",
-      author: { name: "" },
-      homepage: "",
-      repository: "",
-      license: "MIT",
-      keywords: ["claude-code", "skills", "plugin"],
-    };
-    writeFileSync(join(targetDir, "marketplace.json"), JSON.stringify(marketplaceJson, null, 2));
-
-    // The first skill in a generated plugin is a self-referential demo of using doraval itself.
-    const demoSkillName = "doraval";
-    mkdirSync(join(targetDir, "skills", demoSkillName), { recursive: true });
-
-    let skillContent: string;
-    if (migrateContent) {
-      skillContent = migrateContent;
-    } else {
-      skillContent = `---
-name: ${demoSkillName}
-description: Use doraval to validate, measure drift, and judge skills and plugins. Use when authoring or reviewing context engineering artifacts for AI coding agents.
----
-
-# Use Doraval
-
-Scale your AI context for coding agents. Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.
-
-When you need to check a skill or plugin:
-
-- Scan the current directory: \`dora\`
-- Review everything: \`dora review --all\`
-- Review one skill: \`dora review ./skills/${demoSkillName}/\`
-- Apply mechanical fixes: \`dora fix ./skills/${demoSkillName}/\`
-- Get an AI quality judgment: \`dora review --deep ./skills/${demoSkillName}/\`
-
-Always run \`dora review\` before sharing or publishing a plugin. This skill demonstrates a complete, self-referential example of using doraval inside a generated plugin.`;
-    }
-
-    writeFileSync(join(targetDir, "skills", demoSkillName, "SKILL.md"), skillContent);
-
-    const readmePath = join(targetDir, "README.md");
-    if (!existsSync(readmePath)) {
-      writeFileSync(readmePath, "# " + pluginName + "\n\nClaude Code plugin scaffolded by doraval.");
-    }
-  } else {
-    // standalone
-    mkdirSync(join(targetDir, ".claude", "skills", "my-skill"), { recursive: true });
-    const skillBody = migrateContent || "# My Skill\n\nBasic starter.";
-    writeFileSync(join(targetDir, ".claude", "skills", "my-skill", "SKILL.md"), `---\nname: my-skill\ndescription: Starter\n---\n\n${skillBody}`);
   }
 }
 
 export default defineCommand({
   meta: {
     name: "new",
-    description: "Create a new skill or plugin following Claude Code packaging rules",
+    description: `Create a new skill or plugin for claude (prefer: dora new --for claude)`,
   },
   args: {
     name: {
@@ -164,44 +56,52 @@ export default defineCommand({
     },
   },
   async run({ args }) {
-    ui.heading("doraval claude new — Context-aware scaffolding");
-    const ctx = detectContext();
+    ui.heading(`doraval claude new — use \`dora new --for claude\` going forward`);
+    const cwd = process.cwd();
+    const ctx = detectScaffoldContext(cwd, "claude");
     let intent: Intent = (args.intent as Intent) || "self-later";
     if (!args.yes) {
-      intent = await promptSelect<Intent>("Intent", [
-        { value: "self", label: "self", hint: "use in this repo now" },
-        { value: "self-later", label: "self-later", hint: "personal now, promote later" },
-        { value: "distribute", label: "distribute", hint: "ship to others" },
-      ], intent);
+      intent = await promptSelect<Intent>(
+        "Intent",
+        [
+          { value: "self", label: "self", hint: "use in this repo now" },
+          { value: "self-later", label: "self-later", hint: "personal now, promote later" },
+          { value: "distribute", label: "distribute", hint: "ship to others" },
+        ],
+        intent,
+      );
     }
 
-    const decision = decidePath(ctx, intent, args.name as string | undefined);
+    const decision = decidePath({
+      type: "skill",
+      provider: "claude",
+      intent,
+      name: args.name as string | undefined,
+      cwd,
+      ctx,
+    });
 
     ui.info(`  Decision: path=${decision.path}, target=${decision.targetDir}`);
 
     let migrateContent: string | undefined;
     if (decision.migrateExisting && !args.yes) {
-      // Simplified; in real use read the first loose file
       migrateContent = "Content from your existing SKILL.md (user-confirmed).";
     }
 
-    await scaffold(decision, ctx, migrateContent);
+    const result = writeScaffold(decision, migrateContent);
+    if (!result.ok) {
+      ui.fail(result.error);
+      return await exit(1);
+    }
+
     ui.write(`\n  ${pc.green("✓")} Created ${decision.path} at ${pc.bold(decision.targetDir)}`);
-    const cmdName = decision.path === "plugin" ? `/${basename(decision.targetDir)}:doraval` : "/my-skill";
-    ui.info(`  Command: ${cmdName}`);
     if (decision.path === "plugin") {
-      const claudeSpec = getProviderSpec("claude");
-      ui.info(`  Claude: ${claudeSpec.manifestPath}`);
-      ui.info(`  Marketplace: marketplace.json (unified / cross-provider listings)`);
+      const spec = getProviderSpec("claude");
+      ui.info(`  Manifest: ${spec.manifestPath}`);
+      ui.info(`  Marketplace: ${spec.marketplacePath}`);
     }
-    ui.info(`  Test: claude --plugin-dir ${decision.targetDir}   (or use normally for standalone)`);
     ui.info(`  Review: dora review ${decision.targetDir}`);
-    if (decision.path === "plugin") {
-      ui.info(`  Keywords: keywords array added for discovery — run validate to see "If users mention any of these keywords, your plugin will get triggered"`);
-    }
-    if (decision.path === "plugin" && decision.migrateExisting) {
-      ui.info("  (Existing content migrated where confirmed.)");
-    }
+    ui.info(`  Prefer: dora new skill --for claude --yes`);
     await exit(0);
   },
 });

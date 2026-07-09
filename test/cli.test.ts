@@ -25,6 +25,72 @@ describe("doraval CLI", () => {
 
   });
 
+  test("dora new skill --for claude --yes scaffolds standalone", () => {
+    const tmp = join(import.meta.dir, "../../tmp-dora-new-skill-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+
+    const { exitCode, stdout, stderr } = runDoraval(
+      ["new", "skill", "review-pr", "--for", "claude", "--intent", "self", "--yes", "--description", "Reviews PRs"],
+      { cwd: tmp },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("skill");
+    expect(existsSync(join(tmp, ".claude", "skills", "review-pr", "SKILL.md"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("dora new rule --for cursor --yes writes .cursor/rules", () => {
+    const tmp = join(import.meta.dir, "../../tmp-dora-new-rule-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+
+    const { exitCode } = runDoraval(
+      ["new", "rule", "no-defaults", "--for", "cursor", "--yes", "--description", "Never use default exports"],
+      { cwd: tmp },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(existsSync(join(tmp, ".cursor", "rules", "no-defaults.md"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("dora new agent --for claude --yes writes subagent file", () => {
+    const tmp = join(import.meta.dir, "../../tmp-dora-new-agent-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+
+    const { exitCode } = runDoraval(
+      ["new", "agent", "explorer", "--for", "claude", "--yes", "--description", "Explores code"],
+      { cwd: tmp },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(existsSync(join(tmp, ".claude", "agents", "explorer.md"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("dora new plugin --for codex --yes scaffolds plugin packaging", () => {
+    const tmp = join(import.meta.dir, "../../tmp-dora-new-plugin-test");
+    rmSync(tmp, { recursive: true, force: true });
+    mkdirSync(tmp, { recursive: true });
+
+    const { exitCode } = runDoraval(
+      ["new", "plugin", "ship-it", "--for", "codex", "--yes", "--description", "Ship it"],
+      { cwd: tmp },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(existsSync(join(tmp, "ship-it", ".codex-plugin", "plugin.json"))).toBe(true);
+    expect(existsSync(join(tmp, "ship-it", "skills", "doraval", "SKILL.md"))).toBe(true);
+
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
   test("claude new --yes scaffolds plugin in temp dir", () => {
     const tmp = join(import.meta.dir, "../../tmp-claude-new-test");
     rmSync(tmp, { recursive: true, force: true });

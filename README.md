@@ -218,16 +218,20 @@ High-weight principles show up as errors in every future `dora review` on this p
 | `claude:memory` | `CLAUDE.md` | Non-empty, length limit, `@path` import resolution |
 | `agentskills:skill` | `SKILL.md` | The open [agentskills.io](https://agentskills.io/specification) spec: required `name`/`description`, name-matches-directory, length caps, progressive-disclosure token/line budgets |
 
-### `claude new` / `cursor new` / …: scaffold by construction
+### `new`: scaffold by construction
 
-Interactive wizard for skills and plugins. Targets the coding agent you use — or the one your team and community run.
+One command for skills, rules, agents, and plugins — pick the agent with `--for`.
 
 ```bash
-doraval claude new                              # interactive
-doraval claude new --yes --intent distribute my-plugin   # ship to others
-doraval claude new --yes --intent self my-context        # personal / team
-doraval cursor new / doraval codex new / doraval copilot new
+dora new                                          # interactive: type → agent → name
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new rule --for cursor --name no-defaults --description "Never use default exports" --yes
+dora new agent --for claude --name explorer --yes
+dora new plugin --for codex --name ship-it --yes  # distributable packaging
+dora new skill --for claude --native --yes        # local format, not a plugin
 ```
+
+`dora claude new` / `cursor new` / … still work as thin wrappers; prefer `dora new --for <agent>`.
 
 > The old `validate`, `skill lint`, `judge`/`eval`/`evals`, and `drift` commands were folded into `dora review` (structure = tier 1, heuristics = tier 2, LLM = tier 3; session-adherence analysis returns as the review sessions tier).
 

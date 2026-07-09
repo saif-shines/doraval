@@ -38,8 +38,26 @@ describe("claude context detection", () => {
   });
 
   test("decides plugin sibling for loose SKILL + self-later", () => {
-    const ctx = { cwd: "/tmp", hasClaudeDir: false, hasPluginManifest: false, looseSkillFiles: ["/tmp/foo.md"], isEmpty: false };
-    const d = decidePath(ctx as any, "self-later", "my-helper");
+    const ctx = {
+      cwd: "/tmp",
+      hasPluginManifest: false,
+      hasAgentDir: false,
+      looseSkillFiles: ["/tmp/foo.md"],
+      isEmpty: false,
+      agentSurfaceCount: 0,
+      hasAgentsMd: false,
+      hasClaudeMd: false,
+      hasCursorRules: false,
+      hasCopilotInstructions: false,
+    };
+    const d = decidePath({
+      type: "skill",
+      provider: "claude",
+      intent: "self-later",
+      name: "my-helper",
+      cwd: "/tmp",
+      ctx,
+    });
     expect(d.path).toBe("plugin");
     expect(d.targetDir).toContain("my-helper");
     expect(d.migrateExisting).toBe(true);
