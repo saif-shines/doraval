@@ -170,9 +170,16 @@ jobs:
           timeout_minutes: 10
           max_attempts: 3
           retry_wait_seconds: 30
+          # Platform packages publish WITHOUT --provenance: with it, the PUT
+          # deterministically 404s in CI (3 releases in a row: v0.5.0, v0.5.1,
+          # v0.5.2) even though the provenance statement itself signs and
+          # uploads fine — while the identical publish succeeds locally
+          # without provenance, and the MAIN package publishes fine WITH
+          # provenance from this same job/token. npm-side root cause unknown;
+          # main keeps provenance because it demonstrably works there.
           command: |
             for dir in platform-packages/*/; do
-              (cd "$dir" && npm publish --access public --provenance)
+              (cd "$dir" && npm publish --access public)
             done
             bun run scripts/prepare-npm-publish.ts
             npm publish --access public --provenance
@@ -181,9 +188,12 @@ jobs:
         run: |
           VERSION=$(node -pe "require('./package.json').version")
           mkdir -p /tmp/verify/.git && cd /tmp/verify
-          for i in 1 2 3 4 5; do
+          # Fresh versions can take several minutes to become resolvable
+          # (observed ~3-10 min for new packages, ETARGET for ~2 min on new
+          # versions of existing ones) — 20 x 30s = 10 min budget.
+          for i in $(seq 1 20); do
             npx -y @hacksmith/doraval@"$VERSION" --version && break
-            echo "registry not consistent yet, retry $i" && sleep 20
+            echo "registry not consistent yet, retry $i" && sleep 30
           done
           npx -y @hacksmith/doraval@"$VERSION" --format json | grep -q '"empty"'
 
