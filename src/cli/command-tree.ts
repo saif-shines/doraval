@@ -60,6 +60,7 @@ export const memory = defineGroup(
     list: () => import("./commands/memory/list.js").then((m) => m.default),
     stash: () => import("./commands/memory/stash.js").then((m) => m.default),
     restore: () => import("./commands/memory/restore.js").then((m) => m.default),
+    sync: () => import("./commands/memory/sync.js").then((m) => m.default),
   }
 );
 

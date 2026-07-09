@@ -8,6 +8,16 @@ export function getMemoryDir(): string {
   return join(getDoravalDir(), "memory");
 }
 
+/** The git working tree that holds principles + artifacts (plain dir until first sync). */
+export function getMemoryRepoDir(): string {
+  return join(getMemoryDir(), "repo");
+}
+
+/** Persists the remembered remote (`owner/name` or git URL) after first sync. */
+export function getMemoryRemoteConfigPath(): string {
+  return join(getMemoryDir(), "config.yml");
+}
+
 export function getGlobalPrinciplesPath(): string {
   return join(getMemoryDir(), "repo", "global", "principles.md");
 }

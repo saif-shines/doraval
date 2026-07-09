@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   getMemoryDir,
+  getMemoryRepoDir,
+  getMemoryRemoteConfigPath,
   getProjectSlug,
   sanitize,
   shortHash,
@@ -16,6 +18,18 @@ describe("getMemoryDir", () => {
   test("returns memory/ under doraval dir", () => {
     const result = getMemoryDir();
     expect(result).toBe(join(getDoravalDir(), "memory"));
+  });
+});
+
+describe("getMemoryRepoDir", () => {
+  test("returns memory/repo under doraval dir", () => {
+    expect(getMemoryRepoDir()).toBe(join(getDoravalDir(), "memory", "repo"));
+  });
+});
+
+describe("getMemoryRemoteConfigPath", () => {
+  test("returns memory/config.yml under doraval dir", () => {
+    expect(getMemoryRemoteConfigPath()).toBe(join(getDoravalDir(), "memory", "config.yml"));
   });
 });
 

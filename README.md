@@ -194,9 +194,13 @@ dora memory list
 dora memory stash notes.md     # copy a gitignored/untracked file into project memory
 dora memory stash              # interactive picker over untracked/gitignored candidates
 dora memory restore notes.md   # copy it back (diff + confirm, same as `dora fix`)
+dora memory sync               # backup to a private git repo (first run creates/clones)
+dora memory sync --repo you/dora-memory
 ```
 
 High-weight principles show up as errors in every future `dora review` on this project. Stashed artifacts survive a clean clone — handy for local notes, scratch configs, or anything git deliberately ignores but you don't want to lose. Warns above 5MB per file, refuses above 50MB (use git-lfs instead).
+
+`memory sync` turns `~/.doraval/memory/repo` into a real git clone (not the GitHub Contents API). First run checks `gh auth`, creates a private `{you}/dora-memory` repo if needed, adopts any local files, then commit + `pull --rebase` + push. Later runs are just sync. Concurrent machines union-merge append-only `principles.md` files.
 
 #### Validators (Claude)
 
