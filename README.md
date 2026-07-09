@@ -186,14 +186,17 @@ dora fix . --brief      # emit an agent-ready prompt for judgment-only issues
 
 Exits 1 while fixable or judgment issues remain, 0 when clean.
 
-### `memory`: principles dora enforces
+### `memory`: principles dora enforces, plus stashed artifacts
 
 ```bash
 dora memory add "never use default exports" --weight 8
 dora memory list
+dora memory stash notes.md     # copy a gitignored/untracked file into project memory
+dora memory stash              # interactive picker over untracked/gitignored candidates
+dora memory restore notes.md   # copy it back (diff + confirm, same as `dora fix`)
 ```
 
-High-weight principles show up as errors in every future `dora review` on this project.
+High-weight principles show up as errors in every future `dora review` on this project. Stashed artifacts survive a clean clone — handy for local notes, scratch configs, or anything git deliberately ignores but you don't want to lose. Warns above 5MB per file, refuses above 50MB (use git-lfs instead).
 
 #### Validators (Claude)
 
