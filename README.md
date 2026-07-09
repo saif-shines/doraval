@@ -145,7 +145,7 @@ bun add -g @hacksmith/doraval
 
 ### `dora` (bare): scan the repo
 
-Zero-config diagnosis: agent surfaces, skill health, cross-agent contradictions, and numbered next actions. Works in any repo, no setup, no API key. Conflicts exit 1 and suggest `dora reconcile` (coming next).
+Zero-config diagnosis: agent surfaces, skill health, cross-agent contradictions, and numbered next actions. Works in any repo, no setup, no API key. Conflicts exit 1 and suggest `dora reconcile`.
 
 ```bash
 dora                        # scan from the current directory
@@ -185,6 +185,18 @@ dora fix . --brief      # emit an agent-ready prompt for judgment-only issues
 ```
 
 Exits 1 while fixable or judgment issues remain, 0 when clean.
+
+### `reconcile`: settle cross-agent contradictions
+
+When Claude and Cursor disagree on conventions (or AGENTS.md has Claude-only syntax), reconcile takes the recommended fix: shared AGENTS.md, strip local conflict lines, move agent-specific markers.
+
+```bash
+dora reconcile              # interactive per-contradiction choice
+dora reconcile --dry-run    # list + planned diffs, write nothing
+dora reconcile --apply      # non-interactive, take each recommendation
+```
+
+Same-name skills with different bodies are listed but not auto-merged (judgment required). Empty / single-clean repos exit 0 with "nothing to reconcile."
 
 ### `memory`: principles dora enforces, plus stashed artifacts
 

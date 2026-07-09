@@ -110,6 +110,7 @@ export const topLevelSubCommands = {
   review: () => import("./commands/review.js").then((m) => m.default),
   fix: () => import("./commands/fix.js").then(m => m.default),
   new: () => import("./commands/new.js").then((m) => m.default),
+  reconcile: () => import("./commands/reconcile.js").then((m) => m.default),
   bump: () => import("./commands/bump.js").then((m) => m.default),
   update: () => import("./commands/update.js").then((m) => m.default),
   providers: () => import("./commands/providers.js").then((m) => m.default),
