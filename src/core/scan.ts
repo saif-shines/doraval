@@ -20,6 +20,7 @@ import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
 import { detectCapabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig } from "./journal-config.js";
+import { detectContradictions, type Contradiction } from "./cross-agent.js";
 
 export interface HealthItem {
   text: string;
@@ -52,6 +53,8 @@ export interface ScanResult {
   agents: AgentDetection[];
   crossAgent: CrossAgentSurface;
   health: HealthEntry[];
+  /** B16 — cross-agent config conflicts (empty when none). */
+  contradictions: Contradiction[];
   summary: { passed: number; warnings: number; failed: number };
   intelligence: IntelligenceStatus;
   suggestions: Suggestion[];
@@ -62,6 +65,7 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
   const scope = resolveScanScope(cwd);
   const agents = detectAllAgents(scope.scanRoot, deps);
   const crossAgent = scanCrossAgent(scope.scanRoot);
+  const contradictions = detectContradictions(scope.scanRoot);
 
   const skillDirs = findSkillDirs(scope.scanRoot);
   const health: HealthEntry[] = [];
@@ -147,6 +151,19 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
       command: "dora review --all",
     });
   }
+  if (contradictions.some((c) => c.severity === "conflict")) {
+    suggestions.push({
+      kind: "fix",
+      title: `${contradictions.filter((c) => c.severity === "conflict").length} cross-agent contradiction(s)`,
+      command: "dora reconcile",
+    });
+  } else if (contradictions.length > 0) {
+    suggestions.push({
+      kind: "improve",
+      title: `${contradictions.length} cross-agent gap(s) — review coverage`,
+      command: "dora reconcile --dry-run",
+    });
+  }
 
   return {
     version: pkg.version,
@@ -154,6 +171,7 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
     agents,
     crossAgent,
     health,
+    contradictions,
     summary,
     intelligence,
     suggestions,

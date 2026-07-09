@@ -58,6 +58,17 @@ describe("runScan", () => {
     expect(result.agents.map((a) => a.name)).toContain("claude");
     expect(result.crossAgent.agentsMd).toBe(true);
     expect(result.empty).toBe(false); // AGENTS.md counts as agent context
+    expect(result.contradictions).toEqual([]);
+  });
+
+  test("contradictions surface in scan JSON when agent configs conflict", async () => {
+    const root = makeRepo();
+    writeFileSync(join(root, "CLAUDE.md"), "# Claude\n\nUse 2-space indentation.\n");
+    writeFileSync(join(root, ".cursorrules"), "# Cursor\n\nUse tabs for indentation.\n");
+    const result = await runScan(root, noneInstalled);
+    expect(result.contradictions.length).toBeGreaterThan(0);
+    expect(result.contradictions.some((c) => c.kind === "conflicting_convention")).toBe(true);
+    expect(result.suggestions.some((s) => s.command.includes("reconcile"))).toBe(true);
   });
 
   test("scan of a 10-skill repo completes under 500ms", async () => {

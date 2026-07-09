@@ -58,6 +58,20 @@ function renderHuman(r: ScanResult): void {
     ui.dim(`  ${r.summary.passed} passed · ${r.summary.failed} failed · ${r.summary.warnings} warnings`);
   }
 
+  if (r.contradictions.length > 0) {
+    ui.blank();
+    ui.heading("Contradictions");
+    for (const c of r.contradictions) {
+      const mark = c.severity === "conflict" ? "fail" : "warn";
+      const where = c.sources.map((s) => s.file).join(", ");
+      renderCheck(mark, `${c.message}${where ? pc.dim(`  (${where})`) : ""}`);
+    }
+    ui.blank();
+    ui.dim(
+      `  ${r.contradictions.filter((c) => c.severity === "conflict").length} conflicts · ${r.contradictions.filter((c) => c.severity === "gap").length} gaps`,
+    );
+  }
+
   ui.blank();
   ui.heading("Intelligence");
   renderCheck(r.intelligence.judge === "none" ? "warn" : "ok", r.intelligence.detail);
@@ -88,7 +102,8 @@ export default defineCommand({
       const result = await runScan((args.cwd as string) || process.cwd());
       if (mode.format === "json") outJson(result);
       else renderHuman(result);
-      await exit(result.summary.failed > 0 ? 1 : 0);
+      const hasConflicts = result.contradictions.some((c) => c.severity === "conflict");
+      await exit(result.summary.failed > 0 || hasConflicts ? 1 : 0);
     } catch (e) {
       emitError(e, mode);
       await exit(2);

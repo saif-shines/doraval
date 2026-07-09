@@ -26,7 +26,7 @@ doraval is the toolkit for **context engineering** — authoring, validating, an
 > npx @hacksmith/doraval
 > ```
 
-Bare `dora` scans the repo: which agents are configured, every skill's health, and the exact next command to run — zero config, no API key needed.
+Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions (conflicting conventions, coverage gaps, stale AGENTS.md), and the exact next command to run — zero config, no API key needed.
 
 Typical first run:
 
@@ -145,7 +145,7 @@ bun add -g @hacksmith/doraval
 
 ### `dora` (bare): scan the repo
 
-Zero-config diagnosis: agent surfaces, skill health, and numbered next actions. Works in any repo, no setup, no API key.
+Zero-config diagnosis: agent surfaces, skill health, cross-agent contradictions, and numbered next actions. Works in any repo, no setup, no API key. Conflicts exit 1 and suggest `dora reconcile` (coming next).
 
 ```bash
 dora                        # scan from the current directory
