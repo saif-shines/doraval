@@ -239,6 +239,16 @@ doraval journal hook enable   # inject journal on every SessionStart
 
 Requires the GitHub CLI (`gh`). Journal lives in a private GitHub repo you control.
 
+### `sessions`: what your agents actually did
+
+```bash
+dora sessions                    # list recent sessions (Claude Code, Grok today)
+dora sessions --agent claude     # filter by agent
+dora sessions show <id>          # timeline: turns, tool calls, skills invoked
+```
+
+Codex, Copilot, and Cursor adapters are planned — `dora sessions` degrades to an honest "not supported yet" message for them today rather than pretending to have data it doesn't.
+
 ### `config`: dot-notation settings
 
 ```bash
