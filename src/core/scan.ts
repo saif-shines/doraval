@@ -21,6 +21,7 @@ import { analyzeDrift } from "./static-skill-checks.js";
 import { detectCapabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig } from "./journal-config.js";
 import { detectContradictions, type Contradiction } from "./cross-agent.js";
+import { planPromote } from "./memory-promote.js";
 
 export interface HealthItem {
   text: string;
@@ -163,6 +164,20 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
       title: `${contradictions.length} cross-agent gap(s) — review coverage`,
       command: "dora reconcile --dry-run",
     });
+  }
+
+  // High-weight principles not yet in AGENTS.md → promote suggestion (B13a)
+  try {
+    const promote = planPromote(scope.scanRoot);
+    if (!promote.noop && promote.candidates.length > 0) {
+      suggestions.push({
+        kind: "improve",
+        title: `${promote.candidates.length} high-weight principle(s) not in AGENTS.md`,
+        command: "dora memory promote",
+      });
+    }
+  } catch {
+    // intentional: memory store optional; scan must not fail without it
   }
 
   return {
