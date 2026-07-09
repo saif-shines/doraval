@@ -6,6 +6,7 @@ import {
   copyFileSync,
   statSync,
   lstatSync,
+  realpathSync,
 } from "fs";
 import { join, relative, dirname, sep } from "path";
 import { spawnSync } from "bun";
@@ -134,6 +135,15 @@ export function stashFile(cwd: string, slug: string, absPath: string): StashResu
     return {
       ok: false,
       error: `${relativePath} is a symlink — refusing to stash symlinks (they may point outside the project root)`,
+    };
+  }
+  const realCwd = realpathSync(cwd);
+  const realAbsPath = realpathSync(absPath);
+  const realRelative = relative(realCwd, realAbsPath).split(sep).join("/");
+  if (realRelative === ".." || realRelative.startsWith("../") || realRelative === "") {
+    return {
+      ok: false,
+      error: `${relativePath} resolves outside the project root (${cwd}) — refusing to stash`,
     };
   }
 

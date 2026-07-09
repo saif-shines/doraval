@@ -180,6 +180,20 @@ describe("stashFile", () => {
 
     rmSync(outsideTarget, { force: true });
   });
+
+  test("refuses a directory symlink escape (leaf file is real, ancestor dir is a symlink)", () => {
+    const outsideDir = join(tmpdir(), `doraval-outside-dir-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    mkdirSync(outsideDir, { recursive: true });
+    writeFileSync(join(outsideDir, "secret.txt"), "TOP SECRET");
+
+    const linkPath = join(repoDir, "linkdir");
+    symlinkSync(outsideDir, linkPath, "dir");
+
+    const result = stashFile(repoDir, "slug-b", join(repoDir, "linkdir", "secret.txt"));
+    expect(result.ok).toBe(false);
+
+    rmSync(outsideDir, { recursive: true, force: true });
+  });
 });
 
 describe("planRestore / applyRestore", () => {
