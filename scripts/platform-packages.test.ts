@@ -48,8 +48,11 @@ describe("assemblePlatformPackage", () => {
     const dir = assemblePlatformPackage(t, "0.5.0", fakeBinary, join(tmp, "out"));
     expect(existsSync(join(dir, "package.json"))).toBe(true);
     expect(existsSync(join(dir, "bin", "doraval"))).toBe(true);
-    const mode = statSync(join(dir, "bin", "doraval")).mode & 0o777;
-    expect(mode & 0o111).toBeGreaterThan(0); // executable
+    // chmod bit is meaningless on Windows NTFS even when we set 0o755 for non-win32 packages
+    if (process.platform !== "win32") {
+      const mode = statSync(join(dir, "bin", "doraval")).mode & 0o777;
+      expect(mode & 0o111).toBeGreaterThan(0); // executable
+    }
     const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8"));
     expect(pkg.name).toBe("@hacksmith/doraval-linux-x64");
   });

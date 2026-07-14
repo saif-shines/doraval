@@ -1,7 +1,7 @@
 # WIP — Doraval work tracker (resume here)
 
 > **Pinned:** 2026-07-14 · version **0.6.0** · dogfood B33–B39 + B40 partial · push/tag to ship
-> **Branch:** `main` · ahead of `origin/main` (not pushed)  
+> **Branch:** `main` · synced with origin after v0.6.0 push (local fixes may be ahead)  
 > **Policy:** no more version bumps until an explicit release; batch ships as **0.6.0**.  
 > **Plan:** [`docs/EXCEPTIONAL-CLI-PLAN.md`](docs/EXCEPTIONAL-CLI-PLAN.md) (v7 + dogfood B33–B40)  
 > This is the **only** progress pin — do not recreate `STATUS.md`.
@@ -61,6 +61,11 @@ node -e "console.log(require('./package.json').version)"  # 0.6.0
 bun test
 bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 ```
+
+## Gaps found after 0.6.0 tag
+
+- Test CI failed on **windows-latest** only: platform package chmod bit + `.cursor/rules` path separators — **fixed** (this commit).
+- Release pipeline for v0.6.0 was still running after binaries built.
 
 ## Release
 

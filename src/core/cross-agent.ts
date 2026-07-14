@@ -6,6 +6,11 @@
 import { createHash } from "crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { basename, join, relative } from "path";
+
+/** Repo-relative path with `/` separators (stable across Windows CI). */
+function relPosix(cwd: string, abs: string): string {
+  return relative(cwd, abs).split(/[/\\]/).join("/");
+}
 import { parseFrontmatter } from "./frontmatter.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import type { AgentName } from "./agent-detect.js";
@@ -227,10 +232,10 @@ export function collectConfigSurfaces(cwd: string): ConfigSurface[] {
   push("copilot", ".github/copilot-instructions.md");
 
   for (const abs of listRuleFiles(join(cwd, ".claude", "rules"))) {
-    push("claude", relative(cwd, abs));
+    push("claude", relPosix(cwd, abs));
   }
   for (const abs of listRuleFiles(join(cwd, ".cursor", "rules"))) {
-    push("cursor", relative(cwd, abs));
+    push("cursor", relPosix(cwd, abs));
   }
 
   return out;
@@ -482,7 +487,7 @@ export function detectContradictions(cwd: string): Contradiction[] {
     const hash = contentHash(parsed.content || raw);
     const list = byName.get(name) ?? [];
     list.push({
-      dir: relative(cwd, dir) || ".",
+      dir: relPosix(cwd, dir) || ".",
       hash,
       snippet: (parsed.content || raw).trim().slice(0, 80).replace(/\n/g, " "),
     });
