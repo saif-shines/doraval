@@ -60,25 +60,49 @@ export const SUPPORTING_DIRS = ["references", "scripts", "assets", "examples"] a
 
 export const OPTIONAL_DIRS = ["references", "scripts", "assets"] as const;
 
-export async function loadSkill(dir: string): Promise<
+/** agentskills.io description max (also used as Claude-path soft ceiling). */
+export const DESCRIPTION_MAX_LENGTH = 1024;
+
+/** Rough token estimate without a tokenizer: ~4 chars/token. */
+export function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+export type LoadSkillResult =
   | { ok: true; model: SkillModel; existingDirs: string[] }
-  | { ok: false; error: string }
-> {
+  | { ok: false; error: string };
+
+/**
+ * Load SKILL.md from a skill directory.
+ * @param dirOptions.dirs — which supporting dirs to report as present (default OPTIONAL_DIRS).
+ */
+export async function loadSkill(
+  dir: string,
+  dirOptions: { dirs?: readonly string[] } = {},
+): Promise<LoadSkillResult> {
   const skillMd = resolve(dir, "SKILL.md");
   if (!existsSync(skillMd)) {
     return { ok: false, error: "No SKILL.md found" };
   }
   const raw = await Bun.file(skillMd).text();
-  let parsed;
+  let parsed: SkillModel;
   try {
     parsed = parseFrontmatter(raw);
   } catch {
-    return { ok: false, error: "Failed to parse YAML frontmatter in SKILL.md" };
+    return { ok: false, error: "frontmatter-parse-error" };
   }
-  const existingDirs = OPTIONAL_DIRS.filter((d) =>
-    existsSync(resolve(dir, d))
-  );
-  return { ok: true, model: parsed, existingDirs };
+  const dirs = dirOptions.dirs ?? OPTIONAL_DIRS;
+  const existingDirs = dirs.filter((d) => existsSync(resolve(dir, d)));
+  return {
+    ok: true,
+    model: { data: parsed.data, content: parsed.content },
+    existingDirs: [...existingDirs],
+  };
+}
+
+/** Same as loadSkill, scanning SUPPORTING_DIRS (includes examples/). */
+export async function loadSkillFromDir(dir: string): Promise<LoadSkillResult> {
+  return loadSkill(dir, { dirs: SUPPORTING_DIRS });
 }
 
 export function checkFrontmatterPresence(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
@@ -102,8 +126,6 @@ export function checkName(model: SkillModel, _ctx: SkillValidateContext): CheckR
   }
   return { passes: [{ text: `name: "${name}"` }] };
 }
-
-const DESCRIPTION_MAX_LENGTH = 1024;
 
 export function checkDescription(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
   if (!model.data.description) {
@@ -137,7 +159,7 @@ export function checkBodySize(model: SkillModel, _ctx: SkillValidateContext): Ch
   if (len > BODY_SIZE_WARN_CHARS) {
     return {
       warnings: [{
-        text: `SKILL.md body is ${len.toLocaleString()} chars (~${Math.round(len / 4).toLocaleString()} tokens) — consider moving detail into references/ so it loads only on demand`,
+        text: `SKILL.md body is ${len.toLocaleString()} chars (~${estimateTokens(model.content).toLocaleString()} tokens) — consider moving detail into references/ so it loads only on demand`,
       }],
     };
   }
@@ -240,25 +262,4 @@ export function validateSkillModel(
     (acc, check) => merge(acc, check(model, context)),
     EMPTY
   );
-}
-
-export async function loadSkillFromDir(dir: string): Promise<
-  | { ok: true; model: SkillModel; existingDirs: string[] }
-  | { ok: false; error: string }
-> {
-  const skillMd = resolve(dir, "SKILL.md");
-  if (!existsSync(skillMd)) {
-    return { ok: false, error: "No SKILL.md found" };
-  }
-  const raw = await Bun.file(skillMd).text();
-  let parsed;
-  try {
-    parsed = parseFrontmatter(raw);
-  } catch {
-    return { ok: false, error: "frontmatter-parse-error" };
-  }
-  const existingDirs = SUPPORTING_DIRS.filter((d) =>
-    existsSync(resolve(dir, d))
-  );
-  return { ok: true, model: { data: parsed.data, content: parsed.content }, existingDirs };
 }

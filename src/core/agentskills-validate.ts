@@ -2,7 +2,11 @@ import { existsSync } from "fs";
 import { basename, resolve } from "path";
 import type { CheckItem } from "../validators/types.js";
 import type { SkillModel } from "./skill-validate.js";
-import { merge } from "./skill-validate.js";
+import {
+  DESCRIPTION_MAX_LENGTH,
+  estimateTokens,
+  merge,
+} from "./skill-validate.js";
 
 /**
  * Validation against the open agentskills.io specification
@@ -37,7 +41,6 @@ export type AgentSkillCheck = (model: SkillModel, ctx: AgentSkillValidateContext
 // Unicode-lowercase alphanumeric + hyphens; no leading/trailing/consecutive hyphen (spec allows digit-start).
 const NAME_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const NAME_MAX_LEN = 64;
-const DESCRIPTION_MAX_LEN = 1024;
 const COMPATIBILITY_MAX_LEN = 500;
 
 // Level 2 progressive-disclosure budget (agentskills.io/specification#progressive-disclosure).
@@ -53,10 +56,8 @@ export const AGENTSKILLS_FIELDS = new Set([
   "allowed-tools",
 ]);
 
-/** Rough token estimate (no tokenizer dependency): ~4 chars/token, the common heuristic. */
-export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
+// Re-export for tests that import estimateTokens from this module.
+export { estimateTokens };
 
 export function checkName(model: SkillModel, ctx: AgentSkillValidateContext): AgentSkillCheckResult {
   const raw = model.data.name;
@@ -87,8 +88,8 @@ export function checkDescription(model: SkillModel, _ctx: AgentSkillValidateCont
     return { errors: [{ text: 'Missing required "description" field (agentskills.io spec requires description)' }] };
   }
   const description = String(raw);
-  if (description.length > DESCRIPTION_MAX_LEN) {
-    return { errors: [{ text: `Description length out of range: ${description.length} chars (must be 1-${DESCRIPTION_MAX_LEN})` }] };
+  if (description.length > DESCRIPTION_MAX_LENGTH) {
+    return { errors: [{ text: `Description length out of range: ${description.length} chars (must be 1-${DESCRIPTION_MAX_LENGTH})` }] };
   }
   return { passes: [{ text: "description field present and within length limit" }] };
 }

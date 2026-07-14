@@ -79,6 +79,18 @@ Still not worth doing this pass (named, skip):
 - collapse `RenderBackend` seam (one impl today; parked for possible `dora ui`)
 - website journal pages (B26/B27, large docs track)
 
+
+## Validation dedupe (ponytail audit execute, 2026-07-14)
+
+Executed low-risk audit items (no version bump):
+
+1. **MCP factory** — `createMcpValidator` in `src/validators/shared/mcp.ts`; 4 provider mcp.ts files are thin wrappers
+2. **Skill factory** — `createSkillValidator` in `src/validators/shared/skill-validator.ts`; codex/cursor/copilot/claude skill.ts thin (claude keeps includeDrift)
+3. **loadSkill merge** — single loader + `loadSkillFromDir` alias with SUPPORTING_DIRS
+4. **Shared** `DESCRIPTION_MAX_LENGTH` + `estimateTokens` on skill-validate (agentskills re-exports)
+
+Deferred (higher risk / still dual specs): full skill-validate + agentskills profile merge; marketplace/plugin schema tables; pass-message spam.
+
 ## Plan design history (Exceptional CLI v1–v7)
 
 Kept for context; not the live queue (see table above).
