@@ -25,11 +25,14 @@ export function checkTrigger(input: SkillDriftInput): DriftItem {
     input.description.includes("Use when") ||
     input.description.includes("trigger") ||
     input.description.includes("invoke");
+  const hasQuotedPhrase = /["“][^"”]{3,}["”]/.test(input.description);
   return {
     drifted: !hasTriggers,
     category: "Trigger",
     detail: hasTriggers
-      ? "Description includes activation phrases"
+      ? hasQuotedPhrase
+        ? "Description includes activation cue and quoted trigger phrase(s)"
+        : 'Description includes activation phrases (tip: a quoted example like "review this PR" gives the agent concrete phrasing to match, not just the cue)'
       : 'No trigger phrases found — add "Use when..." to description',
   };
 }
@@ -109,4 +112,56 @@ const checks: DriftCheck[] = [
 export function analyzeDrift(input: SkillDriftInput): SkillDriftResult {
   const drifts = checks.map(check => check(input));
   return { drifts, driftCount: drifts.filter(d => d.drifted).length, total: drifts.length };
+}
+
+// ── Script security ───────────────────────────────────────────────────────────
+// Skills bundling scripts/ can exfiltrate data or ask for credentials (real-world
+// findings from Cisco/Snyk on malicious community skills). Flag suspicious
+// patterns so a reviewer looks before trusting a script — this doesn't prove
+// malice, it just surfaces what to eyeball.
+
+const NETWORK_CALL_PATTERNS: RegExp[] = [
+  /\bcurl\s+(-\S+\s+)*-X\s*(POST|PUT|PATCH)\b/i,
+  /\bwget\b/i,
+  /\bfetch\(\s*["'`]https?:/i,
+  /\baxios\.(get|post|put|patch)\(/i,
+  /\brequests\.(get|post|put|patch)\(/i,
+  /\burllib\.request/i,
+  /\bnew XMLHttpRequest\b/,
+  /\bhttp\.request\(/i,
+  /\bnet\/http\b/,
+  /\bnc\s+-e\b/i,
+];
+
+const SECRET_PROMPT_PATTERNS: RegExp[] = [
+  /paste (your )?(api[- ]?key|token|password|secret|credential)/i,
+  /enter (your )?(api[- ]?key|token|password|secret|credential)/i,
+];
+
+export interface ScriptFile {
+  file: string;
+  content: string;
+}
+
+export function scanScriptSecurity(scripts: ScriptFile[]): DriftItem[] {
+  const items: DriftItem[] = [];
+  for (const s of scripts) {
+    const netHit = NETWORK_CALL_PATTERNS.find((p) => p.test(s.content));
+    if (netHit) {
+      items.push({
+        drifted: true,
+        category: "Script security",
+        detail: `${s.file}: outbound network call pattern detected — review before trusting this skill`,
+      });
+    }
+    const secretHit = SECRET_PROMPT_PATTERNS.find((p) => p.test(s.content));
+    if (secretHit) {
+      items.push({
+        drifted: true,
+        category: "Script security",
+        detail: `${s.file}: prompts for an API key/token/password/secret — review before trusting this skill`,
+      });
+    }
+  }
+  return items;
 }

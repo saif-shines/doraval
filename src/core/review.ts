@@ -1,5 +1,7 @@
+import { readFileSync, readdirSync, statSync } from "fs";
+import { resolve as resolvePath, relative } from "path";
 import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
-import { analyzeDrift } from "./static-skill-checks.js";
+import { analyzeDrift, scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
 import { lintSkill, runJudge, type LintResult } from "./skill-lint.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
@@ -93,6 +95,33 @@ function makeFix(text: string): ReviewFinding["fix"] | undefined {
   return undefined;
 }
 
+function readScriptFiles(scriptsDir: string): ScriptFile[] {
+  const out: ScriptFile[] = [];
+  function walk(d: string): void {
+    let entries;
+    try {
+      entries = readdirSync(d, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = resolvePath(d, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.isFile()) {
+        try {
+          if (statSync(full).size > 1_000_000) continue; // skip anything oversized (binaries, etc.)
+          out.push({ file: relative(scriptsDir, full), content: readFileSync(full, "utf8") });
+        } catch {
+          // unreadable (binary, permissions) — skip rather than fail the review
+        }
+      }
+    }
+  }
+  walk(scriptsDir);
+  return out;
+}
+
 // ── reviewSkill ────────────────────────────────────────────────────────────────
 
 export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<ReviewResult> {
@@ -181,6 +210,33 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     fixable: d.drifted,
     ...(d.drifted ? { fix: { type: "content" as const, description: d.detail } } : {}),
   }));
+
+  // Tier 2a: scripts/ security scan — outbound network calls, secret prompts.
+  // Only runs when a scripts/ dir exists; a clean scan still records a pass so
+  // "no scripts/" and "scripts/ reviewed clean" stay distinguishable in output.
+  if (existingDirs.includes("scripts")) {
+    const scriptFiles = readScriptFiles(resolvePath(dir, "scripts"));
+    const scriptHits = scanScriptSecurity(scriptFiles);
+    if (scriptHits.length === 0) {
+      heurFindings.push({
+        id: `heur-${pad(hIdx++)}`,
+        tier: "heuristics" as const,
+        severity: "pass" as const,
+        message: "scripts/ contains no suspicious network-call or secret-prompt patterns",
+        fixable: false,
+      });
+    } else {
+      for (const hit of scriptHits) {
+        heurFindings.push({
+          id: `heur-${pad(hIdx++)}`,
+          tier: "heuristics" as const,
+          severity: "warning" as const,
+          message: hit.detail,
+          fixable: false,
+        });
+      }
+    }
+  }
 
   // Tier 2b: principle keyword checks (free, from dora memory)
   const principles = loadPrinciples(opts.cwd ?? process.cwd());

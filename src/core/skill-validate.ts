@@ -103,9 +103,19 @@ export function checkName(model: SkillModel, _ctx: SkillValidateContext): CheckR
   return { passes: [{ text: `name: "${name}"` }] };
 }
 
+const DESCRIPTION_MAX_LENGTH = 1024;
+
 export function checkDescription(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
   if (!model.data.description) {
     return { warnings: [{ text: 'Missing "description" (recommended) — helps Claude decide when to load the skill automatically' }] };
+  }
+  const desc = String(model.data.description);
+  if (desc.length > DESCRIPTION_MAX_LENGTH) {
+    return {
+      warnings: [{
+        text: `description is ${desc.length} chars — exceeds the agentskills.io spec max of ${DESCRIPTION_MAX_LENGTH}`,
+      }],
+    };
   }
   return { passes: [{ text: "description field present" }] };
 }
@@ -115,6 +125,60 @@ export function checkBody(model: SkillModel, _ctx: SkillValidateContext): CheckR
     return { errors: [{ text: "Markdown body is empty" }] };
   }
   return { passes: [{ text: "Markdown body is non-empty" }] };
+}
+
+// Progressive disclosure: Level 2 (the SKILL.md body) should stay lean since it's
+// loaded in full whenever the skill triggers. ~5k tokens (~20k chars) is the rule
+// of thumb before detail belongs in references/ instead (loaded only on demand).
+const BODY_SIZE_WARN_CHARS = 20_000;
+
+export function checkBodySize(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  const len = model.content.length;
+  if (len > BODY_SIZE_WARN_CHARS) {
+    return {
+      warnings: [{
+        text: `SKILL.md body is ${len.toLocaleString()} chars (~${Math.round(len / 4).toLocaleString()} tokens) — consider moving detail into references/ so it loads only on demand`,
+      }],
+    };
+  }
+  return { passes: [{ text: "SKILL.md body size is within the progressive-disclosure budget" }] };
+}
+
+// The agentskills.io spec warns against `<`/`>` in frontmatter values: they can be
+// interpreted as tags and inject unintended instructions into the system prompt
+// when Level 1 metadata is loaded. Treated as an error, not style, since it's a
+// prompt-injection vector.
+function collectStrings(value: unknown, out: string[]): void {
+  if (typeof value === "string") {
+    out.push(value);
+  } else if (Array.isArray(value)) {
+    for (const v of value) collectStrings(v, out);
+  } else if (value && typeof value === "object") {
+    for (const v of Object.values(value)) collectStrings(v, out);
+  }
+}
+
+export function checkFrontmatterInjection(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  const strings: string[] = [];
+  collectStrings(model.data, strings);
+  const offenders = strings.filter((s) => /[<>]/.test(s));
+  if (offenders.length > 0) {
+    return {
+      errors: [{
+        text: `Frontmatter contains "<" or ">" — possible prompt-injection vector; the spec requires plain text in frontmatter values`,
+      }],
+    };
+  }
+  return { passes: [{ text: "frontmatter free of angle brackets" }] };
+}
+
+export function checkAllowedToolsPortability(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
+  if (!("allowed-tools" in model.data)) return {};
+  return {
+    passes: [{
+      text: '"allowed-tools" is experimental per the agentskills.io spec — well-supported in Claude Code, support varies on other platforms (Codex, OpenClaw)',
+    }],
+  };
 }
 
 export function checkAdvancedFields(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
@@ -159,6 +223,9 @@ const checks: Check[] = [
   checkName,
   checkDescription,
   checkBody,
+  checkBodySize,
+  checkFrontmatterInjection,
+  checkAllowedToolsPortability,
   checkAdvancedFields,
   checkUnknownFields,
   checkSupportingDirs,
