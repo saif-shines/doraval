@@ -243,7 +243,11 @@ export function planReconcile(cwd: string, pick: PickResolution = recommendedOpt
     if (cx.kind === "duplicate_intent") {
       items.push({
         contradiction: cx,
-        chosen: { action: "skip", label: "Judgment required — pick one skill body manually" },
+        chosen: {
+          action: "skip",
+          label: "Judgment required — pick one skill body manually",
+          actor: "you",
+        },
         edits: [],
         skipReason: "duplicate skill bodies need a human choice (not auto-applied)",
       });

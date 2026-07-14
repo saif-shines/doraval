@@ -10,7 +10,13 @@ import {
   stripTopicLines,
   RECONCILE_START,
 } from "./reconcile.js";
-import { detectContradictions } from "./cross-agent.js";
+import {
+  actorTag,
+  detectContradictions,
+  formatContradictionHeadline,
+  withActors,
+  type Contradiction,
+} from "./cross-agent.js";
 
 function makeRepo(): string {
   const root = mkdtempSync(join(tmpdir(), "dora-reconcile-"));
@@ -124,5 +130,59 @@ describe("planReconcile / applyReconcile", () => {
     const plan = planReconcile(root, () => ({ action: "skip", label: "leave it" }));
     expect(plan.items.every((i) => i.skipReason || i.chosen.action === "skip")).toBe(true);
     expect(plan.fileEdits).toHaveLength(0);
+  });
+});
+
+describe("B36 human labels + actors", () => {
+  test("formatContradictionHeadline leads with kind not bare id", () => {
+    const cx: Contradiction = {
+      id: "cx-001",
+      kind: "duplicate_intent",
+      severity: "conflict",
+      message: 'Skill "review" has 2 copies with different bodies',
+      sources: [
+        { agent: "shared", file: ".claude/skills/review/SKILL.md", text: "a" },
+        { agent: "shared", file: "skills/review/SKILL.md", text: "b" },
+      ],
+      resolution: [],
+    };
+    const h = formatContradictionHeadline(cx);
+    expect(h).toContain("duplicate_intent");
+    expect(h).toContain("review");
+    expect(h).not.toMatch(/^cx-/);
+  });
+
+  test("withActors tags mechanical vs judgment", () => {
+    const opts = withActors([
+      { action: "create_agents_md", label: "x", file: "AGENTS.md" },
+      { action: "skip", label: "y" },
+      { action: "update_file", label: "pick body" },
+    ]);
+    expect(opts[0]!.actor).toBe("dora");
+    expect(opts[1]!.actor).toBe("you");
+    expect(opts[2]!.actor).toBe("you");
+    expect(actorTag("dora")).toContain("dora writes");
+    expect(actorTag("you")).toContain("you choose");
+  });
+
+  test("duplicate_intent dry plan yields judgment skip and no edits", () => {
+    const root = makeRepo();
+    const { mkdirSync } = require("fs");
+    mkdirSync(join(root, ".claude/skills/review"), { recursive: true });
+    mkdirSync(join(root, "skills/review"), { recursive: true });
+    writeFileSync(
+      join(root, ".claude/skills/review/SKILL.md"),
+      "---\nname: review\ndescription: A\n---\n\nBody one\n",
+    );
+    writeFileSync(
+      join(root, "skills/review/SKILL.md"),
+      "---\nname: review\ndescription: A\n---\n\nBody two different\n",
+    );
+    const plan = planReconcile(root);
+    expect(plan.fileEdits).toHaveLength(0);
+    const dup = plan.items.find((i) => i.contradiction.kind === "duplicate_intent");
+    expect(dup?.chosen.actor).toBe("you");
+    const h = formatContradictionHeadline(dup!.contradiction);
+    expect(h.startsWith("duplicate_intent")).toBe(true);
   });
 });

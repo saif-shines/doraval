@@ -36,11 +36,16 @@ export interface ContradictionSource {
   text: string;
 }
 
+/** Who acts if this resolution is chosen (B36). */
+export type ResolutionActor = "dora" | "you" | "agent";
+
 export interface ResolutionOption {
   action: "update_file" | "create_agents_md" | "skip";
   label: string;
   file?: string;
   recommended?: boolean;
+  /** [dora writes] | [you choose] | [agent prompt] */
+  actor?: ResolutionActor;
 }
 
 export interface Contradiction {
@@ -50,6 +55,44 @@ export interface Contradiction {
   message: string;
   sources: ContradictionSource[];
   resolution: ResolutionOption[];
+}
+
+/** Infer actor when not set: mechanical writes → dora; skip / vague update → you. */
+export function withActors(opts: ResolutionOption[]): ResolutionOption[] {
+  return opts.map((o) => {
+    if (o.actor) return o;
+    if (o.action === "skip") return { ...o, actor: "you" as const };
+    if (o.action === "update_file" && !o.file) return { ...o, actor: "you" as const };
+    return { ...o, actor: "dora" as const };
+  });
+}
+
+export function actorTag(actor: ResolutionActor | undefined): string {
+  switch (actor) {
+    case "dora":
+      return "[dora writes]";
+    case "agent":
+      return "[agent prompt]";
+    case "you":
+    default:
+      return "[you choose]";
+  }
+}
+
+/** Human primary line: kind + paths — not bare cx-NNN (B36). */
+export function formatContradictionHeadline(cx: Contradiction): string {
+  const files = [...new Set(cx.sources.map((s) => s.file))];
+  if (cx.kind === "duplicate_intent") {
+    const name = cx.message.match(/Skill "([^"]+)"/)?.[1] ?? "skill";
+    return `duplicate_intent · ${name} (${files.length} copies)`;
+  }
+  const pathBit =
+    files.length === 0
+      ? "(no paths)"
+      : files.length <= 2
+        ? files.join(", ")
+        : `${files[0]} +${files.length - 1} more`;
+  return `${cx.kind} · ${pathBit}`;
 }
 
 export interface ExtractedConvention {
@@ -225,7 +268,7 @@ function resolveOptionsForConflict(sources: ContradictionSource[]): ResolutionOp
     opts.push({ action: "update_file", label: `Update ${f} to match the other side`, file: f });
   }
   opts.push({ action: "skip", label: "Mark intentional — leave as-is" });
-  return opts;
+  return withActors(opts);
 }
 
 /** Layer 1 + Layer 2 contradiction detection. Pure filesystem, free. */
@@ -328,7 +371,7 @@ export function detectContradictions(cwd: string): Contradiction[] {
             text: sample.raw,
           },
         ],
-        resolution: [
+        resolution: withActors([
           {
             action: "create_agents_md",
             label: "Promote to AGENTS.md so all agents share it",
@@ -340,7 +383,7 @@ export function detectContradictions(cwd: string): Contradiction[] {
             label: `Copy into the other agent config(s)`,
           },
           { action: "skip", label: "Intentional agent-specific rule" },
-        ],
+        ]),
       });
     }
   }
@@ -371,7 +414,7 @@ export function detectContradictions(cwd: string): Contradiction[] {
           { agent: c.agent, file: c.file, line: c.line, text: c.raw },
           { agent: "shared", file: "AGENTS.md", text: "(no matching convention found)" },
         ],
-        resolution: [
+        resolution: withActors([
           {
             action: "update_file",
             label: "Add this convention to AGENTS.md",
@@ -379,7 +422,7 @@ export function detectContradictions(cwd: string): Contradiction[] {
             recommended: true,
           },
           { action: "skip", label: "Keep agent-local only" },
-        ],
+        ]),
       });
     }
   }
@@ -409,7 +452,7 @@ export function detectContradictions(cwd: string): Contradiction[] {
             text: lineNo ? lines[lineNo - 1]!.trim() : marker.label,
           },
         ],
-        resolution: [
+        resolution: withActors([
           {
             action: "update_file",
             label: "Move Claude-only syntax into CLAUDE.md",
@@ -422,7 +465,7 @@ export function detectContradictions(cwd: string): Contradiction[] {
             file: "AGENTS.md",
           },
           { action: "skip", label: "Leave as-is" },
-        ],
+        ]),
       });
     }
   }
@@ -459,14 +502,15 @@ export function detectContradictions(cwd: string): Contradiction[] {
         file: join(c.dir, "SKILL.md"),
         text: c.snippet,
       })),
-      resolution: [
+      resolution: withActors([
         {
           action: "update_file",
           label: "Pick one body and sync the others",
           recommended: true,
+          actor: "you",
         },
-        { action: "skip", label: "Intentional variants" },
-      ],
+        { action: "skip", label: "Intentional variants", actor: "you" },
+      ]),
     });
   }
 
