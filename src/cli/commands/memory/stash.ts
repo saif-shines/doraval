@@ -9,6 +9,9 @@ import { canPromptInteractively } from "../fix.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
+/** Interactive picker cap — B34 large-N default (never truncate silently). */
+const STASH_PICKER_CAP = 20;
+
 export default defineCommand({
   meta: { name: "stash", description: "Copy a gitignored/untracked file into project memory (survives a clean clone)" },
   args: {
@@ -44,9 +47,17 @@ export default defineCommand({
           return;
         }
 
+        let pickerList = candidates;
+        if (candidates.length > STASH_PICKER_CAP) {
+          ui.dim(
+            `  Showing ${STASH_PICKER_CAP} of ${candidates.length} candidates — pass a path to stash others.`,
+          );
+          pickerList = candidates.slice(0, STASH_PICKER_CAP);
+        }
+
         const selected = await multiselect({
           message: "Select files to stash into project memory",
-          options: candidates.map((c) => ({ value: c.relativePath, label: `${c.relativePath} (${c.status})` })),
+          options: pickerList.map((c) => ({ value: c.relativePath, label: `${c.relativePath} (${c.status})` })),
           required: false,
           output: process.stderr,
         });

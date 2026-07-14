@@ -8,6 +8,8 @@ import {
   parseScaffoldType,
   SCAFFOLD_PROVIDERS,
   SCAFFOLD_TYPES,
+  SCAFFOLD_TYPE_HINTS,
+  SCAFFOLD_INTENT_HINTS,
   type Intent,
   type ScaffoldType,
 } from "../../core/scaffold-wizard.js";
@@ -17,15 +19,18 @@ import { ui, resolveOutputMode, outJson, emitError, summaryLine } from "../out.j
 import { exit } from "../render/exit.js";
 import type { ProviderId } from "../../providers/types.js";
 
+const TYPE_HELP =
+  "skill = reusable SKILL.md · rule = always-on convention · agent = subagent role · plugin = package to ship";
+
 export default defineCommand({
   meta: {
     name: "new",
-    description: "Scaffold a skill, rule, agent, or plugin for a coding agent",
+    description: `Scaffold a skill, rule, agent, or plugin for a coding agent (${TYPE_HELP})`,
   },
   args: {
     type: {
       type: "positional",
-      description: "What to create: skill | rule | agent | plugin",
+      description: `What to create: skill | rule | agent | plugin — ${TYPE_HELP}`,
       required: false,
     },
     name: {
@@ -84,7 +89,11 @@ export default defineCommand({
       if (!type && !yes) {
         type = await promptSelect<ScaffoldType>(
           "What do you want to create?",
-          SCAFFOLD_TYPES.map((t) => ({ value: t, label: t })),
+          SCAFFOLD_TYPES.map((t) => ({
+            value: t,
+            label: t,
+            hint: SCAFFOLD_TYPE_HINTS[t],
+          })),
           "skill",
         );
       }
@@ -115,11 +124,11 @@ export default defineCommand({
       } else if (!yes && (type === "skill" || type === "plugin")) {
         intent = await promptSelect<Intent>(
           "Intent",
-          [
-            { value: "self", label: "self", hint: "use in this repo now" },
-            { value: "self-later", label: "self-later", hint: "personal now, promote later" },
-            { value: "distribute", label: "distribute", hint: "ship to others" },
-          ],
+          (["self", "self-later", "distribute"] as const).map((i) => ({
+            value: i,
+            label: i,
+            hint: SCAFFOLD_INTENT_HINTS[i],
+          })),
           "self-later",
         );
       }
@@ -151,6 +160,14 @@ export default defineCommand({
         cwd,
         ctx,
       });
+
+      // Outcome preview before write (table mode) — B35
+      if (mode.format !== "json") {
+        ui.dim(`  Will create: ${decision.primaryPath}`);
+        if (decision.targetDir && decision.targetDir !== decision.primaryPath) {
+          ui.dim(`  target dir: ${decision.targetDir}`);
+        }
+      }
 
       const result = writeScaffold(decision);
       if (!result.ok) {

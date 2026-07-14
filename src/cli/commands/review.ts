@@ -83,12 +83,26 @@ function renderSingle(r: ReviewResult): void {
   ui.blank();
 }
 
+/** Human aggregate list cap — B34 large-N (JSON still returns full array). */
+const REVIEW_AGGREGATE_CAP = 50;
+
 function renderAggregate(results: ReviewResult[]): void {
   ui.blank();
   ui.heading("dora review --all");
   ui.blank();
 
-  for (const r of results) {
+  const shown =
+    results.length > REVIEW_AGGREGATE_CAP
+      ? results.slice(0, REVIEW_AGGREGATE_CAP)
+      : results;
+  if (results.length > REVIEW_AGGREGATE_CAP) {
+    ui.dim(
+      `  Showing ${REVIEW_AGGREGATE_CAP} of ${results.length} — pass a path or glob to narrow.`,
+    );
+    ui.blank();
+  }
+
+  for (const r of shown) {
     const status = r.summary.errors > 0 ? "fail" as const : r.summary.warnings > 0 ? "warn" as const : "pass" as const;
     renderCheck(status, `${r.path.padEnd(24)} ${countParts(r.summary.passed, r.summary.warnings, r.summary.errors)}`);
   }

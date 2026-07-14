@@ -45,6 +45,20 @@ export type RuleTarget =
 export const SCAFFOLD_PROVIDERS: ProviderId[] = ["claude", "codex", "cursor", "copilot"];
 export const SCAFFOLD_TYPES: ScaffoldType[] = ["skill", "rule", "agent", "plugin"];
 
+/** Plain-language hints for interactive pickers and --help (B35). */
+export const SCAFFOLD_TYPE_HINTS: Record<ScaffoldType, string> = {
+  skill: "reusable, invocable instructions (SKILL.md)",
+  rule: "always-on convention (CLAUDE.md / .cursor/rules / AGENTS.md)",
+  agent: "subagent definition file for one isolated role",
+  plugin: "distributable package + manifest, ships to others",
+};
+
+export const SCAFFOLD_INTENT_HINTS: Record<Intent, string> = {
+  self: "use in this repo now",
+  "self-later": "personal today, promote to a plugin later",
+  distribute: "package to ship to others now",
+};
+
 // ── Context ────────────────────────────────────────────────────────
 
 export function detectScaffoldContext(
