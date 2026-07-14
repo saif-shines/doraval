@@ -1,11 +1,11 @@
 ---
 title: Quickstart
-description: Scale your AI context for coding agents — scaffold, validate, journal, and eval in one path.
+description: Scan, scaffold, review, and capture principles with dora memory — one path for you, team, or community.
 sidebar:
   order: 3
 ---
 
-import { Steps, Badge } from '@astrojs/starlight/components';
+import { Steps } from '@astrojs/starlight/components';
 
 Scale context for **yourself**, **your team**, or **your community**. Same workflow whether you are tuning your own agent, onboarding juniors, or publishing a plugin.
 
@@ -16,114 +16,81 @@ This quickstart assumes doraval is installed. If not, see [Installation](/get-st
                     │
                     ▼
              ┌─────────────┐
-             │  claude new │  scaffold skill or plugin
+             │  dora new   │  scaffold skill / rule / plugin
              └─────────────┘
                     │
                     ▼
              ┌─────────────┐
-             │dora validate│  catch breakage before anyone uses it
+             │ dora review │  structure + heuristics (+ LLM)
              └─────────────┘
                     │
                     ▼
              ┌─────────────┐
-             │  dora init  │  decision memory + agent integration for scaling context
+             │ dora memory │  principles that stick
+             │ add · list  │
+             │ promote     │
              └─────────────┘
-          ┌────────┴────────┐
-          ▼                 ▼
-   ┌─────────────┐   ┌─────────────┐
-   │journal flow │   │ dora drift  │
-   │ add · sync  │   │ real sessions│
-   │ hook enable │   │ ALIGN/DRIFT │
-   └─────────────┘   └─────────────┘
-          │                 │
-          └────────┬────────┘
-                   ▼
+                    │
+                    ▼
         context that works first try
 ```
 
 <Steps>
 
-1. ### Scaffold context
-
-   Create a skill or plugin for the agent you use day to day:
+1. ### Scan what you already have
 
    ```bash
-   # Personal / team context
-   doraval claude new --yes --intent self my-agent-context
-
-   # Plugin to ship to others
-   doraval claude new --yes --intent distribute my-plugin
+   dora
    ```
 
-   Use `doraval cursor new`, `doraval codex new`, or `doraval copilot new` for other agents. See [`claude new`](/commands/claude-new/).
+   Bare `dora` lists agent surfaces, skill health, contradictions, and numbered next actions.
 
-2. ### Validate before you rely on it
-
-   `dora validate` auto-detects what you scaffolded and runs every check that applies: skills, plugins, hooks, MCP servers, subagents, memory files, and more.
+2. ### Scaffold context
 
    ```bash
-   dora validate .
-   dora validate . --for claude:plugin
-   doraval providers
+   # Interactive: type → agent → name
+   dora new
+
+   # Or non-interactive
+   dora new skill --for claude --name my-context --description "Team context" --yes
+   dora new plugin --for claude --name my-plugin --yes
    ```
 
-   See [validate](/commands/validate/) and [providers](/commands/providers/) for the full matrix.
+   Prefer `dora new --for <agent>`. Thin wrappers (`dora claude new`, …) still work. See [claude new](/commands/claude-new/).
 
-3. ### Set up decision memory and agent integration
-
-   Run [`dora init`](/commands/init/) once to set up the journal (the memory that remembers decisions and principles while scaling AI context through skills, plugins, etc.) plus agent integration:
+3. ### Review before anyone relies on it
 
    ```bash
-   dora init
+   dora review .
+   dora fix .                 # mechanical fixes; always shows a diff
    ```
 
-   Or set the agent directly:
+4. ### Record principles that stick
 
    ```bash
-   dora config set agent.command claude
-   dora config get agent
+   dora memory add "Use dora review before shipping any skill change" --weight 8
+   dora memory list
+   dora memory promote        # optional: write hard rules into AGENTS.md
+   dora memory sync           # optional: private git backup
    ```
 
-   Claude Code and Grok have the deepest support today. Cursor, Copilot, and OpenCode work for scaffolding and validation, with fuller eval integrations expanding over time.
-
-4. ### Record decisions that stick
-
-   Capture principles as you work so future sessions (and other people) do not rediscover the same choices:
+   For Claude SessionStart hooks:
 
    ```bash
-   dora journal add "Use validate before shipping any skill change"
-   dora journal sync
+   dora memory context --json --quiet
    ```
 
-   Install a SessionStart hook so your agent receives the journal before the first message:
+   See [memory add](/commands/memory-add/), [memory sync](/commands/memory-sync/), and [Memory](/concepts/memory/).
+
+5. ### Optional deeper checks
+
+   Session adherence and multi-agent reconcile when you need them:
 
    ```bash
-   dora journal hook enable
+   dora sessions
+   dora reconcile
    ```
-
-   See [journal add](/commands/journal-add/), [journal sync](/commands/journal-sync/), and [Agent Journal](/concepts/agent-journal/).
-
-5. ### Judge artifact quality (optional, AI)
-
-   After validate, [`dora judge`](/commands/judge/) runs one LLM call against a best-practices rubric — no sessions required:
-
-   ```bash
-   dora judge ./skills/my-skill/
-   ```
-
-   Use a platform rubric (`--for codex`) or a custom file (`--rubric ./standards.md`). See [three-tier verification](/concepts/three-tier-verification/).
-
-6. ### Measure adherence in real sessions
-
-   `validate` and `judge` check the document. [`dora drift`](/commands/drift/) checks reality: did the agent actually follow your skill in a real transcript?
-
-   ```bash
-   dora drift ./skills/my-skill/     # one skill across recent sessions
-   dora drift                         # all skills, ranked by drift rate
-   ```
-
-   A `DRIFTED` verdict means a binding instruction was not followed — catch that before you scale context to more people.
 
 </Steps>
 
-Next: explore command reference pages for [drift](/commands/drift/), [ui](/commands/ui/), and [update](/commands/update/).
+Next: [Memory](/concepts/memory/), [config](/commands/config/), [update](/commands/update/).

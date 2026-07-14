@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-**Scale your AI context for coding agents.** Make your next context work (skills, plugins & more) for your team, community, or self. Context engineering toolkit for AI coding agents.
+**Scale your AI context for coding agents.** Make your next context work (skills, plugins & more) for your team, community, or self.
 
 Whether you are optimizing context for yourself, your team, or a wider community, the job is the same: make skills, plugins, and decisions work on the first attempt — not after days of debugging.
 
@@ -15,7 +15,7 @@ Whether you are optimizing context for yourself, your team, or a wider community
 
 **doraval** is pronounced *dor-uh-val* — stress the last syllable, like **Dora** + **eval**.
 
-The **Dora** comes from [Doraemon](https://en.wikipedia.org/wiki/Doraemon), the robot cat who pulls the right gadget for the job. The **-val** comes from **evaluation** — three tiers that go from static checks to real session behavior. `validate` checks the document (including static quality heuristics); `judge` scores the artifact against a rubric; `drift` checks reality in real transcripts. The shorter alias **`dora`** is the same CLI.
+The **Dora** comes from [Doraemon](https://en.wikipedia.org/wiki/Doraemon), the robot cat who pulls the right gadget for the job. The **-val** comes from **evaluation**. The shorter alias **`dora`** is the same CLI.
 
 ## The problem
 
@@ -33,7 +33,7 @@ doraval **left-shifts success**: catch breakage before the first session, not af
                         │
                         ▼
                  ┌─────────────┐
-                 │   doraval   │  validate · judge · drift · journal
+                 │   doraval   │  scan · review · fix · memory
                  └─────────────┘
                         │
                         ▼
@@ -45,25 +45,20 @@ doraval **left-shifts success**: catch breakage before the first session, not af
 
 ## What doraval does
 
-| Command | What it scales | Speed |
-|---------|----------------|-------|
-| `validate` | Catch broken skills, plugins, hooks, MCP (plus static skill heuristics) before anyone uses them | Instant |
-| `judge` | Artifact quality vs a best-practices rubric (one LLM call; `eval` / `evals` aliases) | Seconds |
-| `drift` | Proof that agents followed your skills in real session transcripts | Minutes |
-| `claude new` / `cursor new` etc. | Scaffold resources that load correctly across agents | Instant |
-| `init` | One-time setup for decision memory (journal) + agent integration | Instant |
-| `journal` | Decisions that persist across sessions and people | Instant |
-| `bump` / `config` | Semver manifests and dot-notation config | Instant |
-| `ui` | Local dashboard for capturing context without retyping | Instant |
-| `providers` | See which agents understand which packaging | Instant |
-
-`validate` is the workhorse. Point it at a directory or GitHub URL and it tells you what is broken before you scale context to anyone else. See [three-tier verification](/concepts/three-tier-verification/) for how `validate`, `judge`, and `drift` fit together.
+| Command | What it scales |
+|---------|----------------|
+| `dora` / `scan` | See agent surfaces, skill health, contradictions, next actions |
+| `review` | Structure + heuristics + optional LLM / sessions |
+| `fix` | Apply mechanical fixes (diff + confirm) |
+| `new --for <agent>` | Scaffold skills, rules, agents, plugins |
+| `memory` | Principles that persist; enforce in review; promote to AGENTS.md |
+| `reconcile` | Settle contradictions between agent configs |
+| `bump` / `config` / `sessions` | Version manifests, config, session drill-down |
+| `providers` | Which agents understand which packaging |
 
 ## What to do next
 
 - [Install](/get-started/installation/) doraval
-- [Quickstart](/get-started/quickstart/) — scaffold, validate, journal, judge, drift in one path
+- [Quickstart](/get-started/quickstart/) — scan, scaffold, review, memory in one path
+- [Memory](/concepts/memory/) — capture principles that stick
 - `doraval update` — stay current
-- `doraval providers` + `--for` — target the right agents
-
-The goal is always the same: scale context that works on the first attempt.

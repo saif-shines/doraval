@@ -15,7 +15,7 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 | Item | State | Notes |
 |---|---|---|
 | Copilot `dora bump` nesting | **done** | `dd81489` |
-| **B33** remove `dora journal` | **done** | migrate + `memory context` + CHANGELOG; v0.6.0 |
+| **B33** remove `dora journal` | **done** | CLI + migration + CHANGELOG; website residual closed (memory pages, redirects, journal docs removed) |
 | **B34** preflight / stages / large-N | **done** | `9857e8a` `474ca2c` `64d0f37` |
 | **B35** type/intent hints + preview | **partial** | core path done; provider-wrapper carryover → B38 |
 | **B36** reconcile UX | **done** | human headlines, actor tags, judgment Next block |
@@ -27,11 +27,11 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 | Q1 providers identity / Q2 provider groups | **open** | product decisions, not coded |
 | Stash `--fzf` stretch | **deferred** | picker already capped at 20 (B34); fzf optional P2 |
 
-### B33 residuals (not blocking CLI)
+### B33 residuals
 
-- `apps/website/` still documents journal → B26/B27
-- `src/core/journal-config.ts` kept on purpose (shared doraval config / eval paths)
-- Installed SessionStart hooks: change `dora journal context --json` → `dora memory context --json` by hand
+- **Website:** journal command pages removed; Memory sidebar + concept + command docs; old journal URLs redirect (2026-07-14)
+- `src/core/journal-config.ts` kept on purpose (shared doraval config / eval paths; rename later)
+- Installed SessionStart hooks (user machines): change to `dora memory context --json` by hand — documented on memory concept page
 
 ### Implementation plans (local; under gitignored `docs/`)
 
@@ -76,7 +76,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 ## Next (no version bump)
 
 - Update GH secret `NPM_TOKEN` → GAT with Bypass 2FA + write on all six `@hacksmith/doraval*` packages (CI platforms)
-- Website B26/B27 (journal → memory docs)
+- Website B26/B27 full convergence (README rewrite + kill stale validate/drift/init narrative beyond B33 memory swap)
 - Q1 providers identity / Q2 provider groups (product calls)
 - Optional: stash `--fzf` stretch
 

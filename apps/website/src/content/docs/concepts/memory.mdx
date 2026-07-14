@@ -1,0 +1,76 @@
+---
+title: Memory
+description: Project principles that stick — capture, enforce in review, promote to AGENTS.md, optional private git backup.
+---
+
+**Memory** is doraval's durable place for project principles. Record a rule once; every future `dora review` can enforce high-weight ones, and you can promote them into `AGENTS.md` so every agent shares the same hard rules.
+
+`dora journal` was removed. Memory is the only path. On upgrade, the first `dora memory` command migrates any legacy store automatically and prints a one-time report.
+
+## What lives where
+
+```
+~/.doraval/
+├── config.yml          # doraval config (eval, legacy mappings)
+└── memory/
+    ├── global/         # principles shared across projects
+    ├── <project>/      # per-project principles + stashed files
+    └── repo/           # optional git clone for memory sync
+```
+
+Nothing is required inside your project repo unless you `promote` into `AGENTS.md` or `context --append-to` a file.
+
+## Core loop
+
+```bash
+# Capture
+dora memory add "Never use default exports" --weight 8
+
+# Inspect
+dora memory list
+
+# Enforce (high weight → review errors)
+dora review .
+
+# Share with every agent via AGENTS.md
+dora memory promote
+
+# Optional backup
+dora memory sync
+```
+
+## Weight
+
+| Weight | Role |
+|--------|------|
+| **≥ 8** | Hard rule — review treats violations seriously |
+| **5** | Default principle |
+| **≤ 3** | Soft preference |
+
+## Hooks and agent context
+
+```bash
+# Claude SessionStart hook payload
+dora memory context --json --quiet
+
+# Maintain a managed section in CLAUDE.md / AGENTS.md
+dora memory context --append-to CLAUDE.md
+```
+
+If you still have a SessionStart hook calling the old journal context command, change it to `dora memory context --json`.
+
+## Migration from journal
+
+Legacy entries under `~/.doraval/journals/` convert on first memory use. Valid entries land in memory; dropped ones appear in the migration report. Safe to re-run (idempotent).
+
+## Command map
+
+| Old (removed) | New |
+|---------------|-----|
+| `journal add` | [`memory add`](/commands/memory-add/) |
+| `journal list` | [`memory list`](/commands/memory-list/) |
+| `journal context` / hook | [`memory context`](/commands/memory-context/) |
+| `journal sync` | [`memory sync`](/commands/memory-sync/) |
+| `journal init` / `update` / `hook` | not needed — add works offline; sync is optional backup |
+
+Also: [`memory promote`](/commands/memory-promote/), [`memory stash`](/commands/memory-stash/), [`memory restore`](/commands/memory-restore/).

@@ -7,6 +7,13 @@ export default defineConfig({
   redirects: {
     "/get-started/quickstart-distributors": "/get-started/quickstart/",
     "/get-started/quickstart-orchestrators": "/get-started/quickstart/",
+    "/commands/journal-add": "/commands/memory-add/",
+    "/commands/journal-list": "/commands/memory-list/",
+    "/commands/journal-sync": "/commands/memory-sync/",
+    "/commands/journal-update": "/commands/memory-sync/",
+    "/commands/journal-init": "/concepts/memory/",
+    "/concepts/agent-journal": "/concepts/memory/",
+    "/concepts/journal-rationale": "/concepts/memory/",
   },
   image: {
     service: passthroughImageService(),
@@ -65,13 +72,16 @@ export default defineConfig({
           ],
         },
         {
-          label: "Decision journal",
+          label: "Memory",
           items: [
-            "commands/journal-init",
-            "commands/journal-list",
-            "commands/journal-add",
-            "commands/journal-sync",
-            "commands/journal-update",
+            "concepts/memory",
+            "commands/memory-add",
+            "commands/memory-list",
+            "commands/memory-context",
+            "commands/memory-promote",
+            "commands/memory-stash",
+            "commands/memory-restore",
+            "commands/memory-sync",
           ],
         },
         {

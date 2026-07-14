@@ -1,0 +1,17 @@
+---
+title: memory restore
+description: Copy a stashed file back from project memory (diff + confirm).
+sidebar:
+  order: 6
+---
+
+```bash
+dora memory restore notes.md
+dora memory restore              # interactive (TTY)
+dora memory restore notes.md --dry-run
+dora memory restore notes.md --yes
+```
+
+Same approval model as `dora fix`: show the plan, then confirm unless `--yes`.
+
+See also: [memory stash](/commands/memory-stash/).

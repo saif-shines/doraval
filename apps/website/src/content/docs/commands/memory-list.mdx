@@ -1,0 +1,22 @@
+---
+title: memory list
+description: List active principles from project (and global) memory.
+sidebar:
+  order: 2
+---
+
+```bash
+dora memory list
+dora memory list --format json
+```
+
+Shows active principles with weight and tags. Empty state includes example principles and a weight guide so cold start is obvious.
+
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--format table\|json` | Human table or machine JSON |
+| `--ci` | Implies `--format json` |
+
+See also: [memory add](/commands/memory-add/), [memory context](/commands/memory-context/).

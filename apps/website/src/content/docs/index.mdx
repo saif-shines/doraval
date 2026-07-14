@@ -106,7 +106,7 @@ npx @hacksmith/doraval validate https://github.com/obra/superpowers
 
 ## The toolkit
 
-Same workflow as the [quickstart](/get-started/quickstart/): scaffold, validate, journal, **eval**. Validate is above — each card shows the command and what you get back. Use `npx` before install; use `dora` after.
+Same workflow as the [quickstart](/get-started/quickstart/): scaffold, review, **memory**, optional deeper checks. Cards below show example commands. Use `npx` before install; use `dora` after.
 
 <div class="home-commands">
 
@@ -156,7 +156,7 @@ npx @hacksmith/doraval drift ./skills/my-skill/
   Aggregate drift rate: 1/8 binding instructions drifted (12%)
 ```
 
-<p class="home-fold-links"><a href="/commands/drift/">drift command</a> · <a href="/concepts/three-tier-verification/">three-tier verification</a> · needs sessions + <a href="/commands/init/">init</a></p>
+<p class="home-fold-links"><a href="/commands/drift/">drift command</a> · <a href="/concepts/three-tier-verification/">three-tier verification</a> · needs sessions; configure models via <a href="/commands/config/">config</a></p>
 
 </div>
 
@@ -192,29 +192,26 @@ npx @hacksmith/doraval providers
 
 <div class="home-command">
 
-<span class="home-fold-label">Journal</span>
+<span class="home-fold-label">Memory</span>
 
-<p class="home-fold-lead">The journal remembers decisions and principles while scaling AI context (skills, plugins, etc.). Run <a href="/commands/init/">dora init</a> once to set up decision memory + agent integration.</p>
+<p class="home-fold-lead">Principles that stick — capture locally, enforce high-weight ones in review, promote into AGENTS.md, optional private git backup. No separate init step.</p>
 
 ```bash
-dora journal add "Validate before shipping any skill change"
-dora journal list
+dora memory add "Validate before shipping any skill change" --weight 8
+dora memory list
 ```
 
 ```text
-  dora journal list — my-project
+  dora memory list
 
-   1  Validate before shipping any skill change
+   1  Validate before shipping any skill change  w8
       tags: workflow, quality
-      by: human  on 2026-06-20
-      Catch breakage before scaling context to the team.
 
-   2  Use drift not score for rubric deviation
-      tags: naming, cli
-      by: human  on 2026-05-25
+   2  Prefer named exports  w3
+      tags: style
 ```
 
-<p class="home-fold-links"><a href="/commands/journal-list/">journal list</a> · <a href="/concepts/agent-journal/">Agent Journal</a></p>
+<p class="home-fold-links"><a href="/commands/memory-list/">memory list</a> · <a href="/concepts/memory/">Memory</a></p>
 
 </div>
 
@@ -235,10 +232,10 @@ dora judge ./skills/my-skill/
   code examples, and explicit MUST / MUST NOT guardrails.
 ```
 
-<p class="home-fold-links"><a href="/commands/judge/">judge command</a> · <a href="/concepts/three-tier-verification/">three-tier verification</a> · needs <a href="/commands/init/">init</a> for model config</p>
+<p class="home-fold-links"><a href="/commands/judge/">judge command</a> · <a href="/concepts/three-tier-verification/">three-tier verification</a> · model via <a href="/commands/config/">config</a></p>
 
 </div>
 
 </div>
 
-<p class="home-toolkit-more">Also: <a href="/commands/init/">init</a> (one-time journal + agent setup) · <a href="/commands/ui/">ui</a> (local dashboard). Full path in the <a href="/get-started/quickstart/">quickstart</a>.</p>
+<p class="home-toolkit-more">Also: <a href="/concepts/memory/">memory</a> · <a href="/commands/config/">config</a> · <code>dora sessions</code> in the CLI. Full path in the <a href="/get-started/quickstart/">quickstart</a>.</p>
