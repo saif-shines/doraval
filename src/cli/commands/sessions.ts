@@ -12,17 +12,18 @@ function renderTable(entries: ReturnType<typeof listSessions>): void {
     `  ${"AGENT".padEnd(12)} ${"WHEN".padEnd(17)} ${"TITLE".padEnd(24)} ${"TURNS".padEnd(6)} ${"TOOLS".padEnd(6)} ID`,
   );
   for (const e of entries) {
-    const idShort = e.id.length > 12 ? e.id.slice(0, 12) + "…" : e.id;
+    const id = e.sessionId;
+    const idShort = id.length > 12 ? id.slice(0, 12) + "…" : id;
     ui.write(
       `  ${e.agent.padEnd(12)} ${e.when.padEnd(17)} ${e.title.slice(0, 22).padEnd(24)} ${String(e.turns).padEnd(6)} ${String(e.toolCalls).padEnd(6)} ${pc.dim(idShort)}`,
     );
   }
   ui.blank();
   summaryLine(`${entries.length} session${entries.length === 1 ? "" : "s"}`);
-  // B40: real id from the list for drill-down
+  // B40: real sessionId from the list for drill-down
   const first = entries[0];
   if (first) {
-    nextAction(`dora sessions show ${first.id}`);
+    nextAction(`dora sessions show ${first.sessionId}`);
   }
   ui.blank();
 }

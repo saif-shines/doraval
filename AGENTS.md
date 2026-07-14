@@ -45,10 +45,11 @@ Main `@hacksmith/doraval` may still publish. Platform packages stay on an older 
 
 ### Confirmed diagnosis
 
-- Failure is **CI + `npm publish` for the five platform packages**, not a missing package-ACL list in the general sense.
-- **`npm publish --access public` without `--provenance` from a local shell with a real npm token works.**
+- Failure is **auth/permissions on the five platform packages**, not a missing package-ACL list in the general sense.
+- **`npm publish --access public` without `--provenance` from a local shell works** when the token can publish (or you pass `--otp=<code>` for 2FA).
 - CI historically failed with `--provenance` on platforms (provenance signed, then PUT 404). CI was patched to drop provenance for platforms only (`9389365`); main still uses `--provenance`.
-- If platforms still 404 in CI without provenance, **do not ship main alone** and do not invent new version bumps — recover with the local procedure below.
+- **v0.6.0 recovery (2026-07-14):** whoami worked but publish returned **EOTP** until `npm publish --otp=…`. All five platforms published locally from GH release binaries. npm may return **E404** when the token lacks write/Bypass-2FA — do not misread that as "package missing."
+- If platforms still 404/EOTP in CI, **do not ship main alone** and do not invent new version bumps — recover with the local procedure below. CI `NPM_TOKEN` should be a granular token with **write + Bypass 2FA** on all five platform packages (and main).
 
 ### Recovery procedure (when CI platform publish fails)
 
@@ -70,8 +71,9 @@ done
 bun run scripts/platform-packages.ts "$VERSION" "$SCRATCH/artifacts" "$SCRATCH/platform-packages"
 
 # 3) Publish EACH platform package LOCALLY — no --provenance
+#    If EOTP: npm publish --access public --otp=XXXXXX  (or use a Bypass-2FA GAT)
 for dir in "$SCRATCH/platform-packages"/*/; do
-  (cd "$dir" && npm publish --access public)
+  (cd "$dir" && npm publish --access public ${OTP:+--otp="$OTP"})
 done
 
 # 4) Verify all five exist at $VERSION

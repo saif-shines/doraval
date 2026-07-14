@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import { confirm, isCancel, multiselect, select } from "@clack/prompts";
 import { ui } from "../out.js";
 import pc from "picocolors";
 import { resolve, join, dirname, relative } from "path";
@@ -6,8 +7,9 @@ import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from "
 import { exit } from "../render/exit.js";
 
 type Scope = "all" | "plugin" | "marketplace";
+type BumpType = string; // patch | minor | major | x.y.z
 
-function bumpVersion(current: string | undefined, type: string): string {
+export function bumpVersion(current: string | undefined, type: string): string {
   if (/^\d+\.\d+\.\d+$/.test(type)) return type;
 
   const curr = current || "0.0.0";
@@ -63,7 +65,7 @@ function setVersion(obj: any, newVersion: string): boolean {
  * Bumps version fields inside a marketplace's plugins[] array (used by Copilot, and sometimes Cursor/other).
  * Returns number of plugin entries whose version was actually changed.
  */
-function bumpPluginEntriesVersions(plugins: any[], bumpType: string): number {
+export function bumpPluginEntriesVersions(plugins: any[], bumpType: string): number {
   if (!Array.isArray(plugins)) return 0;
   let changed = 0;
   for (const p of plugins) {
@@ -85,13 +87,13 @@ function bumpPluginEntriesVersions(plugins: any[], bumpType: string): number {
   return changed;
 }
 
-interface Target {
+export interface Target {
   file: string;
   kind: "plugin" | "marketplace";
   label: string;
 }
 
-function walkForTargets(dir: string, maxDepth = 6, currentDepth = 0): Target[] {
+export function walkForTargets(dir: string, maxDepth = 6, currentDepth = 0): Target[] {
   const results: Target[] = [];
   if (currentDepth > maxDepth) return results;
 
@@ -143,6 +145,104 @@ function walkForTargets(dir: string, maxDepth = 6, currentDepth = 0): Target[] {
   return results;
 }
 
+export interface BumpPlan {
+  target: Target;
+  relPath: string;
+  current: string | undefined;
+  next: string;
+  rootUnchanged: boolean;
+  /** plugin[] entries that would change (marketplace only; computed without mutating) */
+  innerWouldChange: number;
+}
+
+/** Preview planned bumps without writing. */
+export function planBumps(targets: Target[], root: string, bumpType: BumpType): BumpPlan[] {
+  const plans: BumpPlan[] = [];
+  for (const t of targets) {
+    const json = readJson(t.file);
+    if (!json || typeof json !== "object") continue;
+    const current = getVersion(json);
+    let next: string;
+    try {
+      next = bumpVersion(current, bumpType);
+    } catch {
+      continue;
+    }
+    let innerWouldChange = 0;
+    if (t.kind === "marketplace" && Array.isArray(json.plugins)) {
+      for (const p of json.plugins) {
+        if (p && typeof p === "object" && typeof p.version === "string") {
+          try {
+            if (bumpVersion(p.version, bumpType) !== p.version) innerWouldChange++;
+          } catch {
+            /* skip */
+          }
+        }
+      }
+    }
+    plans.push({
+      target: t,
+      relPath: relative(root, t.file),
+      current,
+      next,
+      rootUnchanged: current === next,
+      innerWouldChange,
+    });
+  }
+  return plans;
+}
+
+function applyBump(plan: BumpPlan, bumpType: BumpType): boolean {
+  const json = readJson(plan.target.file);
+  if (!json || typeof json !== "object") return false;
+
+  let innerChanged = 0;
+  if (plan.target.kind === "marketplace" && Array.isArray(json.plugins)) {
+    innerChanged = bumpPluginEntriesVersions(json.plugins, bumpType);
+  }
+
+  const rootUnchanged = plan.current === plan.next;
+  if (rootUnchanged && innerChanged === 0) return false;
+
+  const didRootUpdate = setVersion(json, plan.next);
+  if (!didRootUpdate && innerChanged === 0) return false;
+
+  writeJson(plan.target.file, json);
+  return true;
+}
+
+function printLookedFor(): void {
+  ui.info("");
+  ui.info("  Looked for (recursively):");
+  ui.info("    • **/.claude-plugin/plugin.json");
+  ui.info("    • **/.codex-plugin/plugin.json");
+  ui.info("    • **/.cursor-plugin/plugin.json (or marketplace.json)");
+  ui.info("    • **/.github/plugin/plugin.json (or marketplace.json)");
+  ui.info("    • **/marketplace.json (top-level/metadata.version + versions inside plugins[] for Cursor/Copilot)");
+  ui.info("");
+  ui.info("  Tip: run from inside a plugin directory, or pass a path that contains plugins/.");
+  ui.info("  Examples:");
+  ui.info("    dora bump minor");
+  ui.info("    dora bump minor ./my-claude-plugin");
+  ui.info("    dora bump --only plugin .          # only the manifests");
+  ui.info("    dora bump --only marketplace ./marketplaces-root");
+}
+
+function filterByScope(discovered: Target[], scope: Scope): Target[] {
+  if (scope === "plugin") return discovered.filter((t) => t.kind === "plugin");
+  if (scope === "marketplace") return discovered.filter((t) => t.kind === "marketplace");
+  return discovered;
+}
+
+function isInteractiveBare(typeArg: string | undefined, pathArg: string | undefined): boolean {
+  return (
+    typeArg === undefined &&
+    pathArg === undefined &&
+    process.stdin.isTTY === true &&
+    process.stderr.isTTY === true
+  );
+}
+
 export default defineCommand({
   meta: {
     name: "bump",
@@ -151,7 +251,7 @@ export default defineCommand({
   args: {
     type: {
       type: "positional",
-      description: "patch | minor | major | x.y.z (exact version)",
+      description: "patch | minor | major | x.y.z (exact version). Omit on a TTY for interactive pick.",
       required: false,
     },
     path: {
@@ -164,17 +264,31 @@ export default defineCommand({
       description: 'Scope to "all" (default), "plugin" (only plugin.json manifests), or "marketplace" (only marketplace.json files that carry a top-level version)',
       default: "all",
     },
+    yes: {
+      type: "boolean",
+      description: "Skip confirmation in interactive mode",
+      default: false,
+    },
   },
   async run({ args }) {
-    let rawType = (args.type as string) || "patch";
-    let targetPath = (args.path as string) || ".";
+    const typeArg = args.type as string | undefined;
+    const pathArg = args.path as string | undefined;
     const scopeInput = ((args.only as string) || "all").toLowerCase();
     const scope: Scope = scopeInput === "plugin" || scopeInput === "marketplace" ? scopeInput : "all";
+    const yes = Boolean(args.yes);
 
     if (!["all", "plugin", "marketplace"].includes(scopeInput)) {
       ui.fail(`Invalid --only "${args.only}". Allowed: all, plugin, marketplace.`);
       return await exit(1);
     }
+
+    // B40: bare `dora bump` on TTY → discover → multiselect → type → confirm
+    if (isInteractiveBare(typeArg, pathArg)) {
+      return await runInteractive(scope, yes);
+    }
+
+    let rawType = typeArg || "patch";
+    let targetPath = pathArg || ".";
 
     // Forgiving UX: `dora bump ./my-plugin-dir` should mean "patch on that dir"
     const isKnownType = ["patch", "minor", "major"].includes(rawType) || /^\d+\.\d+\.\d+$/.test(rawType);
@@ -189,113 +303,188 @@ export default defineCommand({
       return await exit(1);
     }
 
-    const root = resolve(targetPath);
-    if (!existsSync(root)) {
-      ui.fail(`Path does not exist: ${root}`);
-      return await exit(1);
-    }
-
-    ui.heading("doraval bump");
-    ui.info(`  scanning: ${root}`);
-    ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow; Cursor/Copilot metadata.version supported)`);
-
-    const discovered = walkForTargets(root);
-    let targets = discovered;
-
-    if (scope === "plugin") {
-      targets = discovered.filter((t) => t.kind === "plugin");
-    } else if (scope === "marketplace") {
-      targets = discovered.filter((t) => t.kind === "marketplace");
-    }
-
-    if (targets.length === 0) {
-      ui.fail("No matching files found under the scope.");
-      ui.info("");
-      ui.info("  Looked for (recursively):");
-      ui.info("    • **/.claude-plugin/plugin.json");
-      ui.info("    • **/.codex-plugin/plugin.json");
-      ui.info("    • **/.cursor-plugin/plugin.json (or marketplace.json)");
-      ui.info("    • **/.github/plugin/plugin.json (or marketplace.json)");
-      ui.info("    • **/marketplace.json (top-level/metadata.version + versions inside plugins[] for Cursor/Copilot)");
-      ui.info("");
-      ui.info("  Tip: run from inside a plugin directory, or pass a path that contains plugins/.");
-      ui.info("  Examples:");
-      ui.info("    dora bump minor");
-      ui.info("    dora bump minor ./my-claude-plugin");
-      ui.info("    dora bump --only plugin .          # only the manifests");
-      ui.info("    dora bump --only marketplace ./marketplaces-root   # bumps metadata.version + plugins[].version (Copilot/Cursor)");
-      return await exit(1);
-    }
-
-    ui.info(`  matched ${targets.length} file(s)`);
-
-    let bumpedCount = 0;
-
-    for (const t of targets) {
-      const json = readJson(t.file);
-      if (!json || typeof json !== "object") {
-        ui.warnItem(`skipped (invalid JSON): ${relative(root, t.file)}`);
-        continue;
-      }
-
-      const current = getVersion(json);
-      let next: string;
-      try {
-        next = bumpVersion(current, rawType);
-      } catch (err: any) {
-        ui.fail(err.message || String(err));
-        return await exit(1);
-      }
-
-      const relPath = relative(root, t.file);
-
-      // For marketplaces we also consider inner plugin[] versions
-      const rootUnchanged = current === next;
-      let innerChanged = 0;
-
-      if (t.kind === "marketplace" && Array.isArray(json.plugins)) {
-        innerChanged = bumpPluginEntriesVersions(json.plugins, rawType);
-      }
-
-      if (rootUnchanged && innerChanged === 0) {
-        ui.dim(`  • ${t.label}  ${current || "(no version)"}  (no change)  [${relPath}]`);
-        continue;
-      }
-
-      const didRootUpdate = setVersion(json, next);
-      const didAnyUpdate = didRootUpdate || innerChanged > 0;
-
-      if (!didAnyUpdate) {
-        ui.warnItem(`skipped (could not locate version field to update): ${relPath}`);
-        continue;
-      }
-
-      writeJson(t.file, json);
-
-      if (didRootUpdate && current) {
-        ui.success(`${t.label}: ${pc.dim(current)} → ${pc.green(next)}`);
-      } else if (didRootUpdate) {
-        ui.success(`${t.label}: ${pc.green(next)}`);
-      } else {
-        ui.success(`${t.label} (no root version)`);
-      }
-      ui.info(`    ${relPath}`);
-
-      if (innerChanged > 0) {
-        ui.info(`    + bumped ${innerChanged} entry version(s) inside plugins[]`);
-      }
-
-      bumpedCount++;
-    }
-
-    ui.blank();
-
-    if (bumpedCount === 0) {
-      ui.info("All matched files were already at the target version.");
-    } else {
-      ui.info(`Done. Bumped ${bumpedCount} file(s).`);
-      ui.dim("  Next: doraval validate " + (targetPath === "." ? "." : targetPath));
-    }
-    await exit(0);
+    return await runNonInteractive(rawType, targetPath, scope);
   },
 });
+
+async function runInteractive(scope: Scope, yes: boolean): Promise<void> {
+  const root = resolve(".");
+  ui.heading("doraval bump");
+  ui.info(`  scanning: ${root}`);
+  ui.info(`  scope: ${scope}`);
+
+  const targets = filterByScope(walkForTargets(root), scope);
+  if (targets.length === 0) {
+    ui.fail("No matching files found under the scope.");
+    printLookedFor();
+    return await exit(1);
+  }
+
+  const selected = await multiselect({
+    message: "Which manifests to bump?",
+    options: targets.map((t) => {
+      const json = readJson(t.file);
+      const ver = json ? getVersion(json) : undefined;
+      return {
+        value: t.file,
+        label: `${t.label}  ${pc.dim(ver ?? "(no version)")}`,
+        hint: relative(root, t.file),
+      };
+    }),
+    required: true,
+    output: process.stderr,
+  });
+  if (isCancel(selected)) {
+    ui.dim("  cancelled");
+    return await exit(0);
+  }
+
+  const picked = targets.filter((t) => (selected as string[]).includes(t.file));
+  if (picked.length === 0) {
+    ui.dim("  nothing selected");
+    return await exit(0);
+  }
+
+  const bumpType = (await select({
+    message: "Bump type",
+    options: [
+      { value: "patch", label: "patch", hint: "0.1.0 → 0.1.1" },
+      { value: "minor", label: "minor", hint: "0.1.0 → 0.2.0" },
+      { value: "major", label: "major", hint: "0.1.0 → 1.0.0" },
+    ],
+    initialValue: "patch",
+    output: process.stderr,
+  })) as string | symbol;
+  if (isCancel(bumpType)) {
+    ui.dim("  cancelled");
+    return await exit(0);
+  }
+
+  const plans = planBumps(picked, root, bumpType as string);
+  const changing = plans.filter((p) => !p.rootUnchanged || p.innerWouldChange > 0);
+
+  ui.blank();
+  ui.write("  Will change:");
+  if (changing.length === 0) {
+    ui.dim("    (nothing — already at target version)");
+    return await exit(0);
+  }
+  for (const p of changing) {
+    const verLine =
+      p.current && !p.rootUnchanged
+        ? `${pc.dim(p.current)} → ${pc.green(p.next)}`
+        : p.rootUnchanged
+          ? pc.dim("(root unchanged)")
+          : pc.green(p.next);
+    ui.write(`    ${p.target.label}: ${verLine}  ${pc.dim(p.relPath)}`);
+    if (p.innerWouldChange > 0) {
+      ui.write(`      ${pc.dim(`+ ${p.innerWouldChange} plugins[] entry version(s)`)}`);
+    }
+  }
+  ui.blank();
+
+  if (!yes) {
+    const ok = await confirm({
+      message: `Apply ${changing.length} bump(s)?`,
+      initialValue: true,
+      output: process.stderr,
+    });
+    if (isCancel(ok) || !ok) {
+      ui.dim("  cancelled — no files written");
+      return await exit(0);
+    }
+  }
+
+  let bumpedCount = 0;
+  for (const p of changing) {
+    if (applyBump(p, bumpType as string)) {
+      if (p.current && !p.rootUnchanged) {
+        ui.success(`${p.target.label}: ${pc.dim(p.current)} → ${pc.green(p.next)}`);
+      } else {
+        ui.success(`${p.target.label}: ${pc.green(p.next)}`);
+      }
+      ui.info(`    ${p.relPath}`);
+      if (p.innerWouldChange > 0) {
+        ui.info(`    + bumped ${p.innerWouldChange} entry version(s) inside plugins[]`);
+      }
+      bumpedCount++;
+    }
+  }
+
+  ui.blank();
+  ui.info(`Done. Bumped ${bumpedCount} file(s).`);
+  ui.dim("  Next: doraval validate .");
+  await exit(0);
+}
+
+async function runNonInteractive(rawType: string, targetPath: string, scope: Scope): Promise<void> {
+  const root = resolve(targetPath);
+  if (!existsSync(root)) {
+    ui.fail(`Path does not exist: ${root}`);
+    return await exit(1);
+  }
+
+  ui.heading("doraval bump");
+  ui.info(`  scanning: ${root}`);
+  ui.info(`  scope: ${scope}   (use --only plugin or --only marketplace to narrow; Cursor/Copilot metadata.version supported)`);
+
+  const targets = filterByScope(walkForTargets(root), scope);
+
+  if (targets.length === 0) {
+    ui.fail("No matching files found under the scope.");
+    printLookedFor();
+    return await exit(1);
+  }
+
+  ui.info(`  matched ${targets.length} file(s)`);
+
+  let bumpedCount = 0;
+  for (const t of targets) {
+    const plans = planBumps([t], root, rawType);
+    const plan = plans[0];
+    if (!plan) {
+      ui.warnItem(`skipped (invalid JSON): ${relative(root, t.file)}`);
+      continue;
+    }
+    if (plan.rootUnchanged && plan.innerWouldChange === 0) {
+      ui.dim(`  • ${t.label}  ${plan.current || "(no version)"}  (no change)  [${plan.relPath}]`);
+      continue;
+    }
+
+    // Re-validate bump type once so bad types fail early with a clear message
+    try {
+      bumpVersion(plan.current, rawType);
+    } catch (err: any) {
+      ui.fail(err.message || String(err));
+      return await exit(1);
+    }
+
+    if (!applyBump(plan, rawType)) {
+      ui.warnItem(`skipped (could not locate version field to update): ${plan.relPath}`);
+      continue;
+    }
+
+    if (plan.current && !plan.rootUnchanged) {
+      ui.success(`${t.label}: ${pc.dim(plan.current)} → ${pc.green(plan.next)}`);
+    } else if (!plan.rootUnchanged) {
+      ui.success(`${t.label}: ${pc.green(plan.next)}`);
+    } else {
+      ui.success(`${t.label} (no root version)`);
+    }
+    ui.info(`    ${plan.relPath}`);
+    if (plan.innerWouldChange > 0) {
+      ui.info(`    + bumped ${plan.innerWouldChange} entry version(s) inside plugins[]`);
+    }
+    bumpedCount++;
+  }
+
+  ui.blank();
+
+  if (bumpedCount === 0) {
+    ui.info("All matched files were already at the target version.");
+  } else {
+    ui.info(`Done. Bumped ${bumpedCount} file(s).`);
+    ui.dim("  Next: doraval validate " + (targetPath === "." ? "." : targetPath));
+  }
+  await exit(0);
+}

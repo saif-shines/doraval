@@ -1,8 +1,8 @@
 # WIP — Doraval work tracker (resume here)
 
-> **Pinned:** 2026-07-14 · version **0.6.0** · dogfood B33–B39 + B40 partial · push/tag to ship
-> **Branch:** `main` · synced with origin after v0.6.0 push (local fixes may be ahead)  
-> **Policy:** no more version bumps until an explicit release; batch ships as **0.6.0**.  
+> **Pinned:** 2026-07-14 · version **0.6.0** · npm install **fixed** (all five platform packages published)  
+> **Branch:** `main` · synced with origin after v0.6.0 push  
+> **Policy:** no more version bumps until an explicit release.  
 > **Plan:** [`docs/EXCEPTIONAL-CLI-PLAN.md`](docs/EXCEPTIONAL-CLI-PLAN.md) (v7 + dogfood B33–B40)  
 > This is the **only** progress pin — do not recreate `STATUS.md`.
 
@@ -23,8 +23,9 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 | **B38** provider wrappers + help order | **done** | shared provider-new, Advanced labels, primary-first help |
 | **B39** capabilities discoverability | **done** | --help label + stderr banner unless --format json |
 | **B40** cold-start (partial) | **done** | memory examples + weight guide; sessions list Next + id col |
-| B40 rest | **paused** | stash fzf (already capped), sessions show tool names, bump interactive |
+| B40 rest | **done** | sessions list uses `sessionId` (was broken `e.id`); show tool/skill names; interactive bare `dora bump` (multiselect → type → preview → confirm); unit tests |
 | Q1 providers identity / Q2 provider groups | **open** | product decisions, not coded |
+| Stash `--fzf` stretch | **deferred** | picker already capped at 20 (B34); fzf optional P2 |
 
 ### B33 residuals (not blocking CLI)
 
@@ -65,16 +66,19 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 ## Gaps found after 0.6.0 tag
 
 - Test CI Windows failures — **fixed** (`09cb542`); Test green on latest main.
-- **Release v0.6.0:** GitHub Release + JSR + Homebrew OK; **npm platform packages FAILED** (E404 on PUT for all five `@hacksmith/doraval-*@0.6.0`). Main package **did** publish `0.6.0` but optionalDeps point at missing platform binaries → **broken npm install**. Root cause: NPM token lacks write on platform packages (or npm org ACL); loop previously continued after failures. Workflow hardened to fail-fast (this loop).
-- **Action required:** grant NPM_TOKEN write on all five platform packages, re-run Release / re-publish platforms for 0.6.0 (do not re-bump version).
+- **npm platform packages @0.6.0** — **FIXED 2026-07-14** via local recovery (GH release binaries → assemble → `npm publish --access public --otp=…`). All five on registry; clean `npm install @hacksmith/doraval@0.6.0` → `doraval --version` = `0.6.0`.
+- **CI still needs attention:** `NPM_TOKEN` must be a granular token with **write + Bypass 2FA** on all five platform packages (and main), or platforms will EOTP/E404 again on next release. Workflow fail-fast is in place (`24416ef`) so main will not ship alone again.
 
 ## Release
 
-**Pushed 2026-07-14:** `main` + tag **`v0.6.0`**. Partial publish: main+JSR yes, platform packages no.
+**Pushed 2026-07-14:** `main` + tag **`v0.6.0`**. Full npm surface now OK: main + five platforms + JSR + GH Release + Homebrew.
 
-## Next release (when you ask)
+## Next (no version bump)
 
-Push `main` and publish **0.6.0** as one batch (bump fix + B33–B35). Do not mint 0.6.1/0.7.0 for polish.
+- Update GH secret `NPM_TOKEN` → GAT with Bypass 2FA + write on all six `@hacksmith/doraval*` packages (CI platforms)
+- Website B26/B27 (journal → memory docs)
+- Q1 providers identity / Q2 provider groups (product calls)
+- Optional: stash `--fzf` stretch
 
 ---
 
