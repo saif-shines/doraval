@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/usr/local/bin/dora journal context --json"
+            "command": "/usr/local/bin/dora memory context --json"
           }
         ]
       }

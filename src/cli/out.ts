@@ -161,7 +161,7 @@ export function renderValidationReport(
   }
 
   if (totalErrors === 0 && totalWarnings === 0) {
-    nextAction(`dora review ${opts.path}   or   dora journal add "..."`);
+    nextAction(`dora review ${opts.path}   or   dora memory add "..."`);
   } else if (totalErrors > 0) {
     nextAction(`dora review ${opts.path} --deep`);
   } else {

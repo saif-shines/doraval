@@ -257,9 +257,13 @@ describe("doraval CLI", () => {
       expect(stderr.toLowerCase()).toContain("unknown command");
     });
 
-    test("journal init still exists", () => {
-      const { stdout, stderr } = runDoraval(["journal", "--help"]);
-      expect(stdout + stderr).toContain("init");
+    test("journal group is gone (memory is the only path)", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["journal"]);
+      expect(exitCode).not.toBe(0);
+      expect((stdout + stderr).toLowerCase()).toContain("unknown command");
+      // Root help must not list journal as a command either.
+      const help = runDoraval(["--help"]);
+      expect(help.stdout + help.stderr).not.toMatch(/\bjournal\b/);
     });
   });
 

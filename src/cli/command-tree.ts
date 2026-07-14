@@ -31,27 +31,6 @@ export function defineGroup(
   return group;
 }
 
-export const journal = defineGroup(
-  "journal",
-  "Decision & note memory (with optional pushback/tags) — record, view, and sync project principles and useful notes",
-  {
-    init: () =>
-      import("./commands/journal/init.js").then((m) => m.default),
-    list: () =>
-      import("./commands/journal/list.js").then((m) => m.default),
-    context: () =>
-      import("./commands/journal/context.js").then((m) => m.default),
-    hook: () =>
-      import("./commands/journal/hook.js").then((m) => m.default),
-    update: () =>
-      import("./commands/journal/update.js").then((m) => m.default),
-    add: () =>
-      import("./commands/journal/add.js").then((m) => m.default),
-    sync: () =>
-      import("./commands/journal/sync.js").then((m) => m.default),
-  }
-);
-
 export const memory = defineGroup(
   "memory",
   "Project principles — capture, enforce in review, promote to AGENTS.md",
@@ -116,7 +95,6 @@ export const topLevelSubCommands = {
   update: () => import("./commands/update.js").then((m) => m.default),
   providers: () => import("./commands/providers.js").then((m) => m.default),
   completion: () => import("./commands/completion.js").then((m) => m.default),
-  journal: () => Promise.resolve(journal),
   memory: () => Promise.resolve(memory),
   config,
   claude: () => Promise.resolve(claude),

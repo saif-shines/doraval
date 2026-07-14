@@ -1,7 +1,7 @@
 /**
  * Generic work-event bus for long-running commands.
  *
- * WorkSink is emitted by commands (skill lint, eval session-judge, journal sync, …).
+ * WorkSink is emitted by commands (skill lint, eval session-judge, memory sync, …).
  * The text backend uses noopWorkSink. The TUI backend drives a split-footer progress
  * panel from the same events.
  *

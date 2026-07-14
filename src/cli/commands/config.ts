@@ -63,12 +63,12 @@ const configGet = defineCommand({
     const config = await readConfig();
     if (!config) {
       guidedError({
-        context: "doraval config and most commands (eval, journal, etc.) read ~/.doraval/config.yml.",
+        context: "doraval config and most commands (eval, memory, etc.) read ~/.doraval/config.yml.",
         problem: "No doraval config found",
         solutions: [
-          "dora init   (one-time setup for journal + agent + eval)",
+          "dora config set eval.model <model>   (creates ~/.doraval/config.yml)",
         ],
-        next: "dora init",
+        next: "dora config set eval.model <model>",
       });
       return await exit(0);
     }

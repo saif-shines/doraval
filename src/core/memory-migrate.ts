@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from "path";
 import { YAML } from "bun";
 import { getDoravalDir, getJournalsDir, getPendingDir } from "./journal-config.js";
-import { parseJournalEntriesWithWarnings, type JournalEntry } from "./journal-parse.js";
 import {
   getGlobalPrinciplesPath,
   getProjectPrinciplesPath,
@@ -10,6 +9,94 @@ import {
   ensureMemoryDirs,
 } from "./memory-config.js";
 import { generateUlid, serializeEntry, type MemoryEntry } from "./memory-parse.js";
+
+// ── Legacy journal parse (last remaining consumer; owned here until migration
+//    retires). Copied from the former journal-parse.ts — do not expand.
+
+interface JournalEntry {
+  title: string;
+  pushback: number;
+  tags: string[];
+  author: string;
+  date: string;
+  status: "active" | "superseded" | "retired";
+  superseded_by?: string;
+  rationale: string;
+}
+
+function parseJournalEntriesWithWarnings(raw: string): {
+  entries: JournalEntry[];
+  warnings: string[];
+} {
+  const entries: JournalEntry[] = [];
+  const warnings: string[] = [];
+
+  if (!raw || !raw.trim()) {
+    return { entries, warnings };
+  }
+
+  const sectionRegex = /^##\s+(.+)$/gm;
+  const matches = Array.from(raw.matchAll(sectionRegex));
+
+  if (matches.length === 0) {
+    return { entries, warnings };
+  }
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i]!;
+    const title = match[1]!.trim();
+    const start = match.index! + match[0].length;
+    const end = i + 1 < matches.length ? matches[i + 1]!.index! : raw.length;
+
+    const sectionBody = raw.slice(start, end).trim();
+
+    const yamlFenceMatch = sectionBody.match(/```(?:ya?ml)?\s*\n([\s\S]*?)\n```/);
+    if (!yamlFenceMatch) {
+      warnings.push(`Entry "${title}" has no YAML metadata block`);
+      continue;
+    }
+
+    const yamlContent = yamlFenceMatch[1]!;
+    let meta: Record<string, unknown> = {};
+    try {
+      const parsed = YAML.parse(yamlContent);
+      if (parsed && typeof parsed === "object") {
+        meta = parsed as Record<string, unknown>;
+      }
+    } catch (err) {
+      warnings.push(`Entry "${title}" has invalid YAML: ${(err as Error).message}`);
+      continue;
+    }
+
+    const yamlBlockEnd = sectionBody.indexOf(yamlFenceMatch[0]!) + yamlFenceMatch[0]!.length;
+    const rationale = sectionBody.slice(yamlBlockEnd).trim();
+
+    const pushback = Number(meta.pushback);
+    const tags = Array.isArray(meta.tags)
+      ? (meta.tags as string[])
+      : Array.isArray(meta.scope)
+        ? (meta.scope as string[])
+        : [];
+    const author = typeof meta.author === "string" ? meta.author : "human";
+    const date = (typeof meta.date === "string" ? meta.date : "") ?? "";
+    const status = ((meta.status as JournalEntry["status"]) || "active") ?? "active";
+    const superseded_by =
+      typeof meta.superseded_by === "string" ? meta.superseded_by : undefined;
+
+    entries.push({
+      title,
+      pushback: isNaN(pushback) ? 0 : pushback,
+      tags,
+      author,
+      date,
+      status,
+      superseded_by,
+      rationale,
+    });
+  }
+
+  return { entries, warnings };
+}
 
 export interface MigrationReport {
   migrated: number;
