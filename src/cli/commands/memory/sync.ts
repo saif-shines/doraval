@@ -36,6 +36,7 @@ export default defineCommand({
       const result = syncMemory({
         repo: args.repo ? String(args.repo) : undefined,
         message: args.message ? String(args.message) : undefined,
+        onStage: (msg) => stage(mode, msg),
       });
 
       if (!result.ok) {
@@ -72,7 +73,6 @@ export default defineCommand({
         return;
       }
 
-      stage(mode, "Sync finished.");
       ui.blank();
       ui.success(`Memory sync complete — ${result.message}`);
       ui.write(`  remote: ${result.repo}`);

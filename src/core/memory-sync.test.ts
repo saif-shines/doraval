@@ -274,6 +274,30 @@ describe("syncMemory", () => {
     expect(again.committed).toBe(false);
   });
 
+  test("onStage fires heartbeats across bootstrap and later sync", () => {
+    const bare = makeBareRemote();
+    writeLocalPrinciple("global/principles.md", "## Stage\n\ns\n");
+    const firstStages: string[] = [];
+    const first = syncMemory({
+      repo: bare,
+      onStage: (m) => firstStages.push(m),
+    });
+    expect(first.ok).toBe(true);
+    expect(firstStages.some((s) => /remote|Resolving/i.test(s))).toBe(true);
+    expect(firstStages.some((s) => /Bootstrap|clone|init/i.test(s))).toBe(true);
+    expect(firstStages.some((s) => /Done/i.test(s))).toBe(true);
+    // Throwing onStage must not break sync
+    writeLocalPrinciple("global/principles.md", "## Stage\n\ns\n\n## More\n\nm\n");
+    const second = syncMemory({
+      repo: bare,
+      message: "memory: stage test",
+      onStage: () => {
+        throw new Error("progress sink exploded");
+      },
+    });
+    expect(second.ok).toBe(true);
+  });
+
   test("writes .gitattributes with merge=union", () => {
     const bare = makeBareRemote();
     writeLocalPrinciple("global/principles.md", "## X\n\nx\n");

@@ -46,6 +46,11 @@ export interface SyncOptions {
   /** Commit message when there are local changes. */
   message?: string;
   deps?: SyncDeps;
+  /**
+   * Optional progress heartbeat for multi-second network/git work (B34).
+   * Callers should no-op this in `--format json` mode so machine output stays clean.
+   */
+  onStage?: (message: string) => void;
 }
 
 interface MemoryRemoteConfig {
@@ -421,6 +426,13 @@ export function resolveMemoryRepo(
  */
 export function syncMemory(opts: SyncOptions = {}): SyncResult {
   const deps = opts.deps ?? defaultSyncDeps();
+  const stage = (msg: string) => {
+    try {
+      opts.onStage?.(msg);
+    } catch {
+      /* progress must never break sync */
+    }
+  };
 
   if (!hasGitCli(deps)) {
     return {
@@ -430,6 +442,7 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
     };
   }
 
+  stage("Resolving remote…");
   const resolved = resolveMemoryRepo(opts.repo, deps);
   if (!resolved.ok) return resolved;
 
@@ -441,6 +454,7 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
 
   // GitHub owner/name remotes: ensure auth + private repo exists before clone/push.
   if (isGithubOwnerName(repo)) {
+    stage("Checking gh auth…");
     if (!hasGhCli(deps)) {
       return {
         ok: false,
@@ -455,6 +469,7 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
         error: "Not logged in to GitHub. Run: gh auth login",
       };
     }
+    stage("Ensuring private GitHub repo…");
     const created = ensureGithubRepo(repo, deps);
     if (!created.ok) {
       return { ok: false, code: "E-JRN-001", error: created.error };
@@ -463,6 +478,7 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
 
   const wasGit = isGitRepository(repoDir, deps);
   if (!wasGit) {
+    stage("Bootstrapping memory repo (clone/init)…");
     const boot = bootstrapMemoryRepo(repoDir, gitUrl, deps);
     if (!boot.ok) return { ok: false, code: "E-JRN-002", error: boot.error };
   }
@@ -480,11 +496,13 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
   let pulled = false;
   let pushed = false;
 
+  stage("Staging local changes…");
   let r = deps.runGit(["add", "-A"], { cwd: repoDir });
   let check = gitOk(r, "git add");
   if (!check.ok) return { ok: false, code: "E-JRN-003", error: check.error };
 
   if (hasUncommittedChanges(repoDir, deps)) {
+    stage("Committing…");
     const msg = opts.message?.trim() || DEFAULT_COMMIT;
     r = deps.runGit(["commit", "-m", msg], { cwd: repoDir });
     check = gitOk(r, "git commit");
@@ -499,12 +517,14 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
     // Set upstream if origin exists
     const hasOrigin = deps.runGit(["remote", "get-url", "origin"], { cwd: repoDir });
     if (hasOrigin.exitCode === 0) {
+      stage("Pushing (set upstream)…");
       r = deps.runGit(["push", "-u", "origin", branch], { cwd: repoDir });
       check = gitOk(r, "git push -u");
       if (!check.ok) return { ok: false, code: "E-JRN-004", error: check.error };
       pushed = true;
     }
   } else {
+    stage("Pulling (rebase)…");
     r = deps.runGit(["pull", "--rebase", "origin", branch], { cwd: repoDir });
     if (r.exitCode !== 0) {
       // Try to abort a stuck rebase for cleanliness
@@ -517,6 +537,7 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
     }
     pulled = true;
 
+    stage("Pushing…");
     r = deps.runGit(["push", "origin", branch], { cwd: repoDir });
     check = gitOk(r, "git push");
     if (!check.ok) return { ok: false, code: "E-JRN-004", error: check.error };
@@ -524,6 +545,7 @@ export function syncMemory(opts: SyncOptions = {}): SyncResult {
   }
 
   saveMemoryRemoteConfig(repo);
+  stage("Done.");
 
   const parts: string[] = [];
   if (!wasGit) parts.push("bootstrapped");
