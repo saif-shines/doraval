@@ -76,7 +76,8 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 ## Next (no version bump)
 
 - Update GH secret `NPM_TOKEN` → GAT with Bypass 2FA + write on all six `@hacksmith/doraval*` packages (CI platforms)
-- Website B26/B27 full convergence (README rewrite + kill stale validate/drift/init narrative beyond B33 memory swap)
+- **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
+- Website B27 full convergence (sidebar/IA + kill remaining validate/drift/init narrative on site)
 - Q1 providers identity / Q2 provider groups (product calls)
 - Optional: stash `--fzf` stretch
 
