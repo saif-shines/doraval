@@ -1,7 +1,7 @@
 # Doraval — work pin (resume here)
 
-> **Pinned:** 2026-07-14 · HEAD `64d0f37` · version **0.6.0**  
-> **Branch:** `main` · **11 commits ahead of `origin/main` (not pushed)**  
+> **Pinned:** 2026-07-14 · HEAD `5d1283e` (pin) / work through `64d0f37` · version **0.6.0**  
+> **Branch:** `main` · **12 commits ahead of `origin/main` (not pushed)**  
 > **Policy:** no more version bumps until an explicit release; batch ships as 0.6.0.
 
 ## Track pause: Exceptional CLI
