@@ -13,11 +13,20 @@ Context you cannot trust wastes a day. doraval makes the first attempt succeed â
 ## First win
 
 ```bash
+# one-shot (no install)
 npx @hacksmith/doraval
-# after install: dora
+
+# or install once, then use dora / doraval
+npm install -g @hacksmith/doraval
+# brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
+# bun add -g @hacksmith/doraval
+
+dora
 ```
 
-Zero config. No API key. Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions, and the exact next command to run.
+Zero config. No API key. Full install options: [Installation](/get-started/installation/) (npm, Homebrew, Bun, `npx` / `bunx`).
+
+Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions, and the exact next command to run.
 
 ```text
 $ dora

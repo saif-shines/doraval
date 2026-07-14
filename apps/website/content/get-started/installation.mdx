@@ -1,23 +1,19 @@
 ---
 title: Installation
-description: Install doraval via npx, npm, Homebrew, or Bun.
+description: Install doraval via npm, Homebrew, Bun, or one-shot npx/bunx.
 sidebar:
   order: 2
 ---
 
-## No install
+Pick one path. After a permanent install, `dora` and `doraval` are the same binary.
 
-```bash
-npx @hacksmith/doraval
-```
-
-## npm
+## npm (recommended cross-platform)
 
 ```bash
 npm install -g @hacksmith/doraval
 ```
 
-npm ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
+Ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
 
 ## Homebrew (macOS)
 
@@ -25,12 +21,27 @@ npm ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Wind
 brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
 ```
 
+Upgrade later with `brew upgrade doraval` or `dora update`.
+
 ## Bun
 
 ```bash
-bunx @hacksmith/doraval
+# permanent
 bun add -g @hacksmith/doraval
+
+# one-shot
+bunx @hacksmith/doraval
 ```
+
+## One-shot (no install)
+
+```bash
+npx @hacksmith/doraval
+# or
+bunx @hacksmith/doraval
+```
+
+Useful for trying doraval or CI without a global install. Prefer a permanent install for day-to-day use.
 
 ## Alpine / musl
 

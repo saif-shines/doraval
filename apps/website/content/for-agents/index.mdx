@@ -36,9 +36,15 @@ Global flags:
 ## CI example
 
 ```bash
+# one-shot in CI (no global install)
 npx @hacksmith/doraval review --all --quick --ci
+
+# or if doraval is already on PATH (npm / brew / bun install)
+dora review --all --quick --ci
 dora --format json | jq '.summary'
 ```
+
+Install paths for humans and agents: [Installation](/get-started/installation/) (npm, Homebrew, Bun, `npx` / `bunx`).
 
 ## Agent-ready fixes
 
