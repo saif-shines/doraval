@@ -62,6 +62,10 @@ bun test
 bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 ```
 
+## Release
+
+**Pushed 2026-07-14:** `main` + tag **`v0.6.0`** → origin (triggers Release CI). npm publish happens via CI binaries pipeline when green.
+
 ## Next release (when you ask)
 
 Push `main` and publish **0.6.0** as one batch (bump fix + B33–B35). Do not mint 0.6.1/0.7.0 for polish.
