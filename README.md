@@ -90,11 +90,6 @@ dora fix .
 
 # 5. Record principles dora enforces in every future review
 dora memory add "Run tests before shipping skill changes" --weight 8
-
-# 6. Decision journal that persists across sessions
-doraval journal add "Validate before shipping skill changes"
-doraval journal sync
-doraval journal hook enable
 ```
 
 Full walkthrough: [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/)
@@ -216,6 +211,12 @@ High-weight principles show up as errors in every future `dora review` on this p
 
 `memory sync` turns `~/.doraval/memory/repo` into a real git clone (not the GitHub Contents API). First run checks `gh auth`, creates a private `{you}/dora-memory` repo if needed, adopts any local files, then commit + `pull --rebase` + push. Later runs are just sync. Concurrent machines union-merge append-only `principles.md` files.
 
+> **Note:** `dora journal` was removed. Memory is the only path now — on
+> upgrade, the first `dora memory` command you run migrates any legacy
+> journal entries automatically (report printed once). Use
+> `dora memory context` (with `--append-to` / `--json`) where you used
+> `dora journal context`.
+
 #### Validators (Claude)
 
 | Validator | Detects | Checks |
@@ -248,21 +249,6 @@ dora new skill --for claude --native --yes        # local format, not a plugin
 `dora claude new` / `cursor new` / … still work as thin wrappers; prefer `dora new --for <agent>`.
 
 > The old `validate`, `skill lint`, `judge`/`eval`/`evals`, and `drift` commands were folded into `dora review` (structure = tier 1, heuristics = tier 2, LLM = tier 3; session-adherence analysis returns as the review sessions tier).
-
-### `journal`: decision memory that survives sessions
-
-Record project principles so future you (and agents) don't contradict past choices. SessionStart hooks inject the journal before the first message.
-
-```bash
-doraval journal init          # one-time: journal repo + agent config
-doraval journal list          # view active principles
-doraval journal add "..."     # propose a decision
-doraval journal sync          # publish pending entries
-doraval journal update        # pull latest from remote
-doraval journal hook enable   # inject journal on every SessionStart
-```
-
-Requires the GitHub CLI (`gh`). Journal lives in a private GitHub repo you control.
 
 ### `sessions`: what your agents actually did
 
