@@ -8,11 +8,34 @@ import { reportMigration } from "./migration-report.js";
 import { ui, summaryLine } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
+/** Cold-start examples for --help / empty states (B40). */
+export const MEMORY_EXAMPLE_PRINCIPLES = [
+  "Never use default exports",
+  "Run bun test before commit",
+  "Prefer named exports",
+] as const;
+
+export const MEMORY_WEIGHT_GUIDE = "w8 = hard rule · w5 = default · w3 = soft preference";
+
 export default defineCommand({
-  meta: { name: "add", description: "Add a principle or note to project memory (works instantly, local-only)" },
+  meta: {
+    name: "add",
+    description:
+      "Add a principle or note to project memory (works instantly, local-only). " +
+      `Examples: "${MEMORY_EXAMPLE_PRINCIPLES[0]}", "${MEMORY_EXAMPLE_PRINCIPLES[1]}". ` +
+      `Weight: ${MEMORY_WEIGHT_GUIDE}.`,
+  },
   args: {
-    title: { type: "positional", description: "Short imperative title (≤ 80 chars)", required: true },
-    weight: { type: "string", description: "Importance weight 1–10 (default 5)", default: "5" },
+    title: {
+      type: "positional",
+      description: `Short imperative title (≤ 80 chars). e.g. "${MEMORY_EXAMPLE_PRINCIPLES[0]}"`,
+      required: true,
+    },
+    weight: {
+      type: "string",
+      description: `Importance weight 1–10 (default 5). ${MEMORY_WEIGHT_GUIDE}`,
+      default: "5",
+    },
     tags: { type: "string", description: "Comma-separated tags" },
     global: { type: "boolean", description: "Add to global memory (shared across projects)", default: false },
     body: { type: "string", description: "Rationale or detail" },

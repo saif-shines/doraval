@@ -1,21 +1,29 @@
 import { defineCommand } from "citty";
 import pc from "picocolors";
 import { listSessions, isKnownAgent, resolveAgentAlias } from "../../core/sessions-view.js";
-import { ui, resolveOutputMode, outJson, summaryLine, emitError } from "../out.js";
+import { ui, resolveOutputMode, outJson, summaryLine, emitError, nextAction } from "../out.js";
 import { exit } from "../render/exit.js";
 
 function renderTable(entries: ReturnType<typeof listSessions>): void {
   ui.blank();
   ui.heading("dora sessions");
   ui.blank();
-  ui.write(`  ${"AGENT".padEnd(12)} ${"WHEN".padEnd(17)} ${"TITLE".padEnd(24)} ${"TURNS".padEnd(6)} ${"TOOLS".padEnd(6)} TOKENS`);
+  ui.write(
+    `  ${"AGENT".padEnd(12)} ${"WHEN".padEnd(17)} ${"TITLE".padEnd(24)} ${"TURNS".padEnd(6)} ${"TOOLS".padEnd(6)} ID`,
+  );
   for (const e of entries) {
+    const idShort = e.id.length > 12 ? e.id.slice(0, 12) + "…" : e.id;
     ui.write(
-      `  ${e.agent.padEnd(12)} ${e.when.padEnd(17)} ${e.title.slice(0, 22).padEnd(24)} ${String(e.turns).padEnd(6)} ${String(e.toolCalls).padEnd(6)} ${pc.dim("—")}`
+      `  ${e.agent.padEnd(12)} ${e.when.padEnd(17)} ${e.title.slice(0, 22).padEnd(24)} ${String(e.turns).padEnd(6)} ${String(e.toolCalls).padEnd(6)} ${pc.dim(idShort)}`,
     );
   }
   ui.blank();
   summaryLine(`${entries.length} session${entries.length === 1 ? "" : "s"}`);
+  // B40: real id from the list for drill-down
+  const first = entries[0];
+  if (first) {
+    nextAction(`dora sessions show ${first.id}`);
+  }
   ui.blank();
 }
 

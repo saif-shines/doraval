@@ -1,6 +1,6 @@
 # WIP — Doraval work tracker (resume here)
 
-> **Pinned:** 2026-07-14 · work through `64d0f37` · version **0.6.0**  
+> **Pinned:** 2026-07-14 · version **0.6.0** · dogfood B33–B39 + B40 partial · push/tag to ship
 > **Branch:** `main` · ahead of `origin/main` (not pushed)  
 > **Policy:** no more version bumps until an explicit release; batch ships as **0.6.0**.  
 > **Plan:** [`docs/EXCEPTIONAL-CLI-PLAN.md`](docs/EXCEPTIONAL-CLI-PLAN.md) (v7 + dogfood B33–B40)  
@@ -10,7 +10,7 @@
 
 ## Track pause: Exceptional CLI
 
-CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan loop. B37–B39 executed by plan loop. B40 still paused unless asked.
+CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan loop. B37–B39 + B40 memory/sessions polish done. Ship as 0.6.0.
 
 | Item | State | Notes |
 |---|---|---|
@@ -22,7 +22,8 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 | **B37** config dual surface | **done** | interactive bare config, table get, --format json |
 | **B38** provider wrappers + help order | **done** | shared provider-new, Advanced labels, primary-first help |
 | **B39** capabilities discoverability | **done** | --help label + stderr banner unless --format json |
-| **B40** | **paused** | cold-start polish grab-bag |
+| **B40** cold-start (partial) | **done** | memory examples + weight guide; sessions list Next + id col |
+| B40 rest | **paused** | stash fzf (already capped), sessions show tool names, bump interactive |
 | Q1 providers identity / Q2 provider groups | **open** | product decisions, not coded |
 
 ### B33 residuals (not blocking CLI)
@@ -43,7 +44,7 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 **Resume CLI track:**
 
 ```
-Read WIP.md. Resume Exceptional CLI dogfood at B40 (cold-start polish grab-bag) from docs/EXCEPTIONAL-CLI-PLAN.md. No version bump.
+Read WIP.md. After release: remaining B40 (bump interactive, sessions show detail) or website B26/B27 from docs/EXCEPTIONAL-CLI-PLAN.md. No version bump.
 ```
 
 **Continue non-CLI (ponytail / repo conditions):**
