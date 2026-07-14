@@ -118,11 +118,13 @@ function walkForTargets(dir: string, maxDepth = 6, currentDepth = 0): Target[] {
       if (entry === "plugin.json") {
         const parentDir = dirname(full);
         const parentName = parentDir.split(/[/\\]/).pop();
-        if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin" || parentName === ".github") {
+        const grandParentName = dirname(parentDir).split(/[/\\]/).pop();
+        const isCopilotPlugin = parentName === "plugin" && grandParentName === ".github";
+        if (parentName === ".claude-plugin" || parentName === ".codex-plugin" || parentName === ".cursor-plugin" || isCopilotPlugin) {
           results.push({
             file: full,
             kind: "plugin",
-            label: `plugin manifest (${parentName.replace(".", "")})`,
+            label: isCopilotPlugin ? "plugin manifest (copilot)" : `plugin manifest (${parentName!.replace(".", "")})`,
           });
         }
       } else if (entry === "marketplace.json") {
