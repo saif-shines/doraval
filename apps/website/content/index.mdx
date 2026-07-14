@@ -1,6 +1,9 @@
 ---
 title: Scale your AI context for coding agents
 description: Scan, review, fix, and remember agent context so skills and plugins work on the first try — across Claude, Cursor, Codex, Copilot, and Grok.
+sidebar:
+  label: Home
+  order: 0
 ---
 
 **doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
@@ -37,6 +40,20 @@ $ dora
 
 ## The loop
 
+You can run these yourself — but the better default is to **let your coding agent do it**. Point Claude, Cursor, Codex, Copilot, or Grok at the repo and ask it to drive `dora` (JSON-friendly flags are built in).
+
+Paste something like:
+
+```text
+Install doraval if needed, then run the doraval loop in this repo:
+1. dora (scan) — fix anything it suggests
+2. dora review . then dora fix . (use --yes for mechanical fixes)
+3. dora memory add any project principles we should keep
+Use --format json / --ci when you need machine output. Prefer dora new --for <agent> over hand-writing skill files.
+```
+
+What the agent (or you) runs:
+
 ```bash
 dora                                          # scan
 dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
@@ -44,6 +61,8 @@ dora review .                                 # structure + heuristics (+ LLM wh
 dora fix .                                    # diffs first; asks before writing
 dora memory add "Run tests before shipping skill changes" --weight 8
 ```
+
+Details for agents and CI: [For coding agents](/for-agents/).
 
 <CardGroup cols={3}>
   <Card title="Get started" href="/get-started/" icon="rocket">
@@ -53,7 +72,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8
     Full reference for scan, review, fix, new, memory, and more.
   </Card>
   <Card title="For coding agents" href="/for-agents/" icon="bot">
-    JSON mode, CI, exit codes, and machine-readable docs.
+    JSON mode, CI, exit codes — so your agent can run the loop.
   </Card>
 </CardGroup>
 
