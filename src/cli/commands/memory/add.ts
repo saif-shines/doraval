@@ -3,6 +3,8 @@ import { resolve } from "path";
 import { existsSync, readFileSync, appendFileSync } from "fs";
 import { generateUlid, serializeEntry, type MemoryEntry } from "../../../core/memory-parse.js";
 import { getProjectSlug, getProjectPrinciplesPath, getGlobalPrinciplesPath, ensureMemoryDirs } from "../../../core/memory-config.js";
+import { runJournalMigrationIfNeeded } from "../../../core/memory-migrate.js";
+import { reportMigration } from "./migration-report.js";
 import { ui, summaryLine } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
@@ -16,6 +18,8 @@ export default defineCommand({
     body: { type: "string", description: "Rationale or detail" },
   },
   async run({ args }) {
+    reportMigration(runJournalMigrationIfNeeded());
+
     const title = String(args.title);
     if (title.length > 80) {
       ui.fail("Title must be ≤ 80 characters");

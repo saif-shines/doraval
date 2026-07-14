@@ -1,6 +1,8 @@
 import { defineCommand } from "citty";
 import pc from "picocolors";
 import { loadPrinciples } from "../../../core/memory-rubric.js";
+import { runJournalMigrationIfNeeded } from "../../../core/memory-migrate.js";
+import { reportMigration } from "./migration-report.js";
 import { ui, resolveOutputMode, outJson, summaryLine } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
@@ -12,6 +14,9 @@ export default defineCommand({
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const migration = runJournalMigrationIfNeeded();
+    if (mode.format !== "json") reportMigration(migration);
+
     const principles = loadPrinciples(process.cwd());
 
     if (mode.format === "json") {

@@ -3,6 +3,8 @@ import { resolve } from "path";
 import { multiselect, isCancel } from "@clack/prompts";
 import { listStashCandidates, stashFile } from "../../../core/memory-artifacts.js";
 import { getProjectSlug } from "../../../core/memory-config.js";
+import { runJournalMigrationIfNeeded } from "../../../core/memory-migrate.js";
+import { reportMigration } from "./migration-report.js";
 import { canPromptInteractively } from "../fix.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine } from "../../out.js";
 import { exit } from "../../render/exit.js";
@@ -16,6 +18,8 @@ export default defineCommand({
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: false });
+    const migration = runJournalMigrationIfNeeded();
+    if (mode.format !== "json") reportMigration(migration);
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const slug = getProjectSlug(cwd);
 
