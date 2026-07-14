@@ -1,0 +1,26 @@
+---
+title: New
+description: Scaffold a skill, rule, agent, or plugin for a coding agent.
+sidebar:
+  order: 4
+---
+
+```bash
+dora new
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new rule --for cursor --name no-default-exports --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+| Type | What it is |
+| --- | --- |
+| `skill` | Reusable `SKILL.md` |
+| `rule` | Always-on convention |
+| `agent` | Subagent role |
+| `plugin` | Package to ship |
+
+Prefer `dora new --for <agent>`. Advanced packaging groups (`dora claude new`, …) still exist when you need provider-specific trees.
+
+Full reference: [dora new](/commands/new/).
+
+**Next:** [Memory](/first-five-minutes/memory/) for principles that stick.

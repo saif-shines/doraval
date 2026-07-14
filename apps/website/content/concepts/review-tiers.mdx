@@ -1,0 +1,41 @@
+---
+title: Review tiers
+description: How dora review grades artifacts — structure, heuristics, LLM, sessions.
+sidebar:
+  order: 2
+---
+
+`dora review` runs every tier that can run. Flags force or skip tiers when you need a fixed bar (CI vs deep judgment).
+
+## Tier 1 — Structure
+
+Parseable files, required fields, name/dir consistency, basic schema. Fast. Always available. `--quick` includes this tier.
+
+## Tier 2 — Heuristics
+
+Dead file references, duplicate rules, keyword-level violations of [memory](/concepts/memory/) principles, packaging smells. Still no network / LLM. Included in `--quick`.
+
+## Tier 3 — LLM
+
+Judgment when a judge model is configured (`dora config` / env). Vague descriptions, missing guardrails, scenario coverage against [scenarios.yaml](/reference/scenarios/).
+
+- Default: run if available, skip if not  
+- `--deep`: **require** this tier; exit `2` if no judge  
+
+## Tier 4 — Sessions
+
+Compare skill intent to real agent sessions when adapters exist. Session adapters ship over time; `--sessions` will require this tier when ready.
+
+## Choosing a mode
+
+| Goal | Command |
+| --- | --- |
+| CI structural gate | `dora review --all --quick --ci` |
+| Local full pass | `dora review .` |
+| Must have LLM | `dora review --deep <path>` |
+
+## Related
+
+- [dora review](/commands/review/)
+- [dora fix](/commands/fix/)
+- [scenarios.yaml](/reference/scenarios/)

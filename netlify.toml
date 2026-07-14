@@ -5,6 +5,8 @@
 [build.environment]
   # Ensure Bun is used
   BUN_VERSION = "1.2"
+  # Blume requires Node >= 22.12
+  NODE_VERSION = "22"
 
 # Domain redirects: doraval.thehacksmith.dev is the canonical domain
 [[redirects]]

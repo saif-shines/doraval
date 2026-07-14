@@ -1,0 +1,23 @@
+---
+title: Review
+description: Multi-tier quality gate — structure, heuristics, LLM, sessions.
+sidebar:
+  order: 3
+---
+
+```bash
+dora review .
+dora review ./skills/deploy
+dora review --all
+dora review --quick .           # structure + heuristics only
+dora review --deep ./skills/foo # require LLM tier (exit 2 if no judge)
+dora review --all --quick --ci  # CI gate
+```
+
+Tiers that can run do run; LLM and sessions auto-skip when unavailable (unless `--deep` / `--sessions` require them).
+
+Project principles from [memory](/concepts/memory/) apply automatically as a rubric.
+
+Full reference: [dora review](/commands/review/) · [Review tiers](/concepts/review-tiers/).
+
+**Next:** [Scaffold](/first-five-minutes/new/) new context with `dora new`.

@@ -77,7 +77,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 
 - Update GH secret `NPM_TOKEN` → GAT with Bypass 2FA + write on all six `@hacksmith/doraval*` packages (CI platforms)
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
-- Website B27 full convergence (sidebar/IA + kill remaining validate/drift/init narrative on site)
+- **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
 - Q1 providers identity / Q2 provider groups (product calls)
 - Optional: stash `--fzf` stretch
 
@@ -96,7 +96,7 @@ Still not worth doing this pass (named, skip):
 
 - rename `journal-config.ts` → doraval-config (many importers; pure rename PR later)
 - collapse `RenderBackend` seam (one impl today; parked for possible `dora ui`)
-- website journal pages (B26/B27, large docs track)
+- website journal pages — closed by B27 Blume redesign
 
 
 ## Validation dedupe (ponytail audit execute, 2026-07-14)

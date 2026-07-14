@@ -1,0 +1,64 @@
+---
+title: Scale your AI context for coding agents
+description: Scan, review, fix, and remember agent context so skills and plugins work on the first try — across Claude, Cursor, Codex, Copilot, and Grok.
+---
+
+**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
+
+Context you cannot trust wastes a day. doraval makes the first attempt succeed — across Claude, Cursor, Codex, Copilot, and Grok.
+
+## First win
+
+```bash
+npx @hacksmith/doraval
+# after install: dora
+```
+
+Zero config. No API key. Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions, and the exact next command to run.
+
+```text
+$ dora
+
+  doraval v0.6.x
+  Read-only scan of agent context — no writes, no LLM.
+
+  Agent surfaces
+    ✓ claude    CLAUDE.md  .claude/skills
+    ⚠ cursor    not configured
+
+  Health
+    ✓ .claude/skills/review    valid
+    ✗ .claude/skills/deploy    Missing "description"
+
+  Next
+    1. dora fix .claude/skills/deploy
+    2. dora review --all
+```
+
+## The loop
+
+```bash
+dora                                          # scan
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora review .                                 # structure + heuristics (+ LLM when available)
+dora fix .                                    # diffs first; asks before writing
+dora memory add "Run tests before shipping skill changes" --weight 8
+```
+
+<CardGroup cols={3}>
+  <Card title="Get started" href="/get-started/" icon="rocket">
+    Install and run your first scan in under two minutes.
+  </Card>
+  <Card title="Commands" href="/commands/scan/" icon="terminal">
+    Full reference for scan, review, fix, new, memory, and more.
+  </Card>
+  <Card title="For coding agents" href="/for-agents/" icon="bot">
+    JSON mode, CI, exit codes, and machine-readable docs.
+  </Card>
+</CardGroup>
+
+## Next
+
+- [Installation](/get-started/installation/) — npm, Homebrew, Bun
+- [Quickstart](/get-started/quickstart/) — scan → new → review → fix → memory
+- [First five minutes](/first-five-minutes/scan/) — the core loop, one screen at a time

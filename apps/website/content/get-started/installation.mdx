@@ -1,0 +1,53 @@
+---
+title: Installation
+description: Install doraval via npx, npm, Homebrew, or Bun.
+sidebar:
+  order: 2
+---
+
+## No install
+
+```bash
+npx @hacksmith/doraval
+```
+
+## npm
+
+```bash
+npm install -g @hacksmith/doraval
+```
+
+npm ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
+
+## Homebrew (macOS)
+
+```bash
+brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
+```
+
+## Bun
+
+```bash
+bunx @hacksmith/doraval
+bun add -g @hacksmith/doraval
+```
+
+## Alpine / musl
+
+Platform binaries target glibc. On Alpine/musl, run from source with Bun:
+
+```bash
+bunx @hacksmith/doraval
+```
+
+## Verify
+
+```bash
+doraval --version
+# same binary:
+dora --version
+```
+
+## Next
+
+[Quickstart](/get-started/quickstart/) — run your first scan.

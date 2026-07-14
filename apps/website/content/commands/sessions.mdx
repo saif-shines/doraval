@@ -1,0 +1,36 @@
+---
+title: dora sessions
+description: List and show recent AI coding agent sessions for this project.
+sidebar:
+  label: sessions
+  order: 7
+---
+
+```bash
+dora sessions
+dora sessions --agent claude --limit 20
+dora sessions show <id>
+```
+
+Read-only. Claude Code and Grok today; Codex / Copilot / Cursor adapters planned.
+
+## Options (list)
+
+| Flag | Meaning |
+| --- | --- |
+| `--agent <name>` | Filter (`claude`, `grok`) |
+| `--limit <n>` | Max sessions per agent (default `10`) |
+| `--format` / `--ci` | Machine output |
+
+## show
+
+Timeline: user turns, tool calls (names + args summary), skills invoked, token totals when available.
+
+```bash
+dora sessions show <sessionId>
+```
+
+## Related
+
+- [dora review](/commands/review/) (session tier, as adapters mature)
+- [For coding agents](/for-agents/)

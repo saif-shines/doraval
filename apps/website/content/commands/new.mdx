@@ -1,0 +1,44 @@
+---
+title: dora new
+description: Scaffold a skill, rule, agent, or plugin for a coding agent.
+sidebar:
+  label: new
+  order: 4
+---
+
+```bash
+dora new [TYPE] [NAME]
+```
+
+| Type | Meaning |
+| --- | --- |
+| `skill` | Reusable `SKILL.md` |
+| `rule` | Always-on convention |
+| `agent` | Subagent role |
+| `plugin` | Package to ship |
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `-f, --for <agent>` | `claude` \| `cursor` \| `codex` \| `copilot` |
+| `-d, --description <text>` | Short description |
+| `--intent <intent>` | `self` \| `self-later` \| `distribute` |
+| `--native` | Scaffold the agent's native format (not plugin packaging) |
+| `-y, --yes` | Skip interactive prompts |
+| `--format` / `--ci` / `--cwd` | Shared global flags |
+
+## Examples
+
+```bash
+dora new
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+Prefer `dora new --for <agent>`. Advanced provider groups (`dora claude new`, `dora codex new`, …) remain for packaging-specific workflows.
+
+## Related
+
+- [First five minutes: new](/first-five-minutes/new/)
+- [dora providers](/commands/providers/)

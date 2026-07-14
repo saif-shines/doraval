@@ -1,0 +1,23 @@
+---
+title: dora config
+description: Get or set doraval configuration with dot-notation keys.
+sidebar:
+  label: config
+  order: 8
+---
+
+```bash
+dora config
+dora config get
+dora config get eval.model
+dora config set eval.model gpt-4.1
+```
+
+Common keys: `eval.model`, `eval.provider`, `eval.judge`, `agent.command`. Run `dora config get` for the full table.
+
+Bare `dora config` opens the interactive surface when on a TTY; use `get` / `set` for scripts.
+
+## Related
+
+- [dora review](/commands/review/) (judge / model config)
+- [For coding agents](/for-agents/)

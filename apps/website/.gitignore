@@ -1,0 +1,5 @@
+# Blume generated runtime + build output
+.blume/
+.blume-verify/
+dist/
+node_modules/

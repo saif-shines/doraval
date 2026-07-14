@@ -1,0 +1,29 @@
+---
+title: dora bump
+description: Bump semver in plugin.json and marketplace.json manifests.
+sidebar:
+  label: bump
+  order: 9
+---
+
+```bash
+dora bump
+dora bump patch
+dora bump minor ./plugins
+dora bump 1.2.3 --yes
+dora bump --only plugin
+```
+
+| Argument / flag | Meaning |
+| --- | --- |
+| `TYPE` | `patch` \| `minor` \| `major` \| exact `x.y.z`. Omit on a TTY for interactive pick |
+| `PATH` | Directory to scan (default cwd). Single plugin or marketplace root |
+| `--only all\|plugin\|marketplace` | Scope (default `all`) |
+| `--yes` | Skip confirmation in interactive mode |
+
+Supports Claude, Codex, Cursor, and Copilot packaging layouts.
+
+## Related
+
+- [dora new](/commands/new/)
+- [dora providers](/commands/providers/)

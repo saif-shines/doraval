@@ -1,0 +1,44 @@
+---
+title: dora scan
+description: Scan the repo for agent surfaces, skill health, contradictions, and next actions.
+sidebar:
+  label: scan
+  order: 1
+---
+
+```bash
+dora
+dora scan
+```
+
+Default entrypoint. Read-only diagnosis of agent context in the current (or `--cwd`) directory.
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `--format table\|json` | Human table or machine JSON (default `table`) |
+| `--ci` | Machine mode (implies `--format json`) |
+| `--cwd <path>` | Directory to scan |
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Clean (or informational only) |
+| `1` | Issues found |
+| `2` | Could not run |
+
+## Examples
+
+```bash
+dora --format json | jq '.summary'
+dora --ci --cwd "$GITHUB_WORKSPACE"
+```
+
+## Related
+
+- [First five minutes: scan](/first-five-minutes/scan/)
+- [dora review](/commands/review/)
+- [dora fix](/commands/fix/)
+- [For coding agents](/for-agents/)

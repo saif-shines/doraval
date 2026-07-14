@@ -1,0 +1,52 @@
+---
+title: dora review
+description: Deep multi-tier review of skills — structure, heuristics, LLM, sessions.
+sidebar:
+  label: review
+  order: 2
+---
+
+```bash
+dora review [PATH]
+```
+
+`PATH` is a skill dir or project root (default `.`).
+
+## Tiers
+
+1. **Structure** — parseable manifests, required fields, path consistency  
+2. **Heuristics** — dead refs, duplicates, keyword-level memory violations  
+3. **LLM** — judgment when a judge model is configured  
+4. **Sessions** — real-session adherence (adapters land over time)
+
+Tiers that cannot run are skipped unless required by a flag.
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `--quick` | Tiers 1–2 only (no LLM) |
+| `--deep` | Require LLM tier; exit `2` if no judge |
+| `--sessions` | Require session tier (planned; currently a no-op when adapters missing) |
+| `--all` | Review every artifact under the path |
+| `--fail-on error\|warning` | Exit `1` trigger (default `error`) |
+| `--format table\|json` | Output format |
+| `--ci` | Machine mode (implies JSON) |
+| `--cwd <path>` | Working directory override |
+
+## Examples
+
+```bash
+dora review ./skills/deploy
+dora review --quick .
+dora review --deep ./skills/deploy
+dora review --all --quick --ci
+dora review CLAUDE.md
+```
+
+## Related
+
+- [Review tiers](/concepts/review-tiers/)
+- [dora fix](/commands/fix/)
+- [Memory](/concepts/memory/)
+- [scenarios.yaml](/reference/scenarios/)

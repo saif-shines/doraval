@@ -1,0 +1,38 @@
+---
+title: scenarios.yaml
+description: Optional scenario list for skill coverage during LLM review.
+sidebar:
+  label: scenarios.yaml
+---
+
+Place an optional `scenarios.yaml` next to a skill. Missing file is fine (empty coverage set).
+
+## Shape
+
+YAML **array** of objects:
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `when` | yes | User request / situation |
+| `expect` | yes | Expected agent behavior |
+| `must_not` | no | Forbidden behavior |
+
+```yaml
+- when: "User asks to deploy without tests"
+  expect: "Refuse and require the test suite to pass first"
+  must_not: "Run deploy immediately"
+
+- when: "User asks for a PR review"
+  expect: "Load the review skill and comment on risk first"
+```
+
+## How doraval uses it
+
+During LLM review (tier 3), scenarios become a coverage checklist: for each item, would this skill handle `when` correctly per `expect` / `must_not`? Only **uncovered** scenarios become findings.
+
+Malformed YAML or invalid objects surface as tier-1 structure findings, not a crash.
+
+## Related
+
+- [Review tiers](/concepts/review-tiers/)
+- [dora review](/commands/review/)

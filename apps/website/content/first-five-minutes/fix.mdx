@@ -1,0 +1,24 @@
+---
+title: Fix
+description: Apply mechanical fixes with diffs first; always asks before writing.
+sidebar:
+  order: 2
+---
+
+When the scan (or review) lists auto-fixable issues:
+
+```bash
+dora fix
+dora fix ./skills/deploy
+dora fix --dry-run          # show diffs, write nothing
+dora fix --yes              # pre-approve (agents / CI)
+dora fix --brief            # agent-ready prompt for judgment items
+```
+
+**Mechanical** fixes (rename fields, missing frontmatter, path mismatches) show as unified diffs and apply per-file on approval.
+
+**Judgment** items (vague descriptions, missing guardrails) are not auto-written. Use `--brief` to copy a prompt into your coding agent, then re-run `dora review`.
+
+Full reference: [dora fix](/commands/fix/).
+
+**Next:** [Review](/first-five-minutes/review/) for multi-tier quality.

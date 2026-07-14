@@ -1,0 +1,28 @@
+---
+title: dora reconcile
+description: Settle cross-agent contradictions — shared AGENTS.md, strip conflicts.
+sidebar:
+  label: reconcile
+  order: 6
+---
+
+```bash
+dora reconcile
+dora reconcile --dry-run
+dora reconcile --apply
+dora reconcile --apply --yes
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--apply` | Non-interactive: take each recommended resolution |
+| `--dry-run` | List contradictions and planned edits; write nothing |
+| `--yes` | Skip final confirmation when applying |
+| `--format` / `--cwd` | Shared flags |
+
+Interactive by default: review each contradiction and choose how to resolve it.
+
+## Related
+
+- [dora scan](/commands/scan/)
+- [dora memory](/commands/memory/)

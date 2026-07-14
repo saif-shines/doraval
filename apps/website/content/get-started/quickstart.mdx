@@ -1,0 +1,65 @@
+---
+title: Quickstart
+description: Scan, scaffold, review, fix, and capture principles — one path for you, team, or community.
+sidebar:
+  order: 3
+---
+
+Scale context for **yourself**, **your team**, or **your community**. Same workflow whether you are tuning your own agent, onboarding juniors, or publishing a plugin.
+
+Assumes doraval is installed. If not, see [Installation](/get-started/installation/).
+
+## 1. Scan what you already have
+
+```bash
+dora
+```
+
+Bare `dora` lists agent surfaces, skill health, contradictions, and numbered next actions. No writes, no API key.
+
+## 2. Scaffold context
+
+```bash
+# Interactive: type → agent → name
+dora new
+
+# Non-interactive
+dora new skill --for claude --name my-context --description "Team context" --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+Prefer `dora new --for <agent>`. Thin wrappers (`dora claude new`, …) still work for advanced packaging.
+
+## 3. Review and fix
+
+```bash
+dora review .
+dora fix .                 # mechanical fixes; always shows a diff
+```
+
+CI-friendly structural gate (no LLM):
+
+```bash
+dora review --all --quick --ci
+```
+
+## 4. Record principles that stick
+
+```bash
+dora memory add "Use dora review before shipping any skill change" --weight 8
+dora memory list
+dora memory promote        # optional: write hard rules into AGENTS.md
+dora memory sync           # optional: private git backup
+```
+
+For Claude SessionStart hooks:
+
+```bash
+dora memory context --json --quiet
+```
+
+## Next
+
+- [First five minutes: scan](/first-five-minutes/scan/)
+- [For coding agents](/for-agents/) — JSON, CI, exit codes
+- [Memory concept](/concepts/memory/)

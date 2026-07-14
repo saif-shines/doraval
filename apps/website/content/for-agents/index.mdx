@@ -1,0 +1,73 @@
+---
+title: For coding agents
+description: JSON mode, CI, exit codes, capabilities, and machine-readable docs.
+sidebar:
+  label: Overview
+---
+
+doraval is built so coding agents and CI can drive it without a human reading tables.
+
+## Machine output
+
+```bash
+dora --format json
+dora --ci                    # implies --format json
+dora review --all --quick --ci
+dora --capabilities          # JSON manifest of commands (not a human command)
+```
+
+Global flags:
+
+| Flag | Meaning |
+| --- | --- |
+| `--format table\|json` | Output format |
+| `--ci` | Machine mode (JSON) |
+| `--cwd <path>` | Working directory |
+| `--capabilities` | Emit command capability manifest |
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Clean |
+| `1` | Issues found |
+| `2` | Could not run (e.g. required LLM tier unavailable with `--deep`) |
+
+## CI example
+
+```bash
+npx @hacksmith/doraval review --all --quick --ci
+dora --format json | jq '.summary'
+```
+
+## Agent-ready fixes
+
+```bash
+dora fix --yes               # pre-approve mechanical fixes
+dora fix --brief             # clipboard/prompt for judgment items
+dora fix --dry-run
+```
+
+## Machine-readable docs
+
+This site ships agent surfaces by default:
+
+| URL | Content |
+| --- | --- |
+| [https://doraval.thehacksmith.dev/llms.txt](https://doraval.thehacksmith.dev/llms.txt) | Compact index of every page |
+| [https://doraval.thehacksmith.dev/llms-full.txt](https://doraval.thehacksmith.dev/llms-full.txt) | Full corpus Markdown |
+| Any page + `.md` | Raw Markdown for that page (e.g. `/commands/review.md`) |
+
+## Hooks
+
+Inject project principles into Claude SessionStart:
+
+```bash
+dora memory context --json --quiet
+```
+
+## Related
+
+- [dora scan](/commands/scan/)
+- [dora review](/commands/review/)
+- [dora memory](/commands/memory/)

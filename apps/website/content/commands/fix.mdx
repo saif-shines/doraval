@@ -1,0 +1,39 @@
+---
+title: dora fix
+description: Auto-fix review findings — mechanical diffs first; judgment items for your agent.
+sidebar:
+  label: fix
+  order: 3
+---
+
+```bash
+dora fix [PATH]
+```
+
+Applies mechanical fixes from scan/review findings. Always shows diffs; asks before writing unless `--yes`.
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `--yes` | Pre-approve all fixes (agents / CI) |
+| `--dry-run` | Show diffs; write nothing |
+| `--brief` | Emit an agent-ready prompt for judgment fixes |
+| `--format table\|json` | Output format |
+| `--ci` | Machine mode (implies JSON) |
+| `--cwd <path>` | Working directory override |
+
+## Examples
+
+```bash
+dora fix
+dora fix ./skills/deploy
+dora fix --dry-run
+dora fix --yes
+dora fix --brief
+```
+
+## Related
+
+- [dora review](/commands/review/)
+- [First five minutes: fix](/first-five-minutes/fix/)

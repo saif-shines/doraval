@@ -1,0 +1,32 @@
+---
+title: Scan
+description: Run bare dora to see agent surfaces, skill health, and next actions.
+sidebar:
+  order: 1
+---
+
+Your first command is the default:
+
+```bash
+dora
+# same as:
+dora scan
+```
+
+Read-only. No writes, no LLM. Output covers:
+
+1. **Agent surfaces** — which agents look configured (CLAUDE.md, skills dirs, …)
+2. **Health** — skill/manifest issues with short reasons
+3. **Next** — numbered commands to run next (`dora fix …`, `dora review …`)
+
+Useful flags:
+
+```bash
+dora --format json
+dora --ci                 # implies JSON
+dora --cwd /path/to/repo
+```
+
+Full reference: [dora scan](/commands/scan/).
+
+**Next:** [Fix](/first-five-minutes/fix/) mechanical issues the scan found.

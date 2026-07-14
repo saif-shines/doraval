@@ -1,0 +1,59 @@
+---
+title: Memory
+description: Principles that stick — capture once, enforce in review, promote to AGENTS.md.
+sidebar:
+  order: 1
+---
+
+**Memory** is doraval’s store of project (and optional global) principles. It is the only path for durable decisions; the old journal command is gone.
+
+## Why it exists
+
+Sessions forget. README bullets rot. Memory keeps short, weighted principles where:
+
+1. Humans can list and edit them (`dora memory list` / `add`)
+2. Review can enforce them as a rubric
+3. Promote can write hard rules into `AGENTS.md`
+4. Hooks can inject them at session start
+
+## Weights
+
+| Weight | Role |
+| --- | --- |
+| **8–10** | Hard rule — strong review signal; default promote threshold is 7+ |
+| **5** | Default preference |
+| **1–3** | Soft preference |
+
+## Lifecycle
+
+```bash
+dora memory add "…" --weight 8
+dora memory list
+dora review .                    # principles applied as rubric
+dora memory promote              # hard rules → AGENTS.md
+dora memory context --json       # SessionStart hook payload
+dora memory sync                 # optional private git backup
+```
+
+## Stash
+
+Gitignored research files can live in memory and restore after a clean clone:
+
+```bash
+dora memory stash path/to/plan.md
+dora memory restore path/to/plan.md
+```
+
+## Migration note
+
+If you previously used journal, the first `dora memory` command migrates valid entries automatically. Update any SessionStart hooks to:
+
+```bash
+dora memory context --json
+```
+
+## Related
+
+- [dora memory](/commands/memory/)
+- [dora review](/commands/review/)
+- [For coding agents](/for-agents/)
