@@ -1,18 +1,20 @@
 ---
-title: dora completion
-description: Generate shell completion scripts for bash, zsh, or fish.
+title: Shell completions
+description: Install plumbing for bash, zsh, or fish tab completion — not a product command.
 sidebar:
-  label: completion
-  order: 12
+  label: completions
+  order: 99
 ---
 
+Tab completion is **install plumbing**, not part of the scan → fix loop. There is no `dora completion` command.
+
 ```bash
-dora completion bash
-dora completion zsh
-dora completion fish
+dora --completion bash
+dora --completion zsh
+dora --completion fish
 ```
 
-Install the printed script into your shell’s completion directory (or eval it from your rc file).
+Pipe or save the printed script into your shell’s completion directory (or eval it from your rc file).
 
 ## Related
 

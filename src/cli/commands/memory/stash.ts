@@ -13,7 +13,7 @@ import { exit } from "../../render/exit.js";
 const STASH_PICKER_CAP = 20;
 
 export default defineCommand({
-  meta: { name: "stash", description: "Copy a gitignored/untracked file into project memory (survives a clean clone)" },
+  meta: { name: "stash", description: "Stash a gitignored/untracked file into project memory" },
   args: {
     file: { type: "positional", description: "File to stash (relative to cwd)", required: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },

@@ -246,7 +246,7 @@ function isInteractiveBare(typeArg: string | undefined, pathArg: string | undefi
 export default defineCommand({
   meta: {
     name: "bump",
-    description: "Bump semver versions in plugin.json (manifests) and marketplace.json files (supports Claude, Codex, Cursor, Copilot)",
+    description: "Bump plugin/marketplace semver (Claude, Codex, Cursor, Copilot)",
   },
   args: {
     type: {

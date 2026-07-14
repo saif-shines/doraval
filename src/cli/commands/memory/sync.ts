@@ -10,8 +10,7 @@ import { exit } from "../../render/exit.js";
 export default defineCommand({
   meta: {
     name: "sync",
-    description:
-      "Sync project memory to a private git repo (first run creates/clones; later runs commit + pull --rebase + push)",
+    description: "Sync project memory to a private git repo",
   },
   args: {
     repo: {

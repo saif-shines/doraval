@@ -1,9 +1,9 @@
 # WIP — Doraval work tracker (resume here)
 
 > **Pinned:** 2026-07-14 · version **0.6.0** · npm install **fixed** (all five platform packages published)  
-> **Branch:** `main` · synced with origin after v0.6.0 push  
+> **Branch:** `main` · Q1/Q2 CLI decisions implemented (unreleased)  
 > **Policy:** no more version bumps until an explicit release.  
-> **Plan:** [`docs/EXCEPTIONAL-CLI-PLAN.md`](docs/EXCEPTIONAL-CLI-PLAN.md) (v7 + dogfood B33–B40)  
+> **Plan:** [`docs/EXCEPTIONAL-CLI-PLAN.md`](docs/EXCEPTIONAL-CLI-PLAN.md) (v9 + dogfood B33–B40; Q1/Q2 closed)  
 > This is the **only** progress pin — do not recreate `STATUS.md`.
 
 ---
@@ -20,11 +20,12 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 | **B35** type/intent hints + preview | **partial** | core path done; provider-wrapper carryover → B38 |
 | **B36** reconcile UX | **done** | human headlines, actor tags, judgment Next block |
 | **B37** config dual surface | **done** | interactive bare config, table get, --format json |
-| **B38** provider wrappers + help order | **done** | shared provider-new, Advanced labels, primary-first help |
+| **B38** provider wrappers + help order | **done → superseded by Q2** | wrappers deleted 2026-07-14; `dora new --for` only |
 | **B39** capabilities discoverability | **done** | --help label + stderr banner unless --format json |
 | **B40** cold-start (partial) | **done** | memory examples + weight guide; sessions list Next + id col |
 | B40 rest | **done** | sessions list uses `sessionId` (was broken `e.id`); show tool/skill names; interactive bare `dora bump` (multiselect → type → preview → confirm); unit tests |
-| Q1 providers identity / Q2 provider groups | **open** | product decisions, not coded |
+| Q1 providers identity | **decided → A** | packaging/spec only; repo support = bare `dora` scan |
+| Q2 provider groups | **decided → delete** | no `dora claude|cursor|codex|copilot` groups; `dora new --for` only |
 | Stash `--fzf` stretch | **deferred** | picker already capped at 20 (B34); fzf optional P2 |
 
 ### B33 residuals
@@ -78,7 +79,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - Update GH secret `NPM_TOKEN` → GAT with Bypass 2FA + write on all six `@hacksmith/doraval*` packages (CI platforms)
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
-- Q1 providers identity / Q2 provider groups (product calls)
+- Q1/Q2 **implemented** (providers = packaging/spec; provider groups deleted)
 - Optional: stash `--fzf` stretch
 
 ---

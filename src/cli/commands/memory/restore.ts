@@ -19,7 +19,7 @@ function renderDiff(diff: string): void {
 }
 
 export default defineCommand({
-  meta: { name: "restore", description: "Copy a previously stashed file back from project memory" },
+  meta: { name: "restore", description: "Restore a stashed file from project memory" },
   args: {
     file: { type: "positional", description: "File to restore (relative to cwd)", required: false },
     yes: { type: "boolean", description: "Skip per-file confirmation", default: false },

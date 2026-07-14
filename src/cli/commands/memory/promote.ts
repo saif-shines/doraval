@@ -20,7 +20,7 @@ function renderDiff(diff: string): void {
 export default defineCommand({
   meta: {
     name: "promote",
-    description: "Promote high-weight principles into AGENTS.md (diff + confirm)",
+    description: "Promote high-weight principles into AGENTS.md",
   },
   args: {
     weight: {

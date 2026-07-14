@@ -1,7 +1,7 @@
 /**
  * Single source of truth for doraval's command tree.
  *
- * index.ts builds the real citty CLI from these exports. completion.ts
+ * index.ts builds the real citty CLI from these exports. completion-script.ts
  * introspects the same objects (Object.keys on subCommands — citty's
  * defineCommand is an identity function, so this reads names without
  * invoking any lazy import) to generate shell completions. Add a command
@@ -33,7 +33,7 @@ export function defineGroup(
 
 export const memory = defineGroup(
   "memory",
-  "Project principles — capture, enforce in review, promote to AGENTS.md",
+  "Capture principles; enforce in review; promote to AGENTS.md",
   {
     add: () => import("./commands/memory/add.js").then((m) => m.default),
     list: () => import("./commands/memory/list.js").then((m) => m.default),
@@ -48,44 +48,7 @@ export const memory = defineGroup(
 // config command module already defines its own subCommands (set/get)
 export const config = () => import("./commands/config.js").then((m) => m.default);
 
-export const claude = defineGroup(
-  "claude",
-  "Advanced: Claude Code packaging (prefer `dora new --for claude`)",
-  {
-    new: () => import("./commands/claude/new.js").then((m) => m.default),
-    bump: () => import("./commands/bump.js").then((m) => m.default),
-  }
-);
-
-export const codex = defineGroup(
-  "codex",
-  "Advanced: Codex packaging (prefer `dora new --for codex`)",
-  {
-    new: () => import("./commands/codex/new.js").then((m) => m.default),
-    bump: () => import("./commands/bump.js").then((m) => m.default),
-  }
-);
-
-export const cursor = defineGroup(
-  "cursor",
-  "Advanced: Cursor packaging (prefer `dora new --for cursor`)",
-  {
-    new: () => import("./commands/cursor/new.js").then((m) => m.default),
-    bump: () => import("./commands/bump.js").then((m) => m.default),
-  }
-);
-
-export const copilot = defineGroup(
-  "copilot",
-  "Advanced: Copilot packaging (prefer `dora new --for copilot`)",
-  {
-    new: () => import("./commands/copilot/new.js").then((m) => m.default),
-    bump: () => import("./commands/bump.js").then((m) => m.default),
-  }
-);
-
 /** The exact subCommands map used to build the root `doraval` command. */
-/** Primary commands first; provider groups last (B38 teaching order). */
 export const topLevelSubCommands = {
   // ── primary ────────────────────────────────────────────────────
   scan: () => import("./commands/scan.js").then((m) => m.default),
@@ -100,10 +63,4 @@ export const topLevelSubCommands = {
   bump: () => import("./commands/bump.js").then((m) => m.default),
   update: () => import("./commands/update.js").then((m) => m.default),
   providers: () => import("./commands/providers.js").then((m) => m.default),
-  completion: () => import("./commands/completion.js").then((m) => m.default),
-  // ── advanced / compatibility (prefer `dora new --for <agent>`) ─
-  claude: () => Promise.resolve(claude),
-  codex: () => Promise.resolve(codex),
-  cursor: () => Promise.resolve(cursor),
-  copilot: () => Promise.resolve(copilot),
 };

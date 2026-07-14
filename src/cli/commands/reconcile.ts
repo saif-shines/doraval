@@ -61,7 +61,7 @@ function printJudgmentNext(items: ReconcilePlan["items"]): void {
 export default defineCommand({
   meta: {
     name: "reconcile",
-    description: "Settle cross-agent contradictions (shared AGENTS.md, strip conflicts)",
+    description: "Settle cross-agent contradictions (shared AGENTS.md)",
   },
   args: {
     apply: {

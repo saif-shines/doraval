@@ -29,7 +29,7 @@ function renderTable(entries: ReturnType<typeof listSessions>): void {
 }
 
 export default defineCommand({
-  meta: { name: "sessions", description: "List AI coding agent sessions for this project (Claude Code, Grok — Codex/Copilot/Cursor planned)" },
+  meta: { name: "sessions", description: "List coding-agent sessions for this project" },
   args: {
     agent: { type: "string", description: "Filter by agent (claude, grok)" },
     limit: { type: "string", description: "Max sessions per agent", default: "10" },

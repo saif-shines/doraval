@@ -90,12 +90,12 @@ function renderHuman(r: ScanResult): void {
 export default defineCommand({
   meta: {
     name: "scan",
-    description: "Scan the repo: agent surfaces, skill health, contradictions, next actions",
+    description: "Scan the repo: agent surfaces, skill health, next actions",
   },
   args: {
     format: { type: "string", description: "Output format: table | json", default: "table" },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
-    cwd: { type: "string", description: "Directory to scan (for CI and coding agents)" },
+    cwd: { type: "string", description: "Directory to scan (CI / coding agents)" },
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- **Removed provider groups** `dora claude` / `dora cursor` / `dora codex` /
+  `dora copilot` (including `… new` and nested `… bump`). Scaffold only via
+  `dora new --for <agent>`; version bumps via top-level `dora bump`.
+- **`dora providers` is packaging/spec reference only.** Repo-relative
+  “which agents does this project use?” lives on bare `dora` (Agent surfaces).
+- **Removed `dora completion` command.** Use root flag
+  `dora --completion bash|zsh|fish` (install plumbing, not product surface).
+
 ## 0.6.0
 
 ### Breaking

@@ -7,15 +7,17 @@ sidebar:
 ---
 
 ```bash
-dora config
+dora config                 # interactive hub (TTY)
+dora config setup           # judge wizard: provider · model · backend
 dora config get
 dora config get eval.model
 dora config set eval.model gpt-4.1
+dora config set eval.judge auto
 ```
 
-Common keys: `eval.model`, `eval.provider`, `eval.judge`, `agent.command`. Run `dora config get` for the full table.
+Common keys: `eval.model`, `eval.provider`, `eval.judge`, `agent.command`. Run `dora config get` for the full table (secrets masked in human output; use `--format json` for raw values).
 
-Bare `dora config` opens the interactive surface when on a TTY; use `get` / `set` for scripts.
+Bare `dora config` opens the interactive hub when on a TTY — list, edit a key (enums for provider/judge), or setup judge. Use `get` / `set` for scripts.
 
 ## Related
 

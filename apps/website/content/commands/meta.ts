@@ -15,6 +15,5 @@ export default defineMeta({
     "bump",
     "providers",
     "update",
-    "completion",
   ],
 });

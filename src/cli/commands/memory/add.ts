@@ -20,10 +20,7 @@ export const MEMORY_WEIGHT_GUIDE = "w8 = hard rule · w5 = default · w3 = soft 
 export default defineCommand({
   meta: {
     name: "add",
-    description:
-      "Add a principle or note to project memory (works instantly, local-only). " +
-      `Examples: "${MEMORY_EXAMPLE_PRINCIPLES[0]}", "${MEMORY_EXAMPLE_PRINCIPLES[1]}". ` +
-      `Weight: ${MEMORY_WEIGHT_GUIDE}.`,
+    description: "Add a principle to project memory (local, instant)",
   },
   args: {
     title: {
@@ -33,7 +30,7 @@ export default defineCommand({
     },
     weight: {
       type: "string",
-      description: `Importance weight 1–10 (default 5). ${MEMORY_WEIGHT_GUIDE}`,
+      description: `Importance 1–10 (default 5). ${MEMORY_WEIGHT_GUIDE}`,
       default: "5",
     },
     tags: { type: "string", description: "Comma-separated tags" },

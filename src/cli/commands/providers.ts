@@ -1,13 +1,18 @@
+/**
+ * Packaging/spec reference only (Q1 option A).
+ * Repo-relative "which agents does this project use?" lives on bare `dora` scan.
+ */
 import { defineCommand } from "citty";
 import pc from "picocolors";
-import { ui } from "../out.js";
+import { ui, nextAction } from "../out.js";
 import { supportedProviders, getProviderSpec } from "../../providers/spec.js";
 import { exit } from "../render/exit.js";
 
 export default defineCommand({
   meta: {
     name: "providers",
-    description: "List supported providers and their packaging details (including keyword discovery)",
+    description:
+      "Packaging/spec reference for supported agents (not this-repo support — run `dora`)",
   },
   args: {
     json: {
@@ -18,18 +23,22 @@ export default defineCommand({
   },
   async run({ args }) {
     if (args.json) {
-      console.log(JSON.stringify(
-        supportedProviders.map((id) => {
-          const spec = getProviderSpec(id);
-          return { ...spec, id };
-        }),
-        null,
-        2
-      ));
+      console.log(
+        JSON.stringify(
+          supportedProviders.map((id) => {
+            const spec = getProviderSpec(id);
+            return { ...spec, id };
+          }),
+          null,
+          2,
+        ),
+      );
       return await exit(0);
     }
 
-    ui.heading("doraval providers — Supported platforms");
+    ui.heading("doraval providers — packaging/spec reference");
+    ui.dim("  Not “what this repo supports.” For that, run bare `dora` (Agent surfaces).");
+    ui.blank();
 
     for (const id of supportedProviders) {
       const spec = getProviderSpec(id);
@@ -37,12 +46,13 @@ export default defineCommand({
       ui.info(`  Manifest: ${spec.manifestPath}`);
       ui.info(`  Marketplace: ${spec.marketplacePath}`);
       ui.info(`  MCP: ${spec.mcpFilename}`);
-      ui.info(`  Keywords in plugin.json: supported — If users mention any of these keywords, your plugin will get triggered`);
-      ui.info(`  Example: doraval validate . --for ${id}:plugin`);
+      ui.info(`  Keywords in plugin.json: supported for agent discovery`);
     }
 
-    ui.write(`\n  Use --json for machine-readable output.`);
-    ui.write(`  Tip: Add a "keywords" array to your plugin manifest for better agent discovery.`);
+    ui.blank();
+    nextAction("dora                          which agents this repo uses");
+    nextAction("dora new --for <agent>        scaffold skill / rule / plugin");
+    ui.dim("  Use --json for machine-readable packaging specs.");
     await exit(0);
   },
 });

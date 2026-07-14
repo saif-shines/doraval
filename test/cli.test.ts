@@ -13,6 +13,12 @@ describe("doraval CLI", () => {
       expect(stdout).toContain("scan");
       expect(stdout).toContain("review");
       expect(stdout).toContain("fix");
+      expect(stdout).toContain("Primary:");
+      expect(stdout).toContain("point a coding agent");
+      expect(stdout).toContain("https://doraval.thehacksmith.dev");
+      // Root COMMANDS blurbs stay short (detail lives on subcommand --help).
+      expect(stdout).not.toContain("skill = reusable SKILL.md");
+      expect(stdout).not.toContain("common: eval.model");
     });
 
     test("--version prints package version", () => {
@@ -91,81 +97,30 @@ describe("doraval CLI", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  test("claude new --yes scaffolds plugin in temp dir", () => {
-    const tmp = join(import.meta.dir, "../../tmp-claude-new-test");
-    rmSync(tmp, { recursive: true, force: true });
-    mkdirSync(tmp, { recursive: true });
-    writeFileSync(join(tmp, "existing.md"), "---\nname: existing\n---\nold content");
-
-    const { exitCode, stdout, stderr } = runDoraval([
-      "claude", "new",
-      "--yes",
-      "--intent", "self-later",
-      "--name", "test-helper",
-    ], { cwd: tmp });  // Extend spawn helper if needed for cwd
-
+  test("dora providers is packaging/spec reference (not repo support)", () => {
+    const { exitCode, stdout, stderr } = runDoraval(["providers"]);
+    const out = stdout + stderr;
     expect(exitCode).toBe(0);
-    expect(stdout + stderr).toContain("plugin");
-    expect(existsSync(join(tmp, "test-helper", ".claude-plugin", "plugin.json"))).toBe(true);
-
-    rmSync(tmp, { recursive: true, force: true });
+    expect(out).toMatch(/packaging\/spec/i);
+    expect(out).toContain("dora");
+    expect(out).toMatch(/claude/i);
   });
 
-  test("claude new --yes scaffolds standalone in temp dir", () => {
-    const tmp = join(import.meta.dir, "../../tmp-claude-new-standalone-test");
-    rmSync(tmp, { recursive: true, force: true });
-    mkdirSync(tmp, { recursive: true });
-
-    const { exitCode, stdout, stderr } = runDoraval([
-      "claude", "new",
-      "--yes",
-      "--intent", "self",
-    ], { cwd: tmp });
-
-    expect(exitCode).toBe(0);
-    expect(stdout + stderr).toContain("standalone");
-    expect(existsSync(join(tmp, ".claude", "skills", "my-skill", "SKILL.md"))).toBe(true);
-
-    rmSync(tmp, { recursive: true, force: true });
+  test("unknown provider group is rejected (Q2: wrappers removed)", () => {
+    const { exitCode, stdout, stderr } = runDoraval(["claude", "new", "--yes"]);
+    const out = stdout + stderr;
+    expect(exitCode).not.toBe(0);
+    expect(out.toLowerCase()).toMatch(/unknown|invalid|not found|usage|command/i);
   });
 
-  test("codex new --yes scaffolds plugin in temp dir", () => {
-    const tmp = join(import.meta.dir, "../../tmp-codex-new-test");
-    rmSync(tmp, { recursive: true, force: true });
-    mkdirSync(tmp, { recursive: true });
+  test("--completion zsh prints a script; completion subcommand is gone", () => {
+    const flag = runDoraval(["--completion", "zsh"]);
+    expect(flag.exitCode).toBe(0);
+    expect(flag.stdout).toContain("compdef");
+    expect(flag.stdout).toContain("doraval");
 
-    const { exitCode, stdout, stderr } = runDoraval([
-      "codex", "new",
-      "--yes",
-      "--intent", "distribute",
-      "--name", "test-codex-plugin",
-    ], { cwd: tmp });
-
-    expect(exitCode).toBe(0);
-    expect(stdout + stderr).toContain("plugin");
-    expect(existsSync(join(tmp, "test-codex-plugin", ".codex-plugin", "plugin.json"))).toBe(true);
-    expect(existsSync(join(tmp, "test-codex-plugin", ".agents", "plugins", "marketplace.json"))).toBe(true);
-    expect(existsSync(join(tmp, "test-codex-plugin", "skills", "doraval", "SKILL.md"))).toBe(true);
-
-    rmSync(tmp, { recursive: true, force: true });
-  });
-
-  test("codex new --yes scaffolds local skill (standalone) in temp dir", () => {
-    const tmp = join(import.meta.dir, "../../tmp-codex-new-standalone-test");
-    rmSync(tmp, { recursive: true, force: true });
-    mkdirSync(tmp, { recursive: true });
-
-    const { exitCode, stdout, stderr } = runDoraval([
-      "codex", "new",
-      "--yes",
-      "--intent", "self",
-    ], { cwd: tmp });
-
-    expect(exitCode).toBe(0);
-    expect(stdout + stderr).toContain("standalone");
-    expect(existsSync(join(tmp, "skills", "doraval", "SKILL.md"))).toBe(true);
-
-    rmSync(tmp, { recursive: true, force: true });
+    const gone = runDoraval(["completion", "zsh"]);
+    expect(gone.exitCode).not.toBe(0);
   });
 
   test("update --check exits 0 and reports up to date when current version matches latest", () => {

@@ -25,12 +25,12 @@ const TYPE_HELP =
 export default defineCommand({
   meta: {
     name: "new",
-    description: `Scaffold a skill, rule, agent, or plugin for a coding agent (${TYPE_HELP})`,
+    description: "Scaffold a skill, rule, agent, or plugin for a coding agent",
   },
   args: {
     type: {
       type: "positional",
-      description: `What to create: skill | rule | agent | plugin — ${TYPE_HELP}`,
+      description: `skill | rule | agent | plugin — ${TYPE_HELP}`,
       required: false,
     },
     name: {

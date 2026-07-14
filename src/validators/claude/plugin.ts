@@ -135,7 +135,7 @@ export const claudePluginValidator: Validator = {
     } catch (err: any) {
       if (!existsSync(manifestPath)) {
         errors.push({ text: `.claude-plugin/plugin.json is missing (looked for ${manifestPath})` });
-        warnings.push({ text: 'Hint: Run `doraval claude new` (or `dora claude new`) to scaffold a new Claude plugin in this directory.' });
+        warnings.push({ text: 'Hint: Run `dora new plugin --for claude` to scaffold a new Claude plugin in this directory.' });
       } else {
         errors.push({ text: `.claude-plugin/plugin.json is invalid JSON (${err.message})` });
       }

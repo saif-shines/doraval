@@ -29,12 +29,31 @@ if (process.argv.includes("--capabilities")) {
   process.exit(0);
 }
 
+{
+  // Install plumbing — not a product command (same early-exit pattern as --capabilities).
+  const { parseCompletionArg, buildCompletionScript } = await import("./completion-script.js");
+  const shell = parseCompletionArg(process.argv.slice(2));
+  if (shell !== null) {
+    const result = await buildCompletionScript(shell);
+    if (!result.ok) {
+      process.stderr.write(result.error + "\n");
+      process.exit(1);
+    }
+    process.stdout.write(result.script);
+    process.exit(0);
+  }
+}
+
 const main = defineCommand({
   meta: {
     name: "doraval",
     version: pkg.version,
-    description:
-      "Reads your repo and tells you what's broken, missing, or contradictory in your agent context — for every coding agent you use. Primary: scan · review · fix · new --for <agent>. Advanced provider groups: claude/codex/cursor/copilot.",
+    // Multi-line: citty prints this as the help banner (version appended on last line).
+    description: [
+      "Reads your repo and tells you what's broken in agent context.",
+      "Primary: scan · review · fix · new --for <agent>.",
+      "Tip: point a coding agent at this CLI, or run `dora` (scan). Docs: https://doraval.thehacksmith.dev",
+    ].join("\n"),
   },
   subCommands: topLevelSubCommands,
   // Declared so citty's own parser consumes "--format json" / "--format=json"
@@ -43,12 +62,15 @@ const main = defineCommand({
   args: {
     format: { type: "string", description: "Output format: table | json", default: "table" },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
-    cwd: { type: "string", description: "Directory to scan (for CI and coding agents)" },
+    cwd: { type: "string", description: "Directory to scan (CI / coding agents)" },
     capabilities: {
       type: "boolean",
-      description:
-        "(for coding agents / CI — JSON manifest of commands, not a human command)",
+      description: "Machine JSON command manifest (for agents/CI — not a human command)",
       default: false,
+    },
+    completion: {
+      type: "string",
+      description: "Print shell completion script (bash|zsh|fish) — install plumbing, not a product command",
     },
   },
   async run({ args }) {

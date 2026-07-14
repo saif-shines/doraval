@@ -121,12 +121,12 @@ function renderAggregate(results: ReviewResult[]): void {
 // ── Command ────────────────────────────────────────────────────────────────────
 
 export default defineCommand({
-  meta: { name: "review", description: "Deep multi-tier review of skills: structure, heuristics, LLM, sessions" },
+  meta: { name: "review", description: "Multi-tier skill review (structure → heuristics → LLM → sessions)" },
   args: {
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
     quick: { type: "boolean", description: "Tiers 1–2 only (structure + heuristics, no LLM)", default: false },
     deep: { type: "boolean", description: "Require LLM tier; exit 2 if no judge", default: false },
-    sessions: { type: "boolean", description: "Require session tier (planned — session adapters not yet built, currently a no-op)", default: false },
+    sessions: { type: "boolean", description: "Require session tier (planned — currently a no-op)", default: false },
     all: { type: "boolean", description: "Review every artifact under the path", default: false },
     for: { type: "string", description: "Filter by agent name (planned)" },
     agent: { type: "string", description: "Session filter (planned)" },

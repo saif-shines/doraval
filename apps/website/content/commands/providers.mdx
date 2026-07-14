@@ -1,6 +1,6 @@
 ---
 title: dora providers
-description: List supported providers and packaging details.
+description: Packaging/spec reference for supported agents — not this-repo support.
 sidebar:
   label: providers
   order: 10
@@ -11,10 +11,13 @@ dora providers
 dora providers --json
 ```
 
-Shows which agents doraval understands and how packaging / keyword discovery works for each.
+Static packaging/spec matrix: manifest paths, marketplace layout, MCP filename per agent.
 
-Prefer scaffolding with `dora new --for <agent>` rather than memorizing every layout.
+**Not** “which agents does this repo use?” — that is bare [`dora`](/commands/scan/) (Agent surfaces).
+
+Scaffold with `dora new --for <agent>`.
 
 ## Related
 
+- [dora](/commands/scan/) — repo-relative agent surfaces
 - [dora new](/commands/new/)

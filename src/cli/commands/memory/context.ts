@@ -70,7 +70,7 @@ async function appendOrUpdateBlock(target: string, contextText: string) {
 export default defineCommand({
   meta: {
     name: "context",
-    description: "Output active memory principles (for hooks, CLAUDE.md, or piping)",
+    description: "Print active principles (hooks, CLAUDE.md, piping)",
   },
   args: {
     full: {

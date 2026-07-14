@@ -101,7 +101,7 @@ function buildBriefPrompt(perSkill: SkillJudgments[]): string {
 }
 
 export default defineCommand({
-  meta: { name: "fix", description: "Auto-fix review findings: apply mechanical fixes, surface judgment items" },
+  meta: { name: "fix", description: "Apply mechanical review fixes; surface judgment items" },
   args: {
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
     yes: { type: "boolean", description: "Pre-approve all fixes (for agents/CI)", default: false },

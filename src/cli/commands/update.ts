@@ -33,7 +33,7 @@ export default defineCommand({
     },
     via: {
       type: "string",
-      description: 'Force install method (homebrew|npm|bun). Bypasses auto-detection and interactive picker (useful for scripts/CI).',
+      description: "Force install method: homebrew | npm | bun (skips auto-detect)",
     },
   },
   async run({ args }) {

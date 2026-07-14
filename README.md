@@ -48,7 +48,7 @@ dora fix .                                    # diffs first; asks before writing
 dora memory add "Run tests before shipping skill changes" --weight 8
 ```
 
-Prefer `dora new --for <agent>`. Thin wrappers (`dora claude new`, …) still work.
+Scaffold with `dora new --for <agent>` (skill, rule, agent, or plugin).
 
 ## Commands
 
@@ -63,8 +63,10 @@ Prefer `dora new --for <agent>`. Thin wrappers (`dora claude new`, …) still wo
 | `sessions` | List / show recent agent sessions (Claude Code, Grok today) |
 | `config` | Dot-notation settings (`eval.model`, …) |
 | `bump` | Semver in plugin / marketplace manifests |
-| `providers` | Packaging matrix per agent |
-| `update` / `completion` | Self-update · shell completions |
+| `providers` | Packaging/spec reference (repo support → bare `dora`) |
+| `update` | Self-update |
+
+Shell tab-completion (install plumbing, not a product command): `dora --completion zsh` (or `bash` / `fish`).
 
 ```bash
 dora review . --quick --ci          # structural gate, no LLM
