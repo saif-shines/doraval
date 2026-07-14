@@ -104,6 +104,7 @@ done
 - https://docs.github.com/llms.txt
 - https://cursor.com/docs/plugins
 - https://github.com/openai/skills/tree/main/skills/.curated/openai-docs
+- https://www.termcn.dev/llms.txt
 
 ## Resume
 

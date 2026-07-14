@@ -68,33 +68,10 @@
    See the theme's terminal-main.css for available vars.
 */
 
-/* Doraemon hero image (directly embedded as data URI from user-provided asset) */
-.hero .hero-html {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 100%;
-  max-width: none;
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.25)) !important;
-}
-
-.hero .hero-html .doraemon-hero {
-  width: 90%;
-  max-width: none;
-  height: auto;
-  /* crisp pixel look for the dot-matrix style */
-  image-rendering: crisp-edges;
-  border: 2px solid var(--sl-color-accent-high);
-  border-radius: 4px;
-  user-select: none;
-  flex: none;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
-}
-
 /* Hero copy — readable, left-aligned, terminal character */
 .hero .tagline {
   margin-bottom: 0.75rem !important;
-  max-width: 48ch !important;
+  max-width: 52ch !important;
   margin-inline: 0 !important;
   font-size: clamp(0.95rem, 1.5vw, 1.1rem) !important;
   line-height: 1.55 !important;
@@ -144,35 +121,15 @@
   gap: 0.75rem !important;
 }
 
-/* Calm the hero image hover — docs site, not a marketing landing */
-.hero .doraemon-hero {
-  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
-}
-
-.hero .doraemon-hero:hover {
-  transform: none;
-}
-
-/* Light theme tweaks if the image needs adjustment */
-:root[data-theme='light'] .hero .hero-html .doraemon-hero {
-  border-color: #1e40af;
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.15)) !important;
-}
-
-/* Landing page — compact but breathable */
+/* Landing page — compact, text-only hero */
 [data-has-hero] .hero {
   margin-bottom: 1.5rem;
   padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 4vw, 2.5rem) !important;
   min-height: auto !important;
-  gap: clamp(1.25rem, 3vw, 2rem) !important;
-  max-width: 1100px;
-}
-
-@media (min-width: 50rem) {
-  [data-has-hero] .hero {
-    grid-template-columns: 1.1fr 0.9fr;
-    align-items: center;
-  }
+  gap: 0.75rem !important;
+  max-width: 40rem;
+  grid-template-columns: 1fr !important;
+  justify-items: start;
 }
 
 /* Home page body — let content span full width; prose width controlled per-section */
