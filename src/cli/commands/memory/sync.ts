@@ -4,6 +4,7 @@ import { runJournalMigrationIfNeeded } from "../../../core/memory-migrate.js";
 import { reportMigration } from "./migration-report.js";
 import { PrerequisiteError, MemoryError } from "../../../core/errors.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine } from "../../out.js";
+import { preflight, stage, memorySyncPreflightMessage } from "../../preflight.js";
 import { exit } from "../../render/exit.js";
 
 export default defineCommand({
@@ -27,6 +28,7 @@ export default defineCommand({
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    preflight(mode, memorySyncPreflightMessage());
     const migration = runJournalMigrationIfNeeded();
     if (mode.format !== "json") reportMigration(migration);
 
@@ -70,6 +72,7 @@ export default defineCommand({
         return;
       }
 
+      stage(mode, "Sync finished.");
       ui.blank();
       ui.success(`Memory sync complete — ${result.message}`);
       ui.write(`  remote: ${result.repo}`);

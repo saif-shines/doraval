@@ -11,6 +11,7 @@ import {
 import type { Contradiction, ResolutionOption } from "../../core/cross-agent.js";
 import { canPromptInteractively } from "./fix.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction, renderCheck } from "../out.js";
+import { preflight, reconcilePreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
 
 function renderDiff(diff: string): void {
@@ -58,6 +59,7 @@ export default defineCommand({
     const dryRun = Boolean(args["dry-run"]);
     const applyFlag = Boolean(args.apply);
     const yes = Boolean(args.yes) || applyFlag;
+    preflight(mode, reconcilePreflightMessage({ dryRun, apply: applyFlag }));
     const interactive = canPromptInteractively(yes, dryRun, mode.format);
 
     try {

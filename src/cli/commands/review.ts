@@ -7,6 +7,7 @@ import { reviewSkill, reviewAll, type ReviewResult, type ReviewFinding } from ".
 import { reviewMemoryFile, MEMORY_FILE_NAMES } from "../../core/memory-file-review.js";
 
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
+import { preflight, reviewPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
 
 // ── Rendering ──────────────────────────────────────────────────────────────────
@@ -122,6 +123,13 @@ export default defineCommand({
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    preflight(
+      mode,
+      reviewPreflightMessage({
+        quick: args.quick as boolean,
+        deep: args.deep as boolean,
+      }),
+    );
     // Resolve --cwd to an absolute path: it's hashed into the memory
     // project slug (getProjectSlug), so a relative string here would give
     // the same physical project two different slugs depending on how the

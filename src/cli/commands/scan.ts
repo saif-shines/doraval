@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import pc from "picocolors";
 import { runScan, type ScanResult } from "../../core/scan.js";
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
+import { preflight, scanPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
 
 function renderHuman(r: ScanResult): void {
@@ -98,6 +99,7 @@ export default defineCommand({
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    preflight(mode, scanPreflightMessage());
     try {
       const result = await runScan((args.cwd as string) || process.cwd());
       if (mode.format === "json") outJson(result);
