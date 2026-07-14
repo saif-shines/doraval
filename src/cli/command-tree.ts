@@ -50,7 +50,7 @@ export const config = () => import("./commands/config.js").then((m) => m.default
 
 export const claude = defineGroup(
   "claude",
-  "Claude Code-specific commands (packaging, scaffolding, distribution)",
+  "Advanced: Claude Code packaging (prefer `dora new --for claude`)",
   {
     new: () => import("./commands/claude/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
@@ -59,7 +59,7 @@ export const claude = defineGroup(
 
 export const codex = defineGroup(
   "codex",
-  "Codex (OpenAI)-specific commands (packaging, scaffolding, distribution)",
+  "Advanced: Codex packaging (prefer `dora new --for codex`)",
   {
     new: () => import("./commands/codex/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
@@ -68,7 +68,7 @@ export const codex = defineGroup(
 
 export const cursor = defineGroup(
   "cursor",
-  "Cursor-specific commands (packaging, scaffolding, distribution)",
+  "Advanced: Cursor packaging (prefer `dora new --for cursor`)",
   {
     new: () => import("./commands/cursor/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
@@ -77,7 +77,7 @@ export const cursor = defineGroup(
 
 export const copilot = defineGroup(
   "copilot",
-  "Copilot CLI-specific commands (packaging, scaffolding, distribution)",
+  "Advanced: Copilot packaging (prefer `dora new --for copilot`)",
   {
     new: () => import("./commands/copilot/new.js").then((m) => m.default),
     bump: () => import("./commands/bump.js").then((m) => m.default),
@@ -85,21 +85,25 @@ export const copilot = defineGroup(
 );
 
 /** The exact subCommands map used to build the root `doraval` command. */
+/** Primary commands first; provider groups last (B38 teaching order). */
 export const topLevelSubCommands = {
+  // ── primary ────────────────────────────────────────────────────
   scan: () => import("./commands/scan.js").then((m) => m.default),
   review: () => import("./commands/review.js").then((m) => m.default),
-  fix: () => import("./commands/fix.js").then(m => m.default),
+  fix: () => import("./commands/fix.js").then((m) => m.default),
   new: () => import("./commands/new.js").then((m) => m.default),
+  memory: () => Promise.resolve(memory),
   reconcile: () => import("./commands/reconcile.js").then((m) => m.default),
+  config,
+  sessions: () => import("./commands/sessions.js").then((m) => m.default),
+  // ── tooling ────────────────────────────────────────────────────
   bump: () => import("./commands/bump.js").then((m) => m.default),
   update: () => import("./commands/update.js").then((m) => m.default),
   providers: () => import("./commands/providers.js").then((m) => m.default),
   completion: () => import("./commands/completion.js").then((m) => m.default),
-  memory: () => Promise.resolve(memory),
-  config,
+  // ── advanced / compatibility (prefer `dora new --for <agent>`) ─
   claude: () => Promise.resolve(claude),
   codex: () => Promise.resolve(codex),
   cursor: () => Promise.resolve(cursor),
   copilot: () => Promise.resolve(copilot),
-  sessions: () => import("./commands/sessions.js").then((m) => m.default),
 };

@@ -10,7 +10,7 @@
 
 ## Track pause: Exceptional CLI
 
-CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan loop. B37 executed by plan loop. B38+ still paused unless asked.
+CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan loop. B37–B39 executed by plan loop. B40 still paused unless asked.
 
 | Item | State | Notes |
 |---|---|---|
@@ -20,7 +20,9 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 | **B35** type/intent hints + preview | **partial** | core path done; provider-wrapper carryover → B38 |
 | **B36** reconcile UX | **done** | human headlines, actor tags, judgment Next block |
 | **B37** config dual surface | **done** | interactive bare config, table get, --format json |
-| **B38–B40** | **paused** | next: **B38** provider-wrapper teaching / **B39** capabilities |
+| **B38** provider wrappers + help order | **done** | shared provider-new, Advanced labels, primary-first help |
+| **B39** capabilities discoverability | **done** | --help label + stderr banner unless --format json |
+| **B40** | **paused** | cold-start polish grab-bag |
 | Q1 providers identity / Q2 provider groups | **open** | product decisions, not coded |
 
 ### B33 residuals (not blocking CLI)
@@ -41,7 +43,7 @@ CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan lo
 **Resume CLI track:**
 
 ```
-Read WIP.md. Resume Exceptional CLI dogfood at B38 (provider-wrapper teaching) or B39 (capabilities label) from docs/EXCEPTIONAL-CLI-PLAN.md. No version bump.
+Read WIP.md. Resume Exceptional CLI dogfood at B40 (cold-start polish grab-bag) from docs/EXCEPTIONAL-CLI-PLAN.md. No version bump.
 ```
 
 **Continue non-CLI (ponytail / repo conditions):**
