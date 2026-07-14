@@ -1,21 +1,36 @@
-Always look up in the project or system for the available skills and use them as required especially while making decisions. Mention those skills to even inform the user by giving them couple of options.
+# Doraval — agent conditions
 
+## Before you write code (ponytail ladder)
 
-This conversation requires you have full understanding of the cursor, claude, codex and copilot documentation. Read and look up the following links; most important do not interrupt the current conversation just aid the current information with helpful details as needed at that moment.
+Stop at the first rung that holds:
 
-https://code.claude.com/llms.txt
+1. **YAGNI** — Does this need to exist? Speculative = skip, say so in one line.
+2. **Reuse** — Already in this repo? Use it.
+3. **Stdlib / Bun / platform** — Prefer built-ins over new helpers.
+4. **Installed deps** — Use what is already in `package.json`. Never add a dep for a few lines.
+5. **One line** — Prefer the shortest correct form.
+6. **Only then** — Minimum code that works. Fewest files. Deletion > addition.
 
-https://developers.openai.com/llms.txt
+Never lazy about: trust-boundary validation, data-loss error paths, security, or understanding the full call path before editing.
 
-https://docs.github.com/llms.txt
+Non-trivial logic leaves **one** small test. No version bumps unless the user asks for a release (see `WIP.md`).
 
-https://cursor.com/docs/plugins (more on docs/ paths)
+## Skills
 
-https://github.com/openai/skills/tree/main/skills/.curated/openai-docs
+Look up project/system skills when deciding. Mention 1–2 options to the user when useful.
 
+- CLI surfaces: `cli-developer`, `devrel-tooling`, `nodejs-cli-best-practices`
+- Lean code: `ponytail`, `karpathy-guidelines`, `pragmatic-fp`
+- Audits: `improve` (plans only — does not implement)
 
-/cli-developer and /tooling:devrel-tooling focus on the developer user first mind, and evaulate the current changes or thread, and give the main thread inputs and advise if there's anything to consider in order to for butter CLI command surfaces
+## Product / agent docs (context only — do not derail the task)
 
-you can check the code base to find areas to /improve or apply /pragmatic-fp so taht codebase is clean and maintainable. The analysis should not disturb the current thread, but you can ask the user if they want to do this before resuming.
+- https://code.claude.com/llms.txt
+- https://developers.openai.com/llms.txt
+- https://docs.github.com/llms.txt
+- https://cursor.com/docs/plugins
+- https://github.com/openai/skills/tree/main/skills/.curated/openai-docs
 
-All three are active and recurring. Let me know if you want details on any of them, to delete one, or to adjust the prompts/intervals.
+## Resume
+
+**Tracker:** `WIP.md` (only progress pin). Exceptional CLI dogfood is **paused**; resume CLI at **B36** only when asked.

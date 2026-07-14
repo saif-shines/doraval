@@ -7,14 +7,8 @@ import { errorToJson, isDoravalError } from "../core/errors.js";
  * Semantic CLI output helpers.
  * Use these instead of console.error for human-facing messages on Bun.
  *
- * All methods delegate to the active RenderBackend (text or TUI).
- * The active backend is set by render/index.ts and resolved once per command
- * based on TTY / --format json / --ci / CI env (see render/mode.ts).
- *
- * Conventions (per nodejs-cli-best-practices + cli-developer):
- * - Always surface "Next:" action for developer guidance
- * - Non-TTY / --format json / --ci → text backend (byte-identical to before)
- * - Interactive TTY → TUI backend (OpenTUI split-footer)
+ * All methods delegate to the active RenderBackend (text today).
+ * Conventions: surface "Next:" for guidance; JSON/CI stay quiet via mode.
  */
 export const ui = {
   /** Escape hatch: pre-styled or multiline strings. */

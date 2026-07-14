@@ -63,6 +63,21 @@ Push `main` and publish **0.6.0** as one batch (bump fix + B33–B35). Do not mi
 
 ---
 
+
+## Ponytail pass (2026-07-14)
+
+Audit + lean fixes (CLI still paused):
+
+- **delete:** unused `openai` package (code uses `@ai-sdk/openai` only)
+- **shrink:** stale OpenTUI comments in `out.ts` / `backend.ts`
+- **conditions:** `AGENTS.md` rewritten with ponytail ladder + skill routing + WIP pointer
+
+Still not worth doing this pass (named, skip):
+
+- rename `journal-config.ts` → doraval-config (many importers; pure rename PR later)
+- collapse `RenderBackend` seam (one impl today; parked for possible `dora ui`)
+- website journal pages (B26/B27, large docs track)
+
 ## Plan design history (Exceptional CLI v1–v7)
 
 Kept for context; not the live queue (see table above).

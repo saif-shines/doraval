@@ -1,6 +1,7 @@
 /**
- * The RenderBackend interface — implemented by both text and TUI backends.
- * Commands use ui.* from out.ts (which delegates here), never this directly.
+ * RenderBackend — text backend only today.
+ * // ponytail: keep this seam; a second (TUI/dashboard) backend was removed and may return as dora ui
+ * Commands use ui.* from out.ts, never this interface directly.
  */
 export interface RenderBackend {
   // Primitives — mirrors the ui.* object in out.ts
