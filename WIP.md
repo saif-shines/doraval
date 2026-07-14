@@ -64,12 +64,13 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 
 ## Gaps found after 0.6.0 tag
 
-- Test CI failed on **windows-latest** only: platform package chmod bit + `.cursor/rules` path separators — **fixed** (this commit).
-- Release pipeline for v0.6.0 was still running after binaries built.
+- Test CI Windows failures — **fixed** (`09cb542`); Test green on latest main.
+- **Release v0.6.0:** GitHub Release + JSR + Homebrew OK; **npm platform packages FAILED** (E404 on PUT for all five `@hacksmith/doraval-*@0.6.0`). Main package **did** publish `0.6.0` but optionalDeps point at missing platform binaries → **broken npm install**. Root cause: NPM token lacks write on platform packages (or npm org ACL); loop previously continued after failures. Workflow hardened to fail-fast (this loop).
+- **Action required:** grant NPM_TOKEN write on all five platform packages, re-run Release / re-publish platforms for 0.6.0 (do not re-bump version).
 
 ## Release
 
-**Pushed 2026-07-14:** `main` + tag **`v0.6.0`** → origin (triggers Release CI). npm publish happens via CI binaries pipeline when green.
+**Pushed 2026-07-14:** `main` + tag **`v0.6.0`**. Partial publish: main+JSR yes, platform packages no.
 
 ## Next release (when you ask)
 

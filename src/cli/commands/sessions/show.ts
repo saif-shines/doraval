@@ -54,17 +54,63 @@ export default defineCommand({
       });
       ui.blank();
 
+      // Aggregate tool names by count (B40 drill-down)
+      const toolCounts = new Map<string, number>();
+      for (const t of primitives.toolCalls) {
+        toolCounts.set(t.name, (toolCounts.get(t.name) ?? 0) + 1);
+      }
+      const toolsByCount = [...toolCounts.entries()].sort((a, b) => b[1] - a[1]);
+
       ui.write(`  Tool calls (${primitives.toolCalls.length}):`);
-      primitives.toolCalls.slice(0, 20).forEach((t) => {
-        ui.write(`    ${pc.dim("·")} ${t.name} ${pc.dim(truncate(t.input, 80))}`);
-      });
+      if (toolsByCount.length === 0) {
+        ui.write(`    ${pc.dim("none")}`);
+      } else {
+        for (const [name, n] of toolsByCount.slice(0, 30)) {
+          ui.write(`    ${pc.dim("·")} ${name}${n > 1 ? pc.dim(` ×${n}`) : ""}`);
+        }
+        if (toolsByCount.length > 30) {
+          ui.write(`    ${pc.dim(`… +${toolsByCount.length - 30} more tool types`)}`);
+        }
+      }
+      // Sample of recent calls with truncated input (first 8)
+      if (primitives.toolCalls.length > 0) {
+        ui.blank();
+        ui.write(`  Recent calls:`);
+        primitives.toolCalls.slice(0, 8).forEach((t) => {
+          ui.write(`    ${pc.dim("·")} ${t.name} ${pc.dim(truncate(t.input, 80))}`);
+        });
+      }
       ui.blank();
 
-      ui.write(`  Skills invoked: ${primitives.skillsInvoked.length > 0 ? primitives.skillsInvoked.join(", ") : pc.dim("none")}`);
+      // Skills with counts when detectable from Skill tool calls
+      const skillCounts = new Map<string, number>();
+      for (const t of primitives.toolCalls) {
+        if (t.name === "Skill" || t.name === "skill") {
+          const input = t.input as Record<string, unknown> | undefined;
+          const skillName =
+            (typeof input?.skill === "string" && input.skill) ||
+            (typeof input?.name === "string" && input.name) ||
+            null;
+          if (skillName) skillCounts.set(skillName, (skillCounts.get(skillName) ?? 0) + 1);
+        }
+      }
+      for (const s of primitives.skillsInvoked) {
+        if (!skillCounts.has(s)) skillCounts.set(s, 1);
+      }
+      ui.write(`  Skills invoked:`);
+      if (skillCounts.size === 0) {
+        ui.write(`    ${pc.dim("none")}`);
+      } else {
+        for (const [name, n] of [...skillCounts.entries()].sort((a, b) => b[1] - a[1])) {
+          ui.write(`    ${pc.dim("·")} ${name}${n > 1 ? pc.dim(` ×${n}`) : ""}`);
+        }
+      }
       ui.write(`  Tokens: ${pc.dim("unavailable")}`);
       ui.blank();
 
-      summaryLine(`${primitives.userTurnCount} turns · ${primitives.toolCalls.length} tool calls`);
+      summaryLine(
+        `${primitives.userTurnCount} turns · ${primitives.toolCalls.length} tool calls · ${skillCounts.size} skill(s)`,
+      );
       ui.blank();
 
       await exit(0);

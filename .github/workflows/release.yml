@@ -167,35 +167,67 @@ jobs:
       - name: Publish platform packages (all five, then main)
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 10
+          timeout_minutes: 15
           max_attempts: 3
-          retry_wait_seconds: 30
-          # Platform packages publish WITHOUT --provenance: with it, the PUT
-          # deterministically 404s in CI (3 releases in a row: v0.5.0, v0.5.1,
-          # v0.5.2) even though the provenance statement itself signs and
-          # uploads fine — while the identical publish succeeds locally
-          # without provenance, and the MAIN package publishes fine WITH
-          # provenance from this same job/token. npm-side root cause unknown;
-          # main keeps provenance because it demonstrably works there.
+          retry_wait_seconds: 45
+          # Platform packages publish WITHOUT --provenance: with provenance the
+          # PUT has historically 404'd. Main keeps --provenance (works there).
+          # Fail-fast: never publish main if any platform package fails — a main
+          # package whose optionalDeps point at missing platform versions is a
+          # broken install (v0.6.0 shipped main only; platforms stuck at 0.5.2).
+          # NPM_TOKEN (NODE_AUTH_TOKEN) must have write on ALL six packages:
+          # @hacksmith/doraval + the five @hacksmith/doraval-{darwin,linux,win32}-*
           command: |
+            set -euo pipefail
+            VERSION=$(node -pe "require('./package.json').version")
             for dir in platform-packages/*/; do
+              name=$(node -pe "require('./${dir}package.json').name")
+              echo "Publishing $name@$VERSION from $dir"
               (cd "$dir" && npm publish --access public)
+              # Confirm the version is on the registry before continuing
+              for i in 1 2 3 4 5 6; do
+                if npm view "$name@$VERSION" version 2>/dev/null | grep -qx "$VERSION"; then
+                  echo "OK $name@$VERSION on registry"
+                  break
+                fi
+                if [ "$i" -eq 6 ]; then
+                  echo "ERROR: $name@$VERSION not visible on registry after publish"
+                  exit 1
+                fi
+                sleep 10
+              done
             done
             bun run scripts/prepare-npm-publish.ts
             npm publish --access public --provenance
 
       - name: Post-publish install verification (the real user path)
         run: |
+          set -euo pipefail
           VERSION=$(node -pe "require('./package.json').version")
-          mkdir -p /tmp/verify/.git && cd /tmp/verify
-          # Fresh versions can take several minutes to become resolvable
-          # (observed ~3-10 min for new packages, ETARGET for ~2 min on new
-          # versions of existing ones) — 20 x 30s = 10 min budget.
+          # Confirm platform package for this runner exists (optionalDeps target)
+          PLATFORM_PKG="@hacksmith/doraval-linux-x64"
+          npm view "$PLATFORM_PKG@$VERSION" version | grep -qx "$VERSION"
+          mkdir -p /tmp/verify && cd /tmp/verify
+          # npx can omit optionalDeps; install into a real tree so the binary lands
+          # Fresh versions can take several minutes to become resolvable.
           for i in $(seq 1 20); do
-            npx -y @hacksmith/doraval@"$VERSION" --version && break
-            echo "registry not consistent yet, retry $i" && sleep 30
+            rm -rf node_modules package.json package-lock.json
+            npm init -y >/dev/null 2>&1
+            if npm install --no-save --no-fund --no-audit "@hacksmith/doraval@$VERSION" 2>/tmp/npm-install.err; then
+              if ./node_modules/.bin/doraval --version 2>/dev/null | grep -q .; then
+                ./node_modules/.bin/doraval --version
+                mkdir -p .git
+                ./node_modules/.bin/doraval --format json | grep -q '"empty"'
+                echo "install verification OK"
+                exit 0
+              fi
+            fi
+            echo "registry not consistent yet, retry $i"
+            cat /tmp/npm-install.err || true
+            sleep 30
           done
-          npx -y @hacksmith/doraval@"$VERSION" --format json | grep -q '"empty"'
+          echo "install verification failed after retries"
+          exit 1
 
   publish-jsr:
     needs: [build-binaries, smoke-binaries]
