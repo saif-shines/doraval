@@ -33,16 +33,16 @@ function formatWhen(mtime: number): string {
   return new Date(mtime).toISOString().slice(0, 16).replace("T", " ");
 }
 
-function toEntry(adapter: SessionAdapter, path: string, mtime: number, primitives: SessionPrimitives): SessionListEntry {
+function toEntry(adapter: SessionAdapter, s: { path: string; mtime: number; tokens?: number }, primitives: SessionPrimitives): SessionListEntry {
   return {
     agent: adapter.agent,
     sessionId: primitives.sessionId,
-    when: formatWhen(mtime),
+    when: formatWhen(s.mtime),
     title: primitives.sessionTitle ?? "(untitled)",
     turns: primitives.userTurnCount,
     toolCalls: primitives.toolCalls.length,
-    tokens: null,
-    path,
+    tokens: s.tokens ?? null,
+    path: s.path,
   };
 }
 
@@ -60,7 +60,7 @@ export function listSessions(
     for (const s of sessions) {
       try {
         const primitives = adapter.parse(s.path);
-        withMtime.push({ entry: toEntry(adapter, s.path, s.mtime, primitives), mtime: s.mtime });
+        withMtime.push({ entry: toEntry(adapter, s, primitives), mtime: s.mtime });
       } catch {
         // Skip unparseable sessions rather than failing the whole list.
       }
@@ -88,7 +88,7 @@ export function findSession(
         const primitives = adapter.parse(s.path);
         const fileId = basename(s.path).replace(extname(s.path), "");
         if (primitives.sessionId === id || fileId === id) {
-          return { entry: toEntry(adapter, s.path, s.mtime, primitives), primitives };
+          return { entry: toEntry(adapter, s, primitives), primitives };
         }
       } catch {
         // Skip unparseable sessions.

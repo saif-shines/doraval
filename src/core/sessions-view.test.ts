@@ -39,8 +39,12 @@ describe("isKnownAgent", () => {
     expect(isKnownAgent("grok")).toBe(true);
   });
 
+  test("true for codex", () => {
+    expect(isKnownAgent("codex")).toBe(true);
+  });
+
   test("false for an agent with no adapter yet", () => {
-    expect(isKnownAgent("codex")).toBe(false);
+    expect(isKnownAgent("windsurf")).toBe(false);
   });
 });
 
