@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- docs(site): surface npm, Homebrew, and Bun install paths on the homepage
+  and get-started pages.
+
+## 0.6.4
+
+Release retry only (npm publish recovery from the platform-package
+incident); no functional changes since 0.6.3.
+
+## 0.6.3
+
 ### Breaking
 
 - **Removed provider groups** `dora claude` / `dora cursor` / `dora codex` /
@@ -11,6 +21,28 @@
   “which agents does this project use?” lives on bare `dora` (Agent surfaces).
 - **Removed `dora completion` command.** Use root flag
   `dora --completion bash|zsh|fish` (install plumbing, not product surface).
+
+### Other
+
+- Website redesigned on Blume with B27 IA (scan-first navigation).
+- Docs splash copy/hero revised; homepage gained agent-driven loop
+  instructions and sidebar metadata.
+
+## 0.6.2
+
+- **B26 README rewrite** — scan-first, under 200 lines, current command
+  table.
+- Website: replaced `dora journal` docs with `dora memory` docs (B33
+  finish).
+
+## 0.6.1
+
+- Fixed CI Windows test failures for platform packages and cursor rules.
+- Release workflow now fails fast on platform npm publish errors.
+- `dora sessions show` improved; `dora sessions list` now prints real
+  session IDs (was falling back to a broken `e.id`).
+- Documented the npm platform-package publish incident and recovery
+  (see `AGENTS.md`).
 
 ## 0.6.0
 

@@ -30,6 +30,10 @@ function extractFrontmatter(raw: string): { yaml: string; body: string } | null 
 }
 
 function buildAddFieldFix(skillDir: string, finding: ReviewFinding): FixEdit | null {
+  const fieldMatch = finding.message.match(/Missing "(\w+)"/i);
+  const field = fieldMatch?.[1] ?? "name";
+  if (field !== "name") return null; // no safe auto-derivable value; needs human judgment
+
   const file = resolve(skillDir, "SKILL.md");
   let raw: string;
   try { raw = readFileSync(file, "utf-8"); } catch { return null; }
@@ -37,11 +41,7 @@ function buildAddFieldFix(skillDir: string, finding: ReviewFinding): FixEdit | n
   const parsed = extractFrontmatter(raw);
   if (!parsed) return null;
 
-  const dirName = basename(skillDir);
-  const fieldMatch = finding.message.match(/Missing "(\w+)"/i);
-  const field = fieldMatch?.[1] ?? "name";
-  const value = field === "name" ? dirName : "TODO";
-
+  const value = basename(skillDir);
   const oldFm = `---\n${parsed.yaml}\n---`;
   const newYaml = `${parsed.yaml}\n${field}: ${value}`;
   const newFm = `---\n${newYaml}\n---`;
@@ -71,7 +71,7 @@ export function collectFixes(findings: ReviewFinding[], skillDir: string): FixRe
         case "add_field": {
           const edit = buildAddFieldFix(skillDir, f);
           if (edit) mechanical.push(edit);
-          else judgment.push(`[${f.id}] ${f.message} — could not read SKILL.md`);
+          else judgment.push(`[${f.id}] ${f.message} — no safe auto-derivable value; add by hand`);
           break;
         }
         case "content":

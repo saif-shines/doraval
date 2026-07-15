@@ -248,12 +248,13 @@ describe("doraval CLI", () => {
     function fixableSkillRepo(): string {
       const dir = mkdtempSync(join(tmpdir(), "dora-fix-"));
       mkdirSync(join(dir, ".git"));
-      const skill = join(dir, ".claude", "skills", "nodesc");
+      const skill = join(dir, ".claude", "skills", "noname");
       mkdirSync(skill, { recursive: true });
-      // Missing "description" → mechanical add_field fix
+      // Missing "name" → mechanical add_field fix (derivable from dir name; other
+      // missing fields have no safe auto-value and go to judgment instead)
       writeFileSync(
         join(skill, "SKILL.md"),
-        '---\nname: nodesc\n---\n\n1. Use when testing. Run the thing.\n\nMUST do it. Example:\n```bash\necho ok\n```\n'
+        '---\ndescription: does a thing\n---\n\n1. Use when testing. Run the thing.\n\nMUST do it. Example:\n```bash\necho ok\n```\n'
       );
       return dir;
     }

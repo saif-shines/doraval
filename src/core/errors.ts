@@ -6,6 +6,8 @@
  * can render context → problem → solution → next command, plus JSON on stderr.
  */
 
+import { getDocUrl } from "./doc-registry.js";
+
 export interface DoravalErrorOptions {
   code: string;
   message: string;
@@ -25,7 +27,7 @@ export class DoravalError extends Error {
     this.name = new.target.name;
     this.code = opts.code;
     this.suggestion = opts.suggestion;
-    this.docUrl = opts.docUrl;
+    this.docUrl = opts.docUrl ?? getDocUrl(opts.code);
     this.context = opts.context;
   }
 }

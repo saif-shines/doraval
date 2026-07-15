@@ -1,16 +1,22 @@
 # WIP — Doraval work tracker (resume here)
 
-> **Pinned:** 2026-07-14 · version **0.6.0** · npm install **fixed** (all five platform packages published)  
-> **Branch:** `main` · Q1/Q2 CLI decisions implemented (unreleased)  
+> **Pinned:** 2026-07-15 · version **0.6.4** (tagged, released) · npm install **fixed** (all five platform packages published across 0.6.1–0.6.4, no further incidents)  
+> **Branch:** `main` · clean · Q1/Q2 CLI decisions implemented + released (0.6.3)  
 > **Policy:** no more version bumps until an explicit release.  
 > **Plan:** [`docs/EXCEPTIONAL-CLI-PLAN.md`](docs/EXCEPTIONAL-CLI-PLAN.md) (v9 + dogfood B33–B40; Q1/Q2 closed)  
 > This is the **only** progress pin — do not recreate `STATUS.md`.
+>
+> **Resumed 2026-07-15:** CLI track un-paused per user request. Done today (no version bump, tests+tsc green, baseline 214 pre-existing tsc errors unchanged):
+> 1. Fixed stale `CHANGELOG.md` — added missing 0.6.1–0.6.4 sections; moved provider-groups/`dora completion` removal out of "Unreleased" into 0.6.3 where it actually shipped.
+> 2. Fixed real `fix-engine.ts` bug — mechanical `add_field` fix wrote a literal `description: TODO` placeholder into SKILL.md for any missing field; now only the safely-derivable `name` field (from dir name) is mechanical, everything else routes to judgment. Also reworded `checkName`'s warning (`skill-validate.ts`) from "No" to "Missing" so it's consistently wired as fixable — this is the one case that's actually safe to auto-fix.
+> 3. Consolidated provider scaffold TODO(010) — `ProviderAdapter.detectContext`/`.scaffold()` and the `Decision`/`ScaffoldResult`/`ProviderContext` types in `src/providers/types.ts` were 100% dead code (never called; real scaffold path is `new.ts` → `scaffold-wizard.ts` → `scaffold.ts`). Deleted the stubs, the unused `resolveAdapter` export, and the two `TODO(010)` comments instead of building the "shared scaffold" wiring the TODO asked for — nothing calls it.
+> Next: `docs/backlog.md` + resume `docs/EXCEPTIONAL-CLI-PLAN.md`.
 
 ---
 
 ## Track pause: Exceptional CLI
 
-CLI dogfood track was parked for ponytail; **B36 executed** by scheduled plan loop. B37–B39 + B40 memory/sessions polish done. Ship as 0.6.0.
+CLI dogfood track was parked for ponytail through 0.6.0; **B36 executed** by scheduled plan loop. B37–B39 + B40 memory/sessions polish done. Shipped as 0.6.0; Q1/Q2 (provider groups deletion, `dora completion` → `--completion` flag) shipped in 0.6.3.
 
 | Item | State | Notes |
 |---|---|---|
@@ -68,19 +74,33 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 
 - Test CI Windows failures — **fixed** (`09cb542`); Test green on latest main.
 - **npm platform packages @0.6.0** — **FIXED 2026-07-14** via local recovery (GH release binaries → assemble → `npm publish --access public --otp=…`). All five on registry; clean `npm install @hacksmith/doraval@0.6.0` → `doraval --version` = `0.6.0`.
-- **CI still needs attention:** `NPM_TOKEN` must be a granular token with **write + Bypass 2FA** on all five platform packages (and main), or platforms will EOTP/E404 again on next release. Workflow fail-fast is in place (`24416ef`) so main will not ship alone again.
+- `NPM_TOKEN` GAT — releases 0.6.1–0.6.4 all published cleanly with no EOTP/E404 repeat, so the token is very likely fixed. Not independently re-verified this session (can't check GH secret scopes from the repo) — if a future release EOTP/E404s again, redo the write + Bypass-2FA grant on all five platform packages (and main).
 
 ## Release
 
-**Pushed 2026-07-14:** `main` + tag **`v0.6.0`**. Full npm surface now OK: main + five platforms + JSR + GH Release + Homebrew.
+**Latest tagged:** `v0.6.4` (2026-07-14). Full npm surface OK: main + five platforms + JSR + GH Release + Homebrew. See `CHANGELOG.md` for the 0.6.1–0.6.4 breakdown (was missing until this session — provider-groups/`dora completion` removal had been sitting under "Unreleased" despite shipping in 0.6.3).
 
 ## Next (no version bump)
 
-- Update GH secret `NPM_TOKEN` → GAT with Bypass 2FA + write on all six `@hacksmith/doraval*` packages (CI platforms)
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
-- Q1/Q2 **implemented** (providers = packaging/spec; provider groups deleted)
+- Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted
+- `src/providers/index.ts` TODO(010) — **done 2026-07-15** (dead scaffold stubs deleted, not consolidated — nothing called them)
+- `src/core/review.ts:351` — tier 4 session-adapters integration still a stub (only Claude + Grok session adapters exist; B20–B22 Codex/Copilot/Cursor session adapters never built — real gap, not yet picked up)
+- `src/validators/claude/memory.ts:51` — more rules to add incrementally (open-ended, not urgent)
 - Optional: stash `--fzf` stretch
+
+### B19 doc registry — **done 2026-07-15**
+
+`src/core/doc-registry.ts`: `getDocUrl(code)` maps `DoravalError` code prefixes (E-JRN/E-PRE/E-NET/E-CFG/E-SCF/E-VAL) to real, already-published `doraval.thehacksmith.dev` pages (verified against `apps/website/content`, not fabricated); `getProviderDocUrl(provider)` maps claude/codex/cursor/copilot to the external docs already vetted in `AGENTS.md`. Wired into `errors.ts` (`DoravalError` auto-populates `docUrl` from the registry unless explicitly set) and `out.ts` (`guidedError` gets its own `Docs:` line — previously `emitError` was smuggling `docUrl` into the `next:` action slot, so it never rendered correctly; also `docUrl` was never populated anywhere before this). Verified end-to-end via `dora review --deep` on a no-judge machine — real `Docs:` line prints.
+
+Not done (would need touching every validator's `CheckItem`, bigger surface): per-rule `(provider, validator, rule)` → docUrl on structural/heuristic findings themselves (`ReviewFinding`/`CheckItem.code` exists but nothing populates it). Left for later, scoped correctly if picked up.
+
+Also found while wiring this: `E-PRE-001`/`E-PRE-002` codes mean different things in different files (`memory-sync.ts` uses 001=gh-missing/git-missing, 002=gh-not-authenticated; `review.ts`/`memory-file-review.ts` use 002=judge-missing) — codes aren't globally unique per meaning. Not fixed (renumbering touches multiple call sites + would need checking nothing keys off the exact number); flagging in case it bites later.
+
+### B31 CONTRIBUTING.md — **done 2026-07-15**
+
+Added `CONTRIBUTING.md` (setup, test/typecheck gates, ponytail philosophy pointer to `AGENTS.md`, commit style, no-version-bump rule, `dora report` for issues, where-things-live table). CHANGELOG + checked-in CI were already done; B31 now fully closed.
 
 ---
 

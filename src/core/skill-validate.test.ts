@@ -156,7 +156,7 @@ describe("checkFrontmatterPresence", () => {
 describe("checkName", () => {
   test("returns warning when name is absent", () => {
     const result = checkName({ data: {}, content: "" }, { existingDirs: [] });
-    expect(result.warnings?.[0]?.text).toContain("No \"name\" in frontmatter");
+    expect(result.warnings?.[0]?.text).toContain("Missing \"name\" in frontmatter");
   });
 
   test("returns error for invalid kebab-case", () => {

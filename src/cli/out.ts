@@ -80,12 +80,16 @@ export function guidedError(opts: {
   problem: string;
   solutions: string[];
   next?: string;
+  docUrl?: string;
 }): void {
   ui.fail(`Error: ${opts.problem}`);
   ui.info(`  Context: ${opts.context}`);
   ui.info(`  Solutions:`);
   for (const s of opts.solutions) {
     ui.info(`    • ${s}`);
+  }
+  if (opts.docUrl) {
+    ui.info(`  Docs: ${opts.docUrl}`);
   }
   if (opts.next) {
     nextAction(opts.next);
@@ -212,6 +216,6 @@ export function emitError(e: unknown, mode: OutputMode): void {
     context: derr.context ?? "running doraval",
     problem: `${derr.message} (${derr.code})`,
     solutions: derr.suggestion ? [derr.suggestion] : ["Re-run with --verbose for details"],
-    next: derr.docUrl,
+    docUrl: derr.docUrl,
   });
 }

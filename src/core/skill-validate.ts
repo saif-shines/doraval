@@ -115,7 +115,7 @@ export function checkFrontmatterPresence(model: SkillModel, _ctx: SkillValidateC
 
 export function checkName(model: SkillModel, _ctx: SkillValidateContext): CheckResult {
   if (!model.data.name) {
-    return { warnings: [{ text: 'No "name" in frontmatter — directory name provides the /command (name is optional except for plugin-root skills)' }] };
+    return { warnings: [{ text: 'Missing "name" in frontmatter — directory name provides the /command (name is optional except for plugin-root skills)' }] };
   }
   const name = String(model.data.name);
   if (!NAME_REGEX.test(name)) {
