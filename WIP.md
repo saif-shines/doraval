@@ -86,7 +86,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
 - Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted
 - `src/providers/index.ts` TODO(010) — **done 2026-07-15** (dead scaffold stubs deleted, not consolidated — nothing called them)
-- `src/core/review.ts:351` — tier 4 session-adapters integration still a stub (only Claude + Grok session adapters exist; B20–B22 Codex/Copilot/Cursor session adapters never built — real gap, not yet picked up)
+- **B20–B22 session adapters** — **done 2026-07-15** (Cursor + Codex + Copilot adapters + mechanical tier-4 evidence engine; `dora review --sessions` now multi-agent)
 - `src/validators/claude/memory.ts:51` — more rules to add incrementally (open-ended, not urgent)
 - Optional: stash `--fzf` stretch
 

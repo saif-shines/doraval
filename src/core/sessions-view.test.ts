@@ -46,6 +46,12 @@ describe("isKnownAgent", () => {
   test("false for an agent with no adapter yet", () => {
     expect(isKnownAgent("windsurf")).toBe(false);
   });
+
+  test("new adapter agents are known", () => {
+    expect(isKnownAgent("cursor")).toBe(true);
+    expect(isKnownAgent("codex")).toBe(true);
+    expect(isKnownAgent("copilot")).toBe(true);
+  });
 });
 
 describe("listSessions", () => {

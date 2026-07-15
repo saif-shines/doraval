@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `dora sessions` and `dora review --sessions` now read Cursor, Codex, and
+  Copilot session stores (previously Claude Code and Grok only). Review
+  tier 4 reports mechanical usage evidence per skill: invoked / never
+  invoked / no sessions found. `--sessions` exits 2 with guidance when no
+  recent sessions exist.
 - docs(site): surface npm, Homebrew, and Bun install paths on the homepage
   and get-started pages.
 
