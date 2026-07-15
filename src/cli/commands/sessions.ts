@@ -31,7 +31,7 @@ function renderTable(entries: ReturnType<typeof listSessions>): void {
 export default defineCommand({
   meta: { name: "sessions", description: "List coding-agent sessions for this project" },
   args: {
-    agent: { type: "string", description: "Filter by agent (claude, grok)" },
+    agent: { type: "string", description: "Filter by agent (claude, grok, cursor, codex, copilot)" },
     limit: { type: "string", description: "Max sessions per agent", default: "10" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
@@ -56,7 +56,7 @@ export default defineCommand({
           outJson([]);
         } else {
           ui.blank();
-          ui.write(`  ${pc.yellow("⚠")} No session adapter for "${agent}" — Claude Code and Grok are supported today; Codex, Copilot, and Cursor adapters are planned.`);
+          ui.write(`  ${pc.yellow("⚠")} No session adapter for "${agent}" — supported agents: claude, grok, cursor, codex, copilot.`);
           ui.blank();
         }
         await exit(0);
@@ -75,7 +75,7 @@ export default defineCommand({
         if (agent) {
           ui.write(`  No sessions found for ${agent} in this project.`);
         } else {
-          ui.write(`  No sessions found. Claude Code and Grok are supported today; Codex, Copilot, and Cursor adapters are planned.`);
+          ui.write(`  No sessions found. Supported agents: claude, grok, cursor, codex, copilot.`);
         }
         ui.blank();
       } else {
