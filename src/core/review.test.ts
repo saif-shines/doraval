@@ -33,10 +33,9 @@ describe("reviewSkill", () => {
     expect(["authored", "imported", "global"]).toContain(result.origin);
   });
 
-  test("sessions tier is stubbed as unavailable", async () => {
+  test("sessions tier is omitted entirely in quick mode", async () => {
     const result = await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), { quick: true });
-    expect(result.tiers.sessions).toBeDefined();
-    expect(result.tiers.sessions!.available).toBe(false);
+    expect(result.tiers.sessions).toBeUndefined();
   });
 
   test("deep mode without LLM throws PrerequisiteError", async () => {

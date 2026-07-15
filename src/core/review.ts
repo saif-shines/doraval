@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from "fs";
-import { resolve as resolvePath, relative } from "path";
+import { resolve as resolvePath, relative, basename } from "path";
 import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
 import { analyzeDrift, scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
 import { lintSkill, runJudge, type LintResult } from "./skill-lint.js";
@@ -10,6 +10,7 @@ import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
 import { readConfig, getEvalConfig } from "./journal-config.js";
+import { loadRecentSessions, collectSessionEvidence, type LoadResult } from "./session-evidence.js";
 import type { SkillModel } from "./skill-validate.js";
 import type { Capabilities } from "./capability-detect.js";
 import type { AgentConfig } from "./agent-invoke.js";
@@ -56,6 +57,8 @@ export interface ReviewOptions {
   sessions?: boolean;
   agent?: string;
   cwd?: string;
+  /** Preloaded session evidence (reviewAll threads this; also a test seam). */
+  loadedSessions?: LoadResult;
   /** Called before each skill's LLM tier runs (progress reporting). */
   onProgress?: (msg: string) => void;
   /** Test seam: overrides the lintSkill call for the LLM tier. */
@@ -348,8 +351,23 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     }
   }
 
-  // TODO: session adapters integration — tier 4 is a stub
-  tiers.sessions = { available: false, findings: [] };
+  // Tier 4: sessions — mechanical usage evidence (see plan B20–B22)
+  if (!opts.quick) {
+    const loadedSess = opts.loadedSessions ?? loadRecentSessions(opts.cwd ?? process.cwd());
+    if (loadedSess.adaptersDetected.length === 0) {
+      tiers.sessions = { available: false, findings: [] };
+    } else {
+      if (opts.sessions && loadedSess.sessions.length === 0) {
+        throw new PrerequisiteError({
+          code: "E-PRE-003",
+          message: "No sessions found. Use your agent, then re-run.",
+        });
+      }
+      const skillName = String(model.data.name ?? basename(dir));
+      const sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required: opts.sessions === true });
+      tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };
+    }
+  }
 
   const all = [
     ...structTier.findings,
@@ -375,7 +393,9 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
 
 export async function reviewAll(root: string, opts: ReviewOptions = {}): Promise<ReviewResult[]> {
   const dirs = findSkillDirs(root);
-  const optsWithCwd = { ...opts, cwd: opts.cwd ?? root };
+  const cwd = opts.cwd ?? root;
+  const loadedSessions = opts.quick ? undefined : (opts.loadedSessions ?? loadRecentSessions(cwd));
+  const optsWithCwd = { ...opts, cwd, ...(loadedSessions ? { loadedSessions } : {}) };
 
   // Sequential when LLM tier is active (non-quick) to avoid rate limits.
   // Parallel for quick mode (tiers 1–2 are CPU-only).
