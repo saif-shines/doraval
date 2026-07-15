@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resolve } from "path";
 import { readFileSync } from "fs";
 import { resolveAgentAlias, isKnownAgent, listSessions, findSession, type SessionListEntry } from "./sessions-view.js";
-import type { SessionAdapter } from "./session-adapters.js";
+import type { SessionAdapter } from "./session-adapters/index.js";
 import { parseSession } from "./session-parse.js";
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures/sessions");

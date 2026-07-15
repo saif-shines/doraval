@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import { parseSession, safeJsonParse, type SessionPrimitives } from "../session-parse.js";
+import { safeJsonParse, type SessionPrimitives } from "../session-parse.js";
 import type { SessionAdapter, SessionListItem } from "./types.js";
 
+// Basic Grok adapter (sessions stored under ~/.grok/sessions).
 export function createGrokAdapter(homeDir: string = homedir()): SessionAdapter {
   return {
     agent: "grok",
@@ -29,14 +30,14 @@ export function createGrokAdapter(homeDir: string = homedir()): SessionAdapter {
           const mb = statSync(join(base, b)).mtimeMs;
           return mb - ma;
         });
-        const latest = subs[0];
+        const latest = subs[0]!;
         const updates = join(base, latest, "updates.jsonl");
         if (existsSync(updates)) return updates;
         // fallback to a terminal log if present
         const termDir = join(base, latest, "terminal");
         if (existsSync(termDir)) {
           const logs = readdirSync(termDir).filter((f: string) => f.endsWith(".log"));
-          if (logs.length) return join(termDir, logs[0]);
+          if (logs.length) return join(termDir, logs[0]!);
         }
         return null;
       } catch {
