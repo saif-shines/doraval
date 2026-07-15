@@ -1,5 +1,5 @@
 import { basename, extname } from "path";
-import { claudeCodeAdapter, grokAdapter, getAllAdapters, type SessionAdapter } from "./session-adapters.js";
+import { getAllAdapters, ALL_ADAPTERS, type SessionAdapter } from "./session-adapters/index.js";
 import type { SessionPrimitives } from "./session-parse.js";
 
 export interface SessionListEntry {
@@ -22,7 +22,7 @@ export function resolveAgentAlias(name: string): string {
   return AGENT_ALIASES[name] ?? name;
 }
 
-const KNOWN_ADAPTER_AGENTS = new Set([claudeCodeAdapter.agent, grokAdapter.agent]);
+const KNOWN_ADAPTER_AGENTS = new Set(ALL_ADAPTERS.map((a) => a.agent));
 
 /** True if an adapter exists for this agent name (regardless of whether it's installed). */
 export function isKnownAgent(name: string): boolean {
