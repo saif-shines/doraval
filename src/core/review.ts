@@ -354,15 +354,15 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   // Tier 4: sessions — mechanical usage evidence (see plan B20–B22)
   if (!opts.quick) {
     const loadedSess = opts.loadedSessions ?? loadRecentSessions(opts.cwd ?? process.cwd());
+    if (opts.sessions && loadedSess.sessions.length === 0) {
+      throw new PrerequisiteError({
+        code: "E-PRE-003",
+        message: "No sessions found. Use your agent, then re-run.",
+      });
+    }
     if (loadedSess.adaptersDetected.length === 0) {
       tiers.sessions = { available: false, findings: [] };
     } else {
-      if (opts.sessions && loadedSess.sessions.length === 0) {
-        throw new PrerequisiteError({
-          code: "E-PRE-003",
-          message: "No sessions found. Use your agent, then re-run.",
-        });
-      }
       const skillName = String(model.data.name ?? basename(dir));
       const sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required: opts.sessions === true });
       tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };

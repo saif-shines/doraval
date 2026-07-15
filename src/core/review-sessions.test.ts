@@ -53,4 +53,12 @@ describe("review tier 4 wiring", () => {
     ).rejects.toThrow(/No sessions found/);
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("--sessions with zero adapters (no session-store agent installed) throws E-PRE-003", async () => {
+    const { root, dir } = skillFixture("t5");
+    await expect(
+      reviewSkill(dir, { quick: false, sessions: true, cwd: root, loadedSessions: NO_ADAPTERS, ...skipLlm })
+    ).rejects.toThrow(/No sessions found/);
+    rmSync(root, { recursive: true, force: true });
+  });
 });

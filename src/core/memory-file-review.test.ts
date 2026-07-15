@@ -42,9 +42,9 @@ describe("reviewMemoryFile — tier 1 (structure)", () => {
     expect(["authored", "imported", "global"]).toContain(result.origin);
   });
 
-  test("sessions tier is stubbed unavailable", async () => {
+  test("sessions tier is omitted (no tier-4 evidence concept for memory files)", async () => {
     const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
-    expect(result.tiers.sessions).toEqual({ available: false, findings: [] });
+    expect(result.tiers.sessions).toBeUndefined();
   });
 });
 

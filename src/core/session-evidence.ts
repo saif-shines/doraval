@@ -59,8 +59,10 @@ function matchSession(skillName: string, skillDir: string, s: LoadedSession): Ev
     const blob = JSON.stringify(tc.input ?? {});
     if (blob.includes(needleDir) || blob.includes(needleFile)) return "path";
   }
-  // "/name" not followed by a word char or hyphen — so /review ≠ /review-pr
-  const mention = new RegExp(`/${escapeRegExp(skillName)}(?![\\w-])`);
+  // "/name" preceded by start-of-string or whitespace (a real slash-command
+  // invocation), and not followed by a word char or hyphen — so /review ≠
+  // /review-pr, and a path fragment like "src/review.ts" doesn't count either.
+  const mention = new RegExp(`(?:^|\\s)/${escapeRegExp(skillName)}(?![\\w-])`);
   if (s.primitives.userMessages.some((m) => mention.test(m))) return "mention";
   return null;
 }

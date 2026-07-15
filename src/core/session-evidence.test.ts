@@ -42,6 +42,10 @@ describe("collectSessionEvidence", () => {
     // "/review" must NOT match a session that only mentions "/review-pr"
     const miss = loadResult([sess("claude-code", { userMessages: ["use /review-pr here"] })]);
     expect(collectSessionEvidence("review", "/x/review", miss, { required: false })[0]!.severity).toBe("info");
+    // "/review" must NOT match a path fragment like "src/review.ts" — no left
+    // boundary (start-of-string or whitespace) precedes the slash there.
+    const pathMiss = loadResult([sess("claude-code", { userMessages: ["see src/review.ts"] })]);
+    expect(collectSessionEvidence("review", "/x/review", pathMiss, { required: false })[0]!.severity).toBe("info");
   });
 
   test("never invoked: info by default, warning when required", () => {

@@ -247,8 +247,6 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     }
   }
 
-  tiers.sessions = { available: false, findings: [] };
-
   const all = [...structTier.findings, ...heurTier.findings, ...(tiers.llm?.findings ?? [])];
 
   return {
