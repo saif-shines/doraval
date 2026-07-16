@@ -89,7 +89,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - **B20–B22 session adapters** — **done 2026-07-15** (Cursor + Codex + Copilot adapters + mechanical tier-4 evidence engine; `dora review --sessions` now multi-agent)
 - **B30 residual (mechanical sessions on memory files)** — **done 2026-07-16**: `reviewMemoryFile` honors `--sessions` / `E-PRE-003`, emits sess-004 presence findings (not skill-invoke matching). Full rule-violation scoring still backlog #9.
 - **E-PRE code collision** — **done 2026-07-16**: 001 tool missing, 002 not authenticated, 003 no sessions, **004 missing LLM judge** (was colliding with 002 on review paths).
-- `src/validators/claude/memory.ts:51` — more rules to add incrementally (open-ended, not urgent)
+- `src/validators/claude/memory.ts` — dead links + duplicate lines added 2026-07-16; more rules still open-ended
 - Optional: stash `--fzf` stretch
 
 ### B19 doc registry — **done 2026-07-15**

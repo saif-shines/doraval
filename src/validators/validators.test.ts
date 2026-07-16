@@ -375,7 +375,67 @@ describe("claude:memory", () => {
       { format: "table", verbose: false, ci: false }
     );
     expect(result.errors).toEqual([]);
-    expect(result.passes).toContain("CLAUDE.md is non-empty");
+    expect(result.passes.some((p) => p.text === "CLAUDE.md is non-empty")).toBe(true);
+  });
+
+  test("warns on dead relative markdown links", async () => {
+    const tmp = resolve(import.meta.dir, "../../test/tmp-claude-memory-dead-link");
+    try {
+      await Bun.write(
+        resolve(tmp, "CLAUDE.md"),
+        "# Rules\n\nSee the [guide](missing-style.md) for details.\n",
+      );
+      const result = await claudeMemoryValidator.validate(tmp, {
+        format: "table",
+        verbose: false,
+        ci: false,
+      });
+      expect(
+        result.warnings.some((w) => w.text.includes("Dead link reference: missing-style.md")),
+      ).toBe(true);
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
+  });
+
+  test("warns on duplicate instruction lines", async () => {
+    const tmp = resolve(import.meta.dir, "../../test/tmp-claude-memory-dup");
+    try {
+      await Bun.write(
+        resolve(tmp, "CLAUDE.md"),
+        "# Rules\n\nRun tests before committing.\nRun tests before committing.\n",
+      );
+      const result = await claudeMemoryValidator.validate(tmp, {
+        format: "table",
+        verbose: false,
+        ci: false,
+      });
+      expect(
+        result.warnings.some(
+          (w) => w.text.includes("Duplicate instruction") && w.text.includes("run tests"),
+        ),
+      ).toBe(true);
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
+  });
+
+  test("skips http and hash links for dead-link checks", async () => {
+    const tmp = resolve(import.meta.dir, "../../test/tmp-claude-memory-http");
+    try {
+      await Bun.write(
+        resolve(tmp, "CLAUDE.md"),
+        "# Rules\n\nSee [docs](https://example.com) and [local](#heading).\n",
+      );
+      const result = await claudeMemoryValidator.validate(tmp, {
+        format: "table",
+        verbose: false,
+        ci: false,
+      });
+      expect(result.warnings.some((w) => w.text.includes("Dead link"))).toBe(false);
+    } finally {
+      await Bun.$`rm -rf ${tmp}`.quiet();
+    }
   });
 });
 
