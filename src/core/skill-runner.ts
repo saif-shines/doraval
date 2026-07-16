@@ -169,7 +169,9 @@ export async function runSkillSessions(
       try {
         mkdirSync(runCwd, { recursive: true });
         await Bun.write(`${runCwd}/.gitkeep`, "");
-      } catch {}
+      } catch {
+        // intentional: isolated cwd prep best-effort; run continues
+      }
     }
 
     // Drive the agent (real full session) — output is streamed live for progress if verbose
@@ -211,7 +213,9 @@ export async function runSkillSessions(
             }
           }
         }
-      } catch {}
+      } catch {
+        // intentional: fall back to synthetic primitives below
+      }
     }
 
     if (!primitives) {
@@ -269,7 +273,9 @@ export async function runSkillSessions(
       const fname = `${r.eval.sessionId}.json`;
       await Bun.write(join(evalsDir, fname), JSON.stringify({ ...r.eval, _batchId: batchId, _prompt: r.prompt }, null, 2));
     }
-  } catch {}
+  } catch {
+    // intentional: eval persistence optional; return results either way
+  }
 
   opts.progress?.onDone(summary);
 

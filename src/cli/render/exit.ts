@@ -17,7 +17,9 @@ export async function exit(code: number): Promise<never> {
   try {
     await currentBackend().destroy();
     resetToText();
-  } catch {}
+  } catch {
+    // intentional: exit must not fail if backend teardown throws
+  }
   process.exit(code);
 }
 
@@ -33,19 +35,25 @@ export function registerLifecycleHandlers(): void {
   process.on("exit", () => {
     try {
       void currentBackend().destroy();
-    } catch {}
+    } catch {
+      // intentional: process-exit backstop must never throw
+    }
   });
 
   // Restore terminal before crashing on unhandled errors.
   process.on("uncaughtException", async (err: Error) => {
-    try { await currentBackend().destroy(); } catch {}
+    try { await currentBackend().destroy(); } catch {
+      // intentional: still report fatal after best-effort teardown
+    }
     resetToText();
     process.stderr.write(`\nFatal: ${err.message}\n${err.stack ?? ""}\n`);
     process.exit(1);
   });
 
   process.on("unhandledRejection", async (reason: unknown) => {
-    try { await currentBackend().destroy(); } catch {}
+    try { await currentBackend().destroy(); } catch {
+      // intentional: still report rejection after best-effort teardown
+    }
     resetToText();
     process.stderr.write(`\nUnhandled rejection: ${String(reason)}\n`);
     process.exit(1);

@@ -154,7 +154,9 @@ export const claudePluginValidator: Validator = {
       } else if (entries.length === 1) {
         passes.push({ text: ".claude-plugin/ contains only plugin.json (correct layout)" });
       }
-    } catch {}
+    } catch {
+      // intentional: purity check is best-effort if readdir fails
+    }
 
     // name — required, kebab-case (used for namespacing e.g. plugin-name:skill-name)
     if (!manifest.name) {

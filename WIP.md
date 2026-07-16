@@ -90,6 +90,8 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - **B30 residual (mechanical sessions on memory files)** — **done 2026-07-16**: `reviewMemoryFile` honors `--sessions` / `E-PRE-003`, emits sess-004 presence findings (not skill-invoke matching). Full rule-violation scoring still backlog #9.
 - **E-PRE code collision** — **done 2026-07-16**: 001 tool missing, 002 not authenticated, 003 no sessions, **004 missing LLM judge** (was colliding with 002 on review paths).
 - `src/validators/claude/memory.ts` — dead links + duplicate lines added 2026-07-16; more rules still open-ended
+- **B18 residual** — **done 2026-07-16**: empty `catch {}` sites annotated `// intentional: …` (JSON probe, teardown, best-effort I/O).
+- **B28 residual** — **done 2026-07-16**: `completion-script.test.ts` covers bash/zsh/fish + errors (runs in `bun test` / CI).
 - Optional: stash `--fzf` stretch
 
 ### B19 doc registry — **done 2026-07-15**

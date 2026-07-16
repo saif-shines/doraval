@@ -23,7 +23,9 @@ export const cursorMarketplaceValidator: Validator = {
         const hasManifest = existsSync(join(pluginsDir, entry.name, ".cursor-plugin", "plugin.json"));
         if (hasSkills || hasManifest) return true;
       }
-    } catch {}
+    } catch {
+      // intentional: detect returns false on unreadable plugins dir
+    }
 
     return false;
   },

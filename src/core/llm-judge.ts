@@ -74,20 +74,26 @@ export function extractCandidates(text: string): Record<string, unknown>[] {
   if (fullMatch) {
     try {
       candidates.push(JSON.parse(fullMatch[0]) as Record<string, unknown>);
-    } catch {}
+    } catch {
+      // intentional: try next candidate shape
+    }
   }
   const allMatches = cleaned.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
   for (const m of allMatches) {
     try {
       candidates.push(JSON.parse(m) as Record<string, unknown>);
-    } catch {}
+    } catch {
+      // intentional: try next candidate shape
+    }
   }
   if (cleaned.startsWith("{") || cleaned.startsWith("[")) {
     try {
       const direct = JSON.parse(cleaned);
       if (direct && typeof direct === "object")
         candidates.push(direct as Record<string, unknown>);
-    } catch {}
+    } catch {
+      // intentional: try next candidate shape
+    }
   }
 
   const unwrapped: Record<string, unknown>[] = [];
@@ -97,7 +103,9 @@ export function extractCandidates(text: string): Record<string, unknown>[] {
       if (typeof inner === "string") {
         try {
           inner = JSON.parse(inner);
-        } catch {}
+        } catch {
+          // intentional: keep raw result string if not JSON
+        }
       }
       if (inner && typeof inner === "object")
         unwrapped.push(inner as Record<string, unknown>);
@@ -266,7 +274,9 @@ function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: Ju
   }
   let error = `Judge API error${err?.status ? ` (${err.status})` : ""}: ${msg}`;
   if (err?.response?.data) {
-    try { error += ` — ${JSON.stringify(err.response.data).slice(0, 200)}`; } catch {}
+    try { error += ` — ${JSON.stringify(err.response.data).slice(0, 200)}`; } catch {
+      // intentional: response body may not stringify
+    }
   }
   return { code: "network", error };
 }

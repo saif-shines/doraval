@@ -44,7 +44,9 @@ No other text.`;
           }
         }
       }
-    } catch {}
+    } catch {
+    // intentional: fall through to deterministic prompt templates
+  }
   }
 
   // Always produce skill-specific prompts based on the skill's own when_to_use / focus.

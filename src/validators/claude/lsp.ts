@@ -42,7 +42,9 @@ export const claudeLspValidator: Validator = {
             cfg = m.lspServers as Record<string, unknown>;
             passes.push("lspServers present inline in plugin.json");
           }
-        } catch {}
+        } catch {
+          // intentional: optional inline lspServers parse
+        }
       }
     }
 

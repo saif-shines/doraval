@@ -101,24 +101,34 @@ function extractCandidates(text: string): Record<string, unknown>[] {
   const allMatches = cleaned.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g) ?? [];
   const fullMatch = cleaned.match(/\{[\s\S]*\}/);
   if (fullMatch) {
-    try { candidates.push(JSON.parse(fullMatch[0]) as Record<string, unknown>); } catch {}
+    try { candidates.push(JSON.parse(fullMatch[0]) as Record<string, unknown>); } catch {
+      // intentional: try next candidate shape
+    }
   }
   for (const m of allMatches) {
-    try { candidates.push(JSON.parse(m) as Record<string, unknown>); } catch {}
+    try { candidates.push(JSON.parse(m) as Record<string, unknown>); } catch {
+      // intentional: try next candidate shape
+    }
   }
 
   if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
     try {
       const direct = JSON.parse(cleaned);
       if (direct && typeof direct === 'object') candidates.push(direct as Record<string, unknown>);
-    } catch {}
+    } catch {
+      // intentional: try next candidate shape
+    }
   }
 
   const unwrapped: Record<string, unknown>[] = [];
   for (const c of candidates) {
     if (c.result) {
       let inner = c.result;
-      if (typeof inner === "string") { try { inner = JSON.parse(inner); } catch {} }
+      if (typeof inner === "string") {
+        try { inner = JSON.parse(inner); } catch {
+          // intentional: keep raw result string if not JSON
+        }
+      }
       if (inner && typeof inner === "object") unwrapped.push(inner as Record<string, unknown>);
     }
     unwrapped.push(c);

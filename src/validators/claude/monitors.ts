@@ -56,7 +56,9 @@ export const claudeMonitorsValidator: Validator = {
             // path inside manifest; would be resolved at runtime
             passes.push("experimental.monitors declared as path in manifest (content not validated here)");
           }
-        } catch {}
+        } catch {
+          // intentional: optional inline monitors parse
+        }
       }
     }
 

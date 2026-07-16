@@ -195,7 +195,9 @@ export async function fetchLatestVersionInfo(): Promise<VersionInfo> {
       if (lines.length) summary = lines.join(' ').slice(0, 200);
       else if (body) summary = body.split('\n')[0].slice(0, 150);
     }
-  } catch {}
+  } catch {
+    // intentional: release notes are optional polish
+  }
 
   return { version, summary };
 }
@@ -243,5 +245,7 @@ export async function writeMarker(marker: InstallMarker): Promise<void> {
     const { dirname } = await import('node:path');
     await mkdir(dirname(MARKER_PATH), { recursive: true });
     await writeFile(MARKER_PATH, JSON.stringify(marker, null, 2));
-  } catch {}
+  } catch {
+    // intentional: marker write failure must not break upgrade flow
+  }
 }

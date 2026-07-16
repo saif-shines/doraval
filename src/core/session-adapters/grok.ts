@@ -63,7 +63,9 @@ export function createGrokAdapter(homeDir: string = homedir()): SessionAdapter {
             res.push({ path: updates, mtime: statSync(updates).mtimeMs, title: sub, skillCount: 0 });
           }
         }
-      } catch {}
+      } catch {
+        // intentional: degrade to empty list for this home-dir walk
+      }
       return res;
     },
 
