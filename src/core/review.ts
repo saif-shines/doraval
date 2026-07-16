@@ -280,7 +280,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     if (caps.preferred === "none") {
       if (opts.deep) {
         throw new PrerequisiteError({
-          code: "E-PRE-002",
+          code: "E-PRE-004",
           message: "Deep review requires an LLM judge",
         });
       }

@@ -7,6 +7,7 @@ import { detectCapabilities, type Capabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig, type EvalConfig } from "./journal-config.js";
 import { loadPrinciples, buildPrincipleRubric } from "./memory-rubric.js";
 import { PrerequisiteError, NetworkError } from "./errors.js";
+import { loadRecentSessions, type LoadResult } from "./session-evidence.js";
 import type { AgentConfig } from "./agent-invoke.js";
 
 export const MEMORY_FILE_NAMES = new Set([
@@ -27,6 +28,34 @@ const CLAUDE_ONLY_MARKERS: { pattern: RegExp; label: string }[] = [
 
 function pad(n: number): string {
   return String(n).padStart(3, "0");
+}
+
+/**
+ * Mechanical session presence for memory-file review (B30 residual).
+ * Skill-style invoke matching does not apply; full rule-violation scoring is backlog #9.
+ */
+export function memorySessionPresence(
+  loaded: LoadResult,
+  _opts: { required: boolean } = { required: false },
+): ReviewFinding[] {
+  const total = loaded.sessions.length;
+  if (total === 0) {
+    return [{
+      id: "sess-003",
+      tier: "sessions",
+      severity: "info",
+      message: "No sessions found for this project. Use your agent, then re-run.",
+      fixable: false,
+    }];
+  }
+  const agents = [...new Set(loaded.sessions.map((s) => s.agent))].join(", ");
+  return [{
+    id: "sess-004",
+    tier: "sessions",
+    severity: "pass",
+    message: `${total} recent session${total === 1 ? "" : "s"} found (${agents})`,
+    fixable: false,
+  }];
 }
 
 export function buildMemoryLintPrompt(content: string, fileLabel: string, extraRubric?: string): string {
@@ -209,7 +238,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     if (caps.preferred === "none") {
       if (opts.deep) {
         throw new PrerequisiteError({
-          code: "E-PRE-002",
+          code: "E-PRE-004",
           message: "Deep review requires an LLM judge",
         });
       }
@@ -247,7 +276,29 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     }
   }
 
-  const all = [...structTier.findings, ...heurTier.findings, ...(tiers.llm?.findings ?? [])];
+  // Tier 4: mechanical session presence (parity with skill review --sessions gate)
+  if (!opts.quick) {
+    const loadedSess = opts.loadedSessions ?? loadRecentSessions(opts.cwd ?? process.cwd());
+    if (opts.sessions && loadedSess.sessions.length === 0) {
+      throw new PrerequisiteError({
+        code: "E-PRE-003",
+        message: "No sessions found. Use your agent, then re-run.",
+      });
+    }
+    if (loadedSess.adaptersDetected.length === 0) {
+      tiers.sessions = { available: false, findings: [] };
+    } else {
+      const sessFindings = memorySessionPresence(loadedSess, { required: opts.sessions === true });
+      tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };
+    }
+  }
+
+  const all = [
+    ...structTier.findings,
+    ...heurTier.findings,
+    ...(tiers.llm?.findings ?? []),
+    ...(tiers.sessions?.findings ?? []),
+  ];
 
   return {
     path,

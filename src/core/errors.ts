@@ -2,6 +2,8 @@
  * Doraval error catalog (plan item B5).
  * Code families: E-VAL (validation), E-CFG (config), E-NET (network/LLM),
  * E-JRN (journal/memory), E-SCF (scaffold), E-UPD (update), E-PRE (prerequisite).
+ * E-PRE meanings (globally unique): 001 missing tool (gh/git), 002 not authenticated,
+ * 003 no sessions, 004 missing LLM judge.
  * Every user-facing error should be (or wrap into) a DoravalError so the CLI
  * can render context → problem → solution → next command, plus JSON on stderr.
  */

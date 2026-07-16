@@ -10,7 +10,7 @@ const BASE = "https://doraval.thehacksmith.dev";
 /** Error-code prefix (e.g. "E-JRN-001" → "E-JRN") to the doc page that explains it. */
 const CODE_DOCS: Record<string, string> = {
   "E-JRN": `${BASE}/concepts/memory/`, // memory sync/init/promote — gh/git prerequisites, backup model
-  "E-PRE": `${BASE}/concepts/review-tiers/`, // missing judge / gh / git for a required tier
+  "E-PRE": `${BASE}/concepts/review-tiers/`, // 001 tool, 002 auth, 003 sessions, 004 judge
   "E-NET": `${BASE}/concepts/review-tiers/`, // judge invocation failed
   "E-CFG": `${BASE}/commands/config/`,
   "E-SCF": `${BASE}/commands/new/`,

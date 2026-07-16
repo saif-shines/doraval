@@ -49,7 +49,7 @@ describe("reviewSkill", () => {
       await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), { deep: true });
       expect(true).toBe(false); // should not reach here
     } catch (e: any) {
-      expect(e.code).toBe("E-PRE-002");
+      expect(e.code).toBe("E-PRE-004");
     } finally {
       spy.mockRestore();
     }

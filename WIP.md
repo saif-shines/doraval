@@ -87,6 +87,8 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted
 - `src/providers/index.ts` TODO(010) — **done 2026-07-15** (dead scaffold stubs deleted, not consolidated — nothing called them)
 - **B20–B22 session adapters** — **done 2026-07-15** (Cursor + Codex + Copilot adapters + mechanical tier-4 evidence engine; `dora review --sessions` now multi-agent)
+- **B30 residual (mechanical sessions on memory files)** — **done 2026-07-16**: `reviewMemoryFile` honors `--sessions` / `E-PRE-003`, emits sess-004 presence findings (not skill-invoke matching). Full rule-violation scoring still backlog #9.
+- **E-PRE code collision** — **done 2026-07-16**: 001 tool missing, 002 not authenticated, 003 no sessions, **004 missing LLM judge** (was colliding with 002 on review paths).
 - `src/validators/claude/memory.ts:51` — more rules to add incrementally (open-ended, not urgent)
 - Optional: stash `--fzf` stretch
 
@@ -96,7 +98,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 
 Not done (would need touching every validator's `CheckItem`, bigger surface): per-rule `(provider, validator, rule)` → docUrl on structural/heuristic findings themselves (`ReviewFinding`/`CheckItem.code` exists but nothing populates it). Left for later, scoped correctly if picked up.
 
-Also found while wiring this: `E-PRE-001`/`E-PRE-002` codes mean different things in different files (`memory-sync.ts` uses 001=gh-missing/git-missing, 002=gh-not-authenticated; `review.ts`/`memory-file-review.ts` use 002=judge-missing) — codes aren't globally unique per meaning. Not fixed (renumbering touches multiple call sites + would need checking nothing keys off the exact number); flagging in case it bites later.
+E-PRE codes (fixed 2026-07-16): `001` missing tool (gh/git), `002` not authenticated, `003` no sessions, `004` missing LLM judge.
 
 ### B31 CONTRIBUTING.md — **done 2026-07-15**
 
