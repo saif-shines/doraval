@@ -1,16 +1,10 @@
 # WIP — Doraval work tracker (resume here)
 
-> **Pinned:** 2026-07-15 · version **0.6.4** (tagged, released) · npm install **fixed** (all five platform packages published across 0.6.1–0.6.4, no further incidents)  
-> **Branch:** `main` · clean · Q1/Q2 CLI decisions implemented + released (0.6.3)  
+> **Pinned:** 2026-07-16 · version **0.6.5** · B20–B22 + residual track shipped  
+> **Branch:** `main` · Q1/Q2 closed · multi-agent sessions + memory-file session presence  
 > **Policy:** no more version bumps until an explicit release.  
 > **Plan:** [`docs/EXCEPTIONAL-CLI-PLAN.md`](docs/EXCEPTIONAL-CLI-PLAN.md) (v9 + dogfood B33–B40; Q1/Q2 closed)  
 > This is the **only** progress pin — do not recreate `STATUS.md`.
->
-> **Resumed 2026-07-15:** CLI track un-paused per user request. Done today (no version bump, tests+tsc green, baseline 214 pre-existing tsc errors unchanged):
-> 1. Fixed stale `CHANGELOG.md` — added missing 0.6.1–0.6.4 sections; moved provider-groups/`dora completion` removal out of "Unreleased" into 0.6.3 where it actually shipped.
-> 2. Fixed real `fix-engine.ts` bug — mechanical `add_field` fix wrote a literal `description: TODO` placeholder into SKILL.md for any missing field; now only the safely-derivable `name` field (from dir name) is mechanical, everything else routes to judgment. Also reworded `checkName`'s warning (`skill-validate.ts`) from "No" to "Missing" so it's consistently wired as fixable — this is the one case that's actually safe to auto-fix.
-> 3. Consolidated provider scaffold TODO(010) — `ProviderAdapter.detectContext`/`.scaffold()` and the `Decision`/`ScaffoldResult`/`ProviderContext` types in `src/providers/types.ts` were 100% dead code (never called; real scaffold path is `new.ts` → `scaffold-wizard.ts` → `scaffold.ts`). Deleted the stubs, the unused `resolveAdapter` export, and the two `TODO(010)` comments instead of building the "shared scaffold" wiring the TODO asked for — nothing calls it.
-> Next: `docs/backlog.md` + resume `docs/EXCEPTIONAL-CLI-PLAN.md`.
 
 ---
 
@@ -78,7 +72,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 
 ## Release
 
-**Latest tagged:** `v0.6.4` (2026-07-14). Full npm surface OK: main + five platforms + JSR + GH Release + Homebrew. See `CHANGELOG.md` for the 0.6.1–0.6.4 breakdown (was missing until this session — provider-groups/`dora completion` removal had been sitting under "Unreleased" despite shipping in 0.6.3).
+**Latest tagged:** `v0.6.5` (2026-07-16). See `CHANGELOG.md`. Prior 0.6.1–0.6.4 npm platform surface was OK; re-verify five platforms + main after this release CI.
 
 ## Next (no version bump)
 

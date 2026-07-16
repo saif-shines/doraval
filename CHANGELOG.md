@@ -2,13 +2,37 @@
 
 ## Unreleased
 
-- `dora sessions` and `dora review --sessions` now read Cursor, Codex, and
-  Copilot session stores (previously Claude Code and Grok only). Review
-  tier 4 reports mechanical usage evidence per skill: invoked / never
-  invoked / no sessions found. `--sessions` exits 2 with guidance when no
-  recent sessions exist.
-- docs(site): surface npm, Homebrew, and Bun install paths on the homepage
-  and get-started pages.
+## 0.6.5
+
+### Features
+
+- **Multi-agent session adapters (B20–B22):** `dora sessions` and
+  `dora review --sessions` read Cursor, Codex, and Copilot stores (plus
+  Claude Code and Grok). Review tier 4 reports mechanical usage evidence
+  per skill: invoked / never invoked / no sessions found. `--sessions`
+  exits 2 (`E-PRE-003`) when no recent sessions exist.
+- **Memory-file review sessions:** `dora review CLAUDE.md` (and other
+  memory files) includes mechanical session presence and the same
+  `--sessions` gate.
+- **`claude:memory` validator:** warns on dead relative markdown links and
+  duplicate instruction lines.
+
+### Fixes
+
+- Prerequisite codes are unique: `E-PRE-004` = missing LLM judge (no longer
+  collides with `E-PRE-002` gh auth).
+- Review: close `--sessions` + zero-adapters silent-pass gap; mention-regex
+  left-boundary so path fragments don’t false-positive.
+- Sessions CLI: remove stale “planned” messaging for supported agents.
+- Mechanical fix no longer writes placeholder `description: TODO` for
+  missing frontmatter fields (only safe `name` derivation).
+
+### Other
+
+- Doc registry: error codes get real Docs: links; CONTRIBUTING.md.
+- Shell completion generator covered by unit tests (bash/zsh/fish).
+- Empty `catch {}` sites annotated as intentional degradations.
+- docs(site): npm, Homebrew, and Bun install paths on homepage / get-started.
 
 ## 0.6.4
 
