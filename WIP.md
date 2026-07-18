@@ -26,7 +26,7 @@ CLI dogfood track was parked for ponytail through 0.6.0; **B36 executed** by sch
 | B40 rest | **done** | sessions list uses `sessionId` (was broken `e.id`); show tool/skill names; interactive bare `dora bump` (multiselect → type → preview → confirm); unit tests |
 | Q1 providers identity | **decided → A** | packaging/spec only; repo support = bare `dora` scan |
 | Q2 provider groups | **decided → delete** | no `dora claude|cursor|codex|copilot` groups; `dora new --for` only |
-| Stash `--fzf` stretch | **deferred** | picker already capped at 20 (B34); fzf optional P2 |
+| Stash `--fzf` stretch | **done 2026-07-18** | `dora memory stash --fzf`; clack still capped at 20 |
 
 ### B33 residuals
 
@@ -82,7 +82,8 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - **B-xi platform install doctor** — **done 2026-07-18**: `checkPlatformInstall` on scan Intelligence (`install` field); source/dev skip; missing optionalDep fail + reinstall Next; version skew warn; no network, no brotli/home-bin.
 - **Memory rule-violation scoring (backlog #9 slice)** — **done 2026-07-18**: extract binding MUST/MUST NOT/NEVER rules (`sess-005`); on `dora review CLAUDE.md --sessions` run `runEval` with `artifactKind: "memory"` on newest session → map DRIFTED to `sess-006+`. Default review still presence + inventory only (no extra LLM cost).
 - **Per-finding docUrls (B19 leftover / slice A)** — **done 2026-07-18**: `getFindingDocUrl` + `withDocUrl`; `ReviewFinding`/`HealthItem` optional `code`/`docUrl`; sess-* + scan health + shadow codes stamped; review/scan human render shows `Docs:` under non-pass lines. Validators mass-migration still later.
-- **Next residuals:** stash `--fzf` stretch — or explicit release (no bump until asked).
+- **Stash `--fzf` stretch** — **done 2026-07-18**: `dora memory stash --fzf` fuzzy multi-select via fzf (full candidate list); clack path still capped at 20 with hint to `--fzf` when available.
+- **Next residual:** explicit release when you want one (no bump until asked).
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
 - Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted
@@ -94,7 +95,7 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - `src/validators/claude/memory.ts` — dead links + duplicate lines added 2026-07-16; more rules still open-ended
 - **B18 residual** — **done 2026-07-16**: empty `catch {}` sites annotated `// intentional: …` (JSON probe, teardown, best-effort I/O).
 - **B28 residual** — **done 2026-07-16**: `completion-script.test.ts` covers bash/zsh/fish + errors (runs in `bun test` / CI).
-- Optional: stash `--fzf` stretch
+- Optional: stash `--fzf` stretch — **done 2026-07-18**
 
 ### B19 doc registry — **done 2026-07-15**
 

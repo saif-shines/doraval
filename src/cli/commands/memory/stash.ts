@@ -1,6 +1,5 @@
 import { defineCommand } from "citty";
 import { resolve } from "path";
-import { multiselect, isCancel } from "@clack/prompts";
 import { listStashCandidates, stashFile } from "../../../core/memory-artifacts.js";
 import { getProjectSlug } from "../../../core/memory-config.js";
 import { runJournalMigrationIfNeeded } from "../../../core/memory-migrate.js";
@@ -8,9 +7,12 @@ import { reportMigration } from "./migration-report.js";
 import { canPromptInteractively } from "../fix.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine } from "../../out.js";
 import { exit } from "../../render/exit.js";
-
-/** Interactive picker cap — B34 large-N default (never truncate silently). */
-const STASH_PICKER_CAP = 20;
+import {
+  STASH_PICKER_CAP,
+  defaultWhichFzf,
+  pickStashWithClack,
+  pickStashWithFzf,
+} from "./stash-picker.js";
 
 export default defineCommand({
   meta: { name: "stash", description: "Stash a gitignored/untracked file into project memory" },
@@ -18,6 +20,12 @@ export default defineCommand({
     file: { type: "positional", description: "File to stash (relative to cwd)", required: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     cwd: { type: "string", description: "Working directory override" },
+    fzf: {
+      type: "boolean",
+      description:
+        "Use fzf for fuzzy multi-select of the full candidate list (requires fzf on PATH)",
+      default: false,
+    },
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: false });
@@ -25,6 +33,7 @@ export default defineCommand({
     if (mode.format !== "json") reportMigration(migration);
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const slug = getProjectSlug(cwd);
+    const useFzf = Boolean(args.fzf);
 
     try {
       let targets: string[];
@@ -42,32 +51,47 @@ export default defineCommand({
 
         const interactive = canPromptInteractively(false, false, mode.format);
         if (!interactive) {
-          emitError(new Error("Bare `memory stash` requires an interactive terminal — pass a file explicitly (e.g. `dora memory stash notes.md`) in CI."), mode);
+          emitError(
+            new Error(
+              "Bare `memory stash` requires an interactive terminal — pass a file explicitly (e.g. `dora memory stash notes.md`) in CI.",
+            ),
+            mode,
+          );
           await exit(2);
           return;
         }
 
-        let pickerList = candidates;
-        if (candidates.length > STASH_PICKER_CAP) {
-          ui.dim(
-            `  Showing ${STASH_PICKER_CAP} of ${candidates.length} candidates — pass a path to stash others.`,
-          );
-          pickerList = candidates.slice(0, STASH_PICKER_CAP);
+        if (useFzf) {
+          try {
+            targets = pickStashWithFzf(candidates);
+          } catch (e) {
+            emitError(e, mode);
+            await exit(2);
+            return;
+          }
+          if (targets.length === 0) {
+            ui.blank();
+            summaryLine("No files selected — nothing stashed.");
+            await exit(0);
+            return;
+          }
+        } else {
+          targets = await pickStashWithClack(candidates, {
+            cap: STASH_PICKER_CAP,
+            onTruncated: (shown, total) => {
+              const fzfHint = defaultWhichFzf()
+                ? " · or `dora memory stash --fzf` for full fuzzy list"
+                : " · or pass a path; install fzf for `dora memory stash --fzf`";
+              ui.dim(`  Showing ${shown} of ${total} candidates — pass a path to stash others${fzfHint}.`);
+            },
+          });
+          if (targets.length === 0) {
+            ui.blank();
+            summaryLine("No files selected — nothing stashed.");
+            await exit(0);
+            return;
+          }
         }
-
-        const selected = await multiselect({
-          message: "Select files to stash into project memory",
-          options: pickerList.map((c) => ({ value: c.relativePath, label: `${c.relativePath} (${c.status})` })),
-          required: false,
-          output: process.stderr,
-        });
-        if (isCancel(selected) || (selected as string[]).length === 0) {
-          ui.blank();
-          summaryLine("No files selected — nothing stashed.");
-          await exit(0);
-          return;
-        }
-        targets = selected as string[];
       }
 
       const stashed: string[] = [];
