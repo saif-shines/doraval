@@ -28,12 +28,7 @@ import {
   type PlatformInstallCheck,
   type PlatformInstallDeps,
 } from "./platform-install.js";
-import {
-  measureContextBudget,
-  listMcpServerNames,
-  ALWAYS_ON_LINES_WARN,
-  type ContextBudget,
-} from "./context-budget.js";
+import { measureContextBudget, listMcpServerNames, type ContextBudget } from "./context-budget.js";
 import {
   detectSkillOverlaps,
   detectMcpNameCollisions,
@@ -259,10 +254,7 @@ export async function runScan(
     });
   }
   if (contextBudget.status === "warn" && contextBudget.hint) {
-    const largest =
-      contextBudget.alwaysOnLines > ALWAYS_ON_LINES_WARN
-        ? [...contextBudget.alwaysOn].sort((a, b) => b.lines - a.lines)[0]
-        : undefined;
+    const largest = contextBudget.largestAlwaysOn;
     suggestions.push({
       kind: "improve",
       title: contextBudget.hint,
