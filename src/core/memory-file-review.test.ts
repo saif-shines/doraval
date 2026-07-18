@@ -4,8 +4,12 @@ import {
   reviewMemoryFile,
   MEMORY_FILE_NAMES,
   memorySessionPresence,
+  extractBindingRules,
+  memorySessionRuleInventory,
+  mapEvalToMemoryFindings,
 } from "./memory-file-review.js";
 import type { LoadResult } from "./session-evidence.js";
+import type { EvalResult } from "./session-eval.js";
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures/memory-files");
 
@@ -201,6 +205,74 @@ describe("memorySessionPresence", () => {
   });
 });
 
+describe("extractBindingRules + inventory", () => {
+  test("extracts MUST / MUST NOT / NEVER lines", () => {
+    const rules = extractBindingRules(`# Rules
+- MUST run tests before commit
+- MUST NOT force-push to main
+NEVER commit secrets
+Always prefer bun over npm
+plain prose is ignored
+`);
+    expect(rules.length).toBeGreaterThanOrEqual(3);
+    expect(rules.some((r) => r.kind === "must" && /tests/i.test(r.text))).toBe(true);
+    expect(rules.some((r) => r.kind === "must_not" && /force-push|secrets/i.test(r.text))).toBe(true);
+  });
+
+  test("inventory reports count or empty info", () => {
+    const empty = memorySessionRuleInventory("Hello world\nno rules here\n");
+    expect(empty[0]!.id).toBe("sess-005");
+    expect(empty[0]!.severity).toBe("info");
+
+    const has = memorySessionRuleInventory("- MUST NOT skip hooks\n");
+    expect(has[0]!.id).toBe("sess-005");
+    expect(has[0]!.severity).toBe("pass");
+    expect(has[0]!.message).toMatch(/1 binding rule/);
+  });
+});
+
+describe("mapEvalToMemoryFindings", () => {
+  const base = (): EvalResult => ({
+    schemaVersion: 1,
+    sessionId: "019f-abcd-1234-5678",
+    timestamp: new Date().toISOString(),
+    agent: "claude-code",
+    model: "x",
+    skill: "CLAUDE.md",
+    userFamiliarity: 5,
+    userFamiliarityReason: "",
+    closure: "1-shot",
+    userTurnsAfterSkill: 1,
+    skillsInvoked: [],
+    toolCallCounts: {},
+    verdict: "PASS",
+    verdictReason: "ok",
+    checklist: [],
+    ambiguityFlags: [],
+    judgeMethod: "cli",
+  });
+
+  test("PASS → sess-006 aligned", () => {
+    const f = mapEvalToMemoryFindings(base());
+    expect(f[0]!.id).toBe("sess-006");
+    expect(f[0]!.severity).toBe("pass");
+    expect(f[0]!.message).toMatch(/aligned/i);
+  });
+
+  test("DRIFTED MANDATORY → error findings", () => {
+    const r = base();
+    r.verdict = "FAIL";
+    r.checklist = [{
+      instruction: "MUST NOT force-push",
+      bindingness: "MANDATORY",
+      itemVerdict: "DRIFTED",
+      evidence: "tool #3 git push --force",
+    }];
+    const f = mapEvalToMemoryFindings(r);
+    expect(f.some((x) => x.severity === "error" && /force-push/i.test(x.message))).toBe(true);
+  });
+});
+
 describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
   // Skip live judge — these tests only assert tiers.sessions.
   const skipLlm = {
@@ -224,7 +296,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
     }
   });
 
-  test("adapters + sessions → available with count and sess-004", async () => {
+  test("adapters + sessions → available with count, sess-004, and rule inventory", async () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
@@ -237,7 +309,55 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
       });
       expect(result.tiers.sessions?.available).toBe(true);
       expect(result.tiers.sessions?.count).toBe(2);
-      expect(result.tiers.sessions?.findings[0]?.id).toBe("sess-004");
+      const ids = result.tiers.sessions?.findings.map((f) => f.id) ?? [];
+      expect(ids).toContain("sess-004");
+      expect(ids).toContain("sess-005");
+      // without --sessions, no LLM adherence call
+      expect(ids.some((id) => id === "sess-006")).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("--sessions runs adherence eval seam and maps DRIFTED findings", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
+      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+    });
+    try {
+      const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+        sessions: true,
+        loadedSessions: SOME_SESSIONS,
+        ...skipLlm,
+        memorySessionEvalFn: async () => ({
+          schemaVersion: 1 as const,
+          sessionId: "s1",
+          timestamp: new Date().toISOString(),
+          agent: "claude-code",
+          model: "x",
+          skill: "CLAUDE.md",
+          userFamiliarity: 5,
+          userFamiliarityReason: "",
+          closure: "1-shot" as const,
+          userTurnsAfterSkill: 1,
+          skillsInvoked: [],
+          toolCallCounts: {},
+          verdict: "FAIL" as const,
+          verdictReason: "drifted",
+          checklist: [{
+            instruction: "MUST NOT force-push",
+            bindingness: "MANDATORY" as const,
+            itemVerdict: "DRIFTED" as const,
+            evidence: "git push --force",
+          }],
+          ambiguityFlags: [],
+          judgeMethod: "cli" as const,
+        }),
+      });
+      const msgs = result.tiers.sessions?.findings.map((f) => f.message).join("\n") ?? "";
+      expect(msgs).toMatch(/Rule drift|force-push/);
+      expect(result.summary.errors).toBeGreaterThan(0);
     } finally {
       spy.mockRestore();
     }

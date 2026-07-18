@@ -9,6 +9,7 @@ import { loadPrinciples, buildPrincipleRubric } from "./memory-rubric.js";
 import { PrerequisiteError, NetworkError } from "./errors.js";
 import { loadRecentSessions, type LoadResult } from "./session-evidence.js";
 import type { AgentConfig } from "./agent-invoke.js";
+import { runEval, type EvalResult } from "./session-eval.js";
 
 export const MEMORY_FILE_NAMES = new Set([
   "CLAUDE.md",
@@ -30,9 +31,40 @@ function pad(n: number): string {
   return String(n).padStart(3, "0");
 }
 
+/** Binding-style lines from a memory file (MUST / MUST NOT / NEVER / Always). */
+export interface BindingRule {
+  text: string;
+  kind: "must" | "must_not";
+  line: number; // 1-based
+}
+
+const BINDING_LINE_RE =
+  /^\s*(?:[-*]\s+)?(?:\*\*)?(?:MUST\s+NOT|MUST NOT|MUST|NEVER|ALWAYS|DO\s+NOT|DON'T)(?:\*\*)?\b/i;
+
+/**
+ * Extract imperative binding rules from memory content for session adherence scoring.
+ * Conservative: only lines that open with a binding modal (list item or bare).
+ */
+export function extractBindingRules(content: string, limit = 40): BindingRule[] {
+  const out: BindingRule[] = [];
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i]!;
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (!BINDING_LINE_RE.test(trimmed)) continue;
+    const kind: BindingRule["kind"] = /MUST\s+NOT|MUST NOT|NEVER|DO\s+NOT|DON'T/i.test(trimmed)
+      ? "must_not"
+      : "must";
+    out.push({ text: trimmed.replace(/^[-*]\s+/, "").replace(/^\*\*|\*\*$/g, ""), kind, line: i + 1 });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /**
  * Mechanical session presence for memory-file review (B30 residual).
- * Skill-style invoke matching does not apply; full rule-violation scoring is backlog #9.
+ * Skill-style invoke matching does not apply.
  */
 export function memorySessionPresence(
   loaded: LoadResult,
@@ -56,6 +88,75 @@ export function memorySessionPresence(
     message: `${total} recent session${total === 1 ? "" : "s"} found (${agents})`,
     fixable: false,
   }];
+}
+
+/** Inventory of binding rules + optional LLM adherence findings (backlog #9 slice). */
+export function memorySessionRuleInventory(content: string): ReviewFinding[] {
+  const rules = extractBindingRules(content);
+  if (rules.length === 0) {
+    return [{
+      id: "sess-005",
+      tier: "sessions",
+      severity: "info",
+      message: "No binding MUST/MUST NOT/NEVER rules found to score against sessions",
+      fixable: false,
+    }];
+  }
+  const mustNot = rules.filter((r) => r.kind === "must_not").length;
+  return [{
+    id: "sess-005",
+    tier: "sessions",
+    severity: "pass",
+    message: `${rules.length} binding rule(s) extracted for adherence scoring (${mustNot} MUST NOT/NEVER)`,
+    fixable: false,
+  }];
+}
+
+/** Map a session-eval result onto review findings (sess-006+). */
+export function mapEvalToMemoryFindings(evalResult: EvalResult): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const shortId = evalResult.sessionId.length > 12
+    ? `${evalResult.sessionId.slice(0, 8)}…`
+    : evalResult.sessionId;
+
+  if (evalResult.verdict === "UNKNOWN") {
+    findings.push({
+      id: "sess-006",
+      tier: "sessions",
+      severity: "info",
+      message: `Rule adherence judge unavailable for session ${shortId}: ${evalResult.verdictReason || "unknown"}`,
+      fixable: false,
+    });
+    return findings;
+  }
+
+  const drifted = evalResult.checklist.filter(
+    (c) => c.itemVerdict === "DRIFTED" && c.bindingness !== "DISCRETIONARY",
+  );
+
+  if (drifted.length === 0) {
+    findings.push({
+      id: "sess-006",
+      tier: "sessions",
+      severity: "pass",
+      message: `Session ${shortId} aligned with memory rules (${evalResult.agent})`,
+      fixable: false,
+    });
+    return findings;
+  }
+
+  let n = 6;
+  for (const d of drifted) {
+    const evidence = d.evidence || d.detail || evalResult.verdictReason || "no evidence quoted";
+    findings.push({
+      id: `sess-${pad(n++)}`,
+      tier: "sessions",
+      severity: d.bindingness === "MANDATORY" ? "error" : "warning",
+      message: `Rule drift in session ${shortId}: ${d.instruction} — ${evidence}`,
+      fixable: false,
+    });
+  }
+  return findings;
 }
 
 export function buildMemoryLintPrompt(content: string, fileLabel: string, extraRubric?: string): string {
@@ -276,7 +377,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     }
   }
 
-  // Tier 4: mechanical session presence (parity with skill review --sessions gate)
+  // Tier 4: session presence + binding-rule inventory; full adherence when --sessions + judge
   if (!opts.quick) {
     const loadedSess = opts.loadedSessions ?? loadRecentSessions(opts.cwd ?? process.cwd());
     if (opts.sessions && loadedSess.sessions.length === 0) {
@@ -288,7 +389,62 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     if (loadedSess.adaptersDetected.length === 0) {
       tiers.sessions = { available: false, findings: [] };
     } else {
-      const sessFindings = memorySessionPresence(loadedSess, { required: opts.sessions === true });
+      const sessFindings = [
+        ...memorySessionPresence(loadedSess, { required: opts.sessions === true }),
+        ...memorySessionRuleInventory(content),
+      ];
+
+      // Backlog #9 slice: LLM rule-adherence on the newest session when user asked --sessions
+      if (opts.sessions && loadedSess.sessions.length > 0) {
+        const cfg = await readConfig().catch(() => null);
+        const evalCfgPartial: Partial<EvalConfig> = getEvalConfig(cfg);
+        const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
+        const caps: Capabilities = detectCapabilities(evalCfgPartial);
+        if (caps.preferred !== "none") {
+          const newest = [...loadedSess.sessions].sort((a, b) => b.mtime - a.mtime)[0]!;
+          const evalCfg: EvalConfig = {
+            model: evalCfgPartial.model ?? "",
+            api_key: evalCfgPartial.api_key,
+            base_url: evalCfgPartial.base_url,
+            max_tool_calls: evalCfgPartial.max_tool_calls ?? 200,
+            save_history: evalCfgPartial.save_history ?? true,
+            judge: evalCfgPartial.judge ?? "auto",
+            timeout_ms: evalCfgPartial.timeout_ms,
+          };
+          const truncated = content.length > 12_000 ? content.slice(0, 12_000) + "\n[truncated]" : content;
+          const evalFn = opts.memorySessionEvalFn ??
+            ((prims, name, body, agent, ec) =>
+              runEval(prims, name, body, agent, ec, { artifactKind: "memory" }));
+          try {
+            const evalResult = await evalFn(
+              newest.primitives,
+              basename(path),
+              truncated,
+              agentCfg,
+              evalCfg,
+            );
+            sessFindings.push(...mapEvalToMemoryFindings(evalResult));
+          } catch {
+            // intentional: adherence eval is best-effort; presence + inventory still ship
+            sessFindings.push({
+              id: "sess-006",
+              tier: "sessions",
+              severity: "info",
+              message: "Rule adherence judge failed; presence and rule inventory still reported",
+              fixable: false,
+            });
+          }
+        } else {
+          sessFindings.push({
+            id: "sess-006",
+            tier: "sessions",
+            severity: "info",
+            message: "Rule adherence scoring skipped — no LLM judge (set API key or install a coding agent CLI)",
+            fixable: false,
+          });
+        }
+      }
+
       tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };
     }
   }

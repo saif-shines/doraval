@@ -80,13 +80,15 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - **B-ix Grok multi-file sessions** — **done 2026-07-18**: stable `sessionId` from session dir; `summary.json` title/model/cwd/branch; `skillsInvoked` from `Skill <name>` titles + `…/skills/<name>/SKILL.md` paths; long-cwd `.cwd` groups; `GROK_HOME` / `{ grokHome }` override; list skillCount + tokens from signals.
 - **B-x Grok headless JSON judge** — **done 2026-07-18**: live `grok 0.2.103` confirmed `--output-format json` → stdout `{ text, sessionId, usage, … }`; default template includes JSON + hygiene flags; stop stripping JSON in `resolveAgentConfig`; `extractCandidates` unwraps Grok `text` (and Claude `result`). `runAgentSession` stays plain.
 - **B-xi platform install doctor** — **done 2026-07-18**: `checkPlatformInstall` on scan Intelligence (`install` field); source/dev skip; missing optionalDep fail + reinstall Next; version skew warn; no network, no brotli/home-bin.
-- **Next:** Grok workbench B-viii–B-xi closed. Open residuals: memory rule-violation scoring, per-finding docUrls, stash `--fzf` stretch — or ship a release when ready (no bump until asked).
+- **Memory rule-violation scoring (backlog #9 slice)** — **done 2026-07-18**: extract binding MUST/MUST NOT/NEVER rules (`sess-005`); on `dora review CLAUDE.md --sessions` run `runEval` with `artifactKind: "memory"` on newest session → map DRIFTED to `sess-006+`. Default review still presence + inventory only (no extra LLM cost).
+- **Next residuals:** per-finding docUrls (B19 leftover), stash `--fzf` stretch — or explicit release (no bump until asked).
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
 - Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted
 - `src/providers/index.ts` TODO(010) — **done 2026-07-15** (dead scaffold stubs deleted, not consolidated — nothing called them)
 - **B20–B22 session adapters** — **done 2026-07-15** (Cursor + Codex + Copilot adapters + mechanical tier-4 evidence engine; `dora review --sessions` now multi-agent)
-- **B30 residual (mechanical sessions on memory files)** — **done 2026-07-16**: `reviewMemoryFile` honors `--sessions` / `E-PRE-003`, emits sess-004 presence findings (not skill-invoke matching). Full rule-violation scoring still backlog #9.
+- **B30 residual (mechanical sessions on memory files)** — **done 2026-07-16**: `reviewMemoryFile` honors `--sessions` / `E-PRE-003`, emits sess-004 presence findings (not skill-invoke matching).
+- **B30 / backlog #9 slice (rule-violation scoring)** — **done 2026-07-18**: binding-rule inventory + optional LLM adherence when `--sessions` (see above).
 - **E-PRE code collision** — **done 2026-07-16**: 001 tool missing, 002 not authenticated, 003 no sessions, **004 missing LLM judge** (was colliding with 002 on review paths).
 - `src/validators/claude/memory.ts` — dead links + duplicate lines added 2026-07-16; more rules still open-ended
 - **B18 residual** — **done 2026-07-16**: empty `catch {}` sites annotated `// intentional: …` (JSON probe, teardown, best-effort I/O).

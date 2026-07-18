@@ -77,6 +77,17 @@ export interface ReviewOptions {
     agentCfg: AgentConfig,
     evalCfg: Partial<EvalConfig>
   ) => Promise<LintResult>;
+  /**
+   * Test seam: overrides session rule-adherence eval for memory files (backlog #9).
+   * When omitted, `runEval` is used when `--sessions` is set and a judge is available.
+   */
+  memorySessionEvalFn?: (
+    primitives: import("./session-parse.js").SessionPrimitives,
+    name: string,
+    content: string,
+    agentCfg: AgentConfig,
+    evalCfg: EvalConfig,
+  ) => Promise<import("./session-eval.js").EvalResult>;
   /** Test seam: overrides the judge call for scenario-coverage checking. */
   scenarioLintFn?: (
     prompt: string,

@@ -34,6 +34,13 @@ description: Use when debugging a bug
 `;
 
 describe("buildEvalPrompt", () => {
+  test("memory artifactKind uses MEMORY FILE framing", () => {
+    const p = buildEvalPrompt(mockPrimitives, "MUST NOT force-push", 50, { artifactKind: "memory" });
+    expect(p).toContain("MEMORY FILE CONTENT");
+    expect(p).toMatch(/memory file/i);
+    expect(p).not.toContain("SKILL CONTENT");
+  });
+
   test("includes skill content in prompt", () => {
     const prompt = buildEvalPrompt(mockPrimitives, mockSkillContent, 200);
     expect(prompt).toContain("systematic-debugging");

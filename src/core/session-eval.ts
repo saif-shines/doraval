@@ -38,10 +38,13 @@ function toolCallSummary(call: ToolCall): string {
   return `${call.name}: ${inputStr}`;
 }
 
+export type EvalArtifactKind = "skill" | "memory";
+
 export function buildEvalPrompt(
   primitives: SessionPrimitives,
   skillContent: string,
-  maxToolCalls: number
+  maxToolCalls: number,
+  opts?: { artifactKind?: EvalArtifactKind },
 ): string {
   const truncated = truncateToolCalls(primitives.toolCalls, maxToolCalls);
   const wasTruncated = truncated.length < primitives.toolCalls.length;
@@ -64,9 +67,16 @@ export function buildEvalPrompt(
     assistantTextBlock = `\nASSISTANT REASONING (first ${assistantEntries.length} entries):\n${combined}\n`;
   }
 
-  return `You are evaluating whether a coding agent followed a skill's instructions during a real session.
+  const kind = opts?.artifactKind ?? "skill";
+  const intro =
+    kind === "memory"
+      ? "You are evaluating whether a coding agent followed a project memory file's instructions (CLAUDE.md, AGENTS.md, or similar) during a real session."
+      : "You are evaluating whether a coding agent followed a skill's instructions during a real session.";
+  const contentLabel = kind === "memory" ? "MEMORY FILE CONTENT" : "SKILL CONTENT";
 
-SKILL CONTENT:
+  return `${intro}
+
+${contentLabel}:
 ${skillContent}
 
 TOOL CALL SEQUENCE (ordered):
@@ -154,9 +164,10 @@ export async function runEval(
   skillName: string,
   skillContent: string,
   agentCfg: AgentConfig,
-  evalCfg: EvalConfig
+  evalCfg: EvalConfig,
+  opts?: { artifactKind?: EvalArtifactKind },
 ): Promise<EvalResult> {
-  const prompt = buildEvalPrompt(primitives, skillContent, evalCfg.max_tool_calls);
+  const prompt = buildEvalPrompt(primitives, skillContent, evalCfg.max_tool_calls, opts);
 
   const preference = evalCfg.judge ?? 'auto';
 
