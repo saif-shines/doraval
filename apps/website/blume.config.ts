@@ -12,7 +12,7 @@ function redirs(pairs: Array<[string, string]>) {
 export default defineConfig({
   title: "doraval",
   description:
-    "Scale your AI context for coding agents. Make skills, plugins, and decisions work on the first try — for yourself, your team, or your community.",
+    "Make agent context work on the first try. Context engineering for coding agents — scan, review, fix, and remember skills, plugins, and decisions across Claude, Cursor, Codex, Copilot, and Grok.",
   content: {
     root: "content",
   },

@@ -1,6 +1,6 @@
 # doraval
 
-**Scale your AI context for coding agents.** Make skills, plugins, and decisions work on the first try — for yourself, your team, or your community.
+**Make agent context work on the first try.** Context engineering for coding agents — scan, review, fix, and remember skills, plugins, and decisions for yourself, your team, or your community.
 
 **doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
 
