@@ -126,6 +126,13 @@ function renderHuman(r: ScanResult): void {
   ui.blank();
   ui.heading("Intelligence");
   renderCheck(r.intelligence.judge === "none" ? "warn" : "ok", r.intelligence.detail);
+  {
+    const inst = r.intelligence.install;
+    const mark =
+      inst.status === "fail" ? "fail" : inst.status === "warn" ? "warn" : inst.status === "ok" ? "ok" : "pass";
+    // skip (source/unsupported) → dim pass-style line, not an alarm
+    renderCheck(mark === "pass" ? "ok" : mark, inst.detail + (inst.hint && inst.status === "fail" ? pc.dim(` — ${inst.hint}`) : ""));
+  }
 
   if (r.suggestions.length > 0) {
     ui.blank();

@@ -79,7 +79,8 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - **B-viii discovery slice** — **done 2026-07-18**: Grok agent surfaces (`.grok/skills|commands`, `.agents/skills|commands`, rules/plugins/agents dirs, `.grok-plugin`); `grok:skill` + `grok:plugin` validators; scan `shadows` (name collisions, Grok priority winner-first) + human “Name collisions”; skill discovery already ignores gitignore.
 - **B-ix Grok multi-file sessions** — **done 2026-07-18**: stable `sessionId` from session dir; `summary.json` title/model/cwd/branch; `skillsInvoked` from `Skill <name>` titles + `…/skills/<name>/SKILL.md` paths; long-cwd `.cwd` groups; `GROK_HOME` / `{ grokHome }` override; list skillCount + tokens from signals.
 - **B-x Grok headless JSON judge** — **done 2026-07-18**: live `grok 0.2.103` confirmed `--output-format json` → stdout `{ text, sessionId, usage, … }`; default template includes JSON + hygiene flags; stop stripping JSON in `resolveAgentConfig`; `extractCandidates` unwraps Grok `text` (and Claude `result`). `runAgentSession` stays plain.
-- **Next workbench:** **B-xi** (platform install doctor) — optionalDep presence check after 0.6.x incidents.
+- **B-xi platform install doctor** — **done 2026-07-18**: `checkPlatformInstall` on scan Intelligence (`install` field); source/dev skip; missing optionalDep fail + reinstall Next; version skew warn; no network, no brotli/home-bin.
+- **Next:** Grok workbench B-viii–B-xi closed. Open residuals: memory rule-violation scoring, per-finding docUrls, stash `--fzf` stretch — or ship a release when ready (no bump until asked).
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
 - Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted

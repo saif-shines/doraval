@@ -117,6 +117,35 @@ describe("runScan", () => {
     expect(claudeHit.warnings.some((w) => /shadow|also at|prefer/i.test(w.text))).toBe(true);
   });
 
+  test("intelligence.install reflects platform doctor (source skip by default)", async () => {
+    const root = makeRepo();
+    const result = await runScan(root, noneInstalled);
+    expect(result.intelligence.install).toBeDefined();
+    // Repo package.json has no optionalDependencies → source/dev skip
+    expect(["skip", "ok", "warn", "fail"]).toContain(result.intelligence.install.status);
+    expect(result.intelligence.install.expectedVersion).toBeTruthy();
+  });
+
+  test("intelligence.install fail surfaces reinstall suggestion", async () => {
+    const root = makeRepo();
+    const result = await runScan(root, noneInstalled, {
+      installDeps: {
+        platform: "linux",
+        arch: "x64",
+        expectedVersion: "0.6.6",
+        hasOptionalDepsDeclared: true,
+        resolvePlatform: () => null,
+      },
+    });
+    expect(result.intelligence.install.status).toBe("fail");
+    expect(result.intelligence.install.code).toBe("E-INSTALL-MISSING");
+    expect(
+      result.suggestions.some(
+        (s) => s.kind === "fix" && s.command.includes("npm install @hacksmith/doraval"),
+      ),
+    ).toBe(true);
+  });
+
   test("skill under gitignored-looking path still appears (discovery ignores gitignore)", async () => {
     // findSkillDirs never consults .gitignore — only name-based ignore (node_modules, .git, …).
     // Teams often gitignore .claude/** while Grok still loads those skills.

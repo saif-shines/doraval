@@ -23,6 +23,11 @@ import { detectCapabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig } from "./journal-config.js";
 import { detectContradictions, type Contradiction } from "./cross-agent.js";
 import { planPromote } from "./memory-promote.js";
+import {
+  checkPlatformInstall,
+  type PlatformInstallCheck,
+  type PlatformInstallDeps,
+} from "./platform-install.js";
 
 export interface HealthItem {
   text: string;
@@ -47,6 +52,8 @@ export interface Suggestion {
 export interface IntelligenceStatus {
   judge: "api" | "cli" | "none";
   detail: string;
+  /** B-xi — this host's platform optionalDep / binary health */
+  install: PlatformInstallCheck;
 }
 
 export interface ScanResult {
@@ -65,7 +72,11 @@ export interface ScanResult {
   empty: boolean;
 }
 
-export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Promise<ScanResult> {
+export async function runScan(
+  cwd: string,
+  deps: DetectDeps = defaultDeps,
+  opts?: { installDeps?: Partial<PlatformInstallDeps> },
+): Promise<ScanResult> {
   const scope = resolveScanScope(cwd);
   const agents = detectAllAgents(scope.scanRoot, deps);
   const crossAgent = scanCrossAgent(scope.scanRoot);
@@ -137,12 +148,20 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
   // Include config-stored eval credentials, not just env vars
   const cfg = await readConfig().catch(() => null);
   const caps = detectCapabilities(getEvalConfig(cfg));
-  const intelligence: IntelligenceStatus =
+  const install = checkPlatformInstall(opts?.installDeps);
+  const judgePart =
     caps.preferred === "api"
-      ? { judge: "api", detail: "API key detected — deep review ready" }
+      ? { judge: "api" as const, detail: "API key detected — deep review ready" }
       : caps.preferred === "cli"
-      ? { judge: "cli", detail: `${caps.cliCommand} CLI available as judge — deep review ready` }
-      : { judge: "none", detail: "no judge found — install a coding agent CLI or set an API key" };
+        ? {
+            judge: "cli" as const,
+            detail: `${caps.cliCommand} CLI available as judge — deep review ready`,
+          }
+        : {
+            judge: "none" as const,
+            detail: "no judge found — install a coding agent CLI or set an API key",
+          };
+  const intelligence: IntelligenceStatus = { ...judgePart, install };
 
   const anyAgentConfigured = agents.some((a) => a.configuredInRepo);
   const empty = health.length === 0 && !anyAgentConfigured && !crossAgent.agentsMd && !crossAgent.mcpJson;
@@ -153,6 +172,19 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
       kind: "start",
       title: "No agent context found — create your first skill or rule",
       command: "dora new",
+    });
+  }
+  if (install.status === "fail") {
+    suggestions.push({
+      kind: "fix",
+      title: install.detail,
+      command: "npm install @hacksmith/doraval",
+    });
+  } else if (install.status === "warn") {
+    suggestions.push({
+      kind: "improve",
+      title: install.detail,
+      command: `npm install @hacksmith/doraval@${install.expectedVersion}`,
     });
   }
   for (const h of health.filter((x) => x.status === "fail")) {
