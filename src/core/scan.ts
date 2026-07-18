@@ -28,11 +28,17 @@ import {
   type PlatformInstallCheck,
   type PlatformInstallDeps,
 } from "./platform-install.js";
+import { withDocUrl } from "./doc-registry.js";
+
+function healthItem(item: HealthItem): HealthItem {
+  return withDocUrl(item);
+}
 
 export interface HealthItem {
   text: string;
   hint?: string;
   code?: string;
+  docUrl?: string;
 }
 
 export interface HealthEntry {
@@ -95,7 +101,7 @@ export async function runScan(
         path: rel,
         origin,
         status: "fail",
-        errors: [{ text: loaded.error, code: "E-VAL-001" }],
+        errors: [healthItem({ text: loaded.error, code: "E-VAL-001" })],
         warnings: [],
       });
       continue;
@@ -108,11 +114,15 @@ export async function runScan(
     });
     const heuristicWarnings = drift.drifts
       .filter((d) => d.drifted)
-      .map((d) => ({ text: `${d.category}: ${d.detail}` }));
+      .map((d) => healthItem({ text: `${d.category}: ${d.detail}`, code: "E-VAL-001" }));
 
-    const errors = validation.errors.map((e) => ({ text: e.text, hint: e.hint, code: e.code }));
+    const errors = validation.errors.map((e) =>
+      healthItem({ text: e.text, hint: e.hint, code: e.code ?? "E-VAL-001" }),
+    );
     const warnings = [
-      ...validation.warnings.map((w) => ({ text: w.text, hint: w.hint, code: w.code })),
+      ...validation.warnings.map((w) =>
+        healthItem({ text: w.text, hint: w.hint, code: w.code ?? "E-VAL-001" }),
+      ),
       ...heuristicWarnings,
     ];
 
@@ -131,10 +141,12 @@ export async function runScan(
     for (const p of shadow.paths) {
       const entry = health.find((h) => h.path.replace(/\\/g, "/") === p);
       if (!entry) continue;
-      entry.warnings.push({
-        text: shadowWarningText(shadow, p),
-        code: "E-SCAN-SHADOW",
-      });
+      entry.warnings.push(
+        healthItem({
+          text: shadowWarningText(shadow, p),
+          code: "E-SCAN-SHADOW",
+        }),
+      );
       if (entry.status === "pass") entry.status = "warn";
     }
   }

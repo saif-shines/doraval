@@ -9,6 +9,14 @@ import { reviewMemoryFile, MEMORY_FILE_NAMES } from "../../core/memory-file-revi
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
 import { preflight, reviewPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
+import { getFindingDocUrl } from "../../core/doc-registry.js";
+
+/** Dim Docs: line under non-pass findings when a real page exists. */
+function renderFindingDocs(f: ReviewFinding, indent = 6): void {
+  if (f.severity === "pass") return;
+  const url = f.docUrl ?? getFindingDocUrl({ code: f.code ?? f.id, tier: f.tier });
+  if (url) ui.dim(`${" ".repeat(indent)}Docs: ${url}`);
+}
 
 // ── Rendering ──────────────────────────────────────────────────────────────────
 
@@ -28,6 +36,7 @@ function renderFindings(findings: ReviewFinding[]): void {
   for (const f of findings) {
     if (f.severity === "pass" || f.severity === "info") continue;
     renderCheck(f.severity === "error" ? "fail" : "warn", f.message, 4);
+    renderFindingDocs(f, 6);
   }
 }
 
@@ -48,6 +57,7 @@ function renderOptionalTier(
   for (const f of tier.findings ?? []) {
     const status = f.severity === "error" ? "fail" as const : f.severity === "warning" ? "warn" as const : "pass" as const;
     renderCheck(status, f.message, 4);
+    renderFindingDocs(f, 6);
   }
 }
 

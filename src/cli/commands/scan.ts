@@ -4,6 +4,7 @@ import { confirm, isCancel } from "@clack/prompts";
 import { runScan, type ScanResult } from "../../core/scan.js";
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
 import { exit } from "../render/exit.js";
+import { getFindingDocUrl } from "../../core/doc-registry.js";
 
 /** Human TTY only. JSON/CI, --yes, and non-interactive pipes skip the gate. */
 export function shouldConfirmScan(opts: {
@@ -89,10 +90,17 @@ function renderHuman(r: ScanResult): void {
     ui.heading("Health");
     for (const h of r.health) {
       const suffix = h.origin === "authored" ? "" : pc.dim(`  (${h.origin})`);
+      const primary = h.errors[0] ?? h.warnings[0];
       renderCheck(
         h.status === "pass" ? "pass" : h.status,
-        `${h.path}${suffix}${h.errors[0] ? " — " + h.errors[0].text : ""}`
+        `${h.path}${suffix}${primary ? " — " + primary.text : ""}`,
       );
+      if (h.status !== "pass") {
+        const url =
+          primary?.docUrl ??
+          getFindingDocUrl({ code: primary?.code });
+        if (url) ui.dim(`      Docs: ${url}`);
+      }
     }
     ui.blank();
     ui.dim(`  ${r.summary.passed} passed · ${r.summary.failed} failed · ${r.summary.warnings} warnings`);
@@ -120,6 +128,8 @@ function renderHuman(r: ScanResult): void {
         "warn",
         `${s.name}  ${pc.dim(s.paths.join("  →  "))}  ${pc.dim("(first wins for Grok)")}`,
       );
+      const shadowDocs = getFindingDocUrl({ code: "E-SCAN-SHADOW" });
+      if (shadowDocs) ui.dim(`      Docs: ${shadowDocs}`);
     }
   }
 

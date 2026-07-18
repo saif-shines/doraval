@@ -10,6 +10,11 @@ import { PrerequisiteError, NetworkError } from "./errors.js";
 import { loadRecentSessions, type LoadResult } from "./session-evidence.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import { runEval, type EvalResult } from "./session-eval.js";
+import { withDocUrl } from "./doc-registry.js";
+
+function sessFinding(partial: ReviewFinding): ReviewFinding {
+  return withDocUrl({ ...partial, code: partial.code ?? partial.id });
+}
 
 export const MEMORY_FILE_NAMES = new Set([
   "CLAUDE.md",
@@ -72,44 +77,44 @@ export function memorySessionPresence(
 ): ReviewFinding[] {
   const total = loaded.sessions.length;
   if (total === 0) {
-    return [{
+    return [sessFinding({
       id: "sess-003",
       tier: "sessions",
       severity: "info",
       message: "No sessions found for this project. Use your agent, then re-run.",
       fixable: false,
-    }];
+    })];
   }
   const agents = [...new Set(loaded.sessions.map((s) => s.agent))].join(", ");
-  return [{
+  return [sessFinding({
     id: "sess-004",
     tier: "sessions",
     severity: "pass",
     message: `${total} recent session${total === 1 ? "" : "s"} found (${agents})`,
     fixable: false,
-  }];
+  })];
 }
 
 /** Inventory of binding rules + optional LLM adherence findings (backlog #9 slice). */
 export function memorySessionRuleInventory(content: string): ReviewFinding[] {
   const rules = extractBindingRules(content);
   if (rules.length === 0) {
-    return [{
+    return [sessFinding({
       id: "sess-005",
       tier: "sessions",
       severity: "info",
       message: "No binding MUST/MUST NOT/NEVER rules found to score against sessions",
       fixable: false,
-    }];
+    })];
   }
   const mustNot = rules.filter((r) => r.kind === "must_not").length;
-  return [{
+  return [sessFinding({
     id: "sess-005",
     tier: "sessions",
     severity: "pass",
     message: `${rules.length} binding rule(s) extracted for adherence scoring (${mustNot} MUST NOT/NEVER)`,
     fixable: false,
-  }];
+  })];
 }
 
 /** Map a session-eval result onto review findings (sess-006+). */
@@ -120,13 +125,13 @@ export function mapEvalToMemoryFindings(evalResult: EvalResult): ReviewFinding[]
     : evalResult.sessionId;
 
   if (evalResult.verdict === "UNKNOWN") {
-    findings.push({
+    findings.push(sessFinding({
       id: "sess-006",
       tier: "sessions",
       severity: "info",
       message: `Rule adherence judge unavailable for session ${shortId}: ${evalResult.verdictReason || "unknown"}`,
       fixable: false,
-    });
+    }));
     return findings;
   }
 
@@ -135,26 +140,26 @@ export function mapEvalToMemoryFindings(evalResult: EvalResult): ReviewFinding[]
   );
 
   if (drifted.length === 0) {
-    findings.push({
+    findings.push(sessFinding({
       id: "sess-006",
       tier: "sessions",
       severity: "pass",
       message: `Session ${shortId} aligned with memory rules (${evalResult.agent})`,
       fixable: false,
-    });
+    }));
     return findings;
   }
 
   let n = 6;
   for (const d of drifted) {
     const evidence = d.evidence || d.detail || evalResult.verdictReason || "no evidence quoted";
-    findings.push({
+    findings.push(sessFinding({
       id: `sess-${pad(n++)}`,
       tier: "sessions",
       severity: d.bindingness === "MANDATORY" ? "error" : "warning",
       message: `Rule drift in session ${shortId}: ${d.instruction} — ${evidence}`,
       fixable: false,
-    });
+    }));
   }
   return findings;
 }
@@ -426,22 +431,22 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
             sessFindings.push(...mapEvalToMemoryFindings(evalResult));
           } catch {
             // intentional: adherence eval is best-effort; presence + inventory still ship
-            sessFindings.push({
+            sessFindings.push(sessFinding({
               id: "sess-006",
               tier: "sessions",
               severity: "info",
               message: "Rule adherence judge failed; presence and rule inventory still reported",
               fixable: false,
-            });
+            }));
           }
         } else {
-          sessFindings.push({
+          sessFindings.push(sessFinding({
             id: "sess-006",
             tier: "sessions",
             severity: "info",
             message: "Rule adherence scoring skipped — no LLM judge (set API key or install a coding agent CLI)",
             fixable: false,
-          });
+          }));
         }
       }
 

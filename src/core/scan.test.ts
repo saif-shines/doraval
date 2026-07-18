@@ -126,6 +126,25 @@ describe("runScan", () => {
     expect(result.intelligence.install.expectedVersion).toBeTruthy();
   });
 
+  test("health items with codes carry docUrl for JSON consumers", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".claude/skills/bad", 'name: Bad_Name\ndescription: "Use when testing"');
+    const result = await runScan(root, noneInstalled);
+    const bad = result.health.find((h) => h.path.includes("bad"))!;
+    expect(bad.status).toBe("fail");
+    expect(bad.errors[0]?.code).toBeTruthy();
+    expect(bad.errors[0]?.docUrl).toMatch(/doraval\.thehacksmith\.dev/);
+  });
+
+  test("shadow warnings include E-SCAN-SHADOW docUrl", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".claude/skills/dup", 'name: dup\ndescription: "Use when A"');
+    writeSkill(root, ".grok/skills/dup", 'name: dup\ndescription: "Use when B"');
+    const result = await runScan(root, noneInstalled);
+    const warn = result.health.flatMap((h) => h.warnings).find((w) => w.code === "E-SCAN-SHADOW");
+    expect(warn?.docUrl).toContain("/commands/scan/");
+  });
+
   test("intelligence.install fail surfaces reinstall suggestion", async () => {
     const root = makeRepo();
     const result = await runScan(root, noneInstalled, {

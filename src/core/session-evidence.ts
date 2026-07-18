@@ -3,6 +3,11 @@ import { getAllAdapters } from "./session-adapters/index.js";
 import { SESSION_WINDOW, SESSION_MAX_FILE_BYTES, withinWindow, type SessionAdapter } from "./session-adapters/types.js";
 import type { SessionPrimitives } from "./session-parse.js";
 import type { ReviewFinding } from "./review.js";
+import { withDocUrl } from "./doc-registry.js";
+
+function finding(partial: ReviewFinding): ReviewFinding {
+  return withDocUrl({ ...partial, code: partial.code ?? partial.id });
+}
 
 export interface LoadedSession {
   agent: string;
@@ -76,11 +81,11 @@ export function collectSessionEvidence(
   const total = loaded.sessions.length;
 
   if (total === 0) {
-    return [{
+    return [finding({
       id: "sess-003", tier: "sessions", severity: "info",
       message: "No sessions found for this project. Use your agent, then re-run.",
       fixable: false,
-    }];
+    })];
   }
 
   // agent -> kind -> count
@@ -99,18 +104,18 @@ export function collectSessionEvidence(
     const breakdown = [...hits.entries()]
       .map(([agent, kinds]) => [...kinds.entries()].map(([k, n]) => `${agent}: ${n} ${k}`).join(", "))
       .join(", ");
-    return [{
+    return [finding({
       id: "sess-001", tier: "sessions", severity: "pass",
       message: `Invoked in ${invoked} of ${total} recent sessions (${breakdown})`,
       fixable: false,
-    }];
+    })];
   }
 
   const agents = [...new Set(loaded.sessions.map((s) => s.agent))].join(", ");
-  return [{
+  return [finding({
     id: "sess-002", tier: "sessions",
     severity: opts.required ? "warning" : "info",
     message: `Never invoked in ${total} recent sessions (${agents})`,
     fixable: false,
-  }];
+  })];
 }

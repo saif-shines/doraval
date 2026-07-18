@@ -81,7 +81,8 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 - **B-x Grok headless JSON judge** — **done 2026-07-18**: live `grok 0.2.103` confirmed `--output-format json` → stdout `{ text, sessionId, usage, … }`; default template includes JSON + hygiene flags; stop stripping JSON in `resolveAgentConfig`; `extractCandidates` unwraps Grok `text` (and Claude `result`). `runAgentSession` stays plain.
 - **B-xi platform install doctor** — **done 2026-07-18**: `checkPlatformInstall` on scan Intelligence (`install` field); source/dev skip; missing optionalDep fail + reinstall Next; version skew warn; no network, no brotli/home-bin.
 - **Memory rule-violation scoring (backlog #9 slice)** — **done 2026-07-18**: extract binding MUST/MUST NOT/NEVER rules (`sess-005`); on `dora review CLAUDE.md --sessions` run `runEval` with `artifactKind: "memory"` on newest session → map DRIFTED to `sess-006+`. Default review still presence + inventory only (no extra LLM cost).
-- **Next residuals:** per-finding docUrls (B19 leftover), stash `--fzf` stretch — or explicit release (no bump until asked).
+- **Per-finding docUrls (B19 leftover / slice A)** — **done 2026-07-18**: `getFindingDocUrl` + `withDocUrl`; `ReviewFinding`/`HealthItem` optional `code`/`docUrl`; sess-* + scan health + shadow codes stamped; review/scan human render shows `Docs:` under non-pass lines. Validators mass-migration still later.
+- **Next residuals:** stash `--fzf` stretch — or explicit release (no bump until asked).
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
 - Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted

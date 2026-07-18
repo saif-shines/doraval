@@ -203,6 +203,12 @@ describe("memorySessionPresence", () => {
     expect(f[0]!.message).toContain("claude-code");
     expect(f[0]!.message).toContain("cursor");
   });
+
+  test("session findings include code + docUrl", () => {
+    const f = memorySessionPresence(EMPTY_LOAD);
+    expect(f[0]!.code).toBe("sess-003");
+    expect(f[0]!.docUrl).toContain("/concepts/review-tiers/");
+  });
 });
 
 describe("extractBindingRules + inventory", () => {

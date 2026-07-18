@@ -29,6 +29,10 @@ export interface ReviewFinding {
   line?: number;
   fixable: boolean;
   fix?: { type: "rename_field" | "add_field" | "content"; description: string };
+  /** Machine code for doc lookup (e.g. sess-003, E-VAL-001). */
+  code?: string;
+  /** Resolved doc URL (real site page only — see doc-registry). */
+  docUrl?: string;
 }
 
 interface TierResult {
