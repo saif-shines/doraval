@@ -38,6 +38,13 @@ export default defineConfig({
   ai: {
     llmsTxt: true,
   },
+  analytics: {
+    // phc_ is the PostHog project API key — public by design, safe to ship client-side.
+    posthog: {
+      key: "phc_qoiWD2nLqWXw2DmYVBsUb36GBMZyNNjvLoPxZY3vPkzB",
+      host: "https://us.i.posthog.com",
+    },
+  },
   seo: {
     og: { enabled: true },
     sitemap: true,
