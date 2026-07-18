@@ -9,6 +9,7 @@ import { reviewMemoryFile, MEMORY_FILE_NAMES } from "../../core/memory-file-revi
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
 import { preflight, reviewPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
+import { posthog, anonymousId } from "../../analytics.js";
 
 // ── Rendering ──────────────────────────────────────────────────────────────────
 
@@ -190,6 +191,24 @@ export default defineCommand({
       const hasErrors = results.some((r) => r.summary.errors > 0);
       const hasWarnings = results.some((r) => r.summary.warnings > 0);
       const shouldFail = hasErrors || (failOn === "warning" && hasWarnings);
+      const totals = results.reduce(
+        (acc, r) => ({ passed: acc.passed + r.summary.passed, warnings: acc.warnings + r.summary.warnings, errors: acc.errors + r.summary.errors }),
+        { passed: 0, warnings: 0, errors: 0 },
+      );
+      posthog.capture({
+        distinctId: anonymousId,
+        event: "review_run",
+        properties: {
+          skills_reviewed: results.length,
+          total_passed: totals.passed,
+          total_warnings: totals.warnings,
+          total_errors: totals.errors,
+          mode_quick: args.quick as boolean,
+          mode_deep: args.deep as boolean,
+          mode_all: args.all as boolean,
+          format: mode.format,
+        },
+      });
       await exit(shouldFail ? 1 : 0);
     } catch (e) {
       spin?.stop("Review failed");

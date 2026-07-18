@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { confirm, isCancel, multiselect, select } from "@clack/prompts";
 import { ui } from "../out.js";
 import pc from "picocolors";
+import { posthog, anonymousId } from "../../analytics.js";
 import { resolve, join, dirname, relative } from "path";
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync } from "fs";
 import { exit } from "../render/exit.js";
@@ -411,6 +412,16 @@ async function runInteractive(scope: Scope, yes: boolean): Promise<void> {
     }
   }
 
+  posthog.capture({
+    distinctId: anonymousId,
+    event: "version_bumped",
+    properties: {
+      bump_type: bumpType as string,
+      files_bumped: bumpedCount,
+      scope,
+      mode: "interactive",
+    },
+  });
   ui.blank();
   ui.info(`Done. Bumped ${bumpedCount} file(s).`);
   ui.dim("  Next: doraval validate .");
@@ -483,6 +494,16 @@ async function runNonInteractive(rawType: string, targetPath: string, scope: Sco
   if (bumpedCount === 0) {
     ui.info("All matched files were already at the target version.");
   } else {
+    posthog.capture({
+      distinctId: anonymousId,
+      event: "version_bumped",
+      properties: {
+        bump_type: rawType,
+        files_bumped: bumpedCount,
+        scope,
+        mode: "non_interactive",
+      },
+    });
     ui.info(`Done. Bumped ${bumpedCount} file(s).`);
     ui.dim("  Next: doraval validate " + (targetPath === "." ? "." : targetPath));
   }

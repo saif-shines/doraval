@@ -4,6 +4,7 @@ import { runScan, type ScanResult } from "../../core/scan.js";
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
 import { preflight, scanPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
+import { posthog, anonymousId } from "../../analytics.js";
 
 function renderHuman(r: ScanResult): void {
   ui.blank();
@@ -105,6 +106,18 @@ export default defineCommand({
       if (mode.format === "json") outJson(result);
       else renderHuman(result);
       const hasConflicts = result.contradictions.some((c) => c.severity === "conflict");
+      posthog.capture({
+        distinctId: anonymousId,
+        event: "scan_run",
+        properties: {
+          agents_found: result.agents.length,
+          health_failed: result.summary.failed,
+          health_warnings: result.summary.warnings,
+          contradictions: result.contradictions.length,
+          is_empty: result.empty,
+          format: mode.format,
+        },
+      });
       await exit(result.summary.failed > 0 || hasConflicts ? 1 : 0);
     } catch (e) {
       emitError(e, mode);

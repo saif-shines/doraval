@@ -8,6 +8,7 @@
  * even on direct process.exit() calls that bypass this helper.
  */
 import { currentBackend, resetToText } from "./index.js";
+import { posthog } from "../../analytics.js";
 
 /**
  * Destroy the active render backend (restores terminal) then exit.
@@ -20,6 +21,7 @@ export async function exit(code: number): Promise<never> {
   } catch {
     // intentional: exit must not fail if backend teardown throws
   }
+  await posthog.shutdown();
   process.exit(code);
 }
 
@@ -46,6 +48,8 @@ export function registerLifecycleHandlers(): void {
       // intentional: still report fatal after best-effort teardown
     }
     resetToText();
+    posthog.captureException(err);
+    await posthog.shutdown();
     process.stderr.write(`\nFatal: ${err.message}\n${err.stack ?? ""}\n`);
     process.exit(1);
   });
@@ -55,6 +59,8 @@ export function registerLifecycleHandlers(): void {
       // intentional: still report rejection after best-effort teardown
     }
     resetToText();
+    posthog.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+    await posthog.shutdown();
     process.stderr.write(`\nUnhandled rejection: ${String(reason)}\n`);
     process.exit(1);
   });

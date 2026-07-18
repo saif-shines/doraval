@@ -2,6 +2,7 @@ import pc from "picocolors";
 import { currentBackend } from "./render/index.js";
 import type { ValidateResult } from "../validators/types.js";
 import { errorToJson, isDoravalError } from "../core/errors.js";
+import { posthog, anonymousId } from "../analytics.js";
 
 /**
  * Semantic CLI output helpers.
@@ -202,6 +203,10 @@ export function emitError(e: unknown, mode: OutputMode): void {
         context: undefined as string | undefined,
         docUrl: undefined as string | undefined,
       };
+
+  posthog.captureException(e instanceof Error ? e : new Error(derr.message), anonymousId, {
+    error_code: derr.code,
+  });
 
   if (mode.format === "json") {
     process.stderr.write(

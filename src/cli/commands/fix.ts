@@ -8,6 +8,7 @@ import { collectFixes, type FixEdit, type FixResult } from "../../core/fix-engin
 
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../out.js";
 import { exit } from "../render/exit.js";
+import { posthog, anonymousId } from "../../analytics.js";
 
 function renderDiff(diff: string): void {
   for (const line of diff.split("\n")) {
@@ -164,6 +165,17 @@ export default defineCommand({
       // found but not applied, e.g. --dry-run or interactive decline). 0 = clean.
       const unapplied = dryRun ? totalMech : totalMech - totalApplied;
       const exitCode = allJudgments.length > 0 || unapplied > 0 ? 1 : 0;
+      posthog.capture({
+        distinctId: anonymousId,
+        event: "fix_applied",
+        properties: {
+          mechanical_fixes_found: totalMech,
+          fixes_applied: totalApplied,
+          judgment_items: allJudgments.length,
+          dry_run: dryRun,
+          format: mode.format,
+        },
+      });
 
       if (mode.format === "json") {
         outJson({ mechanical: totalMech, judgment: allJudgments, applied: dryRun ? 0 : totalApplied });

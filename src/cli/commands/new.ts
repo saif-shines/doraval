@@ -1,6 +1,7 @@
 import { defineCommand } from "citty";
 import pc from "picocolors";
 import { basename } from "path";
+import { posthog, anonymousId } from "../../analytics.js";
 import {
   decidePath,
   detectScaffoldContext,
@@ -173,6 +174,19 @@ export default defineCommand({
       if (!result.ok) {
         throw new Error(result.error);
       }
+
+      posthog.capture({
+        distinctId: anonymousId,
+        event: "skill_created",
+        properties: {
+          scaffold_type: decision.type,
+          provider: decision.provider,
+          intent,
+          native,
+          files_created: result.createdFiles.length,
+          format: mode.format,
+        },
+      });
 
       if (mode.format === "json") {
         outJson({

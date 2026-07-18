@@ -14,6 +14,7 @@ import {
 } from "../../core/update.js";
 import type { InstallMethod, DetectCtx, InstallMarker } from "../../core/update.js";
 import { exit } from "../render/exit.js";
+import { posthog, anonymousId } from "../../analytics.js";
 
 export default defineCommand({
   meta: {
@@ -146,6 +147,15 @@ export default defineCommand({
     const result = spawnSync(cmd[0]!, cmd.slice(1), { stdio: "inherit" });
 
     if (result.status === 0) {
+      posthog.capture({
+        distinctId: anonymousId,
+        event: "update_completed",
+        properties: {
+          from_version: currentVersion,
+          to_version: latestInfo.version,
+          install_method: method.type,
+        },
+      });
       ui.success(`Successfully updated to ${latestInfo.version}.`);
       ui.info("You may need to restart your shell to pick up the new version.");
 

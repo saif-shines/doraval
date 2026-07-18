@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { resolve } from "path";
 import pc from "picocolors";
 import { confirm, select, isCancel } from "@clack/prompts";
+import { posthog, anonymousId } from "../../analytics.js";
 import {
   applyReconcile,
   diffEdit,
@@ -259,6 +260,15 @@ export default defineCommand({
       for (const f of written) {
         ui.write(`  ${pc.green("✓")} wrote ${f}`);
       }
+      posthog.capture({
+        distinctId: anonymousId,
+        event: "reconcile_applied",
+        properties: {
+          contradictions_found: plan.contradictions.length,
+          files_written: written.length,
+          dry_run: dryRun,
+        },
+      });
       nextAction("dora    # rescan — contradictions should be gone or reduced");
       summaryLine(`${written.length} file(s) updated`);
       await exit(0);
