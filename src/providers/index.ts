@@ -26,6 +26,9 @@ import { copilotMarketplaceValidator } from "../validators/copilot/marketplace.j
 import { copilotMcpValidator } from "../validators/copilot/mcp.js";
 import { copilotSkillValidator } from "../validators/copilot/skill.js";
 
+import { grokSkillValidator } from "../validators/grok/skill.js";
+import { grokPluginValidator } from "../validators/grok/plugin.js";
+
 const claudeAdapter: ProviderAdapter = {
   id: "claude",
   name: "Claude Code",
@@ -79,7 +82,7 @@ const copilotAdapter: ProviderAdapter = {
 const grokAdapter: ProviderAdapter = {
   id: "grok",
   name: "Grok",
-  validators: [], // Grok provider support is focused on agent driving for test sessions; packaging validators added later
+  validators: [grokSkillValidator, grokPluginValidator],
 };
 
 export const adapters: ProviderAdapter[] = [claudeAdapter, codexAdapter, cursorAdapter, copilotAdapter, grokAdapter];

@@ -112,6 +112,17 @@ function renderHuman(r: ScanResult): void {
     );
   }
 
+  if (r.shadows.length > 0) {
+    ui.blank();
+    ui.heading("Name collisions");
+    for (const s of r.shadows) {
+      renderCheck(
+        "warn",
+        `${s.name}  ${pc.dim(s.paths.join("  →  "))}  ${pc.dim("(first wins for Grok)")}`,
+      );
+    }
+  }
+
   ui.blank();
   ui.heading("Intelligence");
   renderCheck(r.intelligence.judge === "none" ? "warn" : "ok", r.intelligence.detail);

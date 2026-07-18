@@ -72,6 +72,12 @@ describe("registry", () => {
     expect(copilotIds).toContain("copilot:skill");
   });
 
+  test("has grok skill + plugin validators registered", () => {
+    const grokIds = validators.filter((v) => v.provider === "grok").map((v) => v.id);
+    expect(grokIds).toContain("grok:skill");
+    expect(grokIds).toContain("grok:plugin");
+  });
+
   test("has the standalone agentskills validator registered", () => {
     const ids = validators.filter((v) => v.provider === "agentskills").map((v) => v.id);
     expect(ids).toContain("agentskills:skill");

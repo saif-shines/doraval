@@ -60,8 +60,16 @@ const AGENT_PROBES: Record<
   },
   grok: {
     binaries: ["grok"],
-    configFiles: [".grok-plugin/plugin.json"],
-    skillRoots: [],
+    // Grok loads project trees under .grok/ and .agents/; plugin.json may live at
+    // plugin root, .grok-plugin/, or (compat) .claude-plugin/ — see Appendix H §H3–H4.
+    configFiles: [
+      ".grok",
+      ".grok/rules",
+      ".grok/plugins",
+      ".grok/agents",
+      ".grok-plugin/plugin.json",
+    ],
+    skillRoots: [".grok/skills", ".grok/commands", ".agents/skills", ".agents/commands"],
   },
 };
 

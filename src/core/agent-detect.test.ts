@@ -47,6 +47,34 @@ describe("detectAllAgents", () => {
     expect(byName.copilot!.configuredInRepo).toBe(true);
   });
 
+  test("detects Grok surfaces: .grok/skills, .agents/skills, plugin manifests", () => {
+    const dir = tmpRepo();
+    mkdirSync(join(dir, ".grok", "skills", "review"), { recursive: true });
+    writeFileSync(join(dir, ".grok", "skills", "review", "SKILL.md"), "---\nname: review\n---\nbody");
+    mkdirSync(join(dir, ".agents", "skills", "shared"), { recursive: true });
+    writeFileSync(join(dir, ".agents", "skills", "shared", "SKILL.md"), "---\nname: shared\n---\nbody");
+    mkdirSync(join(dir, ".grok", "rules"), { recursive: true });
+    writeFileSync(join(dir, ".grok", "rules", "style.md"), "tabs");
+    mkdirSync(join(dir, ".grok-plugin"), { recursive: true });
+    writeFileSync(join(dir, ".grok-plugin", "plugin.json"), "{}");
+
+    const grok = detectAllAgents(dir, noneInstalled).find((a) => a.name === "grok")!;
+    expect(grok.configuredInRepo).toBe(true);
+    expect(grok.surfaces.skillRoots).toContain(".grok/skills");
+    expect(grok.surfaces.skillRoots).toContain(".agents/skills");
+    expect(grok.surfaces.configFiles).toContain(".grok/rules");
+    expect(grok.surfaces.configFiles).toContain(".grok-plugin/plugin.json");
+  });
+
+  test("Grok-only skill root marks configured without Claude paths", () => {
+    const dir = tmpRepo();
+    mkdirSync(join(dir, ".grok", "skills", "only"), { recursive: true });
+    writeFileSync(join(dir, ".grok", "skills", "only", "SKILL.md"), "---\nname: only\n---\nx");
+    const byName = Object.fromEntries(detectAllAgents(dir, noneInstalled).map((a) => [a.name, a]));
+    expect(byName.grok!.configuredInRepo).toBe(true);
+    expect(byName.claude!.configuredInRepo).toBe(false);
+  });
+
   test("installed flag comes from the injected which()", () => {
     const dir = tmpRepo();
     const result = detectAllAgents(dir, allInstalled);

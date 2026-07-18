@@ -16,6 +16,7 @@ import {
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { resolveScanScope, type ScanScope } from "./scan-scope.js";
 import { findSkillDirs } from "./skill-discovery.js";
+import { detectSkillShadows, shadowWarningText, type SkillShadow } from "./skill-shadow.js";
 import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
 import { detectCapabilities } from "./capability-detect.js";
@@ -56,6 +57,8 @@ export interface ScanResult {
   health: HealthEntry[];
   /** B16 — cross-agent config conflicts (empty when none). */
   contradictions: Contradiction[];
+  /** B-viii — same skill leaf-name under multiple agent roots (winner first). */
+  shadows: SkillShadow[];
   summary: { passed: number; warnings: number; failed: number };
   intelligence: IntelligenceStatus;
   suggestions: Suggestion[];
@@ -72,7 +75,7 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
   const health: HealthEntry[] = [];
 
   for (const dir of skillDirs) {
-    const rel = relative(scope.scanRoot, dir) || ".";
+    const rel = (relative(scope.scanRoot, dir) || ".").replace(/\\/g, "/");
     const origin = classifySkillDir(dir, { cwd: scope.scanRoot });
     const loaded = await loadSkillFromDir(dir);
 
@@ -109,6 +112,20 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
       errors,
       warnings,
     });
+  }
+
+  // Name collisions across agent roots (e.g. .grok/skills/x vs .claude/skills/x)
+  const shadows = detectSkillShadows(health.map((h) => h.path));
+  for (const shadow of shadows) {
+    for (const p of shadow.paths) {
+      const entry = health.find((h) => h.path.replace(/\\/g, "/") === p);
+      if (!entry) continue;
+      entry.warnings.push({
+        text: shadowWarningText(shadow, p),
+        code: "E-SCAN-SHADOW",
+      });
+      if (entry.status === "pass") entry.status = "warn";
+    }
   }
 
   const summary = {
@@ -187,6 +204,7 @@ export async function runScan(cwd: string, deps: DetectDeps = defaultDeps): Prom
     crossAgent,
     health,
     contradictions,
+    shadows,
     summary,
     intelligence,
     suggestions,

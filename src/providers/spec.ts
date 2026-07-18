@@ -51,6 +51,7 @@ export const PROVIDER_SPECS = {
   grok: {
     id: "grok" as const,
     name: "Grok",
+    /** Primary display path; discovery also accepts root plugin.json and .claude-plugin/plugin.json (H4). */
     manifestPath: ".grok-plugin/plugin.json",
     marketplacePath: ".grok-plugin/marketplace.json",
     mcpFilename: ".mcp.json",
@@ -59,6 +60,21 @@ export const PROVIDER_SPECS = {
     requiresInterface: false,
   },
 } as const;
+
+/** Project skill/command roots Grok loads (scan surfaces). Gitignore does not hide these. */
+export const GROK_SKILL_ROOTS = [
+  ".grok/skills",
+  ".grok/commands",
+  ".agents/skills",
+  ".agents/commands",
+] as const;
+
+/** Manifest candidates, priority order (H4). */
+export const GROK_MANIFEST_CANDIDATES = [
+  "plugin.json",
+  ".grok-plugin/plugin.json",
+  ".claude-plugin/plugin.json",
+] as const;
 
 export type ProviderSpec = (typeof PROVIDER_SPECS)[ProviderId];
 

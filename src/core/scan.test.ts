@@ -80,4 +80,52 @@ describe("runScan", () => {
     await runScan(root, noneInstalled);
     expect(performance.now() - t0).toBeLessThan(500);
   });
+
+  test("Grok-only skill appears in health and Grok agent surfaces", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".grok/skills/deploy", 'name: deploy\ndescription: "Use when shipping"');
+    const result = await runScan(root, noneInstalled);
+
+    expect(result.empty).toBe(false);
+    const entry = result.health.find((h) => h.path.includes("deploy"));
+    expect(entry).toBeDefined();
+    expect(entry!.status).not.toBe("fail");
+
+    const grok = result.agents.find((a) => a.name === "grok")!;
+    expect(grok.configuredInRepo).toBe(true);
+    expect(grok.surfaces.skillRoots).toContain(".grok/skills");
+  });
+
+  test("same skill name under .claude and .grok reports shadowing (Grok prefers .grok)", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".claude/skills/review", 'name: review\ndescription: "Use when reviewing Claude-side"');
+    writeSkill(root, ".grok/skills/review", 'name: review\ndescription: "Use when reviewing Grok-side"');
+    const result = await runScan(root, noneInstalled);
+
+    expect(result.shadows.length).toBe(1);
+    const shadow = result.shadows[0]!;
+    expect(shadow.name).toBe("review");
+    // Winner first (Grok host priority: .grok before .claude)
+    const paths = shadow.paths.map((p) => p.replace(/\\/g, "/"));
+    expect(paths[0]).toBe(".grok/skills/review");
+    expect(paths).toContain(".claude/skills/review");
+
+    // Health entries carry a warning so human scan notices
+    const grokHit = result.health.find((h) => h.path.replace(/\\/g, "/").includes(".grok/skills/review"))!;
+    const claudeHit = result.health.find((h) => h.path.replace(/\\/g, "/").includes(".claude/skills/review"))!;
+    expect(grokHit.warnings.some((w) => /shadow|also at|prefer/i.test(w.text))).toBe(true);
+    expect(claudeHit.warnings.some((w) => /shadow|also at|prefer/i.test(w.text))).toBe(true);
+  });
+
+  test("skill under gitignored-looking path still appears (discovery ignores gitignore)", async () => {
+    // findSkillDirs never consults .gitignore — only name-based ignore (node_modules, .git, …).
+    // Teams often gitignore .claude/** while Grok still loads those skills.
+    const root = makeRepo();
+    writeFileSync(join(root, ".gitignore"), ".claude/\n.grok/\n");
+    writeSkill(root, ".claude/skills/hidden", 'name: hidden\ndescription: "Use when testing ignore"');
+    writeSkill(root, ".grok/skills/hidden-g", 'name: hidden-g\ndescription: "Use when testing grok ignore"');
+    const result = await runScan(root, noneInstalled);
+    expect(result.health.some((h) => h.path.includes("hidden"))).toBe(true);
+    expect(result.health.some((h) => h.path.includes("hidden-g"))).toBe(true);
+  });
 });

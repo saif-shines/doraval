@@ -76,6 +76,8 @@ bunx tsc --noEmit 2>&1 | grep -c "error TS"  # baseline ~271, pre-existing
 
 ## Next (no version bump)
 
+- **B-viii discovery slice** — **done 2026-07-18**: Grok agent surfaces (`.grok/skills|commands`, `.agents/skills|commands`, rules/plugins/agents dirs, `.grok-plugin`); `grok:skill` + `grok:plugin` validators; scan `shadows` (name collisions, Grok priority winner-first) + human “Name collisions”; skill discovery already ignores gitignore. **Not in this slice:** B-ix sessions, B-x headless JSON, B-xi install doctor.
+- **Next workbench:** B-x (small judge re-verify) or B-ix (Grok multi-file sessions) or B-xi (platform install doctor) — product-grill: discovery was highest stakes; pick next by user-visible path.
 - **B26 README** — **done** (scan-first, ~116 lines, command table, current 0.6.x surface)
 - **B27 website redesign** — **done** (Starlight → Blume; scan-first IA; static `llms.txt` + raw `.md`; Ask AI/MCP deferred)
 - Q1/Q2 **implemented + released** (0.6.3): providers = packaging/spec; provider groups deleted
