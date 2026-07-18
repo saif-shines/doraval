@@ -38,7 +38,11 @@ export function getDefaultPromptTemplate(command: string): string {
   }
 
   if (lower.includes('grok')) {
-    return '-p "{{prompt}}" --no-auto-update --no-alt-screen --always-approve';
+    // Live-verified 2026-07-18 (grok 0.2.x): --output-format json emits one stdout object
+    // { text, sessionId, usage, stopReason, … } with human noise on stderr (usually empty).
+    // extractCandidates unwraps `text` the same way Claude unwraps `result`.
+    // --always-approve / --yolo for unattended tools; keep no-auto-update + no-alt-screen.
+    return '-p "{{prompt}}" --output-format json --no-auto-update --no-alt-screen --always-approve';
   }
 
   return '-p "{{prompt}}"';
@@ -48,6 +52,7 @@ export function getDefaultPromptTemplate(command: string): string {
  * Returns agent config with prompt_template corrected for the actual CLI.
  * Strips cross-agent flags (e.g. Grok flags in a Claude template) and removes
  * unsupported cwd_flag for Claude (Claude has no --cwd; uses spawn cwd).
+ * Grok: JSON output is supported (B-x); do not strip --output-format json.
  */
 export function resolveAgentConfig(agent: AgentConfig): AgentConfig {
   const command = agent.command || "";
@@ -57,9 +62,9 @@ export function resolveAgentConfig(agent: AgentConfig): AgentConfig {
   if (template) {
     if (isClaudeCommand(command) && /--no-auto-update|--no-alt-screen|--always-approve/.test(template)) {
       template = desired;
-    } else if (isGrokCommand(command) && /--output-format\s+json/.test(template)) {
-      template = desired;
     }
+    // B-x: previously rewrote any Grok template that included --output-format json.
+    // Live binary confirms JSON is stable — keep user/default templates that request it.
   } else {
     template = desired;
   }
@@ -94,7 +99,8 @@ export function buildAgentArgv(template: string, promptText: string): string[] {
   });
 }
 
-function extractCandidates(text: string): Record<string, unknown>[] {
+/** Parse agent stdout into candidate objects (Claude `result` / Grok `text` unwrap). Exported for unit tests. */
+export function extractCandidates(text: string): Record<string, unknown>[] {
   let cleaned = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1').trim();
 
   const candidates: Record<string, unknown>[] = [];
@@ -122,11 +128,17 @@ function extractCandidates(text: string): Record<string, unknown>[] {
 
   const unwrapped: Record<string, unknown>[] = [];
   for (const c of candidates) {
-    if (c.result) {
-      let inner = c.result;
+    // Claude headless wraps model JSON in `result`; Grok wraps it in `text`
+    // (often fenced ```json … ``` — strip fences before parse).
+    for (const key of ["result", "text"] as const) {
+      if (c[key] === undefined) continue;
+      let inner: unknown = c[key];
       if (typeof inner === "string") {
-        try { inner = JSON.parse(inner); } catch {
-          // intentional: keep raw result string if not JSON
+        const stripped = inner.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, "$1").trim();
+        try {
+          inner = JSON.parse(stripped);
+        } catch {
+          // intentional: keep raw string if not JSON
         }
       }
       if (inner && typeof inner === "object") unwrapped.push(inner as Record<string, unknown>);
