@@ -151,6 +151,9 @@ jobs:
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+      # Trusted publishing (OIDC) needs npm >= 11.5.1; node 24 bundles a new
+      # enough npm, but pin latest so the OIDC exchange never silently regresses.
+      - run: npm install -g npm@latest
       - run: bun install --frozen-lockfile
 
       - name: Download compiled binaries
@@ -170,13 +173,13 @@ jobs:
           timeout_minutes: 15
           max_attempts: 3
           retry_wait_seconds: 45
-          # Platform packages publish WITHOUT --provenance: with provenance the
-          # PUT has historically 404'd. Main keeps --provenance (works there).
+          # Auth is npm trusted publishing (OIDC): no tokens. Requires the
+          # trusted-publisher config on npmjs.com for ALL six packages
+          # (@hacksmith/doraval + the five @hacksmith/doraval-{darwin,linux,win32}-*),
+          # each pointing at this repo + release.yml. Provenance is automatic.
           # Fail-fast: never publish main if any platform package fails — a main
           # package whose optionalDeps point at missing platform versions is a
           # broken install (v0.6.0 shipped main only; platforms stuck at 0.5.2).
-          # NPM_TOKEN (NODE_AUTH_TOKEN) must have write on ALL six packages:
-          # @hacksmith/doraval + the five @hacksmith/doraval-{darwin,linux,win32}-*
           command: |
             set -euo pipefail
             VERSION=$(node -pe "require('./package.json').version")
@@ -198,7 +201,7 @@ jobs:
               done
             done
             bun run scripts/prepare-npm-publish.ts
-            npm publish --access public --provenance
+            npm publish --access public
 
       - name: Post-publish install verification (the real user path)
         run: |
