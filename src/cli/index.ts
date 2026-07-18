@@ -63,6 +63,12 @@ const main = defineCommand({
     format: { type: "string", description: "Output format: table | json", default: "table" },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
     cwd: { type: "string", description: "Directory to scan (CI / coding agents)" },
+    yes: {
+      type: "boolean",
+      description: "Skip the scan proceed/stop prompt (agents / scripts)",
+      default: false,
+      alias: "y",
+    },
     capabilities: {
       type: "boolean",
       description: "Machine JSON command manifest (for agents/CI — not a human command)",

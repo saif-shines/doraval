@@ -110,3 +110,8 @@ done
 ## Resume
 
 **Tracker:** `WIP.md` (only progress pin). See release status there for v0.6.0 npm platform gap.
+
+
+Good Skill and Plugin references:
+- https://github.com/nutlope/hallmark
+- https://github.com/obra/superpowers

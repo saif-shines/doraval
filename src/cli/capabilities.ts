@@ -49,9 +49,14 @@ export function buildCapabilities(): CapabilitiesManifest {
         flags: {
           ...COMMON_FLAGS,
           "--cwd": { description: "Directory to scan (CI / coding agents)" },
+          "--yes": { description: "Skip the proceed/stop prompt (agents / scripts)" },
         },
         exit_codes: EXIT_CODES,
-        examples: ["dora --format json", "dora scan --cwd /path/to/repo --format json"],
+        examples: [
+          "dora --format json",
+          "dora scan --cwd /path/to/repo --format json",
+          "dora --yes",
+        ],
       },
       {
         name: "review",

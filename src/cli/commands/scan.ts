@@ -1,9 +1,48 @@
 import { defineCommand } from "citty";
 import pc from "picocolors";
+import { confirm, isCancel } from "@clack/prompts";
 import { runScan, type ScanResult } from "../../core/scan.js";
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
-import { shouldEmitProgress } from "../preflight.js";
 import { exit } from "../render/exit.js";
+
+/** Human TTY only. JSON/CI, --yes, and non-interactive pipes skip the gate. */
+export function shouldConfirmScan(opts: {
+  format: string;
+  yes: boolean;
+  stdinTty?: boolean;
+  stderrTty?: boolean;
+}): boolean {
+  const stdinTty = opts.stdinTty ?? process.stdin.isTTY === true;
+  const stderrTty = opts.stderrTty ?? process.stderr.isTTY === true;
+  return !opts.yes && opts.format !== "json" && stdinTty && stderrTty;
+}
+
+/** Brief the human, then y/n. Returns false if they stop or cancel. */
+async function confirmScanProceed(dir: string): Promise<boolean> {
+  ui.blank();
+  ui.info(`  → dora scan  ${pc.dim(dir)}`);
+  ui.dim("  About to (read-only — no writes, no network, no LLM):");
+  ui.dim("    • List which agents are configured in this repo");
+  ui.dim("    • Check skill / manifest health");
+  ui.dim("    • Flag cross-agent contradictions");
+  ui.dim("    • Suggest next commands");
+  ui.blank();
+
+  const ok = await confirm({
+    message: "Proceed with scan?",
+    initialValue: true,
+    output: process.stderr,
+  });
+  if (isCancel(ok)) {
+    ui.dim("  Cancelled.");
+    return false;
+  }
+  if (!ok) {
+    ui.dim("  Stopped.");
+    return false;
+  }
+  return true;
+}
 
 function renderHuman(r: ScanResult): void {
   ui.blank();
@@ -96,16 +135,23 @@ export default defineCommand({
     format: { type: "string", description: "Output format: table | json", default: "table" },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
     cwd: { type: "string", description: "Directory to scan (CI / coding agents)" },
+    yes: {
+      type: "boolean",
+      description: "Skip the proceed/stop prompt (agents / scripts)",
+      default: false,
+      alias: "y",
+    },
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
     const dir = (args.cwd as string) || process.cwd();
-    // Prominent "about to do" (JSON/CI stay silent). No ui.arrow — use → via info.
-    if (shouldEmitProgress(mode)) {
-      ui.blank();
-      ui.info(`  → dora scan  ${pc.dim(dir)}`);
-      ui.dim("  Reading agent surfaces, skill health, contradictions — read-only, no writes, no LLM.");
+    const yes = Boolean(args.yes);
+
+    if (shouldConfirmScan({ format: mode.format, yes })) {
+      const go = await confirmScanProceed(dir);
+      if (!go) await exit(0);
     }
+
     try {
       const result = await runScan(dir);
       if (mode.format === "json") outJson(result);
