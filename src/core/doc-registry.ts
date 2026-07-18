@@ -33,6 +33,8 @@ const CODE_DOCS: Record<string, string> = {
 const FINDING_CODE_DOCS: Record<string, string> = {
   "E-VAL-001": REVIEW,
   "E-SCAN-SHADOW": SCAN,
+  "E-SCAN-OVERLAP": SCAN,
+  "E-SCAN-MCP": SCAN,
   "E-INSTALL-MISSING": INSTALL,
   "E-INSTALL-BINARY": INSTALL,
   "E-INSTALL-SKEW": INSTALL,

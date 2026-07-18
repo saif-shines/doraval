@@ -482,7 +482,13 @@ export function detectContradictions(cwd: string): Contradiction[] {
     const skillPath = join(dir, "SKILL.md");
     const raw = readSafe(skillPath);
     if (raw === null) continue;
-    const parsed = parseFrontmatter(raw);
+    let parsed: { data: Record<string, unknown>; content: string };
+    try {
+      parsed = parseFrontmatter(raw);
+    } catch {
+      // intentional: invalid YAML is a health fail, not a scan crash
+      continue;
+    }
     const name = String(parsed.data["name"] ?? basename(dir)).toLowerCase();
     const hash = contentHash(parsed.content || raw);
     const list = byName.get(name) ?? [];

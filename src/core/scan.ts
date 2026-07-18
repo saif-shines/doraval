@@ -28,6 +28,20 @@ import {
   type PlatformInstallCheck,
   type PlatformInstallDeps,
 } from "./platform-install.js";
+import {
+  measureContextBudget,
+  listMcpServerNames,
+  ALWAYS_ON_LINES_WARN,
+  type ContextBudget,
+} from "./context-budget.js";
+import {
+  detectSkillOverlaps,
+  detectMcpNameCollisions,
+  overlapWarningText,
+  type SkillOverlap,
+  type McpNameCollision,
+  type SkillOverlapInput,
+} from "./skill-overlap.js";
 import { withDocUrl } from "./doc-registry.js";
 
 function healthItem(item: HealthItem): HealthItem {
@@ -60,6 +74,8 @@ export interface IntelligenceStatus {
   detail: string;
   /** B-xi — this host's platform optionalDep / binary health */
   install: PlatformInstallCheck;
+  /** Always-on context budget (CLAUDE.md / AGENTS.md / rules / MCP inventory) */
+  contextBudget: ContextBudget;
 }
 
 export interface ScanResult {
@@ -72,6 +88,10 @@ export interface ScanResult {
   contradictions: Contradiction[];
   /** B-viii — same skill leaf-name under multiple agent roots (winner first). */
   shadows: SkillShadow[];
+  /** Skills with different names but competing descriptions (selection ambiguity). */
+  overlaps: SkillOverlap[];
+  /** MCP servers that look like near-duplicates by name. */
+  mcpCollisions: McpNameCollision[];
   summary: { passed: number; warnings: number; failed: number };
   intelligence: IntelligenceStatus;
   suggestions: Suggestion[];
@@ -90,6 +110,7 @@ export async function runScan(
 
   const skillDirs = findSkillDirs(scope.scanRoot);
   const health: HealthEntry[] = [];
+  const overlapInputs: SkillOverlapInput[] = [];
 
   for (const dir of skillDirs) {
     const rel = (relative(scope.scanRoot, dir) || ".").replace(/\\/g, "/");
@@ -106,6 +127,18 @@ export async function runScan(
       });
       continue;
     }
+
+    const description = [
+      String(loaded.model.data["description"] ?? ""),
+      String(loaded.model.data["when_to_use"] ?? ""),
+    ]
+      .filter((s) => s.trim())
+      .join(" ");
+    overlapInputs.push({
+      path: rel,
+      name: String(loaded.model.data["name"] ?? rel.split("/").pop() ?? ""),
+      description,
+    });
 
     const validation = validateSkillModel(loaded.model, { existingDirs: loaded.existingDirs });
     const drift = analyzeDrift({
@@ -151,6 +184,24 @@ export async function runScan(
     }
   }
 
+  // Competing descriptions (different names, same job)
+  const overlaps = detectSkillOverlaps(overlapInputs);
+  for (const o of overlaps) {
+    for (const p of [o.a, o.b]) {
+      const entry = health.find((h) => h.path.replace(/\\/g, "/") === p);
+      if (!entry) continue;
+      entry.warnings.push(
+        healthItem({
+          text: overlapWarningText(o, p),
+          code: "E-SCAN-OVERLAP",
+        }),
+      );
+      if (entry.status === "pass") entry.status = "warn";
+    }
+  }
+
+  const mcpCollisions = detectMcpNameCollisions(listMcpServerNames(scope.scanRoot));
+
   const summary = {
     passed: health.filter((h) => h.status === "pass").length,
     warnings: health.filter((h) => h.status === "warn").length,
@@ -173,7 +224,8 @@ export async function runScan(
             judge: "none" as const,
             detail: "no judge found — install a coding agent CLI or set an API key",
           };
-  const intelligence: IntelligenceStatus = { ...judgePart, install };
+  const contextBudget = measureContextBudget(scope.scanRoot, health.length);
+  const intelligence: IntelligenceStatus = { ...judgePart, install, contextBudget };
 
   const anyAgentConfigured = agents.some((a) => a.configuredInRepo);
   const empty = health.length === 0 && !anyAgentConfigured && !crossAgent.agentsMd && !crossAgent.mcpJson;
@@ -204,6 +256,32 @@ export async function runScan(
       kind: "fix",
       title: `Fix ${h.path}: ${h.errors[0]?.text ?? "validation error"}`,
       command: `dora fix ${h.path}`,
+    });
+  }
+  if (contextBudget.status === "warn" && contextBudget.hint) {
+    const largest =
+      contextBudget.alwaysOnLines > ALWAYS_ON_LINES_WARN
+        ? [...contextBudget.alwaysOn].sort((a, b) => b.lines - a.lines)[0]
+        : undefined;
+    suggestions.push({
+      kind: "improve",
+      title: contextBudget.hint,
+      command: largest ? `dora review ${largest.path}` : "dora scan",
+    });
+  }
+  if (overlaps.length > 0) {
+    const top = overlaps[0]!;
+    suggestions.push({
+      kind: "improve",
+      title: `${overlaps.length} skill description overlap(s) — agents may pick the wrong skill`,
+      command: `dora review ${top.a}`,
+    });
+  }
+  if (mcpCollisions.length > 0) {
+    suggestions.push({
+      kind: "improve",
+      title: mcpCollisions[0]!.reason,
+      command: "dora review .mcp.json",
     });
   }
   if (!empty && intelligence.judge !== "none" && summary.warnings + summary.failed > 0) {
@@ -249,6 +327,8 @@ export async function runScan(
     health,
     contradictions,
     shadows,
+    overlaps,
+    mcpCollisions,
     summary,
     intelligence,
     suggestions,

@@ -126,6 +126,75 @@ describe("runScan", () => {
     expect(result.intelligence.install.expectedVersion).toBeTruthy();
   });
 
+  test("intelligence.contextBudget counts always-on files and skills", async () => {
+    const root = makeRepo();
+    writeFileSync(join(root, "CLAUDE.md"), "# Project\n\nUse bun test.\n");
+    writeSkill(root, ".claude/skills/ship", 'name: ship\ndescription: "Use when shipping"');
+    const result = await runScan(root, noneInstalled);
+    const b = result.intelligence.contextBudget;
+    expect(b).toBeDefined();
+    expect(b.status).toBe("ok");
+    expect(b.alwaysOn.some((f) => f.path === "CLAUDE.md")).toBe(true);
+    expect(b.skillCount).toBe(1);
+    expect(b.summary).toMatch(/Always-on/);
+  });
+
+  test("heavy always-on contextBudget warns and suggests review", async () => {
+    const root = makeRepo();
+    const body = Array.from({ length: 220 }, (_, i) => `rule line ${i}`).join("\n");
+    writeFileSync(join(root, "CLAUDE.md"), body + "\n");
+    const result = await runScan(root, noneInstalled);
+    expect(result.intelligence.contextBudget.status).toBe("warn");
+    expect(
+      result.suggestions.some(
+        (s) => s.kind === "improve" && s.command.includes("dora review") && /Always-on|CLAUDE/i.test(s.title),
+      ),
+    ).toBe(true);
+  });
+
+  test("competing skill descriptions surface as overlaps + health warn", async () => {
+    const root = makeRepo();
+    writeSkill(
+      root,
+      ".claude/skills/review-pr",
+      'name: review-pr\ndescription: "Use when reviewing pull requests for TypeScript testing quality"',
+    );
+    writeSkill(
+      root,
+      ".claude/skills/pr-check",
+      'name: pr-check\ndescription: "Use when reviewing pull requests for TypeScript testing quality"',
+    );
+    writeSkill(
+      root,
+      ".claude/skills/ship-it",
+      'name: ship-it\ndescription: "Use when deploying production releases with bun and docker"',
+    );
+    const result = await runScan(root, noneInstalled);
+    expect(result.overlaps.length).toBeGreaterThanOrEqual(1);
+    const o = result.overlaps[0]!;
+    expect(o.a + o.b).toMatch(/review-pr|pr-check/);
+    expect(result.health.some((h) => h.warnings.some((w) => w.code === "E-SCAN-OVERLAP"))).toBe(true);
+    expect(result.suggestions.some((s) => /overlap/i.test(s.title))).toBe(true);
+  });
+
+  test("near-duplicate MCP server names surface as mcpCollisions", async () => {
+    const root = makeRepo();
+    writeFileSync(
+      join(root, ".mcp.json"),
+      JSON.stringify({
+        mcpServers: {
+          github: { command: "npx", args: ["github"] },
+          "github-api": { command: "npx", args: ["github-api"] },
+        },
+      }),
+    );
+    writeFileSync(join(root, "AGENTS.md"), "# hi\n");
+    const result = await runScan(root, noneInstalled);
+    expect(result.mcpCollisions.length).toBe(1);
+    expect(result.mcpCollisions[0]!.a).toBe("github");
+    expect(result.suggestions.some((s) => s.command.includes(".mcp.json"))).toBe(true);
+  });
+
   test("health items with codes carry docUrl for JSON consumers", async () => {
     const root = makeRepo();
     writeSkill(root, ".claude/skills/bad", 'name: Bad_Name\ndescription: "Use when testing"');

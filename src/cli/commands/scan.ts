@@ -25,6 +25,7 @@ async function confirmScanProceed(dir: string): Promise<boolean> {
   ui.dim("  About to (read-only — no writes, no network, no LLM):");
   ui.dim("    • List which agents are configured in this repo");
   ui.dim("    • Check skill / manifest health");
+  ui.dim("    • Measure always-on context budget (CLAUDE.md, rules, MCP)");
   ui.dim("    • Flag cross-agent contradictions");
   ui.dim("    • Suggest next commands");
   ui.blank();
@@ -133,6 +134,26 @@ function renderHuman(r: ScanResult): void {
     }
   }
 
+  if (r.overlaps.length > 0) {
+    ui.blank();
+    ui.heading("Skill overlap");
+    for (const o of r.overlaps) {
+      renderCheck("warn", `${o.a}  ↔  ${o.b}  ${pc.dim(o.reason)}`);
+      const docs = getFindingDocUrl({ code: "E-SCAN-OVERLAP" });
+      if (docs) ui.dim(`      Docs: ${docs}`);
+    }
+  }
+
+  if (r.mcpCollisions.length > 0) {
+    ui.blank();
+    ui.heading("MCP name collisions");
+    for (const c of r.mcpCollisions) {
+      renderCheck("warn", `${c.a}  ↔  ${c.b}  ${pc.dim(c.reason)}`);
+      const docs = getFindingDocUrl({ code: "E-SCAN-MCP" });
+      if (docs) ui.dim(`      Docs: ${docs}`);
+    }
+  }
+
   ui.blank();
   ui.heading("Intelligence");
   renderCheck(r.intelligence.judge === "none" ? "warn" : "ok", r.intelligence.detail);
@@ -142,6 +163,13 @@ function renderHuman(r: ScanResult): void {
       inst.status === "fail" ? "fail" : inst.status === "warn" ? "warn" : inst.status === "ok" ? "ok" : "pass";
     // skip (source/unsupported) → dim pass-style line, not an alarm
     renderCheck(mark === "pass" ? "ok" : mark, inst.detail + (inst.hint && inst.status === "fail" ? pc.dim(` — ${inst.hint}`) : ""));
+  }
+  {
+    const b = r.intelligence.contextBudget;
+    if (b.status !== "empty") {
+      renderCheck(b.status === "warn" ? "warn" : "ok", b.summary);
+      if (b.hint) ui.dim(`      ${b.hint}`);
+    }
   }
 
   if (r.suggestions.length > 0) {
