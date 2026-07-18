@@ -15,9 +15,9 @@ dora review [PATH]
 ## Tiers
 
 1. **Structure** — parseable manifests, required fields, path consistency  
-2. **Heuristics** — dead refs, duplicates, keyword-level memory violations  
+2. **Heuristics** — dead refs, duplicates, keyword-level memory violations, `scripts/` security smells (outbound calls, secret prompts)  
 3. **LLM** — judgment when a judge model is configured  
-4. **Sessions** — real-session adherence (adapters land over time)
+4. **Sessions** — mines real agent session logs (Claude, Grok, Cursor, Codex, Copilot) for evidence the skill was actually used
 
 Tiers that cannot run are skipped unless required by a flag.
 
@@ -27,7 +27,7 @@ Tiers that cannot run are skipped unless required by a flag.
 | --- | --- |
 | `--quick` | Tiers 1–2 only (no LLM) |
 | `--deep` | Require LLM tier; exit `2` if no judge |
-| `--sessions` | Require session tier (planned; currently a no-op when adapters missing) |
+| `--sessions` | Require the session-evidence tier; exit `2` if no recent sessions |
 | `--all` | Review every artifact under the path |
 | `--fail-on error\|warning` | Exit `1` trigger (default `error`) |
 | `--format table\|json` | Output format |

@@ -12,13 +12,13 @@ dora sessions --agent claude --limit 20
 dora sessions show <id>
 ```
 
-Read-only. Claude Code and Grok today; Codex / Copilot / Cursor adapters planned.
+Read-only. Adapters ship for Claude Code, Grok, Cursor, Codex, and Copilot — sessions from every one show up here.
 
 ## Options (list)
 
 | Flag | Meaning |
 | --- | --- |
-| `--agent <name>` | Filter (`claude`, `grok`) |
+| `--agent <name>` | Filter (`claude`, `grok`, `cursor`, `codex`, `copilot`) |
 | `--limit <n>` | Max sessions per agent (default `10`) |
 | `--format` / `--ci` | Machine output |
 
@@ -32,5 +32,5 @@ dora sessions show <sessionId>
 
 ## Related
 
-- [dora review](/commands/review/) (session tier, as adapters mature)
+- [dora review](/commands/review/) — the session tier mines these logs for real usage evidence
 - [For coding agents](/for-agents/)

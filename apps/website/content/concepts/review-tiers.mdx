@@ -13,18 +13,20 @@ Parseable files, required fields, name/dir consistency, basic schema. Fast. Alwa
 
 ## Tier 2 — Heuristics
 
-Dead file references, duplicate rules, keyword-level violations of [memory](/concepts/memory/) principles, packaging smells. Still no network / LLM. Included in `--quick`.
+Dead file references, duplicate rules, keyword-level violations of [memory](/concepts/memory/) principles, packaging smells, and `scripts/` security smells (outbound network calls, secret prompts). A violated principle weighted **7+** is an error, not a warning. Still no network / LLM. Included in `--quick`.
 
 ## Tier 3 — LLM
 
-Judgment when a judge model is configured (`dora config` / env). Vague descriptions, missing guardrails, scenario coverage against [scenarios.yaml](/reference/scenarios/).
+Judgment when a judge is available. Vague descriptions, missing guardrails, scenario coverage against [scenarios.yaml](/reference/scenarios/).
+
+A judge is either a **CLI you already have** (`claude` or `grok` on PATH — uses the subscription you already pay for) or an **API key** for an LLM provider (`dora config` / env). CLI is preferred; API is the fallback.
 
 - Default: run if available, skip if not  
 - `--deep`: **require** this tier; exit `2` if no judge  
 
 ## Tier 4 — Sessions
 
-Compare skill intent to real agent sessions when adapters exist. Session adapters ship over time; `--sessions` will require this tier when ready.
+Mines real agent session logs for mechanical evidence a skill was actually invoked. Adapters ship for Claude, Grok, Cursor, Codex, and Copilot. `--sessions` requires this tier and exits `2` if no recent sessions exist.
 
 ## Choosing a mode
 

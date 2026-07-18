@@ -1,0 +1,475 @@
+---
+// Hallmark · genre: modern-minimal · macrostructure: Workbench · theme: Cobalt
+// nav: Blume's real Header (restyled via Cobalt tokens, not hand-rolled — no fake chrome)
+// footer: Ft2 inline · enrichment: code/terminal-hero (real `dora` output, nothing invented)
+import PageLayout from "blume/components/layout/PageLayout.astro";
+import CodeBlock from "blume/components/content/CodeBlock.astro";
+import data from "blume:data";
+import Footer from "./_home/Footer.astro";
+
+const { config } = data;
+
+const scanOutput = `$ dora
+
+  doraval v0.6.x
+  Read-only scan of agent context — no writes, no LLM.
+
+  Agent surfaces
+    ✓ claude    CLAUDE.md  .claude/skills
+    ⚠ cursor    not configured
+
+  Health
+    ✓ .claude/skills/review    valid
+    ✗ .claude/skills/deploy    Missing "description"
+
+  Next
+    1. dora fix .claude/skills/deploy
+    2. dora review --all`;
+
+const installCmd = `# one-shot (no install)
+npx @hacksmith/doraval
+
+# or install once, then use dora / doraval
+npm install -g @hacksmith/doraval
+# brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
+# bun add -g @hacksmith/doraval
+
+dora`;
+
+const loopPrompt = `Install doraval if needed, then run the doraval loop in this repo:
+1. dora (scan) — fix anything it suggests
+2. dora review . then dora fix . (use --yes for mechanical fixes)
+3. dora memory add any project principles we should keep
+Use --format json / --ci when you need machine output. Prefer dora new --for <agent> over hand-writing skill files.`;
+
+const agentCmds = `dora                                          # scan
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora review .                                 # structure + heuristics (+ LLM when available)
+dora fix .                                    # diffs first; asks before writing
+dora memory add "Run tests before shipping skill changes" --weight 8`;
+---
+
+<PageLayout
+  site={{ title: config.title, description: config.description }}
+  logo={config.logo}
+  favicon={config.favicon}
+  banner={config.banner}
+  analytics={config.analytics}
+  navigation={data.navigation}
+  fontCssVars={data.fontCssVars}
+  themeMode={config.theme.mode}
+  searchEnabled={config.search.enabled}
+  siteUrl={config.site}
+  ogEnabled={config.og.enabled}
+  page={{
+    title: `${config.title} — ${config.description}`,
+    description: config.description,
+    route: "/",
+  }}
+>
+  <div class="home">
+    <section class="hero">
+      <div class="hero__copy reveal">
+        <p class="home-eyebrow">DORAVAL · THE `dora` CLI</p>
+        <h1 class="hero__title">Scale your AI context for coding agents</h1>
+        <p class="hero__lede">
+          <strong>doraval</strong> (<em>dor-uh-val</em>) = <strong>Doraemon</strong
+          > + <strong>eval</strong>. Context you cannot trust wastes a day —
+          doraval makes the first attempt succeed, across Claude, Cursor,
+          Codex, Copilot, and Grok.
+        </p>
+        <div class="hero__ctas">
+          <a class="btn btn--primary" href="/get-started/">Get started</a>
+          <a class="btn btn--ghost" href="/for-agents/">For coding agents</a>
+        </div>
+      </div>
+      <div class="hero__demo reveal">
+        <CodeBlock code={scanOutput} lang="text" title="dora" />
+      </div>
+    </section>
+
+    <section class="band band--light reveal">
+      <p class="home-eyebrow">FIRST WIN</p>
+      <p class="section__lede">
+        Zero config. No API key. <a href="/get-started/installation/"
+          >Full install options</a
+        > (npm, Homebrew, Bun, <code>npx</code> / <code>bunx</code>).
+      </p>
+      <CodeBlock code={installCmd} lang="bash" title="terminal" />
+      <p class="home-caption">
+        Scan and session analysis span all five agents. Scaffolding and
+        packaging review cover Claude, Cursor, Codex, and Copilot; the LLM
+        judge runs on a Claude or Grok CLI you already have — or any API key.
+      </p>
+    </section>
+
+    <section class="band band--payoff reveal">
+      <p class="home-eyebrow">WHY THE FIRST TRY WORKS</p>
+      <div class="payoff">
+        <div class="payoff__item">
+          <h3 class="payoff__title">Principles become tests</h3>
+          <p class="payoff__body">
+            <code>dora memory</code> records a rule once. Review enforces it —
+            a principle weighted 7+ fails as an <strong>error</strong>, not a
+            polite warning.
+          </p>
+        </div>
+        <div class="payoff__item">
+          <h3 class="payoff__title">Cross-agent conflicts, settled</h3>
+          <p class="payoff__body">
+            <code>dora reconcile</code> finds where Claude and Cursor
+            contradict each other and writes the resolution into a shared
+            <code>AGENTS.md</code> — no LLM required.
+          </p>
+        </div>
+        <div class="payoff__item">
+          <h3 class="payoff__title">Skills that phone home, flagged</h3>
+          <p class="payoff__body">
+            Review scans a skill's <code>scripts/</code> for outbound calls and
+            secret prompts before it ever runs in an agent.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band band--dark reveal">
+      <p class="home-eyebrow home-eyebrow--dark">THE LOOP</p>
+      <h2 class="section__title section__title--dark">
+        Let your coding agent drive it
+      </h2>
+      <p class="section__lede section__lede--dark">
+        Point Claude, Cursor, Codex, Copilot, or Grok at the repo and paste
+        this — JSON-friendly flags are built in.
+      </p>
+      <div class="band__grid">
+        <div class="code-shell">
+          <CodeBlock code={loopPrompt} lang="text" title="prompt" />
+        </div>
+        <div class="code-shell">
+          <CodeBlock code={agentCmds} lang="bash" title="what the agent runs" />
+        </div>
+      </div>
+    </section>
+
+    <section class="band band--light reveal next">
+      <div class="next__example">
+        <p class="home-eyebrow">DETAILS</p>
+        <p class="section__lede">
+          Full reference for scan, review, fix, new, memory, and more — plus
+          JSON mode, CI, and exit codes for agents.
+        </p>
+      </div>
+      <nav class="next__links" aria-label="Next steps">
+        <a href="/get-started/">Get started →</a>
+        <a href="/commands/scan/">Commands →</a>
+        <a href="/for-agents/">For coding agents →</a>
+      </nav>
+    </section>
+  </div>
+
+  <Footer slot="footer" title={config.title} description={config.description} />
+</PageLayout>
+
+<style>
+  .home {
+    --home-graphite: oklch(22% 0.016 260);
+    --home-graphite-ink: oklch(92% 0.01 260);
+    --home-graphite-muted: oklch(70% 0.015 260);
+    --home-rule-2: oklch(30% 0.02 258);
+    --home-space-md: 1.5rem;
+    --home-space-lg: 2rem;
+    --home-space-xl: 3rem;
+    --home-space-2xl: 4.5rem;
+    --home-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: var(--home-space-md);
+  }
+
+  .home-eyebrow {
+    margin: 0 0 var(--home-space-md);
+    font-family: var(--blume-font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--blume-accent);
+  }
+
+  .home-eyebrow--dark {
+    color: var(--blume-accent);
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--home-space-xl);
+    padding-block: var(--home-space-2xl) var(--home-space-xl);
+  }
+
+  @media (min-width: 768px) {
+    .hero {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+    }
+  }
+
+  .hero__title {
+    font-family: var(--blume-font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    font-size: clamp(2rem, 4vw + 1rem, 3.25rem);
+    overflow-wrap: anywhere;
+    min-width: 0;
+    margin: 0 0 var(--home-space-md);
+  }
+
+  .hero__lede {
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--blume-muted-foreground);
+    margin: 0 0 var(--home-space-lg);
+    max-width: 42ch;
+  }
+
+  .hero__ctas {
+    display: flex;
+    gap: var(--home-space-md);
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--blume-radius);
+    padding: 0.625rem 1.125rem;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 160ms var(--home-ease-out), background-color 160ms var(--home-ease-out), border-color 160ms var(--home-ease-out);
+  }
+
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .btn--primary {
+    background: var(--blume-accent);
+    color: var(--blume-accent-foreground);
+    border: 1px solid var(--blume-accent);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn--primary:hover {
+      background: color-mix(in oklch, var(--blume-accent), black 8%);
+    }
+  }
+
+  .btn--ghost {
+    background: transparent;
+    color: var(--blume-foreground);
+    border: 1px solid var(--blume-border);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn--ghost:hover {
+      border-color: var(--blume-accent);
+      color: var(--blume-accent);
+    }
+  }
+
+  .band {
+    padding-block: var(--home-space-2xl);
+    border-top: 1px solid var(--blume-border);
+  }
+
+  .section__title {
+    font-family: var(--blume-font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-size: clamp(1.5rem, 2vw + 1rem, 2.25rem);
+    margin: 0 0 var(--home-space-md);
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  .section__lede {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--blume-muted-foreground);
+    max-width: 60ch;
+    margin: 0 0 var(--home-space-lg);
+  }
+
+  .section__lede a {
+    color: var(--blume-accent);
+  }
+
+  .home-caption {
+    margin: var(--home-space-md) 0 0;
+    font-family: var(--blume-font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--blume-muted-foreground);
+    max-width: 68ch;
+  }
+
+  .payoff {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--home-space-lg);
+  }
+
+  @media (min-width: 768px) {
+    .payoff {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--home-space-xl);
+    }
+  }
+
+  .payoff__item {
+    border-top: 2px solid var(--blume-accent);
+    padding-top: var(--home-space-md);
+  }
+
+  .payoff__title {
+    font-family: var(--blume-font-display);
+    font-weight: 600;
+    font-size: 1.0625rem;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.5rem;
+  }
+
+  .payoff__body {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--blume-muted-foreground);
+    margin: 0;
+  }
+
+  .payoff__body code {
+    font-family: var(--blume-font-mono);
+    font-size: 0.85em;
+    color: var(--blume-foreground);
+  }
+
+  .band--dark {
+    background: var(--home-graphite);
+    color: var(--home-graphite-ink);
+    border-radius: var(--blume-radius);
+    padding: var(--home-space-2xl) var(--home-space-lg);
+    border-top: none;
+  }
+
+  .section__title--dark {
+    color: var(--home-graphite-ink);
+  }
+
+  .section__lede--dark {
+    color: var(--home-graphite-muted);
+    max-width: 60ch;
+  }
+
+  .code-shell {
+    background: var(--blume-code-background);
+    border-radius: var(--blume-radius);
+    min-width: 0;
+  }
+
+  .band__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--home-space-lg);
+  }
+
+  @media (min-width: 768px) {
+    .band__grid {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+  }
+
+  .next {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--home-space-lg);
+  }
+
+  @media (min-width: 768px) {
+    .next {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  .next__links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-family: var(--blume-font-mono);
+    font-size: 0.875rem;
+  }
+
+  .next__links a {
+    color: var(--blume-foreground);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    width: fit-content;
+    transition: border-color 160ms var(--home-ease-out), color 160ms var(--home-ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .next__links a:hover {
+      color: var(--blume-accent);
+      border-color: var(--blume-accent);
+    }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 600ms var(--home-ease-out), transform 600ms var(--home-ease-out);
+  }
+
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  .next__links a {
+    transition-delay: 0ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .btn,
+    .next__links a {
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+</style>
+
+<script>
+  const revealed = document.querySelectorAll(".home .reveal");
+  if ("IntersectionObserver" in window && revealed.length) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-in");
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.15 }
+    );
+    for (const el of revealed) io.observe(el);
+  } else {
+    for (const el of revealed) el.classList.add("is-in");
+  }
+</script>

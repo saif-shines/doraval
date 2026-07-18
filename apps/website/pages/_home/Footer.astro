@@ -1,0 +1,55 @@
+---
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<footer class="home-footer">
+  <div class="home-footer__row">
+    <span class="home-footer__wordmark">{title}</span>
+    <span class="home-footer__tagline">{description}</span>
+  </div>
+  <div class="home-footer__row home-footer__row--meta">
+    <a href="https://github.com/saif-shines/doraval">GitHub</a>
+    <span class="home-footer__credit">MIT licensed</span>
+  </div>
+</footer>
+
+<style>
+  .home-footer {
+    border-top: 1px solid var(--blume-border);
+    padding: var(--home-space-lg, 2rem) var(--home-space-md, 1.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-family: var(--blume-font-mono);
+    font-size: 0.75rem;
+    color: var(--blume-muted-foreground);
+  }
+
+  .home-footer__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .home-footer__wordmark {
+    color: var(--blume-foreground);
+    font-weight: 600;
+  }
+
+  .home-footer__row--meta a {
+    color: var(--blume-muted-foreground);
+    text-decoration: none;
+  }
+
+  .home-footer__row--meta a:hover {
+    color: var(--blume-accent);
+    text-decoration: underline;
+  }
+</style>

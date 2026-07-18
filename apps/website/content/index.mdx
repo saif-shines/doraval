@@ -47,6 +47,8 @@ $ dora
     2. dora review --all
 ```
 
+Scan and session analysis span all five agents. Scaffolding (`dora new`) and packaging review cover Claude, Cursor, Codex, and Copilot; the LLM judge runs on a Claude or Grok CLI you already have — or any API key.
+
 ## The loop
 
 You can run these yourself — but the better default is to **let your coding agent do it**. Point Claude, Cursor, Codex, Copilot, or Grok at the repo and ask it to drive `dora` (JSON-friendly flags are built in).
@@ -66,10 +68,13 @@ What the agent (or you) runs:
 ```bash
 dora                                          # scan
 dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
-dora review .                                 # structure + heuristics (+ LLM when available)
+dora review .                                 # structure + heuristics + security + LLM when available
 dora fix .                                    # diffs first; asks before writing
+dora reconcile                                # settle cross-agent contradictions in AGENTS.md
 dora memory add "Run tests before shipping skill changes" --weight 8
 ```
+
+A recorded principle is not a note — `dora review` enforces it as a rubric, and anything weighted 7+ fails as an error. Review also mines real agent sessions (Claude, Cursor, Codex, Copilot, Grok) for evidence a skill was actually used.
 
 Details for agents and CI: [For coding agents](/for-agents/).
 

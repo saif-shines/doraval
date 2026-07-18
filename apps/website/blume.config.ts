@@ -22,11 +22,11 @@ export default defineConfig({
     branch: "main",
   },
   theme: {
-    accent: "#3b82f6",
+    accent: "oklch(58% 0.20 256)",
     radius: "sm",
     mode: "system",
     fonts: {
-      display: "geist",
+      display: "space-grotesk",
       body: "inter",
       mono: "jetbrains-mono",
     },
