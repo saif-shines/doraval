@@ -52,6 +52,16 @@ Platform binaries target glibc. On Alpine/musl, run from source with Bun:
 bunx @hacksmith/doraval
 ```
 
+## Install the skill (for coding agents)
+
+The steps above install the `dora` CLI. To make a coding agent use it on its own, install the doraval skill:
+
+```bash
+npx skills add saif-shines/doraval
+```
+
+This drops the doraval skill into your agent's skill directory (`.claude/skills/`, `.codex/skills/`, `.cursor/rules/`, and the like). The agent then verifies any skill, plugin, rule, or agent config with `dora review` before reporting the work done. See [For coding agents](/for-agents/) for how the skill drives the CLI.
+
 ## Verify
 
 ```bash

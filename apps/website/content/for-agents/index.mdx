@@ -8,6 +8,24 @@ sidebar:
 
 doraval is built so coding agents and CI can drive it without a human reading tables.
 
+## The doraval skill
+
+Install the skill so an agent reaches for `dora` on its own:
+
+```bash
+npx skills add saif-shines/doraval
+```
+
+The skill is a router, not documentation. Its frontmatter fires when an agent authors or edits a skill (`SKILL.md`), plugin, rule, or agent config, and it enforces one loop:
+
+1. Scan or review with `--format json`.
+2. Read the exit code. Do not report the work done while it is `1` or `2`.
+3. Apply mechanical fixes non-interactively: `dora fix <path> --dry-run`, then `dora fix <path> --yes`.
+4. Hand-edit judgment fixes from `dora fix <path> --brief`.
+5. Re-review until exit `0`.
+
+Because agent loops cannot answer TTY prompts, the skill always uses `--yes` to apply and `--dry-run` to preview, and never runs bare interactive `dora fix`, `dora reconcile`, or `dora memory promote`. Reference: [Installation](/get-started/installation/#install-the-skill-for-coding-agents).
+
 ## Machine output
 
 ```bash

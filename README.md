@@ -105,6 +105,16 @@ bun add -g @hacksmith/doraval
 
 npm ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18. Alpine/musl: run from source with Bun.
 
+## Make your agent use doraval automatically
+
+Install the doraval skill so Claude, Cursor, Codex, Copilot, or Grok reach for `dora` on their own. When an agent writes or edits a skill, plugin, rule, or agent config, the skill tells it to verify with `dora review` before calling the work done, and to read the exit code as truth.
+
+```bash
+npx skills add saif-shines/doraval
+```
+
+The skill teaches the fix loop (`--dry-run`, then `--yes`), the exit-code contract (`0` clean, `1` issues, `2` could not run), and when to branch on `--format json`. It runs the `dora` CLI you installed above; if `dora` is not on `PATH`, it falls back to `npx @hacksmith/doraval`.
+
 ## CI
 
 ```bash
