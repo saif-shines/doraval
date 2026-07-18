@@ -73,15 +73,17 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
         <p class="home-eyebrow">CONTEXT ENGINEERING FOR CODING AGENTS</p>
         <h1 class="hero__title">Make agent context work on the first try</h1>
         <p class="hero__lede">
-          <strong>doraval</strong> (<em>dor-uh-val</em>) = <strong>Doraemon</strong
-          > + <strong>eval</strong>. Scan, review, fix, and remember agent
-          context — so skills and plugins work across Claude, Cursor, Codex,
-          Copilot, and Grok.
+          Broken skills, silent Claude-vs-Cursor contradictions, decisions that
+          vanish next session. <strong>doraval</strong> scans, reviews, fixes,
+          and remembers your agent context — so the first attempt works.
         </p>
         <div class="hero__ctas">
           <a class="btn btn--primary" href="/get-started/">Get started</a>
           <a class="btn btn--ghost" href="/for-agents/">For coding agents</a>
         </div>
+        <p class="hero__note">
+          doraval · <em>dor-uh-val</em> · Doraemon + eval
+        </p>
       </div>
       <div class="hero__demo reveal">
         <CodeBlock code={scanOutput} lang="text" title="dora" />
@@ -231,7 +233,19 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
     line-height: 1.6;
     color: var(--blume-muted-foreground);
     margin: 0 0 var(--home-space-lg);
-    max-width: 42ch;
+    max-width: 46ch;
+  }
+
+  .hero__note {
+    margin: var(--home-space-md) 0 0;
+    font-family: var(--blume-font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    color: var(--blume-muted-foreground);
+  }
+
+  .hero__note em {
+    font-style: italic;
   }
 
   .hero__ctas {
