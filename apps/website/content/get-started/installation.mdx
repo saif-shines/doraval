@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install doraval via npm, Homebrew, Bun, or one-shot npx/bunx.
+description: Install doraval via Homebrew, npm, Bun, or one-shot npx/bunx.
 sidebar:
   label: Installation
   order: 2
@@ -8,21 +8,21 @@ sidebar:
 
 Pick one path. After a permanent install, `dora` and `doraval` are the same binary.
 
-## npm (recommended cross-platform)
-
-```bash
-npm install -g @hacksmith/doraval
-```
-
-Ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
-
-## Homebrew (macOS)
+## Homebrew (recommended, macOS)
 
 ```bash
 brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
 ```
 
 Upgrade later with `brew upgrade doraval` or `dora update`.
+
+## npm (cross-platform)
+
+```bash
+npm install -g @hacksmith/doraval
+```
+
+Ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
 
 ## Bun
 
@@ -52,15 +52,21 @@ Platform binaries target glibc. On Alpine/musl, run from source with Bun:
 bunx @hacksmith/doraval
 ```
 
-## Install the skill (for coding agents)
+## For coding agents
 
-The steps above install the `dora` CLI. To make a coding agent use it on its own, install the doraval skill:
+Agents and CI usually skip a permanent install and run the CLI on demand with `npx` (no global install, always the latest):
+
+```bash
+npx @hacksmith/doraval review . --ci
+```
+
+To make a coding agent reach for `dora` on its own, install the doraval skill:
 
 ```bash
 npx skills add saif-shines/doraval
 ```
 
-This drops the doraval skill into your agent's skill directory (`.claude/skills/`, `.codex/skills/`, `.cursor/rules/`, and the like). The agent then verifies any skill, plugin, rule, or agent config with `dora review` before reporting the work done. See [For coding agents](/for-agents/) for how the skill drives the CLI.
+This drops the doraval skill into your agent's skill directory (`.claude/skills/`, `.codex/skills/`, `.cursor/rules/`, and the like). The agent then verifies any skill, plugin, rule, or agent config with `dora review` before reporting the work done. If `dora` is not on `PATH`, the skill falls back to `npx @hacksmith/doraval`. See [For coding agents](/for-agents/) for how the skill drives the CLI.
 
 ## Verify
 
