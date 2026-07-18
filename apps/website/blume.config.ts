@@ -1,6 +1,6 @@
 import { defineConfig } from "blume";
 
-/** Exact-path redirects (Blume has no wildcards). One `from` per path — dual slash variants collide. */
+/** Exact-path redirects (Blume has no wildcards). One `from` per path; dual slash variants collide. */
 function redirs(pairs: Array<[string, string]>) {
   return pairs.map(([from, to]) => ({
     from: from.replace(/\/$/, "") || "/",
@@ -12,7 +12,7 @@ function redirs(pairs: Array<[string, string]>) {
 export default defineConfig({
   title: "doraval",
   description:
-    "Make agent context work on the first try. Context engineering for coding agents — scan, review, fix, and remember skills, plugins, and decisions across Claude, Cursor, Codex, Copilot, and Grok.",
+    "Make agent context work on the first try. Context engineering for coding agents: scan, review, fix, and remember skills, plugins, and decisions across Claude, Cursor, Codex, Copilot, and Grok.",
   content: {
     root: "content",
   },

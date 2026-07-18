@@ -1,6 +1,6 @@
 ---
 title: Make agent context work on the first try
-description: Scan, review, fix, and remember agent context so skills and plugins work on the first try — across Claude, Cursor, Codex, Copilot, and Grok.
+description: Scan, review, fix, and remember agent context so skills and plugins work on the first try, across Claude, Cursor, Codex, Copilot, and Grok.
 sidebar:
   label: Home
   order: 0
@@ -8,7 +8,7 @@ sidebar:
 
 **doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
 
-Context you cannot trust wastes a day. doraval makes the first attempt succeed — across Claude, Cursor, Codex, Copilot, and Grok.
+Context you cannot trust wastes a day. doraval makes the first attempt succeed across Claude, Cursor, Codex, Copilot, and Grok.
 
 ## First win
 
@@ -32,7 +32,7 @@ Bare `dora` scans the repo: which agents are configured, every skill's health, c
 $ dora
 
   doraval v0.6.x
-  Read-only scan of agent context — no writes, no LLM.
+  Read-only scan of agent context. No writes, no LLM.
 
   Agent surfaces
     ✓ claude    CLAUDE.md  .claude/skills
@@ -47,17 +47,17 @@ $ dora
     2. dora review --all
 ```
 
-Scan and session analysis span all five agents. Scaffolding (`dora new`) and packaging review cover Claude, Cursor, Codex, and Copilot; the LLM judge runs on a Claude or Grok CLI you already have — or any API key.
+Scan and session analysis span all five agents. Scaffolding (`dora new`) and packaging review cover Claude, Cursor, Codex, and Copilot; the LLM judge runs on a Claude or Grok CLI you already have, or any API key.
 
 ## The loop
 
-You can run these yourself — but the better default is to **let your coding agent do it**. Point Claude, Cursor, Codex, Copilot, or Grok at the repo and ask it to drive `dora` (JSON-friendly flags are built in).
+You can run these yourself, but the better default is to **let your coding agent do it**. Point Claude, Cursor, Codex, Copilot, or Grok at the repo and ask it to drive `dora` (JSON-friendly flags are built in).
 
 Paste something like:
 
 ```text
 Install doraval if needed, then run the doraval loop in this repo:
-1. dora (scan) — fix anything it suggests
+1. dora (scan): fix anything it suggests
 2. dora review . then dora fix . (use --yes for mechanical fixes)
 3. dora memory add any project principles we should keep
 Use --format json / --ci when you need machine output. Prefer dora new --for <agent> over hand-writing skill files.
@@ -74,7 +74,7 @@ dora reconcile                                # settle cross-agent contradiction
 dora memory add "Run tests before shipping skill changes" --weight 8
 ```
 
-A recorded principle is not a note — `dora review` enforces it as a rubric, and anything weighted 7+ fails as an error. Review also mines real agent sessions (Claude, Cursor, Codex, Copilot, Grok) for evidence a skill was actually used.
+A recorded principle is not a note. `dora review` enforces it as a rubric, and anything weighted 7+ fails as an error. Review also mines real agent sessions (Claude, Cursor, Codex, Copilot, Grok) for evidence a skill was actually used.
 
 Details for agents and CI: [For coding agents](/for-agents/).
 
@@ -86,12 +86,12 @@ Details for agents and CI: [For coding agents](/for-agents/).
     Full reference for scan, review, fix, new, memory, and more.
   </Card>
   <Card title="For coding agents" href="/for-agents/" icon="bot">
-    JSON mode, CI, exit codes — so your agent can run the loop.
+    JSON mode, CI, exit codes, so your agent can run the loop.
   </Card>
 </CardGroup>
 
 ## Next
 
-- [Installation](/get-started/installation/) — npm, Homebrew, Bun
-- [Quickstart](/get-started/quickstart/) — scan → new → review → fix → memory
-- [First five minutes](/first-five-minutes/scan/) — the core loop, one screen at a time
+- [Installation](/get-started/installation/): npm, Homebrew, Bun
+- [Quickstart](/get-started/quickstart/): scan → new → review → fix → memory
+- [First five minutes](/first-five-minutes/scan/): the core loop, one screen at a time

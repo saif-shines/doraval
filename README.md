@@ -1,12 +1,12 @@
 # doraval
 
-**Make agent context work on the first try.** Context engineering for coding agents — scan, review, fix, and remember skills, plugins, and decisions for yourself, your team, or your community.
+**Make agent context work on the first try.** Context engineering for coding agents. Scan, review, fix, and remember skills, plugins, and decisions for yourself, your team, or your community.
 
 **doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
 
 [Docs](https://doraval.thehacksmith.dev) · [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
 
-**The problem:** context you cannot trust until someone has already wasted a day debugging it — broken skills, silent contradictions between Claude and Cursor, decisions that vanish next session.
+**The problem:** context you cannot trust until someone has already wasted a day debugging it. Broken skills, silent contradictions between Claude and Cursor, decisions that vanish next session.
 
 **The win:** scan → review → fix → remember, so the first attempt succeeds across Claude, Cursor, Codex, Copilot, and Grok.
 
@@ -22,8 +22,8 @@ Zero config. No API key. Bare `dora` scans the repo: which agents are configured
 ```
 $ dora
 
-  doraval v0.6.1
-  Read-only scan of agent context — no writes, no LLM.
+  doraval v0.6.x
+  Read-only scan of agent context. No writes, no LLM.
 
   Agent surfaces
     ✓ claude    CLAUDE.md  .claude/skills
@@ -55,12 +55,12 @@ Scaffold with `dora new --for <agent>` (skill, rule, agent, or plugin).
 | Command | Job |
 |---|---|
 | `dora` / `scan` | Repo diagnosis: surfaces, health, contradictions, next actions |
-| `review` | Quality gate — structure → heuristics → LLM → sessions (tiers skip if unavailable) |
+| `review` | Quality gate: structure → heuristics → LLM → sessions (tiers skip if unavailable) |
 | `fix` | Apply mechanical fixes (`--yes` / `--dry-run` / `--brief` for agents) |
 | `new --for` | Scaffold skill, rule, agent, or plugin |
 | `memory` | Principles that stick; enforce in review; promote to AGENTS.md; optional git backup |
 | `reconcile` | Settle cross-agent contradictions (interactive or `--apply`) |
-| `sessions` | List / show recent agent sessions (Claude Code, Grok today) |
+| `sessions` | List / show recent agent sessions (Claude, Grok, Cursor, Codex, Copilot) |
 | `config` | Dot-notation settings (`eval.model`, …) |
 | `bump` | Semver in plugin / marketplace manifests |
 | `providers` | Packaging/spec reference (repo support → bare `dora`) |
@@ -114,5 +114,5 @@ dora --format json | jq '.summary'
 
 ## Links
 
-- [Documentation](https://doraval.thehacksmith.dev) — get started, commands, [memory](https://doraval.thehacksmith.dev/concepts/memory/)
+- [Documentation](https://doraval.thehacksmith.dev): get started, commands, [memory](https://doraval.thehacksmith.dev/concepts/memory/)
 - [npm](https://www.npmjs.com/package/@hacksmith/doraval) · [JSR](https://jsr.io/@hacksmith/doraval) · [Releases](https://github.com/saif-shines/doraval/releases)

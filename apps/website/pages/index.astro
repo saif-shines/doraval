@@ -1,6 +1,6 @@
 ---
 // Hallmark · genre: modern-minimal · macrostructure: Workbench · theme: Cobalt
-// nav: Blume's real Header (restyled via Cobalt tokens, not hand-rolled — no fake chrome)
+// nav: Blume's real Header (restyled via Cobalt tokens, not hand-rolled; no fake chrome)
 // footer: Ft2 inline · enrichment: code/terminal-hero (real `dora` output, nothing invented)
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
@@ -12,7 +12,7 @@ const { config } = data;
 const scanOutput = `$ dora
 
   doraval v0.6.x
-  Read-only scan of agent context — no writes, no LLM.
+  Read-only scan of agent context. No writes, no LLM.
 
   Agent surfaces
     ✓ claude    CLAUDE.md  .claude/skills
@@ -37,7 +37,7 @@ npm install -g @hacksmith/doraval
 dora`;
 
 const loopPrompt = `Install doraval if needed, then run the doraval loop in this repo:
-1. dora (scan) — fix anything it suggests
+1. dora (scan): fix anything it suggests
 2. dora review . then dora fix . (use --yes for mechanical fixes)
 3. dora memory add any project principles we should keep
 Use --format json / --ci when you need machine output. Prefer dora new --for <agent> over hand-writing skill files.`;
@@ -62,7 +62,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
   siteUrl={config.site}
   ogEnabled={config.og.enabled}
   page={{
-    title: `${config.title} — ${config.description}`,
+    title: `${config.title}: ${config.description}`,
     description: config.description,
     route: "/",
   }}
@@ -75,7 +75,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
         <p class="hero__lede">
           Broken skills, silent Claude-vs-Cursor contradictions, decisions that
           vanish next session. <strong>doraval</strong> scans, reviews, fixes,
-          and remembers your agent context — so the first attempt works.
+          and remembers your agent context, so the first attempt works.
         </p>
         <div class="hero__ctas">
           <a class="btn btn--primary" href="/get-started/">Get started</a>
@@ -101,7 +101,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
       <p class="home-caption">
         Scan and session analysis span all five agents. Scaffolding and
         packaging review cover Claude, Cursor, Codex, and Copilot; the LLM
-        judge runs on a Claude or Grok CLI you already have — or any API key.
+        judge runs on a Claude or Grok CLI you already have, or any API key.
       </p>
     </section>
 
@@ -111,7 +111,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
         <div class="payoff__item">
           <h3 class="payoff__title">Principles become tests</h3>
           <p class="payoff__body">
-            <code>dora memory</code> records a rule once. Review enforces it —
+            <code>dora memory</code> records a rule once. Review enforces it:
             a principle weighted 7+ fails as an <strong>error</strong>, not a
             polite warning.
           </p>
@@ -121,7 +121,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
           <p class="payoff__body">
             <code>dora reconcile</code> finds where Claude and Cursor
             contradict each other and writes the resolution into a shared
-            <code>AGENTS.md</code> — no LLM required.
+            <code>AGENTS.md</code>. No LLM required.
           </p>
         </div>
         <div class="payoff__item">
@@ -141,7 +141,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
       </h2>
       <p class="section__lede section__lede--dark">
         Point Claude, Cursor, Codex, Copilot, or Grok at the repo and paste
-        this — JSON-friendly flags are built in.
+        this. JSON-friendly flags are built in.
       </p>
       <div class="band__grid">
         <div class="code-shell">
@@ -157,7 +157,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8`;
       <div class="next__example">
         <p class="home-eyebrow">DETAILS</p>
         <p class="section__lede">
-          Full reference for scan, review, fix, new, memory, and more — plus
+          Full reference for scan, review, fix, new, memory, and more, plus
           JSON mode, CI, and exit codes for agents.
         </p>
       </div>
