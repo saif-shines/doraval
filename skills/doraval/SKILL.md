@@ -1,6 +1,6 @@
 ---
 name: doraval
-description: "Verify agent-context quality with the `dora` CLI. Use when you author or edit a skill (SKILL.md), plugin, rule, or agent config and need to check it before reporting done — and when the user asks to check, diagnose, fix, or clean up agent context across Claude, Cursor, Codex, Copilot, or Grok. Not for ordinary source-code edits."
+description: "Verify agent-context quality with the `dora` CLI. Whenever you author or edit a skill (SKILL.md), plugin, rule, or agent config, run dora to check it before reporting the work done. Also use when the user asks to check, diagnose, fix, or clean up agent context across Claude, Cursor, Codex, Copilot, or Grok. Not for ordinary source-code edits."
 ---
 
 # doraval
@@ -24,17 +24,18 @@ could not run. Treat the exit code as ground truth, not your own judgement.
 | Two agents disagree on a convention | `dora reconcile --dry-run` (then surface to user) |
 | CI or subagent (non-interactive) | add `--ci` (implies `--format json`) |
 
-## The loop — never skip the gate
+## The loop — the review gate is mandatory
 
 Always pass `--format json` when you will act on the result, so you branch on
 data, not on a human-formatted table. `<path>` throughout is the skill
 directory (the folder holding `SKILL.md`), a plugin root, or `.` for the whole
 repo.
 
-**Two entry points.** If the user asked you to *author* something new, start at
-step 1 (scan first). If you were invoked *after already editing* an artifact,
-skip to step 3 (review the path you touched) — you don't need a full repo scan
-to verify one file.
+**The gate is the review (step 3) — never skip it.** The initial scan (steps
+1–2) is optional: if the user asked you to *author* something new, start at
+step 1. If you were invoked *after already editing* an artifact, start at step 3
+and review the path you touched — you don't need a full repo scan to verify one
+file, but you always run the review.
 
 1. **Scan first.** Run `dora --format json` and read `.summary` /
    `.contradictions`. State what you found before authoring anything.
@@ -60,8 +61,8 @@ to verify one file.
    done. The gate is only passed when the tool says so.
 7. **Remember — only with user intent.** When the user states a durable rule
    they want enforced, record it: `dora memory add "<rule>" --weight <1-10>`.
-   Weight is priority (1-10, default 5): `w8` = hard rule, `w5` = default,
-   `w3` = soft preference. Weight `≥ 7` is treated as a hard constraint. To
+   Weight is priority (1-10, default 5): `≥ 7` = hard rule (enforced in review),
+   `5` = default, `≤ 3` = soft preference. To
    write those into AGENTS.md, run `dora memory promote --dry-run` to show the
    diff, then `dora memory promote --yes` — only when the user wants hard rules
    enforced repo-wide (never run bare `promote`; it prompts). Do not invent
