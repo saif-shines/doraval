@@ -2,6 +2,7 @@
 title: Installation
 description: Install doraval via npm, Homebrew, Bun, or one-shot npx/bunx.
 sidebar:
+  label: Installation
   order: 2
 ---
 
@@ -59,6 +60,11 @@ doraval --version
 dora --version
 ```
 
+## Common mistakes
+
+- Global install succeeds but `dora` is missing: ensure your npm/Bun global bin directory is on `PATH`.
+- Alpine or musl hosts: use Bun (`bunx` / `bun add -g`), not the glibc platform binary.
+
 ## Next
 
-[Quickstart](/get-started/quickstart/) — run your first scan.
+[Quickstart](/get-started/quickstart/): run your first scan.

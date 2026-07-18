@@ -17,8 +17,10 @@ export function stage(mode: ProgressMode, message: string): void {
   preflight(mode, message);
 }
 
-export function scanPreflightMessage(): string {
-  return "Read-only scan of agent context — no writes, no LLM.";
+/** Single-line form for tests / callers that still use `preflight()`. */
+export function scanPreflightMessage(dir?: string): string {
+  const where = dir ? ` (${dir})` : "";
+  return `Scanning agent context${where} — read-only, no writes, no LLM.`;
 }
 
 export function reviewPreflightMessage(opts: { quick?: boolean; deep?: boolean } = {}): string {

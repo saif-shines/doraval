@@ -1,10 +1,12 @@
 ---
 title: dora sessions
-description: List and show recent AI coding agent sessions for this project.
+description: List and show recent coding-agent sessions for this project (Claude, Grok, Cursor, Codex, Copilot).
 sidebar:
   label: sessions
   order: 7
 ---
+
+`dora sessions` lists recent agent sessions for the current project and shows a timeline for one session. It is read-only. Use it when you want human-readable history, or to understand what `dora review --sessions` mines for skill-usage evidence.
 
 ```bash
 dora sessions
@@ -12,7 +14,7 @@ dora sessions --agent claude --limit 20
 dora sessions show <id>
 ```
 
-Read-only. Adapters ship for Claude Code, Grok, Cursor, Codex, and Copilot, so sessions from every one show up here.
+Adapters ship for Claude Code, Grok, Cursor, Codex, and Copilot, so sessions from each surface appear here when logs exist on disk.
 
 ## Options (list)
 
@@ -30,7 +32,17 @@ Timeline: user turns, tool calls (names + args summary), skills invoked, token t
 dora sessions show <sessionId>
 ```
 
+## How review uses sessions
+
+The session tier of `dora review` mines these logs for mechanical evidence that a skill was actually invoked (not only that the file exists). `--sessions` requires that tier and exits `2` if no recent sessions exist.
+
+## Common mistakes
+
+- Empty list: agents write logs only after real runs; new machines or sandboxes often have none yet.
+- Treating `sessions` as a chat UI: it summarizes local logs for diagnosis, not live conversation.
+
 ## Related
 
 - [dora review](/commands/review/): the session tier mines these logs for real usage evidence
+- [Review tiers](/concepts/review-tiers/)
 - [For coding agents](/for-agents/)

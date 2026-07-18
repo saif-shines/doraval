@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import pc from "picocolors";
 import { runScan, type ScanResult } from "../../core/scan.js";
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
-import { preflight, scanPreflightMessage } from "../preflight.js";
+import { shouldEmitProgress } from "../preflight.js";
 import { exit } from "../render/exit.js";
 
 function renderHuman(r: ScanResult): void {
@@ -99,9 +99,15 @@ export default defineCommand({
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
-    preflight(mode, scanPreflightMessage());
+    const dir = (args.cwd as string) || process.cwd();
+    // Prominent "about to do" (JSON/CI stay silent). No ui.arrow — use → via info.
+    if (shouldEmitProgress(mode)) {
+      ui.blank();
+      ui.info(`  → dora scan  ${pc.dim(dir)}`);
+      ui.dim("  Reading agent surfaces, skill health, contradictions — read-only, no writes, no LLM.");
+    }
     try {
-      const result = await runScan((args.cwd as string) || process.cwd());
+      const result = await runScan(dir);
       if (mode.format === "json") outJson(result);
       else renderHuman(result);
       const hasConflicts = result.contradictions.some((c) => c.severity === "conflict");

@@ -1,10 +1,12 @@
 ---
 title: dora new
-description: Scaffold a skill, rule, agent, or plugin for a coding agent.
+description: Scaffold a skill, rule, agent, or plugin for Claude, Cursor, Codex, or Copilot.
 sidebar:
   label: new
   order: 4
 ---
+
+`dora new` scaffolds context files so you do not hand-write manifests. Use it when adding a skill, rule, subagent role, or plugin package. Prefer interactive mode the first time; use flags for agents and CI.
 
 ```bash
 dora new [TYPE] [NAME]
@@ -23,22 +25,40 @@ dora new [TYPE] [NAME]
 | --- | --- |
 | `-f, --for <agent>` | `claude` \| `cursor` \| `codex` \| `copilot` |
 | `-d, --description <text>` | Short description |
-| `--intent <intent>` | `self` \| `self-later` \| `distribute` |
+| `--intent <intent>` | `self` \| `self-later` \| `distribute` (who the scaffold is for) |
 | `--native` | Scaffold the agent's native format (not plugin packaging) |
 | `-y, --yes` | Skip interactive prompts |
 | `--format` / `--ci` / `--cwd` | Shared global flags |
+
+## Intent and native
+
+| Flag | When to use |
+| --- | --- |
+| `--intent self` | Personal project context you will use now |
+| `--intent self-later` | Stash layout for a future setup |
+| `--intent distribute` | Something you plan to publish or share |
+| `--native` | Agent-local layout only; skip plugin/marketplace packaging |
+
+Use `dora new --for <agent>`. There is no separate `dora claude new` or `dora cursor new` path.
 
 ## Examples
 
 ```bash
 dora new
 dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new rule --for cursor --name no-default-exports --yes
 dora new plugin --for claude --name my-plugin --yes
+dora new skill --for claude --name deploy --intent distribute --yes
 ```
 
-Use `dora new --for <agent>` — there is no separate `dora claude new` / `dora cursor new` path.
+## Common mistakes
+
+- Scaffolding without `--for`: interactive mode asks; non-interactive needs the agent.
+- Skipping review after scaffold: always run `dora review` (or at least `dora`) on the new path.
+- Hand-writing multi-agent copies: scaffold once per agent with `--for`, then `dora reconcile` if shared rules conflict.
 
 ## Related
 
 - [First five minutes: new](/first-five-minutes/new/)
-- [dora providers](/commands/providers/) (packaging/spec reference only)
+- [dora providers](/commands/providers/) (packaging and spec reference only)
+- [dora review](/commands/review/)

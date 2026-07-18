@@ -1,17 +1,27 @@
 ---
 title: dora scan
-description: Scan the repo for agent surfaces, skill health, contradictions, and next actions.
+description: Diagnose agent surfaces, skill health, contradictions, and next actions. No writes, no API key.
 sidebar:
   label: scan
   order: 1
 ---
+
+`dora` (alias: `dora scan`) is the default entrypoint. It is a read-only diagnosis of agent context in the current directory (or `--cwd`). Use it first on any repo, or after scaffolding, to see what is configured and what to run next.
 
 ```bash
 dora
 dora scan
 ```
 
-Default entrypoint. Read-only diagnosis of agent context in the current (or `--cwd`) directory.
+## What you get
+
+| Section | Meaning |
+| --- | --- |
+| Agent surfaces | Which agents look configured (`CLAUDE.md`, skill dirs, and so on) |
+| Health | Skill and manifest issues with short reasons |
+| Next | Numbered follow-up commands (`dora fix …`, `dora review …`) |
+
+No writes. No LLM. No API key.
 
 ## Options
 
@@ -35,6 +45,11 @@ Default entrypoint. Read-only diagnosis of agent context in the current (or `--c
 dora --format json | jq '.summary'
 dora --ci --cwd "$GITHUB_WORKSPACE"
 ```
+
+## Common mistakes
+
+- Expecting `scan` to fix anything: it only reports. Use `dora fix` or `dora review` next.
+- Confusing surfaces with packaging: “what this repo uses” is `dora`; packaging layout is `dora providers`.
 
 ## Related
 

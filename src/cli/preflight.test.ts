@@ -19,8 +19,15 @@ describe("shouldEmitProgress", () => {
 describe("message builders", () => {
   test("scan is read-only, no LLM", () => {
     const m = scanPreflightMessage();
-    expect(m).toContain("Read-only");
+    expect(m).toContain("Scanning agent context");
     expect(m.toLowerCase()).toContain("no llm");
+    expect(m.toLowerCase()).toMatch(/read-only|no writes/);
+  });
+
+  test("scan message names target dir when given", () => {
+    const m = scanPreflightMessage("/tmp/my-proj");
+    expect(m).toContain("/tmp/my-proj");
+    expect(m).toContain("Scanning agent context");
   });
 
   test("review quick excludes LLM", () => {

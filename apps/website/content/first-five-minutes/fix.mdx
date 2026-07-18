@@ -2,10 +2,11 @@
 title: Fix
 description: Apply mechanical fixes with diffs first; always asks before writing.
 sidebar:
+  label: Fix
   order: 2
 ---
 
-When the scan (or review) lists auto-fixable issues:
+When the scan (or review) lists auto-fixable issues, apply them with `dora fix`. Diffs always come first; nothing is written until you approve (unless you pass `--yes`).
 
 ```bash
 dora fix

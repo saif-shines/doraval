@@ -6,6 +6,8 @@ sidebar:
   order: 9
 ---
 
+`dora bump` updates semantic versions in plugin and marketplace manifests. Use it when shipping a packaged skill or marketplace entry for Claude, Codex, Cursor, or Copilot.
+
 ```bash
 dora bump
 dora bump patch
@@ -21,7 +23,10 @@ dora bump --only plugin
 | `--only all\|plugin\|marketplace` | Scope (default `all`) |
 | `--yes` | Skip confirmation in interactive mode |
 
-Supports Claude, Codex, Cursor, and Copilot packaging layouts.
+## Common mistakes
+
+- Bumping the wrong root: pass the plugin or marketplace directory, not a random monorepo path.
+- Skipping review before ship: run `dora review` on the package path before tagging.
 
 ## Related
 

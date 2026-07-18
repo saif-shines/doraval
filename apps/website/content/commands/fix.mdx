@@ -1,16 +1,23 @@
 ---
 title: dora fix
-description: Auto-fix review findings — mechanical diffs first; judgment items for your agent.
+description: Apply mechanical fixes from scan and review. Diffs first; judgment items stay for your agent.
 sidebar:
   label: fix
   order: 3
 ---
 
+`dora fix` applies mechanical fixes from scan and review findings. It always shows diffs and asks before writing unless you pass `--yes`. Use it after `dora` or `dora review` when the report lists auto-fixable issues.
+
 ```bash
 dora fix [PATH]
 ```
 
-Applies mechanical fixes from scan/review findings. Always shows diffs; asks before writing unless `--yes`.
+## Mechanical vs judgment
+
+| Kind | Examples | What `fix` does |
+| --- | --- | --- |
+| Mechanical | Missing frontmatter fields, path mismatches, renames | Shows a unified diff; applies on approval |
+| Judgment | Vague descriptions, missing guardrails | Does not auto-write. Use `--brief` for an agent-ready prompt, then re-run `dora review` |
 
 ## Options
 
@@ -32,6 +39,11 @@ dora fix --dry-run
 dora fix --yes
 dora fix --brief
 ```
+
+## Common mistakes
+
+- Running `fix` with no prior scan/review: there may be nothing to apply. Run `dora` or `dora review` first.
+- Expecting judgment items to rewrite themselves: use `--brief` and your coding agent, then re-review.
 
 ## Related
 

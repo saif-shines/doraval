@@ -1,23 +1,27 @@
 ---
 title: dora providers
-description: Packaging/spec reference for supported agents — not this-repo support.
+description: Packaging and spec matrix for supported agents (not which agents this repo uses).
 sidebar:
   label: providers
   order: 10
 ---
+
+`dora providers` prints a static packaging and spec matrix: manifest paths, marketplace layout, and MCP filename per agent. Use it when scaffolding or shipping packages, not when diagnosing the current repo.
 
 ```bash
 dora providers
 dora providers --json
 ```
 
-Static packaging/spec matrix: manifest paths, marketplace layout, MCP filename per agent.
-
-**Not** “which agents does this repo use?” — that is bare [`dora`](/commands/scan/) (Agent surfaces).
+**Not** “which agents does this repo use?” That is bare [`dora`](/commands/scan/) (Agent surfaces).
 
 Scaffold with `dora new --for <agent>`.
 
+## Common mistakes
+
+- Using `providers` instead of `dora` to see local configuration: wrong tool for repo diagnosis.
+
 ## Related
 
-- [dora](/commands/scan/) — repo-relative agent surfaces
+- [dora scan](/commands/scan/) (repo-relative agent surfaces)
 - [dora new](/commands/new/)

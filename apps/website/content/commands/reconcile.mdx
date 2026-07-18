@@ -1,10 +1,12 @@
 ---
 title: dora reconcile
-description: Settle cross-agent contradictions — shared AGENTS.md, strip conflicts.
+description: Settle cross-agent contradictions into shared AGENTS.md and strip conflicting copies.
 sidebar:
   label: reconcile
   order: 6
 ---
+
+`dora reconcile` settles contradictions between agent-specific context (for example Claude vs Cursor rules that disagree). Use it when `dora` reports cross-agent conflicts, or when the same policy exists in multiple agent files with different wording.
 
 ```bash
 dora reconcile
@@ -13,6 +15,10 @@ dora reconcile --apply
 dora reconcile --apply --yes
 ```
 
+Interactive by default: review each contradiction and choose how to resolve it. Resolutions typically land shared truth in `AGENTS.md` and strip or align the conflicting agent copies.
+
+## Options
+
 | Flag | Meaning |
 | --- | --- |
 | `--apply` | Non-interactive: take each recommended resolution |
@@ -20,9 +26,21 @@ dora reconcile --apply --yes
 | `--yes` | Skip final confirmation when applying |
 | `--format` / `--cwd` | Shared flags |
 
-Interactive by default: review each contradiction and choose how to resolve it.
+## Workflow
+
+1. Run `dora` and note cross-agent contradiction findings.
+2. Preview with `dora reconcile --dry-run`.
+3. Resolve interactively (`dora reconcile`) or apply recommendations (`dora reconcile --apply`).
+4. Re-run `dora` or `dora review` to confirm the conflict is gone.
+
+## Common mistakes
+
+- Applying without a dry-run on a large monorepo: always inspect planned edits first.
+- Reconciling instead of deleting dead agent surfaces: if an agent is unused, remove its config rather than merging stale rules.
+- Expecting reconcile to invent policy: it resolves conflicts; you still choose or accept the recommended shared wording.
 
 ## Related
 
 - [dora scan](/commands/scan/)
 - [dora memory](/commands/memory/)
+- [Memory concept](/concepts/memory/)

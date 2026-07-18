@@ -1,30 +1,31 @@
 ---
 title: Review tiers
-description: How dora review grades artifacts — structure, heuristics, LLM, sessions.
+description: How dora review grades artifacts: structure, heuristics, LLM, sessions.
 sidebar:
+  label: Review tiers
   order: 2
 ---
 
 `dora review` runs every tier that can run. Flags force or skip tiers when you need a fixed bar (CI vs deep judgment).
 
-## Tier 1 — Structure
+## Tier 1: Structure
 
 Parseable files, required fields, name/dir consistency, basic schema. Fast. Always available. `--quick` includes this tier.
 
-## Tier 2 — Heuristics
+## Tier 2: Heuristics
 
 Dead file references, duplicate rules, keyword-level violations of [memory](/concepts/memory/) principles, packaging smells, and `scripts/` security smells (outbound network calls, secret prompts). A violated principle weighted **7+** is an error, not a warning. Still no network / LLM. Included in `--quick`.
 
-## Tier 3 — LLM
+## Tier 3: LLM
 
 Judgment when a judge is available. Vague descriptions, missing guardrails, scenario coverage against [scenarios.yaml](/reference/scenarios/).
 
 A judge is either a **CLI you already have** (`claude` or `grok` on PATH, using the subscription you already pay for) or an **API key** for an LLM provider (`dora config` / env). CLI is preferred; API is the fallback.
 
-- Default: run if available, skip if not  
-- `--deep`: **require** this tier; exit `2` if no judge  
+- Default: run if available, skip if not
+- `--deep`: **require** this tier; exit `2` if no judge
 
-## Tier 4 — Sessions
+## Tier 4: Sessions
 
 Mines real agent session logs for mechanical evidence a skill was actually invoked. Adapters ship for Claude, Grok, Cursor, Codex, and Copilot. `--sessions` requires this tier and exits `2` if no recent sessions exist.
 

@@ -1,18 +1,18 @@
 ---
 title: dora memory
-description: Project principles — capture, enforce in review, promote to AGENTS.md.
+description: Capture project principles, enforce them in review, and promote hard rules to AGENTS.md.
 sidebar:
   label: memory
   order: 5
 ---
 
+`dora memory` stores short, weighted principles that survive sessions. Review treats them as a rubric. Optional promote writes hard rules into `AGENTS.md`. Optional sync backs up to a private git repo. Memory is the only durable path; the old journal command is gone.
+
 ```bash
 dora memory <subcommand>
 ```
 
-Local project principles that stick across sessions. Review treats them as a rubric. Optional promote writes hard rules into `AGENTS.md`. Optional sync backs up to a private git repo.
-
-> Memory replaced the old journal command. The first `dora memory` run migrates legacy journal entries once when present.
+> The first `dora memory` run migrates legacy journal entries once when present.
 
 ## add
 
@@ -29,7 +29,7 @@ dora memory add "Prefer named exports" --global
 | `--global` | Global memory (shared across projects) |
 | `--body <text>` | Rationale / detail |
 
-Title is required, short imperative (≤ 80 chars).
+Title is required: short imperative, ≤ 80 characters.
 
 ## list
 
@@ -54,7 +54,7 @@ dora memory context --append-to CLAUDE.md
 | `--full` | Full principle body |
 | `--json` | Claude SessionStart hook JSON (`hookSpecificOutput.additionalContext`) |
 | `--quiet` | Omit plain text when empty (still emits JSON with `--json`) |
-| `--append-to <file>` | Append/update a managed section in that file |
+| `--append-to <file>` | Append or update a managed section in that file |
 
 ## promote
 
@@ -64,7 +64,7 @@ dora memory promote --weight 7 --dry-run
 dora memory promote --yes
 ```
 
-Writes high-weight principles into `AGENTS.md` (diff + confirm unless `--yes`).
+Writes high-weight principles into `AGENTS.md` (diff + confirm unless `--yes`). Default promote threshold is weight 7+.
 
 ## stash / restore
 
@@ -83,7 +83,13 @@ dora memory sync
 dora memory sync --repo owner/dora-memory
 ```
 
-First run creates/clones the private backup repo; later runs commit + pull --rebase + push.
+First run creates or clones the private backup repo; later runs commit, pull --rebase, and push.
+
+## Common mistakes
+
+- Treating memory like a notes app: write imperative principles review can enforce, not long essays.
+- Forgetting weight: soft preferences (1–3) rarely fail review; hard rules need 7+.
+- Leaving SessionStart hooks on the old journal path: switch to `dora memory context --json`.
 
 ## Related
 

@@ -19,7 +19,7 @@ npx @hacksmith/doraval
 
 Zero config. No API key. Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions, and the exact next command to run.
 
-```
+```text
 $ dora
 
   doraval v0.6.x
