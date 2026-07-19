@@ -1,0 +1,394 @@
+---
+title: Command reference
+description: All dora commands — flags, exit codes, and common mistakes on one page.
+sidebar:
+  label: Command reference
+  order: 1
+---
+
+Single page for every `dora` / `doraval` command. Prefer **[Audit](/get-started/audit/)** or **[Quickstart](/get-started/quickstart/)** if you want a tutorial.
+
+**Aliases:** `dora` and `doraval` are the same binary. One-shot: `npx @hacksmith/doraval …`.
+
+## Contents
+
+- [Global flags](#global-flags)
+- [scan](#scan) · [review](#review) · [fix](#fix) · [new](#new) · [memory](#memory)
+- [reconcile](#reconcile) · [sessions](#sessions) · [config](#config)
+- [bump](#bump) · [providers](#providers) · [update](#update) · [completions](#completions)
+
+## Global flags
+
+These work on most commands:
+
+| Flag | Meaning |
+| --- | --- |
+| `--format table\|json` | Human table or machine JSON |
+| `--ci` | Machine mode (implies `--format json`) |
+| `--cwd <path>` | Working directory |
+
+### Exit codes (typical)
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Clean / success |
+| `1` | Issues found |
+| `2` | Could not run |
+
+---
+
+## scan
+
+`dora` (alias: `dora scan`) is the default entrypoint. Read-only diagnosis of agent context in the current directory (or `--cwd`). No writes, no LLM, no API key.
+
+```bash
+dora
+dora scan
+```
+
+| Section | Meaning |
+| --- | --- |
+| Agent surfaces | Which agents look configured (`CLAUDE.md`, skill dirs, …) |
+| Health | Skill and manifest issues with short reasons |
+| Next | Numbered follow-ups (`dora fix …`, `dora review …`) |
+
+| Flag | Meaning |
+| --- | --- |
+| `--format table\|json` | Output format (default `table`) |
+| `--ci` | Machine mode (implies JSON) |
+| `--cwd <path>` | Directory to scan |
+
+```bash
+dora --format json | jq '.summary'
+dora --ci --cwd "$GITHUB_WORKSPACE"
+```
+
+**Mistakes:** scan only reports — use `fix` / `review` next. “What this repo uses” is `dora`; packaging layout is [`providers`](#providers).
+
+---
+
+## review
+
+`dora review` grades skills, memory principles, and related artifacts. Tiers that can run do run; LLM and sessions skip when unavailable unless required.
+
+```bash
+dora review [PATH]
+```
+
+`PATH` is a skill directory or project root (default `.`).
+
+**Tiers:** (1) structure · (2) heuristics · (3) LLM · (4) sessions. Details: [Review tiers](/concepts/review-tiers/).
+
+Memory principles apply as a rubric. Weight **7+** violations are errors. [Memory](/concepts/memory/).
+
+| Flag | Meaning |
+| --- | --- |
+| `--quick` | Tiers 1–2 only (no LLM) |
+| `--deep` | Require LLM tier; exit `2` if no judge |
+| `--sessions` | Require session-evidence tier; exit `2` if no recent sessions |
+| `--all` | Review every artifact under the path |
+| `--fail-on error\|warning` | Exit `1` trigger (default `error`) |
+| `--format` / `--ci` / `--cwd` | Shared globals |
+
+```bash
+dora review ./skills/deploy
+dora review --quick .
+dora review --deep ./skills/deploy
+dora review --all --quick --ci
+dora review CLAUDE.md
+```
+
+**Mistakes:** `--deep` without a judge → exit `2` (use `--quick` in CI). Skipped LLM tier ≠ full pass — configure a judge with [`config`](#config). Review does not rewrite files — use [`fix`](#fix).
+
+---
+
+## fix
+
+`dora fix` applies mechanical fixes from scan/review. Diffs first; asks before write unless `--yes`.
+
+```bash
+dora fix [PATH]
+```
+
+| Kind | Examples | Behavior |
+| --- | --- | --- |
+| Mechanical | Frontmatter, paths, renames | Unified diff; apply on approval |
+| Judgment | Vague descriptions, guardrails | Not auto-written; use `--brief` |
+
+| Flag | Meaning |
+| --- | --- |
+| `--yes` | Pre-approve (agents / CI) |
+| `--dry-run` | Show diffs; write nothing |
+| `--brief` | Agent-ready prompt for judgment items |
+| `--format` / `--ci` / `--cwd` | Shared globals |
+
+```bash
+dora fix
+dora fix ./skills/deploy
+dora fix --dry-run
+dora fix --yes
+dora fix --brief
+```
+
+**Mistakes:** run `dora` or `review` first. Judgment items need `--brief` + hand edit, then re-review.
+
+---
+
+## new
+
+`dora new` scaffolds a skill, rule, agent, or plugin. Prefer interactive once; flags for agents/CI.
+
+```bash
+dora new [TYPE] [NAME]
+```
+
+| Type | Meaning |
+| --- | --- |
+| `skill` | Reusable `SKILL.md` |
+| `rule` | Always-on convention |
+| `agent` | Subagent role |
+| `plugin` | Package to ship |
+
+| Flag | Meaning |
+| --- | --- |
+| `-f, --for <agent>` | `claude` \| `cursor` \| `codex` \| `copilot` |
+| `-d, --description <text>` | Short description |
+| `--intent self\|self-later\|distribute` | Who the scaffold is for |
+| `--native` | Agent-local layout only |
+| `-y, --yes` | Skip prompts |
+| `--format` / `--ci` / `--cwd` | Shared globals |
+
+```bash
+dora new
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new rule --for cursor --name no-default-exports --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+No separate `dora claude new` path — always `--for <agent>`. Review the new path after scaffold.
+
+---
+
+## memory
+
+`dora memory` stores short, weighted principles. Review uses them as a rubric. Optional promote → `AGENTS.md`. Optional sync → private git backup. Old journal is gone (first run migrates once).
+
+```bash
+dora memory <subcommand>
+```
+
+### memory add
+
+```bash
+dora memory add "Never use default exports" --weight 8
+dora memory add "Run bun test before commit" --tags style,ci --body "CI fails otherwise"
+dora memory add "Prefer named exports" --global
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--weight 1–10` | Default `5`. **8+** hard · **5** default · **1–3** soft |
+| `--tags <csv>` | Tags |
+| `--global` | Shared across projects |
+| `--body <text>` | Rationale |
+
+Title: short imperative, ≤ 80 characters.
+
+### memory list
+
+```bash
+dora memory list
+dora memory list --format json
+```
+
+### memory context
+
+```bash
+dora memory context
+dora memory context --full
+dora memory context --json --quiet
+dora memory context --append-to CLAUDE.md
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--full` | Full body |
+| `--json` | SessionStart hook JSON |
+| `--quiet` | Quiet when empty |
+| `--append-to <file>` | Managed section in a file |
+
+### memory promote
+
+```bash
+dora memory promote
+dora memory promote --weight 7 --dry-run
+dora memory promote --yes
+```
+
+Default promote threshold weight 7+.
+
+### memory stash / restore
+
+```bash
+dora memory stash path/to/notes.md
+dora memory restore path/to/notes.md
+dora memory restore --dry-run
+```
+
+### memory sync
+
+```bash
+dora memory sync
+dora memory sync --repo owner/dora-memory
+```
+
+**Mistakes:** write enforceable principles, not essays. Soft weights rarely fail review. Update SessionStart hooks to `dora memory context --json`. Concept: [Memory](/concepts/memory/).
+
+---
+
+## reconcile
+
+Settles cross-agent contradictions (e.g. Claude vs Cursor) into shared `AGENTS.md`.
+
+```bash
+dora reconcile
+dora reconcile --dry-run
+dora reconcile --apply
+dora reconcile --apply --yes
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--apply` | Non-interactive recommended resolutions |
+| `--dry-run` | Plan only |
+| `--yes` | Skip final confirm when applying |
+| `--format` / `--cwd` | Shared globals |
+
+Workflow: `dora` → `reconcile --dry-run` → apply → re-scan/review.
+
+**Mistakes:** always dry-run large monorepos first. Unused agent surfaces should be removed, not merged. Reconcile resolves conflicts — it does not invent policy.
+
+---
+
+## sessions
+
+Lists recent agent sessions for this project; `show` prints a timeline. Read-only.
+
+```bash
+dora sessions
+dora sessions --agent claude --limit 20
+dora sessions show <sessionId>
+```
+
+Adapters: Claude Code, Grok, Cursor, Codex, Copilot (when logs exist on disk).
+
+| Flag (list) | Meaning |
+| --- | --- |
+| `--agent <name>` | Filter |
+| `--limit <n>` | Max per agent (default `10`) |
+| `--format` / `--ci` | Machine output |
+
+`dora review --sessions` mines these logs for skill-usage evidence; requires recent sessions or exit `2`.
+
+**Mistakes:** empty list is normal on new machines. Not a live chat UI.
+
+---
+
+## config
+
+Reads and writes doraval settings (judge, model, agent command).
+
+```bash
+dora config                 # interactive hub (TTY)
+dora config setup           # judge wizard
+dora config get
+dora config get eval.model
+dora config set eval.model gpt-4.1
+dora config set eval.judge auto
+```
+
+Common keys: `eval.model`, `eval.provider`, `eval.judge`, `agent.command`. Human `get` masks secrets; use `--format json` for raw values.
+
+**Mistakes:** `--deep` needs a judge (`config setup`). Do not paste API keys into chat logs.
+
+---
+
+## bump
+
+Semver for plugin / marketplace manifests.
+
+```bash
+dora bump
+dora bump patch
+dora bump minor ./plugins
+dora bump 1.2.3 --yes
+dora bump --only plugin
+```
+
+| Arg / flag | Meaning |
+| --- | --- |
+| `TYPE` | `patch` \| `minor` \| `major` \| `x.y.z` |
+| `PATH` | Plugin or marketplace root |
+| `--only all\|plugin\|marketplace` | Scope |
+| `--yes` | Skip confirm |
+
+**Mistakes:** pass the package root, not a random monorepo path. Review before ship.
+
+---
+
+## providers
+
+Static packaging/spec matrix (manifest paths, marketplace, MCP filename). **Not** “which agents this repo uses” — that is [`scan`](#scan).
+
+```bash
+dora providers
+dora providers --json
+```
+
+Scaffold with `dora new --for <agent>`.
+
+---
+
+## update
+
+Self-update doraval.
+
+```bash
+dora update
+dora update --check
+dora update --yes
+dora update --via npm
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--check` | Check only |
+| `--yes` | Skip confirm |
+| `--via homebrew\|npm\|bun` | Force channel |
+
+See [Installation](/get-started/installation/).
+
+---
+
+## completions
+
+Shell tab completion (install plumbing, not a product subcommand). No `dora completion` command.
+
+```bash
+dora --completion bash
+dora --completion zsh
+dora --completion fish
+```
+
+Wire the printed script into your shell’s completion directory or rc file.
+
+---
+
+## See also
+
+- [Audit my agent context](/get-started/audit/)
+- [Quickstart](/get-started/quickstart/)
+- [Use with your agent](/for-agents/)
+- [Review tiers](/concepts/review-tiers/)
+- [Memory](/concepts/memory/)
+- [scenarios.yaml](/reference/scenarios/)
