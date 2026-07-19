@@ -1,0 +1,65 @@
+---
+title: Audit my agent context
+description: Install the doraval skill, then run dora review — the short path to check skills, rules, and plugins.
+sidebar:
+  label: Audit my agent context
+  order: 2
+---
+
+**Outcome:** your coding agent has the doraval skill, and you have run a real review on this project.
+
+## 1. Install the doraval skill
+
+```bash
+npx skills add saif-shines/doraval
+```
+
+This installs the skill into your agent’s skill directory. After this, the agent can load the doraval checklist when you edit skills, plugins, rules, or agent config.
+
+## 2. Review with dora
+
+Same engine the skill uses. No permanent install required:
+
+```bash
+# whole project
+npx @hacksmith/doraval review .
+
+# one skill directory (folder that contains SKILL.md)
+npx @hacksmith/doraval review ./path/to/my-skill
+
+# machine-readable (agents / CI)
+npx @hacksmith/doraval review . --format json
+```
+
+If `dora` is already on PATH (after [Installation](/get-started/installation/)):
+
+```bash
+dora review .
+dora review ./path/to/my-skill --format json
+```
+
+## 3. Read the exit code
+
+| Code | Meaning | What you do |
+| --- | --- | --- |
+| `0` | Clean | Done for this pass |
+| `1` | Issues found | Fix, then re-run review |
+| `2` | Could not run | Fix the blocker (e.g. missing judge for `--deep`) |
+
+**Do not treat the work as finished while the code is `1` or `2`.**
+
+## 4. Fix mechanical issues (if any)
+
+```bash
+npx @hacksmith/doraval fix . --dry-run
+npx @hacksmith/doraval fix . --yes
+npx @hacksmith/doraval review .
+```
+
+Judgment items (vague copy, missing guardrails) need a hand edit — `fix --brief` prints a prompt for your agent.
+
+## Done
+
+You installed the skill and ran a review. For the full tour (scan, scaffold, memory, reconcile, permanent CLI install), use **[Quickstart](/get-started/quickstart/)**.
+
+Agent JSON flags and CI: [Use with your agent](/for-agents/).

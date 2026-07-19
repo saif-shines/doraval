@@ -1,59 +1,219 @@
 ---
 title: Quickstart
-description: Run dora on this repo — surfaces, health, next actions — in under two minutes.
+description: End-to-end tutorial — install the skill, install the CLI, scan, review, fix, scaffold, and remember principles.
 sidebar:
   label: Quickstart
   order: 3
 ---
 
-After **step 1** ([install the skill](/get-started/installation/)):
+**Outcome:** doraval skill installed, `dora` available, project scanned and reviewed, and you know the main commands.
+
+Short path only (skill + review)? Use **[Audit my agent context](/get-started/audit/)** instead.
+
+## What you will do
+
+1. Install the doraval skill  
+2. Install the CLI (or keep using `npx`)  
+3. Scan the project  
+4. Review and fix  
+5. Scaffold new context (optional)  
+6. Record a principle (optional)  
+
+**Time:** about 10–15 minutes. **Needs:** Node (for `npx`), a project with or without agent files.
+
+---
+
+## 1. Install the doraval skill
 
 ```bash
 npx skills add saif-shines/doraval
 ```
 
-Check agent context on **this project** — skills, rules, surfaces, next fixes:
+Agents load this checklist when you edit skills, plugins, rules, or agent config. The skill runs the same `dora` engine you use by hand (or `npx @hacksmith/doraval` if `dora` is not on PATH).
+
+<details>
+<summary>What if npx skills add fails?</summary>
+
+- Need network and a current Node  
+- Retry: `npx skills add saif-shines/doraval`  
+- List installed skills: `npx skills list`  
+</details>
+
+---
+
+## 2. Put the CLI on PATH (or use npx)
+
+**One-shot (no install):**
 
 ```bash
-npx @hacksmith/doraval
-# same as: dora   (after npm / brew / bun install)
+npx @hacksmith/doraval --version
 ```
 
-## What you get
+**Permanent (pick one):**
 
-Bare `dora` is read-only. No API key. No writes.
+```bash
+# macOS
+brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
 
-1. **Agent surfaces** — which agents look configured  
-2. **Health** — skill / manifest issues with short reasons  
-3. **Next** — numbered follow-ups (`dora fix …`, `dora review …`)
+# npm
+npm install -g @hacksmith/doraval
+
+# Bun
+bun add -g @hacksmith/doraval
+```
+
+After install, `dora` and `doraval` are the same binary. Verify:
+
+```bash
+dora --version
+```
+
+<details>
+<summary>PATH / Alpine notes</summary>
+
+- Global install but `dora` not found: add your npm/Bun global bin directory to `PATH`  
+- Alpine/musl: use Bun (`bunx` / `bun add -g`); platform binaries target glibc  
+</details>
+
+Full matrix: [Installation](/get-started/installation/).
+
+---
+
+## 3. Scan the project
+
+```bash
+dora
+# same as: dora scan
+# or: npx @hacksmith/doraval
+```
+
+**Read-only.** No API key. You get:
+
+| Section | Meaning |
+| --- | --- |
+| Agent surfaces | Which agents look configured |
+| Health | Skill / manifest issues |
+| Next | Numbered follow-ups (`dora fix …`, `dora review …`) |
+
+```bash
+dora --format json    # for agents / scripts
+dora --ci             # implies JSON
+```
+
+---
+
+## 4. Review quality
+
+```bash
+dora review .
+dora review ./path/to/skill-dir
+dora review --all
+dora review --quick .              # structure + heuristics only
+dora review --all --quick --ci     # CI gate, no LLM
+```
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Clean |
+| `1` | Issues found |
+| `2` | Could not run |
+
+Tiers (structure → heuristics → LLM → sessions): [Review tiers](/concepts/review-tiers/).
+
+---
+
+## 5. Fix mechanical issues
+
+```bash
+dora fix .
+dora fix --dry-run
+dora fix --yes                 # agents / CI (no TTY prompt)
+dora fix --brief               # prompt for judgment items
+```
+
+| Kind | Examples | Behavior |
+| --- | --- | --- |
+| Mechanical | Frontmatter, paths | Diff first; apply on approval or `--yes` |
+| Judgment | Vague descriptions | Not auto-written; use `--brief` then re-review |
+
+Re-run `dora review .` until exit `0`.
+
+---
+
+## 6. Scaffold new context (optional)
+
+```bash
+dora new
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new rule --for cursor --name no-default-exports --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+| Type | Meaning |
+| --- | --- |
+| `skill` | Reusable `SKILL.md` |
+| `rule` | Always-on convention |
+| `agent` | Subagent role |
+| `plugin` | Package to ship |
+
+Always pass `--for <agent>` for non-interactive runs. Then `dora review` the new path.
+
+---
+
+## 7. Record a principle (optional)
+
+```bash
+dora memory add "Never use default exports" --weight 8
+dora memory list
+dora memory promote              # hard rules → AGENTS.md (diff + confirm)
+dora memory context --json --quiet   # SessionStart hooks
+```
+
+Weights: **8+** hard rule · **5** default · **1–3** soft. [Memory concept](/concepts/memory/).
+
+---
+
+## 8. Cross-agent conflicts (when scan reports them)
+
+```bash
+dora reconcile --dry-run
+dora reconcile
+# or: dora reconcile --apply --yes
+```
+
+Settles contradictions into shared `AGENTS.md`. [dora reconcile](/commands/reconcile/).
+
+---
+
+## Use with your agent
+
+After step 1, paste or rely on the skill:
 
 ```text
-$ dora
-
-  Health
-    ✓ .claude/skills/review    valid
-    ✗ .claude/skills/deploy    Missing "description"
-
-  Next
-    1. dora fix .claude/skills/deploy
-    2. dora review --all
+Review my agent context with dora (npx @hacksmith/doraval). Fix mechanical issues with --yes. Do not report done until review exits 0.
 ```
 
-## Optional next steps
+JSON, exit codes, CI examples: [Use with your agent](/for-agents/).
 
-Only if the scan (or your work) needs them:
+---
 
-| Goal | Command |
+## Command map
+
+| Job | Command |
 | --- | --- |
-| Apply mechanical fixes | `dora fix .` (diffs first; `--yes` for agents/CI) |
-| Grade a skill or the repo | `dora review .` · CI: `dora review --all --quick --ci` |
-| Scaffold a skill / rule / plugin | `dora new` or `dora new skill --for claude --name … --yes` |
-| Keep a principle | `dora memory add "…" --weight 8` |
+| Scan project | `dora` |
+| Review | `dora review` |
+| Fix | `dora fix` |
+| Scaffold | `dora new --for …` |
+| Principles | `dora memory` |
+| Conflicts | `dora reconcile` |
+| Sessions | `dora sessions` |
+| Config / judge | `dora config` |
 
-Full tables: [Command reference](/commands/scan/). JSON and CI: [Use with your agent](/for-agents/).
+Full flags: [Command reference](/commands/scan/).
 
 ## Next
 
-- **[Use with your agent](/for-agents/)** — `npx skills add saif-shines/doraval` when you want automation  
-- **[Install dora](/get-started/installation/)** — put `dora` on PATH  
-- **[First five minutes: scan](/first-five-minutes/scan/)** — main commands, one screen at a time  
+- **[Audit my agent context](/get-started/audit/)** — short skill + review path only  
+- **[Use with your agent](/for-agents/)** — automation details  
+- **[First five minutes](/first-five-minutes/)** — one-command deep dives  

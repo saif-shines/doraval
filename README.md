@@ -4,7 +4,7 @@
 
 **doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` CLI runs on your project; your agent can run the same checks when you want automation.
 
-[Docs](https://doraval.thehacksmith.dev) · [Use with your agent](https://doraval.thehacksmith.dev/for-agents/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
+[Docs](https://doraval.thehacksmith.dev) · [Audit](https://doraval.thehacksmith.dev/get-started/audit/) · [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
 
 **The problem:** context you cannot rely on wastes a million tokens — broken skills, silent contradictions between Claude and Cursor, decisions that vanish next session.
 
