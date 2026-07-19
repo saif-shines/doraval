@@ -8,6 +8,117 @@
 
 ---
 
+## Session 2026-07-20b — `dora rules` brainstorm (RESUME HERE)
+
+Brainstormed a **coded, toggleable rule system** for dora. Design fully approved
+across 6 sections + a deep-findings pass. **Spec written, NOT yet planned/coded. No
+version bump.**
+
+### ⚠️ Recovery caveat — spec is UNCOMMITTED
+
+Mid-session the working tree switched `design/dora-rules → main` and wiped my
+working-tree patches (they were never committed). Recovered by hand.
+
+- **Live patched spec (357 lines):** `docs/superpowers/specs/2026-07-20-dora-rules-design.md`
+  — untracked in working tree on `main` (`docs/` is gitignored → needs `git add -f`).
+- **Backups:** scratchpad `dora-rules-spec-original.md` + `dora-rules-spec-FINAL-patched.md`
+  (session scratchpad `…/23a18623-…/scratchpad/`).
+- `design/dora-rules` branch holds only the **original** unpatched spec (`1dafe15`),
+  with two unrelated `docs(website)` commits stacked on top. Do **not** trust that
+  copy — the working-tree/scratchpad FINAL is authoritative.
+- **First resume action:** decide where to commit the patched spec (recommended: new
+  branch off current `main`), then `git add -f` it.
+
+### Decisions (all approved)
+
+- Term is **rule** (over guideline/policy/practice) — Ruff + Vale prior art.
+- **Identity:** stable numeric `code` (`R012`, permanent doc anchor) + memorable
+  `slug` (`description-length`, what you type). Both resolve. Not concatenated.
+- **Scope C:** every existing check (structure/heuristic/llm/session) gets a code +
+  becomes a rule; new authored rules join later. Central registry
+  `src/core/rules/registry.ts` = single source of truth = the reference catalog.
+- **Toggle** = on/off **+ severity override**. Grammar `on|off|error|warning|fyi`.
+- Safety guards `locked` = can't disable **or** demote (injection scan, YAML parse,
+  script-security).
+- **`info` renders as FYI** (display-only; internal enum unchanged).
+- **Config** all in `~/.doraval/config.yml` (no repo file): global top-level `rules:`
+  + per-project on `ProjectMapping.rules` (projects keyed by sanitized **name**, not
+  path; resolve via `resolveProjectName`, no ancestor walk). Project overrides win.
+- **Packages** = named code lists shipped as files (`recommended` default / `strict`
+  / `minimal`); built-in now, user-authored later; one base + overrides, no union.
+- **CLI** `dora rules`: bare = interactive checklist; args `list/on/off/set/package/
+  explain` + `--project|--global`.
+- **Docs** new `reference/rules/` — generated catalog + per-rule pages; every finding
+  stamps `docUrl` from `Rule.docUrl` (new `RULE` base), link-back loop.
+- **Deep findings (§7 of spec):** LLM tier is 2 judge calls → per-dimension disable =
+  post-filter, coarse skip saves tokens; sess-* re-coded to R0xx (no shim); memory
+  principles stay out of rule scope; doc-gen preserves prose between HTML markers.
+- Terminology: product says **memory**, code still `JournalConfig`/`journal:` (no
+  rename). Spec tracks current code.
+
+### Resume prompt
+
+```
+Read WIP.md § Session 2026-07-20b. Spec is UNCOMMITTED — recover from
+docs/superpowers/specs/2026-07-20-dora-rules-design.md (working tree, main) or
+scratchpad FINAL backup; commit it (new branch off main, git add -f). Then invoke
+superpowers:writing-plans on that spec to produce the implementation plan (I execute
+plans myself — memory feedback_plan_only). No version bump.
+```
+
+---
+
+## Session 2026-07-20 — review UX + judge-architecture rethink
+
+Two things this session: (1) shipped review-UX fixes, (2) brainstormed a
+judge-architecture spec ready for a plan. **No version bump.**
+
+### Shipped this session (in tree, UNCOMMITTED — `git status` to see)
+
+| Change | Files |
+|---|---|
+| `dora review` (bare human TTY) asks **Quick vs Agentic**; agentic w/o judge offers `config setup` | `src/cli/commands/review.ts` (`shouldPromptReviewMode`), `config.ts` (export `runSetupWizard`) |
+| Per-skill progress counter in `reviewAll` (`Reviewing N/M · name`); spinner now also on quick `--all` | `src/core/review.ts`, `src/cli/commands/review.ts` |
+| **CLI-judge spawn timeout** — `spawnSync` gets `timeout`+`killSignal:SIGKILL` (default 180s, `eval.timeout_ms`), maps kill→actionable error. Fixes the infinite hang when `claude` subprocess blocks. | `src/core/agent-invoke.ts`, `src/core/skill-lint.ts` (threads `timeout_ms` into `lintViaCli`) |
+| Tests | `src/cli/commands/review.test.ts` (new), `src/core/agent-invoke.test.ts` (timeout case) |
+
+All green: `bun test src/core` = 578 pass; touched files typecheck clean.
+
+### Brainstormed (spec written, NOT yet planned/implemented)
+
+**Spec:** `docs/superpowers/specs/2026-07-20-judge-architecture-delegate-or-api-design.md`
+(APPROVED design, pending user review + writing-plans.)
+
+Core decision: **CLI-spawn judging is the wrong tool — delete it.** Replace with:
+- **in-agent → delegate** (Style 1): dora emits a `JUDGE THIS` prompt block; the
+  calling model judges inline. Zero keys, zero subprocess.
+- **standalone/CI → API** (existing `llm-judge.ts` path). No key → fail clear.
+- `eval.judge`: `auto|api|cli` → **`auto|api|delegate`** (drop `cli`).
+- `capability-detect` → pure probe `"api"|"none"`; new `resolveJudgeMode({apiAvailable, ci, judgePref})` → `api|delegate|fail`, **discriminated by `--ci`** (agents use `--format json`, so `--ci` — not json — is the "no caller to delegate to" signal).
+- **session-eval forced in-scope** (shares the `eval.judge` enum) → convert its
+  CLI fallback to API-or-fail.
+- Non-goals: OAuth (parked, ToS-gray), models.dev catalog, prompt-gen (left; still
+  protected by the timeout above), in-agent merged verdict.
+
+Grounded in a sourced study of `anomalyco/opencode` @ `67caf894` — its own guidance
+for a single-call judge = env-key + AI-SDK `create*` switch + `generateObject`, no
+subprocess/plugins/OAuth. dora's API path already is that.
+
+The shipped CLI-spawn timeout is a **stopgap**; this spec removes the judge's
+CLI-spawn entirely (timeout stays only to guard `prompt-gen`).
+
+### Resume prompt
+
+```
+Read WIP.md § Session 2026-07-20. Decide: commit the shipped review-UX work +
+spec, then invoke superpowers:writing-plans on
+docs/superpowers/specs/2026-07-20-judge-architecture-delegate-or-api-design.md to
+produce the implementation plan (I execute plans myself — see memory
+feedback_plan_only). No version bump.
+```
+
+---
+
 ## Track pause: Exceptional CLI
 
 CLI dogfood track was parked for ponytail through 0.6.0; **B36 executed** by scheduled plan loop. B37–B39 + B40 memory/sessions polish done. Shipped as 0.6.0; Q1/Q2 (provider groups deletion, `dora completion` → `--completion` flag) shipped in 0.6.3.
