@@ -1,41 +1,34 @@
 # doraval
 
-**Make agent context work on every try.** Context engineering toolkit for coding agents. Scan, review, fix, and remember skills, plugins, and decisions for yourself, your team, or your community.
+**Make agent context work on every try.** Context engineering toolkit for coding agents — scan, review, fix, and remember skills, plugins, and decisions across Claude, Cursor, Codex, Copilot, and Grok.
 
-**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` CLI runs on your project; your agent can run the same checks when you want automation.
+**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. `dora` and `doraval` are the same CLI.
 
-[Docs](https://doraval.thehacksmith.dev) · [Audit](https://doraval.thehacksmith.dev/get-started/audit/) · [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
+[Docs](https://doraval.thehacksmith.dev) · [Audit](https://doraval.thehacksmith.dev/get-started/audit/) · [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) · [Command reference](https://doraval.thehacksmith.dev/commands/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
 
-**The problem:** context you cannot rely on wastes a million tokens — broken skills, silent contradictions between Claude and Cursor, decisions that vanish next session.
+Context you cannot rely on wastes a million tokens: broken skills, silent Claude-vs-Cursor contradictions, decisions that vanish next session.
 
-**The win:** scan → review → fix → remember, so every attempt succeeds across Claude, Cursor, Codex, Copilot, and Grok.
+## First steps
 
-## First win (< 2 minutes)
-
-### 1. Install the doraval skill (first step)
+### 1. Install the doraval skill
 
 ```bash
 npx skills add saif-shines/doraval
 ```
 
-### 2. Review my context
+Agents load this checklist when you edit skills, plugins, rules, or agent config. The skill runs the same engine as the CLI (`dora` or `npx @hacksmith/doraval`).
+
+### 2. Review context on this project
 
 ```bash
 npx @hacksmith/doraval
-# or, after install: dora
+# after permanent install: dora
 ```
 
-Zero config. No API key. Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions, and the exact next command to run.
+Read-only. No API key. Surfaces, skill health, contradictions, and next actions.
 
 ```text
 $ dora
-
-  doraval v0.6.x
-  Read-only scan of agent context. No writes, no LLM.
-
-  Agent surfaces
-    ✓ claude    CLAUDE.md  .claude/skills
-    ⚠ cursor    not configured
 
   Health
     ✓ .claude/skills/review    valid
@@ -46,48 +39,13 @@ $ dora
     2. dora review --all
 ```
 
-## Commands
+**Short path:** [Audit my agent context](https://doraval.thehacksmith.dev/get-started/audit/) (skill + `dora review`).  
+**Full tour:** [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) (install, scan, review, fix, scaffold, memory).
 
-| Command | Job |
-|---|---|
-| `dora` / `scan` | Repo diagnosis: surfaces, health, contradictions, next actions |
-| `review` | Quality gate: structure → heuristics → LLM → sessions (tiers skip if unavailable) |
-| `fix` | Apply mechanical fixes (`--yes` / `--dry-run` / `--brief` for agents) |
-| `new --for` | Scaffold skill, rule, agent, or plugin |
-| `memory` | Principles that stick; enforce in review; promote to AGENTS.md; optional git backup |
-| `reconcile` | Settle cross-agent contradictions (interactive or `--apply`) |
-| `sessions` | List / show recent agent sessions (Claude, Grok, Cursor, Codex, Copilot) |
-| `config` | Dot-notation settings (`eval.model`, …) |
-| `bump` | Semver in plugin / marketplace manifests |
-| `providers` | Packaging/spec reference (repo support → bare `dora`) |
-| `update` | Self-update |
-
-Shell tab-completion (install plumbing, not a product command): `dora --completion zsh` (or `bash` / `fish`).
+## Install the CLI (optional)
 
 ```bash
-dora review . --quick --ci          # structural gate, no LLM
-dora review --deep ./skills/foo     # require LLM tier (exit 2 if no judge)
-dora fix . --dry-run
-dora memory list
-dora memory promote                 # hard rules → AGENTS.md (diff + confirm)
-dora memory sync                    # optional private git backup
-dora sessions
-dora sessions show <id>
-dora reconcile --dry-run
-```
-
-Exit codes: `0` clean · `1` issues found · `2` could not run. Use `--format json` for agents and CI.
-
-> **`dora journal` was removed.** Memory is the only path. First `dora memory` after upgrade migrates legacy entries once. Hooks: `dora memory context --json`. Details: [Memory](https://doraval.thehacksmith.dev/concepts/memory/).
-
-Old `validate` / `lint` / `judge` / `eval` / `drift` folded into `dora review` (structure, heuristics, LLM, sessions).
-
-## Install
-
-### CLI
-
-```bash
-# No install
+# one-shot
 npx @hacksmith/doraval
 
 # npm
@@ -97,19 +55,48 @@ npm install -g @hacksmith/doraval
 brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
 
 # Bun
-bunx @hacksmith/doraval
 bun add -g @hacksmith/doraval
 ```
 
-npm ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18. Alpine/musl: run from source with Bun.
+Prebuilt binaries: macOS arm64/x64, Linux x64/arm64, Windows x64 (Node ≥ 14.18). Alpine/musl: use Bun. Details: [Installation](https://doraval.thehacksmith.dev/get-started/installation/).
 
-### Doraval skill (first step)
+## Commands
+
+| Command | Job |
+| --- | --- |
+| `dora` / `scan` | Repo diagnosis: surfaces, health, contradictions, next actions |
+| `review` | Quality gate: structure → heuristics → LLM → sessions |
+| `fix` | Mechanical fixes (`--yes` / `--dry-run` / `--brief`) |
+| `new --for` | Scaffold skill, rule, agent, or plugin |
+| `memory` | Principles; enforce in review; promote to AGENTS.md |
+| `reconcile` | Cross-agent contradictions → shared AGENTS.md |
+| `sessions` | List / show recent agent sessions |
+| `config` | Judge / model / settings |
+| `bump` | Semver in plugin / marketplace manifests |
+| `providers` | Packaging/spec matrix (not local “which agents”) |
+| `update` | Self-update |
+
+Full flags: [Command reference](https://doraval.thehacksmith.dev/commands/).
 
 ```bash
-npx skills add saif-shines/doraval
+dora review . --quick --ci
+dora review --deep ./skills/foo
+dora fix . --dry-run
+dora memory add "Never use default exports" --weight 8
+dora reconcile --dry-run
 ```
 
-Installs the doraval skill so agents run `dora` / `npx @hacksmith/doraval` when you edit context. Details: [Use with your agent](https://doraval.thehacksmith.dev/for-agents/).
+Exit codes: `0` clean · `1` issues · `2` could not run. Agents/CI: `--format json` / `--ci`.
+
+## Use with your agent
+
+After `npx skills add saif-shines/doraval`, the agent can run checks when context changes. Same CLI:
+
+```text
+Review my agent context with dora (npx @hacksmith/doraval). Fix with --yes. Do not report done until review exits 0.
+```
+
+JSON, exit codes, CI: [Use with your agent](https://doraval.thehacksmith.dev/for-agents/).
 
 ## CI
 
@@ -120,6 +107,5 @@ dora --format json | jq '.summary'
 
 ## Links
 
-- [Documentation](https://doraval.thehacksmith.dev): get started, commands, [memory](https://doraval.thehacksmith.dev/concepts/memory/)
-- [Use with your agent](https://doraval.thehacksmith.dev/for-agents/): `npx skills add`, JSON, exit codes
+- [Documentation](https://doraval.thehacksmith.dev)
 - [npm](https://www.npmjs.com/package/@hacksmith/doraval) · [JSR](https://jsr.io/@hacksmith/doraval) · [Releases](https://github.com/saif-shines/doraval/releases)
