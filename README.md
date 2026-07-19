@@ -1,31 +1,76 @@
-# doraval
+<div align="center">
 
-**Make agent context work on every try.** Context engineering toolkit for coding agents — scan, review, fix, and remember skills, plugins, and decisions across Claude, Cursor, Codex, Copilot, and Grok.
+<h1>
+  <img alt="doraval" src="https://raw.githubusercontent.com/saif-shines/doraval/main/apps/website/public/icon.svg" width="72">
+  <br>
+  doraval (<code>dora</code>)
+</h1>
 
-**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. `dora` and `doraval` are the same CLI.
+**doraval** is a context engineering toolkit for coding agents. It scans,
+reviews, fixes, and remembers agent context — skills, plugins, rules, and
+decisions — so Claude, Cursor, Codex, Copilot, and Grok work on every try
+instead of burning tokens on context you cannot rely on.
 
-[Docs](https://doraval.thehacksmith.dev) · [Audit](https://doraval.thehacksmith.dev/get-started/audit/) · [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) · [Command reference](https://doraval.thehacksmith.dev/commands/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
+[Installing](#installing) ·
+[Building from source](#building-from-source) ·
+[Documentation](#documentation) ·
+[Repository layout](#repository-layout) ·
+[Development](#development) ·
+[Contributing](#contributing) ·
+[License](#license)
 
-Context you cannot rely on wastes a million tokens: broken skills, silent Claude-vs-Cursor contradictions, decisions that vanish next session.
+**Learn more about doraval at [doraval.thehacksmith.dev](https://doraval.thehacksmith.dev)**
 
-## First steps
+This repository contains the TypeScript source for the `dora` / `doraval` CLI,
+its validators, and the agent skill shipped via
+`npx skills add saif-shines/doraval`.
 
-### 1. Install the doraval skill
+**Pronunciation:** *dor-uh-val* · Doraemon + eval
 
-```bash
+</div>
+
+---
+
+## Installing
+
+### Skill (recommended first step)
+
+Installs the agent skill so coding agents load the Doraval checklist when you
+edit skills, plugins, rules, or agent config:
+
+```sh
 npx skills add saif-shines/doraval
 ```
 
-Agents load this checklist when you edit skills, plugins, rules, or agent config. The skill runs the same engine as the CLI (`dora` or `npx @hacksmith/doraval`).
+### CLI
 
-### 2. Review context on this project
+Prebuilt binaries for macOS, Linux, and Windows:
 
-```bash
+```sh
+# one-shot (no install)
 npx @hacksmith/doraval
-# after permanent install: dora
+
+# permanent
+npm install -g @hacksmith/doraval
+
+# macOS
+brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
+
+# Bun
+bun add -g @hacksmith/doraval
+
+dora --version    # same binary as doraval
 ```
 
-Read-only. No API key. Surfaces, skill health, contradictions, and next actions.
+Node ≥ 14.18. Alpine/musl: use Bun. See the [changelog](CHANGELOG.md) and
+[installation guide](https://doraval.thehacksmith.dev/get-started/installation/).
+
+### First run
+
+```sh
+npx @hacksmith/doraval              # scan this project
+npx @hacksmith/doraval review .     # quality gate
+```
 
 ```text
 $ dora
@@ -39,33 +84,48 @@ $ dora
     2. dora review --all
 ```
 
-**Short path:** [Audit my agent context](https://doraval.thehacksmith.dev/get-started/audit/) (skill + `dora review`).  
-**Full tour:** [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) (install, scan, review, fix, scaffold, memory).
+Read-only scan. No API key. Exit codes: `0` clean · `1` issues · `2` could not run.
 
-## Install the CLI (optional)
+**Paths:**
+[Audit my agent context](https://doraval.thehacksmith.dev/get-started/audit/) ·
+[Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) ·
+[Use with your agent](https://doraval.thehacksmith.dev/for-agents/)
 
-```bash
-# one-shot
-npx @hacksmith/doraval
-
-# npm
-npm install -g @hacksmith/doraval
-
-# Homebrew (macOS)
-brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
-
-# Bun
-bun add -g @hacksmith/doraval
+```sh
+npx @hacksmith/doraval review --all --quick --ci
 ```
 
-Prebuilt binaries: macOS arm64/x64, Linux x64/arm64, Windows x64 (Node ≥ 14.18). Alpine/musl: use Bun. Details: [Installation](https://doraval.thehacksmith.dev/get-started/installation/).
+## Building from source
 
-## Commands
+Requirements:
+
+- **[Bun](https://bun.sh)** ≥ 1.3
+- Node ≥ 14.18 for the published binary target
+
+```sh
+bun install
+bun run dev -- --help          # run CLI from source
+bun run build                  # emit bin/doraval.js
+```
+
+## Documentation
+
+Full documentation: [doraval.thehacksmith.dev](https://doraval.thehacksmith.dev)
+
+| Path | Contents |
+|------|----------|
+| [Getting started](https://doraval.thehacksmith.dev/get-started/) | Audit vs Quickstart |
+| [Command reference](https://doraval.thehacksmith.dev/commands/) | All flags on one page |
+| [Use with your agent](https://doraval.thehacksmith.dev/for-agents/) | Skill, JSON, exit codes, CI |
+| [Memory](https://doraval.thehacksmith.dev/concepts/memory/) | Principles that stick |
+| [Review tiers](https://doraval.thehacksmith.dev/concepts/review-tiers/) | Structure → heuristics → LLM → sessions |
+
+### Commands
 
 | Command | Job |
-| --- | --- |
-| `dora` / `scan` | Repo diagnosis: surfaces, health, contradictions, next actions |
-| `review` | Quality gate: structure → heuristics → LLM → sessions |
+|---------|-----|
+| `dora` / `scan` | Surfaces, health, contradictions, next actions |
+| `review` | Quality gate (structure → heuristics → LLM → sessions) |
 | `fix` | Mechanical fixes (`--yes` / `--dry-run` / `--brief`) |
 | `new --for` | Scaffold skill, rule, agent, or plugin |
 | `memory` | Principles; enforce in review; promote to AGENTS.md |
@@ -73,39 +133,49 @@ Prebuilt binaries: macOS arm64/x64, Linux x64/arm64, Windows x64 (Node ≥ 14.18
 | `sessions` | List / show recent agent sessions |
 | `config` | Judge / model / settings |
 | `bump` | Semver in plugin / marketplace manifests |
-| `providers` | Packaging/spec matrix (not local “which agents”) |
+| `providers` | Packaging/spec matrix |
 | `update` | Self-update |
 
-Full flags: [Command reference](https://doraval.thehacksmith.dev/commands/).
-
-```bash
+```sh
 dora review . --quick --ci
-dora review --deep ./skills/foo
 dora fix . --dry-run
 dora memory add "Never use default exports" --weight 8
 dora reconcile --dry-run
 ```
 
-Exit codes: `0` clean · `1` issues · `2` could not run. Agents/CI: `--format json` / `--ci`.
+Shell completions: `dora --completion zsh` (or `bash` / `fish`).
 
-## Use with your agent
+## Repository layout
 
-After `npx skills add saif-shines/doraval`, the agent can run checks when context changes. Same CLI:
+| Path | Contents |
+|------|----------|
+| `src/cli/` | citty CLI surface (`dora` / `doraval`) |
+| `src/core/` | Scan, review, fix, memory, sessions, scaffold |
+| `src/validators/` | Per-agent validators (Claude, Cursor, Codex, Copilot, Grok) |
+| `src/providers/` | Packaging / provider specs |
+| `skills/doraval/` | Agent skill shipped via `npx skills add saif-shines/doraval` |
+| `apps/website/` | Docs site ([Blume](https://github.com/saif-shines/blume)) |
+| `scripts/` | Release, platform packages, publish helpers |
+| `test/` | Fixtures and CLI tests |
+| `bin/` | Built CLI entry (`doraval.cjs`) |
 
-```text
-Review my agent context with dora (npx @hacksmith/doraval). Fix with --yes. Do not report done until review exits 0.
+## Development
+
+```sh
+bun install
+bun run dev -- --help          # run from source
+bun test                       # unit + CLI tests
+bun run typecheck
+bun run build                  # emit bin/doraval.js
 ```
 
-JSON, exit codes, CI: [Use with your agent](https://doraval.thehacksmith.dev/for-agents/).
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md) for
+conventions (ponytail ladder, no version bumps unless releasing).
 
-## CI
+## Contributing
 
-```bash
-npx @hacksmith/doraval review --all --quick --ci
-dora --format json | jq '.summary'
-```
+Issues and PRs are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-## Links
+## License
 
-- [Documentation](https://doraval.thehacksmith.dev)
-- [npm](https://www.npmjs.com/package/@hacksmith/doraval) · [JSR](https://jsr.io/@hacksmith/doraval) · [Releases](https://github.com/saif-shines/doraval/releases)
+MIT — see [`package.json`](package.json) (`"license": "MIT"`).
