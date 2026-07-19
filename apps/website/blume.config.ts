@@ -2,18 +2,11 @@ import { defineConfig } from "blume";
 
 /** Exact-path redirects (Blume has no wildcards). One `from` per path; dual slash variants collide. */
 function redirs(pairs: Array<[string, string]>) {
-  return pairs.map(([from, to]) => {
-    const cleanFrom = from.replace(/\/$/, "") || "/";
-    let cleanTo = to;
-    if (to !== "/" && to.includes("#")) {
-      const [path, hash] = to.split("#");
-      const pathSlash = !path || path.endsWith("/") ? path || "/" : `${path}/`;
-      cleanTo = `${pathSlash}#${hash}`;
-    } else if (to !== "/" && !to.endsWith("/")) {
-      cleanTo = `${to}/`;
-    }
-    return { from: cleanFrom, to: cleanTo, status: 301 as const };
-  });
+  return pairs.map(([from, to]) => ({
+    from: from.replace(/\/$/, "") || "/",
+    to: to === "/" ? "/" : to.endsWith("/") ? to : `${to}/`,
+    status: 301 as const,
+  }));
 }
 
 export default defineConfig({
@@ -58,9 +51,9 @@ export default defineConfig({
     robots: true,
   },
   redirects: redirs([
+    // Pre-rename leftovers only (journal → memory, validate → review, …)
     ["/get-started/quickstart-distributors", "/get-started/quickstart/"],
     ["/get-started/quickstart-orchestrators", "/get-started/quickstart/"],
-    // Legacy command paths → single command reference (anchors in in-app links)
     ["/commands/journal-add", "/commands/"],
     ["/commands/journal-list", "/commands/"],
     ["/commands/journal-sync", "/commands/"],
@@ -88,26 +81,6 @@ export default defineConfig({
     ["/commands/memory-restore", "/commands/"],
     ["/commands/memory-sync", "/commands/"],
     ["/concepts/three-tier-verification", "/concepts/review-tiers/"],
-    // First five minutes removed
-    ["/first-five-minutes", "/get-started/quickstart/"],
-    ["/first-five-minutes/scan", "/commands/"],
-    ["/first-five-minutes/review", "/commands/"],
-    ["/first-five-minutes/fix", "/commands/"],
-    ["/first-five-minutes/new", "/commands/"],
-    ["/first-five-minutes/memory", "/commands/"],
-    // Per-command pages → one reference
-    ["/commands/scan", "/commands/"],
-    ["/commands/review", "/commands/"],
-    ["/commands/fix", "/commands/"],
-    ["/commands/new", "/commands/"],
-    ["/commands/memory", "/commands/"],
-    ["/commands/reconcile", "/commands/"],
-    ["/commands/sessions", "/commands/"],
-    ["/commands/config", "/commands/"],
-    ["/commands/bump", "/commands/"],
-    ["/commands/providers", "/commands/"],
-    ["/commands/update", "/commands/"],
-    ["/commands/completion", "/commands/"],
-    ["/commands/completions", "/commands/"],
   ]),
+
 });
