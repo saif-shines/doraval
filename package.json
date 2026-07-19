@@ -1,6 +1,6 @@
 {
   "name": "@hacksmith/doraval",
-  "version": "0.6.9",
+  "version": "0.6.10",
   "author": "Saif",
   "repository": {
     "type": "git",
@@ -44,7 +44,7 @@
     "dev": "bun run ./src/cli/index.ts",
     "test": "bun test && bun run scripts/check-ci-status.ts",
     "typecheck": "bunx tsc --noEmit --skipLibCheck",
-    "prepublishOnly": "node -e \"const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)};if(!p.optionalDependencies||!p.optionalDependencies['@hacksmith/doraval-darwin-arm64']){console.error('optionalDependencies not injected \u2014 run scripts/prepare-npm-publish.ts (CI does this). Refusing to publish a binary-less package.');process.exit(1)}\"",
+    "prepublishOnly": "node -e \"const p=require('./package.json'),j=require('./jsr.json');if(p.version!==j.version){console.error('Version mismatch: package.json='+p.version+' jsr.json='+j.version);process.exit(1)};if(!p.optionalDependencies||!p.optionalDependencies['@hacksmith/doraval-darwin-arm64']){console.error('optionalDependencies not injected — run scripts/prepare-npm-publish.ts (CI does this). Refusing to publish a binary-less package.');process.exit(1)}\"",
     "bump": "bun run scripts/bump.ts",
     "release": "bun run scripts/release.ts",
     "test:judge-api": "bun run scripts/test-judge-api.ts",
