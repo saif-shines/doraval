@@ -14,20 +14,19 @@ Brainstormed a **coded, toggleable rule system** for dora. Design fully approved
 across 6 sections + a deep-findings pass. **Spec written, NOT yet planned/coded. No
 version bump.**
 
-### ⚠️ Recovery caveat — spec is UNCOMMITTED
+### Spec location — COMMITTED on `main`
 
-Mid-session the working tree switched `design/dora-rules → main` and wiped my
-working-tree patches (they were never committed). Recovered by hand.
+The 357-line patched spec is committed on `main` at `767529b`
+(`docs/superpowers/specs/2026-07-20-dora-rules-design.md`; `docs/` is gitignored so
+it took `git add -f`). This is the authoritative copy.
 
-- **Live patched spec (357 lines):** `docs/superpowers/specs/2026-07-20-dora-rules-design.md`
-  — untracked in working tree on `main` (`docs/` is gitignored → needs `git add -f`).
-- **Backups:** scratchpad `dora-rules-spec-original.md` + `dora-rules-spec-FINAL-patched.md`
-  (session scratchpad `…/23a18623-…/scratchpad/`).
-- `design/dora-rules` branch holds only the **original** unpatched spec (`1dafe15`),
-  with two unrelated `docs(website)` commits stacked on top. Do **not** trust that
-  copy — the working-tree/scratchpad FINAL is authoritative.
-- **First resume action:** decide where to commit the patched spec (recommended: new
-  branch off current `main`), then `git add -f` it.
+History note (resolved): mid-session a branch switch `design/dora-rules → main`
+wiped uncommitted working-tree patches; recovered by hand and cherry-picked to
+`main`. Scratchpad backups still exist (`dora-rules-spec-original.md` +
+`dora-rules-spec-FINAL-patched.md`). The `design/dora-rules` branch holds only the
+**original** unpatched spec (`1dafe15`) — ignore it.
+
+**First resume action:** run `superpowers:writing-plans` on the spec.
 
 ### Decisions (all approved)
 
@@ -59,9 +58,8 @@ working-tree patches (they were never committed). Recovered by hand.
 ### Resume prompt
 
 ```
-Read WIP.md § Session 2026-07-20b. Spec is UNCOMMITTED — recover from
-docs/superpowers/specs/2026-07-20-dora-rules-design.md (working tree, main) or
-scratchpad FINAL backup; commit it (new branch off main, git add -f). Then invoke
+Read WIP.md § Session 2026-07-20b. Spec is committed on main (767529b):
+docs/superpowers/specs/2026-07-20-dora-rules-design.md. Invoke
 superpowers:writing-plans on that spec to produce the implementation plan (I execute
 plans myself — memory feedback_plan_only). No version bump.
 ```
