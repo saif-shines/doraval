@@ -8,17 +8,12 @@
 
 ## Getting started
 
+- [Audit my agent context](https://doraval.thehacksmith.dev/get-started/audit/): Skill install + dora review.
+- [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/): Full tutorial.
+
 - [Getting started](https://doraval.thehacksmith.dev/get-started): Who doraval is for, the problem it solves, and how to get a first win.
 - [Installation](https://doraval.thehacksmith.dev/get-started/installation): Install doraval via npx, npm, Homebrew, or Bun.
 - [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart): Scan, scaffold, review, fix, and capture principles — one path for you, team, or community.
-
-## First five minutes
-
-- [Scan](https://doraval.thehacksmith.dev/first-five-minutes/scan): Run bare dora to see agent surfaces, skill health, and next actions.
-- [Fix](https://doraval.thehacksmith.dev/first-five-minutes/fix): Apply mechanical fixes with diffs first; always asks before writing.
-- [Review](https://doraval.thehacksmith.dev/first-five-minutes/review): Multi-tier quality gate — structure, heuristics, LLM, sessions.
-- [New](https://doraval.thehacksmith.dev/first-five-minutes/new): Scaffold a skill, rule, agent, or plugin for a coding agent.
-- [Memory](https://doraval.thehacksmith.dev/first-five-minutes/memory): Capture principles once; enforce them in every review.
 
 ## Commands
 

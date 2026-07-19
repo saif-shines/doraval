@@ -80,5 +80,12 @@ export default defineConfig({
     ["/commands/memory-restore", "/commands/memory/"],
     ["/commands/memory-sync", "/commands/memory/"],
     ["/concepts/three-tier-verification", "/concepts/review-tiers/"],
+    // First five minutes removed — one tutorial + command reference
+    ["/first-five-minutes", "/get-started/quickstart/"],
+    ["/first-five-minutes/scan", "/commands/scan/"],
+    ["/first-five-minutes/review", "/commands/review/"],
+    ["/first-five-minutes/fix", "/commands/fix/"],
+    ["/first-five-minutes/new", "/commands/new/"],
+    ["/first-five-minutes/memory", "/commands/memory/"],
   ]),
 });

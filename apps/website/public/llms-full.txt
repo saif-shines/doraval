@@ -63,7 +63,7 @@ dora memory add "Run tests before shipping skill changes" --weight 8
 
 - [Installation](/get-started/installation/) — npm, Homebrew, Bun
 - [Quickstart](/get-started/quickstart/) — scan → new → review → fix → memory
-- [First five minutes](/first-five-minutes/scan/) — the core loop, one screen at a time
+- [Quickstart](/commands/scan/) — full tutorial
 
 ---
 
@@ -165,7 +165,7 @@ dora fix --brief
 ## Related
 
 - [dora review](/commands/review/)
-- [First five minutes: fix](/first-five-minutes/fix/)
+- [dora fix](/commands/fix/)
 
 ---
 
@@ -255,7 +255,7 @@ First run creates/clones the private backup repo; later runs commit + pull --reb
 
 - [Memory concept](/concepts/memory/)
 - [dora review](/commands/review/)
-- [First five minutes: memory](/first-five-minutes/memory/)
+- [dora memory](/commands/memory/)
 
 ---
 
@@ -296,7 +296,7 @@ Prefer `dora new --for <agent>`. Advanced provider groups (`dora claude new`, `d
 
 ## Related
 
-- [First five minutes: new](/first-five-minutes/new/)
+- [dora new](/commands/new/)
 - [dora providers](/commands/providers/)
 
 ---
@@ -430,7 +430,7 @@ dora --ci --cwd "$GITHUB_WORKSPACE"
 
 ## Related
 
-- [First five minutes: scan](/first-five-minutes/scan/)
+- [dora scan](/commands/scan/)
 - [dora review](/commands/review/)
 - [dora fix](/commands/fix/)
 - [For coding agents](/for-agents/)
@@ -592,7 +592,7 @@ Compare skill intent to real agent sessions when adapters exist. Session adapter
 ---
 
 # Fix
-Source: https://doraval.thehacksmith.dev/first-five-minutes/fix
+Source: https://doraval.thehacksmith.dev/get-started/quickstart/fix
 
 When the scan (or review) lists auto-fixable issues:
 
@@ -610,12 +610,12 @@ dora fix --brief            # agent-ready prompt for judgment items
 
 Full reference: [dora fix](/commands/fix/).
 
-**Next:** [Review](/first-five-minutes/review/) for multi-tier quality.
+**Next:** [Review](/commands/review/) for multi-tier quality.
 
 ---
 
 # Memory
-Source: https://doraval.thehacksmith.dev/first-five-minutes/memory
+Source: https://doraval.thehacksmith.dev/get-started/quickstart/memory
 
 ```bash
 dora memory add "Never use default exports" --weight 8
@@ -635,7 +635,7 @@ Full reference: [dora memory](/commands/memory/) · [Memory concept](/concepts/m
 ---
 
 # New
-Source: https://doraval.thehacksmith.dev/first-five-minutes/new
+Source: https://doraval.thehacksmith.dev/get-started/quickstart/new
 
 ```bash
 dora new
@@ -655,12 +655,12 @@ Prefer `dora new --for <agent>`. Advanced packaging groups (`dora claude new`, �
 
 Full reference: [dora new](/commands/new/).
 
-**Next:** [Memory](/first-five-minutes/memory/) for principles that stick.
+**Next:** [Memory](/commands/memory/) for principles that stick.
 
 ---
 
 # Review
-Source: https://doraval.thehacksmith.dev/first-five-minutes/review
+Source: https://doraval.thehacksmith.dev/get-started/quickstart/review
 
 ```bash
 dora review .
@@ -677,12 +677,12 @@ Project principles from [memory](/concepts/memory/) apply automatically as a rub
 
 Full reference: [dora review](/commands/review/) · [Review tiers](/concepts/review-tiers/).
 
-**Next:** [Scaffold](/first-five-minutes/new/) new context with `dora new`.
+**Next:** [Scaffold](/commands/new/) new context with `dora new`.
 
 ---
 
 # Scan
-Source: https://doraval.thehacksmith.dev/first-five-minutes/scan
+Source: https://doraval.thehacksmith.dev/get-started/quickstart/scan
 
 Your first command is the default:
 
@@ -708,7 +708,7 @@ dora --cwd /path/to/repo
 
 Full reference: [dora scan](/commands/scan/).
 
-**Next:** [Fix](/first-five-minutes/fix/) mechanical issues the scan found.
+**Next:** [Fix](/commands/fix/) mechanical issues the scan found.
 
 ---
 
@@ -811,7 +811,7 @@ Left-shift success. **Scan → review → fix → remember**, so the first attem
 
 1. [Install](/get-started/installation/)
 2. [Quickstart](/get-started/quickstart/) — first win under two minutes
-3. [First five minutes](/first-five-minutes/scan/) — the loop, one screen at a time
+3. [Quickstart](/commands/scan/) — full tutorial
 
 ---
 
@@ -925,7 +925,7 @@ dora memory context --json --quiet
 
 ## Next
 
-- [First five minutes: scan](/first-five-minutes/scan/)
+- [dora scan](/commands/scan/)
 - [For coding agents](/for-agents/) — JSON, CI, exit codes
 - [Memory concept](/concepts/memory/)
 
