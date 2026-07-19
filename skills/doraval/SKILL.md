@@ -8,7 +8,7 @@ description: "Verify agent-context quality with the `dora` CLI. Whenever you aut
 `dora` reads a repo and reports what's broken in agent context — dead skills,
 frontmatter errors, cross-agent contradictions, lost decisions. It is a
 **verification gate**: the tool checks your work, so you don't ship context that
-fails on the first try.
+fails on every try.
 
 Every result is verifiable — `dora` exits `0` clean, `1` issues found, `2`
 could not run. Treat the exit code as ground truth, not your own judgement.

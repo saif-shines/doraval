@@ -1,0 +1,967 @@
+# doraval
+
+> Scale your AI context for coding agents. Make skills, plugins, and decisions work on the first try — for yourself, your team, or your community.
+
+# Scale your AI context for coding agents
+Source: https://doraval.thehacksmith.dev/
+
+**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
+
+Context you cannot rely on wastes a million tokens. doraval makes the first attempt succeed — across Claude, Cursor, Codex, Copilot, and Grok.
+
+## First win
+
+```bash
+npx @hacksmith/doraval
+# after install: dora
+```
+
+Zero config. No API key. Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions, and the exact next command to run.
+
+```text
+$ dora
+
+  doraval v0.6.x
+  Read-only scan of agent context — no writes, no LLM.
+
+  Agent surfaces
+    ✓ claude    CLAUDE.md  .claude/skills
+    ⚠ cursor    not configured
+
+  Health
+    ✓ .claude/skills/review    valid
+    ✗ .claude/skills/deploy    Missing "description"
+
+  Next
+    1. dora fix .claude/skills/deploy
+    2. dora review --all
+```
+
+## The loop
+
+```bash
+dora                                          # scan
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora review .                                 # structure + heuristics (+ LLM when available)
+dora fix .                                    # diffs first; asks before writing
+dora memory add "Run tests before shipping skill changes" --weight 8
+```
+
+<CardGroup cols={3}>
+  <Card title="Get started" href="/get-started/" icon="rocket">
+    Install and run your first scan in under two minutes.
+  </Card>
+  <Card title="Commands" href="/commands/scan/" icon="terminal">
+    Full reference for scan, review, fix, new, memory, and more.
+  </Card>
+  <Card title="For coding agents" href="/for-agents/" icon="bot">
+    JSON mode, CI, exit codes, and machine-readable docs.
+  </Card>
+</CardGroup>
+
+## Next
+
+- [Installation](/get-started/installation/) — npm, Homebrew, Bun
+- [Quickstart](/get-started/quickstart/) — scan → new → review → fix → memory
+- [First five minutes](/first-five-minutes/scan/) — the core loop, one screen at a time
+
+---
+
+# dora bump
+Source: https://doraval.thehacksmith.dev/commands/bump
+
+```bash
+dora bump
+dora bump patch
+dora bump minor ./plugins
+dora bump 1.2.3 --yes
+dora bump --only plugin
+```
+
+| Argument / flag | Meaning |
+| --- | --- |
+| `TYPE` | `patch` \| `minor` \| `major` \| exact `x.y.z`. Omit on a TTY for interactive pick |
+| `PATH` | Directory to scan (default cwd). Single plugin or marketplace root |
+| `--only all\|plugin\|marketplace` | Scope (default `all`) |
+| `--yes` | Skip confirmation in interactive mode |
+
+Supports Claude, Codex, Cursor, and Copilot packaging layouts.
+
+## Related
+
+- [dora new](/commands/new/)
+- [dora providers](/commands/providers/)
+
+---
+
+# dora completion
+Source: https://doraval.thehacksmith.dev/commands/completion
+
+```bash
+dora completion bash
+dora completion zsh
+dora completion fish
+```
+
+Install the printed script into your shell’s completion directory (or eval it from your rc file).
+
+## Related
+
+- [Getting started](/get-started/)
+
+---
+
+# dora config
+Source: https://doraval.thehacksmith.dev/commands/config
+
+```bash
+dora config
+dora config get
+dora config get eval.model
+dora config set eval.model gpt-4.1
+```
+
+Common keys: `eval.model`, `eval.provider`, `eval.judge`, `agent.command`. Run `dora config get` for the full table.
+
+Bare `dora config` opens the interactive surface when on a TTY; use `get` / `set` for scripts.
+
+## Related
+
+- [dora review](/commands/review/) (judge / model config)
+- [For coding agents](/for-agents/)
+
+---
+
+# dora fix
+Source: https://doraval.thehacksmith.dev/commands/fix
+
+```bash
+dora fix [PATH]
+```
+
+Applies mechanical fixes from scan/review findings. Always shows diffs; asks before writing unless `--yes`.
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `--yes` | Pre-approve all fixes (agents / CI) |
+| `--dry-run` | Show diffs; write nothing |
+| `--brief` | Emit an agent-ready prompt for judgment fixes |
+| `--format table\|json` | Output format |
+| `--ci` | Machine mode (implies JSON) |
+| `--cwd <path>` | Working directory override |
+
+## Examples
+
+```bash
+dora fix
+dora fix ./skills/deploy
+dora fix --dry-run
+dora fix --yes
+dora fix --brief
+```
+
+## Related
+
+- [dora review](/commands/review/)
+- [First five minutes: fix](/first-five-minutes/fix/)
+
+---
+
+# dora memory
+Source: https://doraval.thehacksmith.dev/commands/memory
+
+```bash
+dora memory <subcommand>
+```
+
+Local project principles that stick across sessions. Review treats them as a rubric. Optional promote writes hard rules into `AGENTS.md`. Optional sync backs up to a private git repo.
+
+> Memory replaced the old journal command. The first `dora memory` run migrates legacy journal entries once when present.
+
+## add
+
+```bash
+dora memory add "Never use default exports" --weight 8
+dora memory add "Run bun test before commit" --tags style,ci --body "CI fails otherwise"
+dora memory add "Prefer named exports" --global
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--weight 1–10` | Default `5`. **w8** hard rule · **w5** default · **w3** soft preference |
+| `--tags <csv>` | Comma-separated tags |
+| `--global` | Global memory (shared across projects) |
+| `--body <text>` | Rationale / detail |
+
+Title is required, short imperative (≤ 80 chars).
+
+## list
+
+```bash
+dora memory list
+dora memory list --format json
+```
+
+## context
+
+Output principles for hooks, `CLAUDE.md`, or piping.
+
+```bash
+dora memory context
+dora memory context --full
+dora memory context --json --quiet
+dora memory context --append-to CLAUDE.md
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--full` | Full principle body |
+| `--json` | Claude SessionStart hook JSON (`hookSpecificOutput.additionalContext`) |
+| `--quiet` | Omit plain text when empty (still emits JSON with `--json`) |
+| `--append-to <file>` | Append/update a managed section in that file |
+
+## promote
+
+```bash
+dora memory promote
+dora memory promote --weight 7 --dry-run
+dora memory promote --yes
+```
+
+Writes high-weight principles into `AGENTS.md` (diff + confirm unless `--yes`).
+
+## stash / restore
+
+Copy gitignored or untracked files into project memory (survives a clean clone), then restore later.
+
+```bash
+dora memory stash path/to/notes.md
+dora memory restore path/to/notes.md
+dora memory restore --dry-run
+```
+
+## sync
+
+```bash
+dora memory sync
+dora memory sync --repo owner/dora-memory
+```
+
+First run creates/clones the private backup repo; later runs commit + pull --rebase + push.
+
+## Related
+
+- [Memory concept](/concepts/memory/)
+- [dora review](/commands/review/)
+- [First five minutes: memory](/first-five-minutes/memory/)
+
+---
+
+# dora new
+Source: https://doraval.thehacksmith.dev/commands/new
+
+```bash
+dora new [TYPE] [NAME]
+```
+
+| Type | Meaning |
+| --- | --- |
+| `skill` | Reusable `SKILL.md` |
+| `rule` | Always-on convention |
+| `agent` | Subagent role |
+| `plugin` | Package to ship |
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `-f, --for <agent>` | `claude` \| `cursor` \| `codex` \| `copilot` |
+| `-d, --description <text>` | Short description |
+| `--intent <intent>` | `self` \| `self-later` \| `distribute` |
+| `--native` | Scaffold the agent's native format (not plugin packaging) |
+| `-y, --yes` | Skip interactive prompts |
+| `--format` / `--ci` / `--cwd` | Shared global flags |
+
+## Examples
+
+```bash
+dora new
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+Prefer `dora new --for <agent>`. Advanced provider groups (`dora claude new`, `dora codex new`, …) remain for packaging-specific workflows.
+
+## Related
+
+- [First five minutes: new](/first-five-minutes/new/)
+- [dora providers](/commands/providers/)
+
+---
+
+# dora providers
+Source: https://doraval.thehacksmith.dev/commands/providers
+
+```bash
+dora providers
+dora providers --json
+```
+
+Shows which agents doraval understands and how packaging / keyword discovery works for each.
+
+Prefer scaffolding with `dora new --for <agent>` rather than memorizing every layout.
+
+## Related
+
+- [dora new](/commands/new/)
+
+---
+
+# dora reconcile
+Source: https://doraval.thehacksmith.dev/commands/reconcile
+
+```bash
+dora reconcile
+dora reconcile --dry-run
+dora reconcile --apply
+dora reconcile --apply --yes
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--apply` | Non-interactive: take each recommended resolution |
+| `--dry-run` | List contradictions and planned edits; write nothing |
+| `--yes` | Skip final confirmation when applying |
+| `--format` / `--cwd` | Shared flags |
+
+Interactive by default: review each contradiction and choose how to resolve it.
+
+## Related
+
+- [dora scan](/commands/scan/)
+- [dora memory](/commands/memory/)
+
+---
+
+# dora review
+Source: https://doraval.thehacksmith.dev/commands/review
+
+```bash
+dora review [PATH]
+```
+
+`PATH` is a skill dir or project root (default `.`).
+
+## Tiers
+
+1. **Structure** — parseable manifests, required fields, path consistency  
+2. **Heuristics** — dead refs, duplicates, keyword-level memory violations  
+3. **LLM** — judgment when a judge model is configured  
+4. **Sessions** — real-session adherence (adapters land over time)
+
+Tiers that cannot run are skipped unless required by a flag.
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `--quick` | Tiers 1–2 only (no LLM) |
+| `--deep` | Require LLM tier; exit `2` if no judge |
+| `--sessions` | Require session tier (planned; currently a no-op when adapters missing) |
+| `--all` | Review every artifact under the path |
+| `--fail-on error\|warning` | Exit `1` trigger (default `error`) |
+| `--format table\|json` | Output format |
+| `--ci` | Machine mode (implies JSON) |
+| `--cwd <path>` | Working directory override |
+
+## Examples
+
+```bash
+dora review ./skills/deploy
+dora review --quick .
+dora review --deep ./skills/deploy
+dora review --all --quick --ci
+dora review CLAUDE.md
+```
+
+## Related
+
+- [Review tiers](/concepts/review-tiers/)
+- [dora fix](/commands/fix/)
+- [Memory](/concepts/memory/)
+- [scenarios.yaml](/reference/scenarios/)
+
+---
+
+# dora scan
+Source: https://doraval.thehacksmith.dev/commands/scan
+
+```bash
+dora
+dora scan
+```
+
+Default entrypoint. Read-only diagnosis of agent context in the current (or `--cwd`) directory.
+
+## Options
+
+| Flag | Meaning |
+| --- | --- |
+| `--format table\|json` | Human table or machine JSON (default `table`) |
+| `--ci` | Machine mode (implies `--format json`) |
+| `--cwd <path>` | Directory to scan |
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Clean (or informational only) |
+| `1` | Issues found |
+| `2` | Could not run |
+
+## Examples
+
+```bash
+dora --format json | jq '.summary'
+dora --ci --cwd "$GITHUB_WORKSPACE"
+```
+
+## Related
+
+- [First five minutes: scan](/first-five-minutes/scan/)
+- [dora review](/commands/review/)
+- [dora fix](/commands/fix/)
+- [For coding agents](/for-agents/)
+
+---
+
+# dora sessions
+Source: https://doraval.thehacksmith.dev/commands/sessions
+
+```bash
+dora sessions
+dora sessions --agent claude --limit 20
+dora sessions show <id>
+```
+
+Read-only. Claude Code and Grok today; Codex / Copilot / Cursor adapters planned.
+
+## Options (list)
+
+| Flag | Meaning |
+| --- | --- |
+| `--agent <name>` | Filter (`claude`, `grok`) |
+| `--limit <n>` | Max sessions per agent (default `10`) |
+| `--format` / `--ci` | Machine output |
+
+## show
+
+Timeline: user turns, tool calls (names + args summary), skills invoked, token totals when available.
+
+```bash
+dora sessions show <sessionId>
+```
+
+## Related
+
+- [dora review](/commands/review/) (session tier, as adapters mature)
+- [For coding agents](/for-agents/)
+
+---
+
+# dora update
+Source: https://doraval.thehacksmith.dev/commands/update
+
+```bash
+dora update
+dora update --check
+dora update --yes
+dora update --via npm
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--check` | Only check; do not install |
+| `--yes` | Skip confirmation |
+| `--via homebrew\|npm\|bun` | Force install method (scripts / CI) |
+
+## Related
+
+- [Installation](/get-started/installation/)
+
+---
+
+# Memory
+Source: https://doraval.thehacksmith.dev/concepts/memory
+
+**Memory** is doraval’s store of project (and optional global) principles. It is the only path for durable decisions; the old journal command is gone.
+
+## Why it exists
+
+Sessions forget. README bullets rot. Memory keeps short, weighted principles where:
+
+1. Humans can list and edit them (`dora memory list` / `add`)
+2. Review can enforce them as a rubric
+3. Promote can write hard rules into `AGENTS.md`
+4. Hooks can inject them at session start
+
+## Weights
+
+| Weight | Role |
+| --- | --- |
+| **8–10** | Hard rule — strong review signal; default promote threshold is 7+ |
+| **5** | Default preference |
+| **1–3** | Soft preference |
+
+## Lifecycle
+
+```bash
+dora memory add "…" --weight 8
+dora memory list
+dora review .                    # principles applied as rubric
+dora memory promote              # hard rules → AGENTS.md
+dora memory context --json       # SessionStart hook payload
+dora memory sync                 # optional private git backup
+```
+
+## Stash
+
+Gitignored research files can live in memory and restore after a clean clone:
+
+```bash
+dora memory stash path/to/plan.md
+dora memory restore path/to/plan.md
+```
+
+## Migration note
+
+If you previously used journal, the first `dora memory` command migrates valid entries automatically. Update any SessionStart hooks to:
+
+```bash
+dora memory context --json
+```
+
+## Related
+
+- [dora memory](/commands/memory/)
+- [dora review](/commands/review/)
+- [For coding agents](/for-agents/)
+
+---
+
+# Review tiers
+Source: https://doraval.thehacksmith.dev/concepts/review-tiers
+
+`dora review` runs every tier that can run. Flags force or skip tiers when you need a fixed bar (CI vs deep judgment).
+
+## Tier 1 — Structure
+
+Parseable files, required fields, name/dir consistency, basic schema. Fast. Always available. `--quick` includes this tier.
+
+## Tier 2 — Heuristics
+
+Dead file references, duplicate rules, keyword-level violations of [memory](/concepts/memory/) principles, packaging smells. Still no network / LLM. Included in `--quick`.
+
+## Tier 3 — LLM
+
+Judgment when a judge model is configured (`dora config` / env). Vague descriptions, missing guardrails, scenario coverage against [scenarios.yaml](/reference/scenarios/).
+
+- Default: run if available, skip if not  
+- `--deep`: **require** this tier; exit `2` if no judge  
+
+## Tier 4 — Sessions
+
+Compare skill intent to real agent sessions when adapters exist. Session adapters ship over time; `--sessions` will require this tier when ready.
+
+## Choosing a mode
+
+| Goal | Command |
+| --- | --- |
+| CI structural gate | `dora review --all --quick --ci` |
+| Local full pass | `dora review .` |
+| Must have LLM | `dora review --deep <path>` |
+
+## Related
+
+- [dora review](/commands/review/)
+- [dora fix](/commands/fix/)
+- [scenarios.yaml](/reference/scenarios/)
+
+---
+
+# Fix
+Source: https://doraval.thehacksmith.dev/first-five-minutes/fix
+
+When the scan (or review) lists auto-fixable issues:
+
+```bash
+dora fix
+dora fix ./skills/deploy
+dora fix --dry-run          # show diffs, write nothing
+dora fix --yes              # pre-approve (agents / CI)
+dora fix --brief            # agent-ready prompt for judgment items
+```
+
+**Mechanical** fixes (rename fields, missing frontmatter, path mismatches) show as unified diffs and apply per-file on approval.
+
+**Judgment** items (vague descriptions, missing guardrails) are not auto-written. Use `--brief` to copy a prompt into your coding agent, then re-run `dora review`.
+
+Full reference: [dora fix](/commands/fix/).
+
+**Next:** [Review](/first-five-minutes/review/) for multi-tier quality.
+
+---
+
+# Memory
+Source: https://doraval.thehacksmith.dev/first-five-minutes/memory
+
+```bash
+dora memory add "Never use default exports" --weight 8
+dora memory list
+dora memory promote                 # hard rules → AGENTS.md
+dora memory context --json --quiet  # SessionStart hooks
+```
+
+Weights: **w8** hard rule · **w5** default · **w3** soft preference.
+
+Review uses principles as a rubric. Promote writes high-weight items into `AGENTS.md` (diff + confirm).
+
+Full reference: [dora memory](/commands/memory/) · [Memory concept](/concepts/memory/).
+
+**Next:** [Commands](/commands/scan/) for the full atlas, or [For coding agents](/for-agents/).
+
+---
+
+# New
+Source: https://doraval.thehacksmith.dev/first-five-minutes/new
+
+```bash
+dora new
+dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
+dora new rule --for cursor --name no-default-exports --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+| Type | What it is |
+| --- | --- |
+| `skill` | Reusable `SKILL.md` |
+| `rule` | Always-on convention |
+| `agent` | Subagent role |
+| `plugin` | Package to ship |
+
+Prefer `dora new --for <agent>`. Advanced packaging groups (`dora claude new`, …) still exist when you need provider-specific trees.
+
+Full reference: [dora new](/commands/new/).
+
+**Next:** [Memory](/first-five-minutes/memory/) for principles that stick.
+
+---
+
+# Review
+Source: https://doraval.thehacksmith.dev/first-five-minutes/review
+
+```bash
+dora review .
+dora review ./skills/deploy
+dora review --all
+dora review --quick .           # structure + heuristics only
+dora review --deep ./skills/foo # require LLM tier (exit 2 if no judge)
+dora review --all --quick --ci  # CI gate
+```
+
+Tiers that can run do run; LLM and sessions auto-skip when unavailable (unless `--deep` / `--sessions` require them).
+
+Project principles from [memory](/concepts/memory/) apply automatically as a rubric.
+
+Full reference: [dora review](/commands/review/) · [Review tiers](/concepts/review-tiers/).
+
+**Next:** [Scaffold](/first-five-minutes/new/) new context with `dora new`.
+
+---
+
+# Scan
+Source: https://doraval.thehacksmith.dev/first-five-minutes/scan
+
+Your first command is the default:
+
+```bash
+dora
+# same as:
+dora scan
+```
+
+Read-only. No writes, no LLM. Output covers:
+
+1. **Agent surfaces** — which agents look configured (CLAUDE.md, skills dirs, …)
+2. **Health** — skill/manifest issues with short reasons
+3. **Next** — numbered commands to run next (`dora fix …`, `dora review …`)
+
+Useful flags:
+
+```bash
+dora --format json
+dora --ci                 # implies JSON
+dora --cwd /path/to/repo
+```
+
+Full reference: [dora scan](/commands/scan/).
+
+**Next:** [Fix](/first-five-minutes/fix/) mechanical issues the scan found.
+
+---
+
+# For coding agents
+Source: https://doraval.thehacksmith.dev/for-agents
+
+doraval is built so coding agents and CI can drive it without a human reading tables.
+
+## Machine output
+
+```bash
+dora --format json
+dora --ci                    # implies --format json
+dora review --all --quick --ci
+dora --capabilities          # JSON manifest of commands (not a human command)
+```
+
+Global flags:
+
+| Flag | Meaning |
+| --- | --- |
+| `--format table\|json` | Output format |
+| `--ci` | Machine mode (JSON) |
+| `--cwd <path>` | Working directory |
+| `--capabilities` | Emit command capability manifest |
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Clean |
+| `1` | Issues found |
+| `2` | Could not run (e.g. required LLM tier unavailable with `--deep`) |
+
+## CI example
+
+```bash
+npx @hacksmith/doraval review --all --quick --ci
+dora --format json | jq '.summary'
+```
+
+## Agent-ready fixes
+
+```bash
+dora fix --yes               # pre-approve mechanical fixes
+dora fix --brief             # clipboard/prompt for judgment items
+dora fix --dry-run
+```
+
+## Machine-readable docs
+
+This site ships agent surfaces by default:
+
+| URL | Content |
+| --- | --- |
+| [https://doraval.thehacksmith.dev/llms.txt](https://doraval.thehacksmith.dev/llms.txt) | Compact index of every page |
+| [https://doraval.thehacksmith.dev/llms-full.txt](https://doraval.thehacksmith.dev/llms-full.txt) | Full corpus Markdown |
+| Any page + `.md` | Raw Markdown for that page (e.g. `/commands/review.md`) |
+
+## Hooks
+
+Inject project principles into Claude SessionStart:
+
+```bash
+dora memory context --json --quiet
+```
+
+## Related
+
+- [dora scan](/commands/scan/)
+- [dora review](/commands/review/)
+- [dora memory](/commands/memory/)
+
+---
+
+# Getting started
+Source: https://doraval.thehacksmith.dev/get-started
+
+## Who this is for
+
+Anyone **scaling AI context** for coding agents — skills, plugins, decisions, and the glue between them — for **yourself**, **your team**, or **your community**.
+
+## The problem
+
+Context you cannot rely on wastes a million tokens. Broken manifests, skills that never trigger, decisions that evaporate between sessions, “works on my Claude” that fails on Cursor, Codex, or the tenth engineer you onboard.
+
+## The win
+
+Left-shift success. **Scan → review → fix → remember**, so the first attempt works across agents.
+
+| Job | Command |
+| --- | --- |
+| See what's broken | `dora` / `dora scan` |
+| Grade quality | `dora review` |
+| Apply mechanical fixes | `dora fix` |
+| Scaffold context | `dora new --for <agent>` |
+| Principles that stick | `dora memory` |
+
+## Paths
+
+1. [Install](/get-started/installation/)
+2. [Quickstart](/get-started/quickstart/) — first win under two minutes
+3. [First five minutes](/first-five-minutes/scan/) — the loop, one screen at a time
+
+---
+
+# Installation
+Source: https://doraval.thehacksmith.dev/get-started/installation
+
+## No install
+
+```bash
+npx @hacksmith/doraval
+```
+
+## npm
+
+```bash
+npm install -g @hacksmith/doraval
+```
+
+npm ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
+
+## Homebrew (macOS)
+
+```bash
+brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
+```
+
+## Bun
+
+```bash
+bunx @hacksmith/doraval
+bun add -g @hacksmith/doraval
+```
+
+## Alpine / musl
+
+Platform binaries target glibc. On Alpine/musl, run from source with Bun:
+
+```bash
+bunx @hacksmith/doraval
+```
+
+## Verify
+
+```bash
+doraval --version
+# same binary:
+dora --version
+```
+
+## Next
+
+[Quickstart](/get-started/quickstart/) — run your first scan.
+
+---
+
+# Quickstart
+Source: https://doraval.thehacksmith.dev/get-started/quickstart
+
+Scale context for **yourself**, **your team**, or **your community**. Same workflow whether you are tuning your own agent, onboarding juniors, or publishing a plugin.
+
+Assumes doraval is installed. If not, see [Installation](/get-started/installation/).
+
+## 1. Scan what you already have
+
+```bash
+dora
+```
+
+Bare `dora` lists agent surfaces, skill health, contradictions, and numbered next actions. No writes, no API key.
+
+## 2. Scaffold context
+
+```bash
+# Interactive: type → agent → name
+dora new
+
+# Non-interactive
+dora new skill --for claude --name my-context --description "Team context" --yes
+dora new plugin --for claude --name my-plugin --yes
+```
+
+Prefer `dora new --for <agent>`. Thin wrappers (`dora claude new`, …) still work for advanced packaging.
+
+## 3. Review and fix
+
+```bash
+dora review .
+dora fix .                 # mechanical fixes; always shows a diff
+```
+
+CI-friendly structural gate (no LLM):
+
+```bash
+dora review --all --quick --ci
+```
+
+## 4. Record principles that stick
+
+```bash
+dora memory add "Use dora review before shipping any skill change" --weight 8
+dora memory list
+dora memory promote        # optional: write hard rules into AGENTS.md
+dora memory sync           # optional: private git backup
+```
+
+For Claude SessionStart hooks:
+
+```bash
+dora memory context --json --quiet
+```
+
+## Next
+
+- [First five minutes: scan](/first-five-minutes/scan/)
+- [For coding agents](/for-agents/) — JSON, CI, exit codes
+- [Memory concept](/concepts/memory/)
+
+---
+
+# scenarios.yaml
+Source: https://doraval.thehacksmith.dev/reference/scenarios
+
+Place an optional `scenarios.yaml` next to a skill. Missing file is fine (empty coverage set).
+
+## Shape
+
+YAML **array** of objects:
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `when` | yes | User request / situation |
+| `expect` | yes | Expected agent behavior |
+| `must_not` | no | Forbidden behavior |
+
+```yaml
+- when: "User asks to deploy without tests"
+  expect: "Refuse and require the test suite to pass first"
+  must_not: "Run deploy immediately"
+
+- when: "User asks for a PR review"
+  expect: "Load the review skill and comment on risk first"
+```
+
+## How doraval uses it
+
+During LLM review (tier 3), scenarios become a coverage checklist: for each item, would this skill handle `when` correctly per `expect` / `must_not`? Only **uncovered** scenarios become findings.
+
+Malformed YAML or invalid objects surface as tier-1 structure findings, not a crash.
+
+## Related
+
+- [Review tiers](/concepts/review-tiers/)
+- [dora review](/commands/review/)

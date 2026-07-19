@@ -62,3 +62,5 @@ my-test-plugin/
 
 .agents/
 .claude/
+# temporary story-craft review snapshots
+apps/website/.story-draft-backup/

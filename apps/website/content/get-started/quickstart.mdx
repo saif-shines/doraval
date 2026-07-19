@@ -1,66 +1,59 @@
 ---
 title: Quickstart
-description: Scan, scaffold, review, fix, and capture principles for yourself, team, or community.
+description: Run dora on this repo — surfaces, health, next actions — in under two minutes.
 sidebar:
   label: Quickstart
   order: 3
 ---
 
-Scale context for yourself, your team, or your community. Same workflow whether you are tuning your own agent, onboarding juniors, or publishing a plugin.
-
-Assumes doraval is installed (`npm`, Homebrew, or Bun). If not, see [Installation](/get-started/installation/), or one-shot with `npx @hacksmith/doraval` / `bunx @hacksmith/doraval`.
-
-## 1. Scan what you already have
+After **step 1** ([install the skill](/get-started/installation/)):
 
 ```bash
-dora
+npx skills add saif-shines/doraval
 ```
 
-Bare `dora` lists agent surfaces, skill health, contradictions, and numbered next actions. No writes, no API key.
-
-## 2. Scaffold context
+Check agent context on **this project** — skills, rules, surfaces, next fixes:
 
 ```bash
-# Interactive: type → agent → name
-dora new
-
-# Non-interactive
-dora new skill --for claude --name my-context --description "Team context" --yes
-dora new plugin --for claude --name my-plugin --yes
+npx @hacksmith/doraval
+# same as: dora   (after npm / brew / bun install)
 ```
 
-Scaffold with `dora new --for <agent>`.
+## What you get
 
-## 3. Review and fix
+Bare `dora` is read-only. No API key. No writes.
 
-```bash
-dora review .
-dora fix .                 # mechanical fixes; always shows a diff
+1. **Agent surfaces** — which agents look configured  
+2. **Health** — skill / manifest issues with short reasons  
+3. **Next** — numbered follow-ups (`dora fix …`, `dora review …`)
+
+```text
+$ dora
+
+  Health
+    ✓ .claude/skills/review    valid
+    ✗ .claude/skills/deploy    Missing "description"
+
+  Next
+    1. dora fix .claude/skills/deploy
+    2. dora review --all
 ```
 
-CI-friendly structural gate (no LLM):
+## Optional next steps
 
-```bash
-dora review --all --quick --ci
-```
+Only if the scan (or your work) needs them:
 
-## 4. Record principles that stick
+| Goal | Command |
+| --- | --- |
+| Apply mechanical fixes | `dora fix .` (diffs first; `--yes` for agents/CI) |
+| Grade a skill or the repo | `dora review .` · CI: `dora review --all --quick --ci` |
+| Scaffold a skill / rule / plugin | `dora new` or `dora new skill --for claude --name … --yes` |
+| Keep a principle | `dora memory add "…" --weight 8` |
 
-```bash
-dora memory add "Use dora review before shipping any skill change" --weight 8
-dora memory list
-dora memory promote        # optional: write hard rules into AGENTS.md
-dora memory sync           # optional: private git backup
-```
-
-For Claude SessionStart hooks:
-
-```bash
-dora memory context --json --quiet
-```
+Full tables: [Command reference](/commands/scan/). JSON and CI: [Use with your agent](/for-agents/).
 
 ## Next
 
-- [First five minutes: scan](/first-five-minutes/scan/)
-- [For coding agents](/for-agents/): JSON, CI, exit codes
-- [Memory concept](/concepts/memory/)
+- **[Use with your agent](/for-agents/)** — `npx skills add saif-shines/doraval` when you want automation  
+- **[Install dora](/get-started/installation/)** — put `dora` on PATH  
+- **[First five minutes: scan](/first-five-minutes/scan/)** — main commands, one screen at a time  

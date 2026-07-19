@@ -1,32 +1,58 @@
 ---
 title: Getting started
-description: Who doraval is for, the problem it solves, and how to get a first win.
+description: Start with npx skills add saif-shines/doraval, then review context with dora.
 sidebar:
   label: Overview
   order: 1
 ---
 
-doraval is for anyone scaling AI context for coding agents: skills, plugins, decisions, and the glue between them, for yourself, your team, or your community.
+**doraval** is a **context engineering toolkit** for coding agents. Make agent context work on every try: skills, plugins, rules, and decisions you can rely on across Claude, Cursor, Codex, Copilot, and Grok.
 
-## The problem
+**First step for everyone who uses a coding agent:** install the doraval skill. Then check context with the `dora` CLI — yourself or through that agent.
 
-Context you cannot trust until someone has already burned a day. Broken manifests, skills that never trigger, decisions that evaporate between sessions, “works on my Claude” that fails on Cursor, Codex, or the tenth engineer you onboard.
+## Why this exists
 
-## The win
+Agent context goes bad in ordinary ways:
 
-Left-shift success. **Scan → review → fix → remember**, so the first attempt works across agents.
+- A skill ships with broken frontmatter or a vague description and never fires
+- Claude and Cursor disagree on the same convention
+- A decision lived in chat and is gone next session
+- Always-on files grow until nothing is high-signal
 
-| Job | Command |
+You can fix each of those by hand. doraval makes the check **repeatable** — before someone (or an agent) calls the work done.
+
+## Start here
+
+```bash
+# 1) first step — install the doraval skill
+npx skills add saif-shines/doraval
+
+# 2) review context on this project
+npx @hacksmith/doraval
+```
+
+| You want… | Go here |
 | --- | --- |
-| See what's broken | `dora` / `dora scan` |
-| Grade quality | `dora review` |
-| Apply mechanical fixes | `dora fix` |
-| Settle cross-agent conflicts | `dora reconcile` |
-| Scaffold context | `dora new --for <agent>` |
-| Principles that stick | `dora memory` |
+| **Install the skill** (step 1) | **[Installation](/get-started/installation/)** — `npx skills add saif-shines/doraval` |
+| **Review my context** on this project | **[Quickstart](/get-started/quickstart/)** — `npx @hacksmith/doraval` |
+| How the agent should run dora | **[Use with your agent](/for-agents/)** |
+| Put `dora` on PATH | [Installation](/get-started/installation/) (npm / brew / bun) |
 
-## Paths
+## What you can do with it
 
-1. [Install](/get-started/installation/): `npx`, npm global, Homebrew, or Bun
-2. [Quickstart](/get-started/quickstart/): first win under two minutes
-3. [First five minutes](/first-five-minutes/scan/): the loop, one screen at a time
+| Situation | Tool |
+| --- | --- |
+| What's broken in this project's agent setup? | `dora` / `dora scan` |
+| Is this skill / plugin / rule good enough to ship? | `dora review` |
+| Fix the mechanical issues (frontmatter, structure) | `dora fix` |
+| Scaffold a skill, rule, agent, or plugin | `dora new --for <agent>` |
+| Keep a principle and enforce it later | `dora memory` |
+| Claude and Cursor contradict each other | `dora reconcile` |
+
+Full flags: [Command reference](/commands/scan/).
+
+## Next
+
+1. **[Install the skill](/get-started/installation/)** — `npx skills add saif-shines/doraval`  
+2. **[Review my context](/get-started/quickstart/)** — run on your project  
+3. **[First five minutes](/first-five-minutes/)** — main commands, one screen at a time  

@@ -1,16 +1,24 @@
 # doraval
 
-**Make agent context work on the first try.** Context engineering for coding agents. Scan, review, fix, and remember skills, plugins, and decisions for yourself, your team, or your community.
+**Make agent context work on every try.** Context engineering toolkit for coding agents. Scan, review, fix, and remember skills, plugins, and decisions for yourself, your team, or your community.
 
-**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
+**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` CLI runs on your project; your agent can run the same checks when you want automation.
 
-[Docs](https://doraval.thehacksmith.dev) · [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
+[Docs](https://doraval.thehacksmith.dev) · [Use with your agent](https://doraval.thehacksmith.dev/for-agents/) · [npm](https://www.npmjs.com/package/@hacksmith/doraval)
 
-**The problem:** context you cannot trust until someone has already wasted a day debugging it. Broken skills, silent contradictions between Claude and Cursor, decisions that vanish next session.
+**The problem:** context you cannot rely on wastes a million tokens — broken skills, silent contradictions between Claude and Cursor, decisions that vanish next session.
 
-**The win:** scan → review → fix → remember, so the first attempt succeeds across Claude, Cursor, Codex, Copilot, and Grok.
+**The win:** scan → review → fix → remember, so every attempt succeeds across Claude, Cursor, Codex, Copilot, and Grok.
 
 ## First win (< 2 minutes)
+
+### 1. Install the doraval skill (first step)
+
+```bash
+npx skills add saif-shines/doraval
+```
+
+### 2. Review my context
 
 ```bash
 npx @hacksmith/doraval
@@ -37,18 +45,6 @@ $ dora
     1. dora fix .claude/skills/deploy
     2. dora review --all
 ```
-
-## The loop
-
-```bash
-dora                                          # scan
-dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
-dora review .                                 # structure + heuristics (+ LLM when available)
-dora fix .                                    # diffs first; asks before writing
-dora memory add "Run tests before shipping skill changes" --weight 8
-```
-
-Scaffold with `dora new --for <agent>` (skill, rule, agent, or plugin).
 
 ## Commands
 
@@ -88,6 +84,8 @@ Old `validate` / `lint` / `judge` / `eval` / `drift` folded into `dora review` (
 
 ## Install
 
+### CLI
+
 ```bash
 # No install
 npx @hacksmith/doraval
@@ -105,15 +103,13 @@ bun add -g @hacksmith/doraval
 
 npm ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18. Alpine/musl: run from source with Bun.
 
-## Make your agent use doraval automatically
-
-Install the doraval skill so Claude, Cursor, Codex, Copilot, or Grok reach for `dora` on their own. When an agent writes or edits a skill, plugin, rule, or agent config, the skill tells it to verify with `dora review` before calling the work done, and to read the exit code as truth.
+### Doraval skill (first step)
 
 ```bash
 npx skills add saif-shines/doraval
 ```
 
-The skill teaches the fix loop (`--dry-run`, then `--yes`), the exit-code contract (`0` clean, `1` issues, `2` could not run), and when to branch on `--format json`. It runs the `dora` CLI you installed above; if `dora` is not on `PATH`, it falls back to `npx @hacksmith/doraval`.
+Installs the doraval skill so agents run `dora` / `npx @hacksmith/doraval` when you edit context. Details: [Use with your agent](https://doraval.thehacksmith.dev/for-agents/).
 
 ## CI
 
@@ -125,4 +121,5 @@ dora --format json | jq '.summary'
 ## Links
 
 - [Documentation](https://doraval.thehacksmith.dev): get started, commands, [memory](https://doraval.thehacksmith.dev/concepts/memory/)
+- [Use with your agent](https://doraval.thehacksmith.dev/for-agents/): `npx skills add`, JSON, exit codes
 - [npm](https://www.npmjs.com/package/@hacksmith/doraval) · [JSR](https://jsr.io/@hacksmith/doraval) · [Releases](https://github.com/saif-shines/doraval/releases)

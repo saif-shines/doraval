@@ -1,14 +1,35 @@
 ---
 title: Installation
-description: Install doraval via Homebrew, npm, Bun, or one-shot npx/bunx.
+description: Step 1 — npx skills add saif-shines/doraval. Then install the dora CLI if you want it on PATH.
 sidebar:
   label: Installation
   order: 2
 ---
 
-Pick one path. After a permanent install, `dora` and `doraval` are the same binary.
+## 1. Install the doraval skill (first step)
 
-## Homebrew (recommended, macOS)
+```bash
+npx skills add saif-shines/doraval
+```
+
+This uses the **skills** CLI to install the doraval skill into your agent’s skill directory. After this, Claude, Cursor, Codex, Copilot, or Grok can load the checklist and run `dora` when you edit skills, plugins, rules, or agent config.
+
+How the skill drives checks: [Use with your agent](/for-agents/).
+
+## 2. Review context on your project
+
+```bash
+npx @hacksmith/doraval
+# same engine the skill uses; after permanent install: dora
+```
+
+**[Review my context](/get-started/quickstart/)** walks through the output.
+
+## 3. Optional — put `dora` on PATH
+
+After a permanent install, `dora` and `doraval` are the same binary. Not required if you are fine with `npx @hacksmith/doraval` (the skill falls back to that when `dora` is missing).
+
+### Homebrew (recommended, macOS)
 
 ```bash
 brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
@@ -16,7 +37,7 @@ brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
 
 Upgrade later with `brew upgrade doraval` or `dora update`.
 
-## npm (cross-platform)
+### npm (cross-platform)
 
 ```bash
 npm install -g @hacksmith/doraval
@@ -24,27 +45,15 @@ npm install -g @hacksmith/doraval
 
 Ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
 
-## Bun
+### Bun
 
 ```bash
-# permanent
 bun add -g @hacksmith/doraval
-
-# one-shot
+# one-shot:
 bunx @hacksmith/doraval
 ```
 
-## One-shot (no install)
-
-```bash
-npx @hacksmith/doraval
-# or
-bunx @hacksmith/doraval
-```
-
-Useful for trying doraval or CI without a global install. Prefer a permanent install for day-to-day use.
-
-## Alpine / musl
+### Alpine / musl
 
 Platform binaries target glibc. On Alpine/musl, run from source with Bun:
 
@@ -52,35 +61,25 @@ Platform binaries target glibc. On Alpine/musl, run from source with Bun:
 bunx @hacksmith/doraval
 ```
 
-## For coding agents
-
-Agents and CI usually skip a permanent install and run the CLI on demand with `npx` (no global install, always the latest):
-
-```bash
-npx @hacksmith/doraval review . --ci
-```
-
-To make a coding agent reach for `dora` on its own, install the doraval skill:
-
-```bash
-npx skills add saif-shines/doraval
-```
-
-This drops the doraval skill into your agent's skill directory (`.claude/skills/`, `.codex/skills/`, `.cursor/rules/`, and the like). The agent then verifies any skill, plugin, rule, or agent config with `dora review` before reporting the work done. If `dora` is not on `PATH`, the skill falls back to `npx @hacksmith/doraval`. See [For coding agents](/for-agents/) for how the skill drives the CLI.
-
 ## Verify
 
 ```bash
+# skill (skills CLI)
+npx skills list
+
+# CLI (after permanent install)
 doraval --version
-# same binary:
 dora --version
 ```
 
 ## Common mistakes
 
+- Skipped step 1: agents will not auto-load the doraval checklist until `npx skills add saif-shines/doraval`.
+- `npx skills add` fails: need network + a recent Node; retry the same command.
 - Global install succeeds but `dora` is missing: ensure your npm/Bun global bin directory is on `PATH`.
 - Alpine or musl hosts: use Bun (`bunx` / `bun add -g`), not the glibc platform binary.
 
 ## Next
 
-[Quickstart](/get-started/quickstart/): run your first scan.
+**[Review my context](/get-started/quickstart/)** — run on your project.  
+**[Use with your agent](/for-agents/)** — what the skill expects, JSON, CI.  

@@ -1,46 +1,60 @@
 ---
-title: For coding agents
-description: JSON mode, CI, exit codes, capabilities, and machine-readable docs.
+title: Use with your agent
+description: Install the doraval skill with npx skills add, then JSON mode, exit codes, and CI.
 sidebar:
-  label: Overview
+  label: Use with your agent
   order: 1
 ---
 
-doraval is built so coding agents and CI can drive it without a human reading tables.
+Two pieces:
 
-## The doraval skill
+| Piece | What it is |
+| --- | --- |
+| **`dora` CLI** | The engine — `npx @hacksmith/doraval` or install on PATH |
+| **doraval skill** | Agent instructions so Claude / Cursor / etc. run that engine for you |
 
-Install the skill so an agent reaches for `dora` on its own:
+You can always run the CLI by hand ([Review my context](/get-started/quickstart/)). The skill is how the agent reaches for it without a paste every time.
+
+## Install the doraval skill
+
+Uses the open **skills** CLI (not the `dora` binary):
 
 ```bash
 npx skills add saif-shines/doraval
 ```
 
-The skill is a router, not documentation. Its frontmatter fires when an agent authors or edits a skill (`SKILL.md`), plugin, rule, or agent config, and it enforces one loop:
+That installs the skill from this repo into your agent’s skill directory (e.g. `.claude/skills/`, `.agents/skills/`, host-specific paths). After that, when you author or edit a skill, plugin, rule, or agent config, the agent should load doraval and run `dora` (or `npx @hacksmith/doraval` if `dora` is not on `PATH`).
 
-1. Scan or review with `--format json`.
-2. Read the exit code. Do not report the work done while it is `1` or `2`.
-3. Apply mechanical fixes non-interactively: `dora fix <path> --dry-run`, then `dora fix <path> --yes`.
-4. Hand-edit judgment fixes from `dora fix <path> --brief`.
-5. Re-review until exit `0`.
+List / remove with the same CLI: `npx skills list`, `npx skills remove …`.
 
-Because agent loops cannot answer TTY prompts, the skill always uses `--yes` to apply and `--dry-run` to preview, and never runs bare interactive `dora fix`, `dora reconcile`, or `dora memory promote`. Reference: [Installation](/get-started/installation/#install-the-skill-for-coding-agents).
+## What the skill expects
+
+- `dora review <path> --format json` (or `npx @hacksmith/doraval review <path> --format json`)
+- Exit codes as truth: **do not report done** on `1` or `2`
+- Mechanical fixes: `dora fix <path> --dry-run`, then `dora fix <path> --yes`
+- Judgment items: `dora fix <path> --brief`, hand-edit, re-review until exit `0`
+
+Agent sessions cannot answer TTY prompts — never bare interactive `dora fix`, `reconcile`, or `memory promote`.
+
+## Without the skill (paste)
+
+```text
+Review my agent context with dora (npx @hacksmith/doraval). Fix mechanical issues with --yes. Do not say you're done until review exits 0.
+```
 
 ## Machine output
 
 ```bash
-dora --format json
-dora --ci                    # implies --format json
-dora review --all --quick --ci
-dora --capabilities          # JSON manifest of commands (not a human command)
+npx @hacksmith/doraval --format json
+npx @hacksmith/doraval --ci
+npx @hacksmith/doraval review --all --quick --ci
+dora --capabilities          # if dora is on PATH
 ```
-
-Global flags:
 
 | Flag | Meaning |
 | --- | --- |
 | `--format table\|json` | Output format |
-| `--ci` | Machine mode (JSON) |
+| `--ci` | Machine mode (implies JSON) |
 | `--cwd <path>` | Working directory |
 | `--capabilities` | Emit command capability manifest |
 
@@ -50,42 +64,31 @@ Global flags:
 | --- | --- |
 | `0` | Clean |
 | `1` | Issues found |
-| `2` | Could not run (e.g. required LLM tier unavailable with `--deep`) |
+| `2` | Could not run (e.g. `--deep` with no judge) |
 
 ## CI example
 
 ```bash
-# one-shot in CI (no global install)
 npx @hacksmith/doraval review --all --quick --ci
-
-# or if doraval is already on PATH (npm / brew / bun install)
-dora review --all --quick --ci
-dora --format json | jq '.summary'
 ```
-
-Install paths for humans and agents: [Installation](/get-started/installation/) (npm, Homebrew, Bun, `npx` / `bunx`).
 
 ## Agent-ready fixes
 
 ```bash
-dora fix --yes               # pre-approve mechanical fixes
-dora fix --brief             # clipboard/prompt for judgment items
-dora fix --dry-run
+npx @hacksmith/doraval fix --yes
+npx @hacksmith/doraval fix --brief
+npx @hacksmith/doraval fix --dry-run
 ```
 
 ## Machine-readable docs
 
-This site ships agent surfaces by default:
-
 | URL | Content |
 | --- | --- |
-| [https://doraval.thehacksmith.dev/llms.txt](https://doraval.thehacksmith.dev/llms.txt) | Compact index of every page |
-| [https://doraval.thehacksmith.dev/llms-full.txt](https://doraval.thehacksmith.dev/llms-full.txt) | Full corpus Markdown |
-| Any page + `.md` | Raw Markdown for that page (e.g. `/commands/review.md`) |
+| [llms.txt](https://doraval.thehacksmith.dev/llms.txt) | Compact index of every page |
+| [llms-full.txt](https://doraval.thehacksmith.dev/llms-full.txt) | Full corpus Markdown |
+| Any page + `.md` | Raw Markdown (e.g. `/commands/review.md`) |
 
 ## Hooks
-
-Inject project principles into Claude SessionStart:
 
 ```bash
 dora memory context --json --quiet
@@ -93,6 +96,7 @@ dora memory context --json --quiet
 
 ## Related
 
-- [dora scan](/commands/scan/)
+- [Review my context](/get-started/quickstart/)
+- [Install dora](/get-started/installation/)
 - [dora review](/commands/review/)
-- [dora memory](/commands/memory/)
+- [dora scan](/commands/scan/)

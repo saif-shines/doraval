@@ -1,0 +1,49 @@
+# doraval
+
+> Scale your AI context for coding agents. Make skills, plugins, and decisions work on every try — for yourself, your team, or your community.
+
+## Docs
+
+- [Scale your AI context for coding agents](https://doraval.thehacksmith.dev/): Scan, review, fix, and remember agent context so skills and plugins work on every try — across Claude, Cursor, Codex, Copilot, and Grok.
+
+## Getting started
+
+- [Getting started](https://doraval.thehacksmith.dev/get-started): Who doraval is for, the problem it solves, and how to get a first win.
+- [Installation](https://doraval.thehacksmith.dev/get-started/installation): Install doraval via npx, npm, Homebrew, or Bun.
+- [Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart): Scan, scaffold, review, fix, and capture principles — one path for you, team, or community.
+
+## First five minutes
+
+- [Scan](https://doraval.thehacksmith.dev/first-five-minutes/scan): Run bare dora to see agent surfaces, skill health, and next actions.
+- [Fix](https://doraval.thehacksmith.dev/first-five-minutes/fix): Apply mechanical fixes with diffs first; always asks before writing.
+- [Review](https://doraval.thehacksmith.dev/first-five-minutes/review): Multi-tier quality gate — structure, heuristics, LLM, sessions.
+- [New](https://doraval.thehacksmith.dev/first-five-minutes/new): Scaffold a skill, rule, agent, or plugin for a coding agent.
+- [Memory](https://doraval.thehacksmith.dev/first-five-minutes/memory): Capture principles once; enforce them in every review.
+
+## Commands
+
+- [dora scan](https://doraval.thehacksmith.dev/commands/scan): Scan the repo for agent surfaces, skill health, contradictions, and next actions.
+- [dora review](https://doraval.thehacksmith.dev/commands/review): Deep multi-tier review of skills — structure, heuristics, LLM, sessions.
+- [dora fix](https://doraval.thehacksmith.dev/commands/fix): Auto-fix review findings — mechanical diffs first; judgment items for your agent.
+- [dora new](https://doraval.thehacksmith.dev/commands/new): Scaffold a skill, rule, agent, or plugin for a coding agent.
+- [dora memory](https://doraval.thehacksmith.dev/commands/memory): Project principles — capture, enforce in review, promote to AGENTS.md.
+- [dora reconcile](https://doraval.thehacksmith.dev/commands/reconcile): Settle cross-agent contradictions — shared AGENTS.md, strip conflicts.
+- [dora sessions](https://doraval.thehacksmith.dev/commands/sessions): List and show recent AI coding agent sessions for this project.
+- [dora config](https://doraval.thehacksmith.dev/commands/config): Get or set doraval configuration with dot-notation keys.
+- [dora bump](https://doraval.thehacksmith.dev/commands/bump): Bump semver in plugin.json and marketplace.json manifests.
+- [dora providers](https://doraval.thehacksmith.dev/commands/providers): List supported providers and packaging details.
+- [dora update](https://doraval.thehacksmith.dev/commands/update): Update doraval to the latest version.
+- [dora completion](https://doraval.thehacksmith.dev/commands/completion): Generate shell completion scripts for bash, zsh, or fish.
+
+## For coding agents
+
+- [For coding agents](https://doraval.thehacksmith.dev/for-agents): JSON mode, CI, exit codes, capabilities, and machine-readable docs.
+
+## Concepts
+
+- [Memory](https://doraval.thehacksmith.dev/concepts/memory): Principles that stick — capture once, enforce in review, promote to AGENTS.md.
+- [Review tiers](https://doraval.thehacksmith.dev/concepts/review-tiers): How dora review grades artifacts — structure, heuristics, LLM, sessions.
+
+## Reference
+
+- [scenarios.yaml](https://doraval.thehacksmith.dev/reference/scenarios): Optional scenario list for skill coverage during LLM review.

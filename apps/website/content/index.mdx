@@ -1,42 +1,34 @@
 ---
-title: Make agent context work on the first try
-description: Scan, review, fix, and remember agent context so skills and plugins work on the first try, across Claude, Cursor, Codex, Copilot, and Grok.
+title: Make agent context work on every try
+description: First install the doraval skill, then check agent context with dora — skills, plugins, and rules across Claude, Cursor, Codex, Copilot, and Grok.
 sidebar:
   label: Home
   order: 0
 ---
 
-**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. The `dora` alias is the same CLI.
+**doraval** (*dor-uh-val*) = **Doraemon** + **eval**. A **context engineering toolkit** for coding agents: install the skill first, then check context with the `dora` CLI (yourself or via your agent).
 
-Context you cannot trust wastes a day. doraval makes the first attempt succeed across Claude, Cursor, Codex, Copilot, and Grok.
+Context you cannot rely on wastes a million tokens. doraval makes verification **repeatable** — so you (and your agents) check before calling the work done, across Claude, Cursor, Codex, Copilot, and Grok.
 
 ## First win
 
+**Step 1 — install the doraval skill** (required first step for agent-driven checks):
+
 ```bash
-# one-shot (no install)
-npx @hacksmith/doraval
-
-# or install once, then use dora / doraval
-npm install -g @hacksmith/doraval
-# brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
-# bun add -g @hacksmith/doraval
-
-dora
+npx skills add saif-shines/doraval
 ```
 
-Zero config. No API key. Full install options: [Installation](/get-started/installation/) (npm, Homebrew, Bun, `npx` / `bunx`).
+**Step 2 — review context on this project:**
 
-Bare `dora` scans the repo: which agents are configured, every skill's health, cross-agent contradictions, and the exact next command to run.
+```bash
+npx @hacksmith/doraval
+# or after install: dora
+```
+
+Bare `dora` reviews agent context: surfaces, skill health, contradictions, next actions. Zero config. No API key. The skill uses the same engine when your agent runs checks.
 
 ```text
 $ dora
-
-  doraval v0.6.x
-  Read-only scan of agent context. No writes, no LLM.
-
-  Agent surfaces
-    ✓ claude    CLAUDE.md  .claude/skills
-    ⚠ cursor    not configured
 
   Health
     ✓ .claude/skills/review    valid
@@ -47,51 +39,22 @@ $ dora
     2. dora review --all
 ```
 
-Scan and session analysis span all five agents. Scaffolding (`dora new`) and packaging review cover Claude, Cursor, Codex, and Copilot; the LLM judge runs on a Claude or Grok CLI you already have, or any API key.
-
-## The loop
-
-You can run these yourself, but the better default is to **let your coding agent do it**. Point Claude, Cursor, Codex, Copilot, or Grok at the repo and ask it to drive `dora` (JSON-friendly flags are built in).
-
-Paste something like:
-
-```text
-Install doraval if needed, then run the doraval loop in this repo:
-1. dora (scan): fix anything it suggests
-2. dora review . then dora fix . (use --yes for mechanical fixes)
-3. dora memory add any project principles we should keep
-Use --format json / --ci when you need machine output. Prefer dora new --for <agent> over hand-writing skill files.
-```
-
-What the agent (or you) runs:
-
-```bash
-dora                                          # scan
-dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
-dora review .                                 # structure + heuristics + security + LLM when available
-dora fix .                                    # diffs first; asks before writing
-dora reconcile                                # settle cross-agent contradictions in AGENTS.md
-dora memory add "Run tests before shipping skill changes" --weight 8
-```
-
-A recorded principle is not a note. `dora review` enforces it as a rubric, and anything weighted 7+ fails as an error. Review also mines real agent sessions (Claude, Cursor, Codex, Copilot, Grok) for evidence a skill was actually used.
-
-Details for agents and CI: [For coding agents](/for-agents/).
+Common follow-ups: `dora review`, `dora fix`, `dora new --for`, `dora memory`, `dora reconcile`. Full table: [Command reference](/commands/scan/).
 
 <CardGroup cols={3}>
-  <Card title="Get started" href="/get-started/" icon="rocket">
-    Install and run your first scan in under two minutes.
+  <Card title="Install the skill" href="/get-started/installation/" icon="rocket">
+    `npx skills add saif-shines/doraval` — first step.
   </Card>
-  <Card title="Commands" href="/commands/scan/" icon="terminal">
-    Full reference for scan, review, fix, new, memory, and more.
+  <Card title="Review my context" href="/get-started/quickstart/" icon="terminal">
+    Run `dora` on your project — surfaces, health, next actions.
   </Card>
-  <Card title="For coding agents" href="/for-agents/" icon="bot">
-    JSON mode, CI, exit codes, so your agent can run the loop.
+  <Card title="Use with your agent" href="/for-agents/" icon="bot">
+    How the skill drives dora — JSON, exit codes, CI.
   </Card>
 </CardGroup>
 
 ## Next
 
-- [Installation](/get-started/installation/): npm, Homebrew, Bun
-- [Quickstart](/get-started/quickstart/): scan → new → review → fix → memory
-- [First five minutes](/first-five-minutes/scan/): the core loop, one screen at a time
+- [Install the skill](/get-started/installation/): `npx skills add saif-shines/doraval` first  
+- [Review my context](/get-started/quickstart/): run `dora` on your project  
+- [Use with your agent](/for-agents/): agent flags and exit codes  
