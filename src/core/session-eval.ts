@@ -1,5 +1,4 @@
 import type { AgentConfig } from "./agent-invoke.js";
-import { invokeAgent, getLastInvokeError } from "./agent-invoke.js";
 import { invokeJudge, canUseApiJudge, type JudgeResult, type JudgeOutput } from "./llm-judge.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
@@ -30,7 +29,7 @@ export interface EvalResult {
   verdictReason: string;
   checklist: ChecklistItem[];
   ambiguityFlags: string[];
-  judgeMethod: "api" | "cli" | "unknown";
+  judgeMethod: "api" | "unknown";
 }
 
 function toolCallSummary(call: ToolCall): string {
@@ -174,12 +173,10 @@ export async function runEval(
   let judged: JudgeOutput | null = null;
   let judgeError: string | undefined;
   let judgeCode: string | undefined;
-  let usedMethod: "api" | "cli" | "unknown" = "unknown";
+  let usedMethod: "api" | "unknown" = "unknown";
 
   const shouldTryApi =
-    preference !== 'cli' &&
-    (preference === 'api' || canUseApiJudge(evalCfg)) &&
-    !!evalCfg.model;
+    (preference === 'api' || canUseApiJudge(evalCfg)) && !!evalCfg.model;
 
   if (shouldTryApi) {
     const timeoutMs = evalCfg.timeout_ms ?? 180_000;
@@ -193,43 +190,8 @@ export async function runEval(
     }
   }
 
-  // Fallback: CLI agent returns Record<string, unknown>; map it to JudgeOutput shape
-  if (!judged && preference !== 'api') {
-    const raw = await invokeAgent(prompt, agentCfg, ["verdict", "checklist"]);
-    if (raw && typeof raw.verdict === "string" && Array.isArray(raw.checklist)) {
-      judged = {
-        verdict: raw.verdict === "PASS" ? "PASS" : "FAIL",
-        verdictReason: typeof raw.verdictReason === "string" ? raw.verdictReason : "",
-        checklist: (raw.checklist as unknown[]).map((item) => {
-          const i = item as Record<string, unknown>;
-          const bindingness = (["MANDATORY", "CONDITIONAL", "DISCRETIONARY"] as const).includes(i.bindingness as never)
-            ? (i.bindingness as "MANDATORY" | "CONDITIONAL" | "DISCRETIONARY")
-            : "MANDATORY";
-          const itemVerdict = (["ALIGNED", "DRIFTED", "JUSTIFIED", "UNCLEAR"] as const).includes(i.itemVerdict as never)
-            ? (i.itemVerdict as "ALIGNED" | "DRIFTED" | "JUSTIFIED" | "UNCLEAR")
-            : "UNCLEAR";
-          return {
-            instruction: typeof i.instruction === "string" ? i.instruction : "unknown",
-            bindingness,
-            itemVerdict,
-            evidence: typeof i.evidence === "string" ? i.evidence : "",
-            detail: typeof i.detail === "string" ? i.detail : undefined,
-          };
-        }),
-        ambiguityFlags: Array.isArray(raw.ambiguityFlags)
-          ? (raw.ambiguityFlags as unknown[]).filter((f): f is string => typeof f === "string")
-          : [],
-        userFamiliarity: typeof raw.userFamiliarity === "number" ? raw.userFamiliarity : 0,
-        userFamiliarityReason: typeof raw.userFamiliarityReason === "string" ? raw.userFamiliarityReason : "",
-        closure: (raw.closure as JudgeOutput["closure"]) ?? "incomplete",
-        userTurnsAfterSkill: typeof raw.userTurnsAfterSkill === "number" ? raw.userTurnsAfterSkill : 0,
-      };
-      if (judged) usedMethod = "cli";
-    }
-  }
-
   if (!judged) {
-    const err = judgeError || getLastInvokeError();
+    const err = judgeError;
     const codeSuffix = judgeCode ? ` [${judgeCode}]` : "";
     return makeUnknownResult(
       primitives,
