@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import type { JournalConfig } from "../../core/journal-config.js";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { readConfig, type JournalConfig } from "../../core/journal-config.js";
 import {
   applyOverride,
   applyPackage,
   buildListRows,
   displaySeverity,
   explainRule,
+  persist,
   readScopeRules,
   resolveScope,
 } from "./rules-core.js";
@@ -135,6 +139,21 @@ describe("displaySeverity", () => {
     expect(displaySeverity("info")).toBe("FYI");
     expect(displaySeverity("error")).toBe("error");
   });
+});
+
+test("persist round-trips config through DORAVAL_HOME", async () => {
+  const home = mkdtempSync(join(tmpdir(), "dora-rules-"));
+  const previous = process.env.DORAVAL_HOME;
+  process.env.DORAVAL_HOME = home;
+  try {
+    await persist(cfg({}, { package: "strict", overrides: { "body-size": "off" } }));
+    const saved = await readConfig();
+    expect(saved?.rules).toEqual({ package: "strict", overrides: { "body-size": "off" } });
+  } finally {
+    if (previous === undefined) delete process.env.DORAVAL_HOME;
+    else process.env.DORAVAL_HOME = previous;
+    rmSync(home, { recursive: true, force: true });
+  }
 });
 
 describe("readScopeRules", () => {

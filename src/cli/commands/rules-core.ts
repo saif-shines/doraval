@@ -1,5 +1,8 @@
 import {
+  ensureDoravalDirs,
+  readConfig,
   resolveProjectName,
+  writeConfig,
   type JournalConfig,
   type RuleOverride,
   type RulesConfig,
@@ -7,6 +10,8 @@ import {
 import { BUILTIN_PACKAGES, getPackage } from "../../core/rules/packages.js";
 import { resolveEffectiveRules } from "../../core/rules/resolve.js";
 import { RULES, resolveRuleId, type RuleSeverity } from "../../core/rules/registry.js";
+
+export { readConfig };
 
 export type Scope = { kind: "global" } | { kind: "project"; name: string };
 export type ScopeResult = { ok: true; scope: Scope } | { ok: false; error: string };
@@ -135,6 +140,11 @@ export function buildListRows(
 
 function cfgForPackage(packageName: string): JournalConfig {
   return { journal: { repo: "", projects: {} }, rules: { package: packageName } };
+}
+
+export async function persist(config: JournalConfig): Promise<void> {
+  ensureDoravalDirs();
+  await writeConfig(config);
 }
 
 export function explainRule(
