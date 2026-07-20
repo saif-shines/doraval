@@ -18,12 +18,19 @@ sidebar:
 
 ## What
 
-{/* describe what this rule checks */}
+Heuristic check that the skill description (and `when_to_use` when present) includes an activation cue such as **“Use when…”**, **trigger**, or **invoke**.
 
 ## Why
 
-{/* explain why it matters */}
+Without a when-clause, the agent has no reliable signal to load the skill. This is the mechanical half of “nail the description”; size alone is [R005](/reference/rules/R005), semantic specificity is [R025](/reference/rules/R025).
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Rewrite the description to include both capability and situation:
+
+```text
+Use when working with PDF files. Do NOT use for general document editing,
+spreadsheets, or plain text files.
+```
+
+Optional: add a short quoted user phrase (“review this PR”) so the model can match natural wording. Include a **negative** case when the skill is easy to over-apply.

@@ -18,12 +18,15 @@ sidebar:
 
 ## What
 
-{/* describe what this rule checks */}
+Session-tier signal: the skill was **never** invoked in recent project sessions (when session data is available).
 
 ## Why
 
-{/* explain why it matters */}
+Unused skills are candidates to **retire**, retarget, or fix. Capability skills often become unnecessary as models improve; preference skills go stale when the team process changes. Silence in sessions is not proof of uselessness, but it is a prompt to investigate.
 
 ## How to fix
 
-{/* concrete remediation steps */}
+1. Confirm session adapters can see this project’s agents ([R030](/reference/rules/R030) if none found).
+2. If the skill should fire: tighten the description ([R005](/reference/rules/R005), [R014](/reference/rules/R014), [R025](/reference/rules/R025)).
+3. If the work now succeeds without it: remove or archive the skill and free context.
+4. If it is intentional manual-only tooling, document that and expect low auto-invocation.

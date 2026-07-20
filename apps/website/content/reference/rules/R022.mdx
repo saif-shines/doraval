@@ -18,12 +18,15 @@ sidebar:
 
 ## What
 
-{/* describe what this rule checks */}
+LLM-tier judgment: instructions in the skill body should be unambiguous — one clear meaning per rule, no contradictory or foggy guidance.
 
 ## Why
 
-{/* explain why it matters */}
+Long, essay-like skills often hide conflicting advice. Ambiguity multiplies across millions of invocations; the agent cannot “read between the lines” reliably under load.
 
 ## How to fix
 
-{/* concrete remediation steps */}
+1. Split multi-topic skills or move side topics into `references/`.
+2. Replace hedging (“maybe”, “consider”, “perhaps”) with a decision or a condition.
+3. If two paths are valid, state the **decision rule** that picks between them.
+4. Mechanical ambiguity cues also surface under [R019](/reference/rules/R019).

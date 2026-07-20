@@ -18,12 +18,21 @@ sidebar:
 
 ## What
 
-{/* describe what this rule checks */}
+Heuristic check that the body states hard constraints with **MUST** / **MUST NOT** (or equivalent explicit guardrails).
 
 ## Why
 
-{/* explain why it matters */}
+Preferences without bounds leave the agent free to invent unsafe shortcuts. Constraints are the right level of freedom: say what must never happen; leave adaptable paths open. This pairs with tip-style “always run tests / never push to main” guidance.
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Add a short guardrail section:
+
+```markdown
+## Constraints
+- MUST run tests before opening a PR.
+- MUST NOT push directly to main.
+- MUST NOT use this skill for general prose editing (PDF only).
+```
+
+Put “do not use when…” in the **description** as well when over-trigger is the risk ([R014](/reference/rules/R014)).

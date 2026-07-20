@@ -18,12 +18,15 @@ sidebar:
 
 ## What
 
-{/* describe what this rule checks */}
+LLM-tier check that documented scenarios in `scenarios.yaml` are covered by the skill’s guidance (the skill would handle what the scenarios claim).
 
 ## Why
 
-{/* explain why it matters */}
+Shipping without evals is guessing. Scenarios turn “test before you ship” into something dora can re-run. Include cases the skill **should** handle and cases it **should ignore** so you do not optimize the trigger in only one direction.
 
 ## How to fix
 
-{/* concrete remediation steps */}
+1. Keep `scenarios.yaml` valid ([R013](/reference/rules/R013)).
+2. Add  a mix of happy-path, ignore/negative, and one edge case.
+3. Define success per scenario (compiles, right API, did not fire, …) — grade outcomes, not the exact path.
+4. After description changes, re-run review; most regressions are trigger mismatches ([R025](/reference/rules/R025)).

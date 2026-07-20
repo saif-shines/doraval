@@ -18,12 +18,19 @@ sidebar:
 
 ## What
 
-{/* describe what this rule checks */}
+Heuristic check that the body uses imperative verbs (Create, Run, Verify, …) rather than only passive or suggestive phrasing.
 
 ## Why
 
-{/* explain why it matters */}
+Agents follow **directives**. “You might want to consider the Interactions API” is trivia; “Always use `interactions.create()`” is an instruction. Clear voice improves actionability without longer essays.
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Replace suggestions with commands:
+
+| Weak | Stronger |
+| --- | --- |
+| You might want to run tests | Run the test suite before opening a PR |
+| Consider using model X | Use model X — model Y is deprecated and returns errors |
+
+Explain **why** when it helps the agent generalize beyond a single example.

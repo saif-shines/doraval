@@ -26,4 +26,12 @@ Scenarios define expected trigger behavior. Invalid scenario data cannot be used
 
 ## How to fix
 
-Correct the YAML syntax and required fields in `scenarios.yaml`. Keep each scenario focused on one expected trigger or non-trigger case.
+Correct the YAML syntax and required fields in `scenarios.yaml`.
+
+Include at least:
+
+- one case the skill **should** handle
+- one case it **should not** fire (negative / ignore)
+- optionally one edge case
+
+Each scenario should name a success criterion you can grade. Coverage of those cases is judged under [R027](/reference/rules/R027).

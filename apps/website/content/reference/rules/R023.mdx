@@ -18,12 +18,16 @@ sidebar:
 
 ## What
 
-{/* describe what this rule checks */}
+LLM-tier judgment: instructions should be executable — the agent can act without inventing missing steps or APIs.
 
 ## Why
 
-{/* explain why it matters */}
+Trivia and background do not ship work. Prefer directives and outcomes over encyclopedias. Over-specified micro-workflows also fail: they block recovery when reality diverges from the author’s three test prompts.
 
 ## How to fix
 
-{/* concrete remediation steps */}
+- Lead with **what success looks like**, then constraints.
+- Give one concrete example ([R017](/reference/rules/R017)).
+- Say why a constraint exists when it generalizes (“model Y is deprecated and returns errors”).
+- Avoid overfitting to a single happy path; cover the failure you care about in `scenarios.yaml` ([R027](/reference/rules/R027)).
+- Fragile multi-step order → script, not a novel-length procedure.
