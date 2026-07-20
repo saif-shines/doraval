@@ -52,7 +52,8 @@
     "jsr:publish": "bunx jsr publish",
     "site:dev": "cd apps/website && bun run dev",
     "gen:rules": "bun scripts/gen-rule-docs.ts",
-    "site:build": "bun scripts/gen-rule-docs.ts && cd apps/website && bun run build",
+    "gen:rules:check": "bun scripts/gen-rule-docs.ts --check",
+    "site:build": "bun run gen:rules:check && cd apps/website && bun run build",
     "site:preview": "cd apps/website && bun run preview"
   },
   "type": "module",

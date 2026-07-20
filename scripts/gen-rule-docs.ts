@@ -1,23 +1,17 @@
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
+  refreshRulePage,
   renderCatalog,
-  renderGeneratedBlock,
   scaffoldRulePage,
-  spliceGeneratedRegion,
 } from "../src/core/rules/docs.js";
 import { RULES } from "../src/core/rules/registry.js";
 
 const DEFAULT_DIR = resolve(import.meta.dir, "../apps/website/content/reference/rules");
 
-export async function generateRuleDocs(options?: {
-  dir?: string;
-}): Promise<{ written: string[]; catalog: string }> {
-  const dir = options?.dir ?? DEFAULT_DIR;
-  await mkdir(dir, { recursive: true });
-
-  const catalog = [
+function renderCatalogPage(): string {
+  return [
     "---",
     "title: Rules catalog",
     "description: Every rule dora can check, with code, tier, default severity, and package membership.",
@@ -33,24 +27,88 @@ export async function generateRuleDocs(options?: {
     renderCatalog(),
     "",
   ].join("\n");
-  const pages = new Map<string, string>();
+}
 
+function renderRulesMeta(): string {
+  const pages = ["index", ...RULES.map((rule) => rule.code)].map((page) => JSON.stringify(page)).join(", ");
+  return [
+    'import { defineMeta } from "blume";',
+    "",
+    "export default defineMeta({",
+    '  title: "Rules",',
+    "  order: 1,",
+    `  pages: [${pages}],`,
+    "});",
+    "",
+  ].join("\n");
+}
+
+function expectedNames(): string[] {
+  return ["index.mdx", "meta.ts", ...RULES.map((rule) => `${rule.code}.mdx`)].sort();
+}
+
+export async function generateRuleDocs(options?: {
+  dir?: string;
+}): Promise<{ written: string[]; catalog: string }> {
+  const dir = options?.dir ?? DEFAULT_DIR;
+  await mkdir(dir, { recursive: true });
+
+  const catalog = renderCatalogPage();
+  const pages = new Map<string, string>();
   for (const rule of RULES) {
     const path = join(dir, `${rule.code}.mdx`);
-    const body = existsSync(path)
-      ? spliceGeneratedRegion(await Bun.file(path).text(), renderGeneratedBlock(rule))
-      : scaffoldRulePage(rule);
-    pages.set(path, body);
+    pages.set(path, existsSync(path)
+      ? refreshRulePage(await Bun.file(path).text(), rule)
+      : scaffoldRulePage(rule));
   }
 
   const catalogPath = join(dir, "index.mdx");
+  const metaPath = join(dir, "meta.ts");
   await Bun.write(catalogPath, catalog);
+  await Bun.write(metaPath, renderRulesMeta());
   for (const [path, body] of pages) await Bun.write(path, body);
 
-  return { written: [catalogPath, ...pages.keys()], catalog };
+  return { written: [catalogPath, metaPath, ...pages.keys()], catalog };
+}
+
+export async function checkRuleDocs(options?: { dir?: string }): Promise<void> {
+  const dir = options?.dir ?? DEFAULT_DIR;
+  const actualNames = existsSync(dir) ? (await readdir(dir)).sort() : [];
+  const expected = expectedNames();
+  const missing = expected.filter((name) => !actualNames.includes(name));
+  const extra = actualNames.filter((name) => !expected.includes(name));
+  if (missing.length || extra.length) {
+    throw new Error([
+      missing.length && `missing: ${missing.join(", ")}`,
+      extra.length && `unexpected: ${extra.join(", ")}`,
+    ].filter(Boolean).join("; "));
+  }
+
+  const catalogPath = join(dir, "index.mdx");
+  if (await Bun.file(catalogPath).text() !== renderCatalogPage()) {
+    throw new Error("Stale generated rule docs: index.mdx");
+  }
+
+  const metaPath = join(dir, "meta.ts");
+  if (await Bun.file(metaPath).text() !== renderRulesMeta()) {
+    throw new Error("Stale generated rule docs: meta.ts");
+  }
+
+  for (const rule of RULES) {
+    const path = join(dir, `${rule.code}.mdx`);
+    const current = await Bun.file(path).text();
+    if (refreshRulePage(current, rule) !== current) {
+      throw new Error(`Stale generated rule docs: ${rule.code}.mdx`);
+    }
+  }
 }
 
 if (import.meta.main) {
-  const { written } = await generateRuleDocs();
-  console.log(`Generated ${written.length} rule doc file(s).`);
+  if (process.argv.includes("--check")) {
+    await checkRuleDocs();
+    console.log("Rule docs are in sync.");
+  } else {
+    const { written } = await generateRuleDocs();
+    console.log(`Generated ${written.length} rule doc file(s).`);
+  }
 }

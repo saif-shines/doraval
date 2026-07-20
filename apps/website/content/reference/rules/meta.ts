@@ -1,8 +1,7 @@
 import { defineMeta } from "blume";
-import { RULES } from "../../../../../src/core/rules/registry.js";
 
 export default defineMeta({
   title: "Rules",
   order: 1,
-  pages: ["index", ...RULES.map((rule) => rule.code)],
+  pages: ["index", "R001", "R002", "R003", "R004", "R005", "R006", "R007", "R008", "R009", "R010", "R011", "R012", "R013", "R014", "R015", "R016", "R017", "R018", "R019", "R020", "R021", "R022", "R023", "R024", "R025", "R026", "R027", "R028", "R029", "R030", "R031", "R032", "R033"],
 });

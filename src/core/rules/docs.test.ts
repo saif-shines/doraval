@@ -76,6 +76,11 @@ describe("spliceGeneratedRegion", () => {
   test("throws when markers absent", () => {
     expect(() => spliceGeneratedRegion("no markers here", "X")).toThrow(/marker/i);
   });
+
+  test("throws when either marker is duplicated", () => {
+    expect(() => spliceGeneratedRegion(`${GEN_START}\n${GEN_START}\n${GEN_END}`, "X")).toThrow(/duplicate/i);
+    expect(() => spliceGeneratedRegion(`${GEN_START}\n${GEN_END}\n${GEN_END}`, "X")).toThrow(/duplicate/i);
+  });
 });
 
 describe("scaffoldRulePage", () => {

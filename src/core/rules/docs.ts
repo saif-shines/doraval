@@ -50,11 +50,15 @@ export function spliceGeneratedRegion(existing: string, block: string): string {
   if (start === -1 || end === -1 || end < start) {
     throw new Error(`Missing ${GEN_START} / ${GEN_END} marker pair; refusing to overwrite`);
   }
+  if (existing.indexOf(GEN_START, start + GEN_START.length) !== -1
+    || existing.indexOf(GEN_END, end + GEN_END.length) !== -1) {
+    throw new Error("Duplicate generated marker; refusing to overwrite");
+  }
 
   return `${existing.slice(0, start + GEN_START.length)}\n${block}\n${existing.slice(end)}`;
 }
 
-export function scaffoldRulePage(rule: Rule): string {
+export function renderRuleFrontmatter(rule: Rule): string {
   return [
     "---",
     `title: ${rule.code} · ${rule.slug}`,
@@ -62,6 +66,20 @@ export function scaffoldRulePage(rule: Rule): string {
     "sidebar:",
     `  label: ${rule.code} ${rule.slug}`,
     "---",
+  ].join("\n");
+}
+
+export function refreshRulePage(existing: string, rule: Rule): string {
+  if (!existing.startsWith("---\n")) throw new Error(`Missing frontmatter for ${rule.code}`);
+  const frontmatterEnd = existing.indexOf("\n---", 4);
+  if (frontmatterEnd === -1) throw new Error(`Missing frontmatter delimiter for ${rule.code}`);
+  const withFrontmatter = `${renderRuleFrontmatter(rule)}${existing.slice(frontmatterEnd + 4)}`;
+  return spliceGeneratedRegion(withFrontmatter, renderGeneratedBlock(rule));
+}
+
+export function scaffoldRulePage(rule: Rule): string {
+  return [
+    renderRuleFrontmatter(rule),
     "",
     GEN_START,
     renderGeneratedBlock(rule),
