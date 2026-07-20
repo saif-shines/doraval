@@ -45,9 +45,12 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .astro
 package-lock.json
 
-# local docs (not published)
+# local-only (stay on disk, never publish)
 /docs/
 plans/
+.agents/
+.claude/
+WIP.md
 
 # worktrees for isolated feature development (using-git-worktrees skill)
 .worktrees/
@@ -59,8 +62,5 @@ test/tmp-*
 # legacy root-level test artifacts (now moved under test/)
 tmp-*
 my-test-plugin/
-
-.agents/
-.claude/
 # temporary story-craft review snapshots
 apps/website/.story-draft-backup/
