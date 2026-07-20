@@ -55,6 +55,35 @@ describe("rules machine-mode errors", () => {
     expect(result.stderr).not.toContain(" at ");
   });
 
+  test.each([
+    ["on --json", ["on", "--json"]],
+    ["off --format json", ["off", "--format", "json"]],
+    ["set missing rule --ci", ["set", "--ci"]],
+    ["set missing assignment --json", ["set", "body-size", "--json"]],
+    ["package --format json", ["package", "--format", "json"]],
+    ["explain --ci", ["explain", "--ci"]],
+  ])("missing positional for %s emits JSON only", (_name, args) => {
+    const result = runRules(args);
+    expectJsonOnlyError(result);
+    expect(result.stderr).not.toContain("USAGE");
+  });
+
+  test("invalid persisted RulesConfig is a controlled human error", () => {
+    const config = "journal:\n  repo: ''\n  projects: {}\nrules:\n  overrides: nope\n";
+    const result = runRules(["list"], config);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("rules.overrides must be an object");
+    expect(result.stderr).not.toContain(" at ");
+  });
+
+  test("invalid persisted RulesConfig is controlled JSON", () => {
+    const config = "journal:\n  repo: ''\n  projects: {}\nrules:\n  package: bogus\n";
+    const result = runRules(["list", "--json"], config);
+    expectJsonOnlyError(result);
+    expect(result.stderr).toContain("rules.package");
+  });
+
   test("simultaneous scope flags fail before mutation", () => {
     const config = "journal:\n  repo: ''\n  projects: {}\n";
     const result = runRules(["on", "body-size", "--global", "--project", "--json"], config);

@@ -124,13 +124,15 @@ function onOff(name: "on" | "off", value: RuleOverride) {
     args: {
       ...scopeArgs,
       ...outputArgs,
-      rule: { type: "positional" as const, description: "Rule code or slug", required: true },
+      rule: { type: "positional" as const, description: "Rule code or slug", required: false },
       cwd: { type: "string" as const, description: "Working directory override" },
     },
     async run({ args }) {
       const mode = modeFor(args);
+      const rule = args.rule as string | undefined;
+      if (!rule) return await failRules(`Missing rule. Usage: dora rules ${name} <rule>.`, mode);
       await withScope(args, mode, async (config, scope) => {
-        const result = applyOverride(config, scope, args.rule as string, value);
+        const result = applyOverride(config, scope, rule, value);
         if (!result.ok) return await failRules(result.error, mode);
         await persist(result.config);
         emitSuccess(result.message, mode);
@@ -145,21 +147,27 @@ const rulesSet = defineCommand({
   args: {
     ...scopeArgs,
     ...outputArgs,
-    rule: { type: "positional", description: "Rule code or slug", required: true },
+    rule: { type: "positional", description: "Rule code or slug", required: false },
     assignment: {
       type: "positional",
       description: "severity=error|warning|fyi",
-      required: true,
+      required: false,
     },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
     const mode = modeFor(args);
-    const match = String(args.assignment).match(/^severity=(error|warning|fyi)$/);
+    const rule = args.rule as string | undefined;
+    if (!rule) return await failRules("Missing rule. Usage: dora rules set <rule> severity=<level>.", mode);
+    const assignment = args.assignment as string | undefined;
+    if (!assignment) {
+      return await failRules("Missing severity assignment. Expected severity=error|warning|fyi.", mode);
+    }
+    const match = assignment.match(/^severity=(error|warning|fyi)$/);
     if (!match) return await failRules("Expected severity=error|warning|fyi", mode);
 
     await withScope(args, mode, async (config, scope) => {
-      const result = applyOverride(config, scope, args.rule as string, match[1] as RuleOverride);
+      const result = applyOverride(config, scope, rule, match[1] as RuleOverride);
       if (!result.ok) return await failRules(result.error, mode);
       await persist(result.config);
       emitSuccess(result.message, mode);
@@ -176,14 +184,16 @@ const rulesPackage = defineCommand({
     name: {
       type: "positional",
       description: "recommended | strict | minimal",
-      required: true,
+      required: false,
     },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
     const mode = modeFor(args);
+    const packageName = args.name as string | undefined;
+    if (!packageName) return await failRules("Missing package. Usage: dora rules package <name>.", mode);
     await withScope(args, mode, async (config, scope) => {
-      const result = applyPackage(config, scope, args.name as string);
+      const result = applyPackage(config, scope, packageName);
       if (!result.ok) return await failRules(result.error, mode);
       await persist(result.config);
       emitSuccess(result.message, mode);
@@ -197,13 +207,15 @@ const rulesExplain = defineCommand({
   args: {
     ...scopeArgs,
     ...outputArgs,
-    rule: { type: "positional", description: "Rule code or slug", required: true },
+    rule: { type: "positional", description: "Rule code or slug", required: false },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
     const mode = modeFor(args);
+    const rule = args.rule as string | undefined;
+    if (!rule) return await failRules("Missing rule. Usage: dora rules explain <rule>.", mode);
     await withScope(args, mode, async (config, scope, cwd) => {
-      const result = explainRule(config, scope.kind === "global" ? "" : cwd, args.rule as string);
+      const result = explainRule(config, scope.kind === "global" ? "" : cwd, rule);
       if (!result.ok) return await failRules(result.error, mode);
       if (mode.format === "json") outJson({ lines: result.lines });
       else for (const line of result.lines) ui.write(line);

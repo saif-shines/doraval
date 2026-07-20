@@ -158,6 +158,42 @@ function cfgForPackage(packageName: string): JournalConfig {
   return { journal: { repo: "", projects: {} }, rules: { package: packageName } };
 }
 
+const RULE_OVERRIDE_VALUES = new Set<unknown>(["off", "on", "fyi", "error", "warning"]);
+
+function validateRulesConfig(value: unknown, path: string): string | null {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return `Invalid doraval config: ${path} must be an object.`;
+  }
+
+  const rules = value as Record<string, unknown>;
+  for (const key of Object.keys(rules)) {
+    if (key !== "package" && key !== "overrides") {
+      return `Invalid doraval config: unknown field "${path}.${key}".`;
+    }
+  }
+
+  if (rules.package !== undefined) {
+    if (typeof rules.package !== "string" || !getPackage(rules.package)) {
+      return `Invalid doraval config: ${path}.package must be one of recommended, strict, minimal.`;
+    }
+  }
+
+  if (rules.overrides === undefined) return null;
+  if (!rules.overrides || typeof rules.overrides !== "object" || Array.isArray(rules.overrides)) {
+    return `Invalid doraval config: ${path}.overrides must be an object.`;
+  }
+  for (const [key, override] of Object.entries(rules.overrides)) {
+    if (!resolveRuleId(key)) {
+      return `Invalid doraval config: ${path}.overrides contains unknown rule "${key}".`;
+    }
+    if (!RULE_OVERRIDE_VALUES.has(override)) {
+      return `Invalid doraval config: ${path}.overrides.${key} must be one of off, on, fyi, error, warning.`;
+    }
+  }
+  return null;
+}
+
 export async function readRulesConfig(): Promise<ConfigResult> {
   let config: unknown;
   try {
@@ -177,6 +213,10 @@ export async function readRulesConfig(): Promise<ConfigResult> {
   if (!journal || typeof journal !== "object" || Array.isArray(journal)) {
     return { ok: false, error: "Invalid doraval config: journal must be an object." };
   }
+  const root = config as Record<string, unknown>;
+  const globalRulesError = validateRulesConfig(root.rules, "rules");
+  if (globalRulesError) return { ok: false, error: globalRulesError };
+
   const projects = (journal as Record<string, unknown>).projects;
   if (!projects || typeof projects !== "object" || Array.isArray(projects)) {
     return { ok: false, error: "Invalid doraval config: journal.projects must be an object." };
@@ -185,6 +225,11 @@ export async function readRulesConfig(): Promise<ConfigResult> {
     if (!project || typeof project !== "object" || Array.isArray(project)) {
       return { ok: false, error: `Invalid doraval config: project "${name}" must be an object.` };
     }
+    const projectRulesError = validateRulesConfig(
+      (project as Record<string, unknown>).rules,
+      `journal.projects.${name}.rules`,
+    );
+    if (projectRulesError) return { ok: false, error: projectRulesError };
   }
 
   return { ok: true, config: config as JournalConfig };
