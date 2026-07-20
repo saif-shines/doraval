@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import type { JournalConfig } from "../../core/journal-config.js";
-import { applyOverride, applyPackage, readScopeRules, resolveScope } from "./rules-core.js";
+import {
+  applyOverride,
+  applyPackage,
+  buildListRows,
+  displaySeverity,
+  explainRule,
+  readScopeRules,
+  resolveScope,
+} from "./rules-core.js";
 
 const cfg = (
   projects: JournalConfig["journal"]["projects"] = {},
@@ -84,6 +92,48 @@ describe("applyPackage", () => {
 
   test("rejects an unknown package", () => {
     expect(applyPackage(cfg(), { kind: "global" }, "bogus").ok).toBe(false);
+  });
+});
+
+describe("buildListRows", () => {
+  test("returns each rule with its effective package state", () => {
+    const rows = buildListRows(cfg({}, { package: "recommended" }), "/x");
+    expect(rows).toHaveLength(33);
+    expect(rows.find((row) => row.slug === "body-size")?.enabled).toBe(true);
+    expect(rows.find((row) => row.slug === "advanced-fields")?.enabled).toBe(false);
+  });
+
+  test("previews the requested package", () => {
+    const rows = buildListRows(cfg({}, { package: "minimal" }), "/x", "strict");
+    expect(rows.every((row) => row.enabled)).toBe(true);
+  });
+
+  test("labels info severity as FYI", () => {
+    expect(buildListRows(null, "/x").some((row) => row.severity === "FYI")).toBe(true);
+  });
+});
+
+describe("explainRule", () => {
+  test("explains code or slug with docs and effective state", () => {
+    const result = explainRule(cfg({}, { package: "recommended" }), "/x", "R003");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const output = result.lines.join("\n");
+      expect(output).toContain("no-injection");
+      expect(output).toContain("/reference/rules/R003");
+      expect(output).toMatch(/locked/i);
+    }
+  });
+
+  test("rejects an unknown rule", () => {
+    expect(explainRule(null, "/x", "nope").ok).toBe(false);
+  });
+});
+
+describe("displaySeverity", () => {
+  test("renders info as FYI", () => {
+    expect(displaySeverity("info")).toBe("FYI");
+    expect(displaySeverity("error")).toBe("error");
   });
 });
 
