@@ -202,7 +202,7 @@ describe("runScan", () => {
     const bad = result.health.find((h) => h.path.includes("bad"))!;
     expect(bad.status).toBe("fail");
     expect(bad.errors[0]?.code).toBeTruthy();
-    expect(bad.errors[0]?.docUrl).toMatch(/doraval\.thehacksmith\.dev/);
+    expect(bad.errors[0]?.docUrl).toMatch(/doraval\.dev/);
   });
 
   test("shadow warnings include E-SCAN-SHADOW docUrl", async () => {
