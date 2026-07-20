@@ -26,6 +26,7 @@ describe("no CLI-spawn in judge paths", () => {
       const src = readFileSync(f, "utf8");
       expect(src.includes("eval.judge=cli")).toBe(false);
       expect(src.includes("install a coding agent CLI")).toBe(false);
+      expect(src.includes("judge CLI/API")).toBe(false);
     }
   });
 });

@@ -382,7 +382,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
           throw new NetworkError({
             code: "E-NET-002",
             message: `LLM judge failed: ${result.error}`,
-            suggestion: "Re-run, check the judge CLI/API credentials, or drop --deep to review without the LLM tier",
+            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
           });
         }
         tiers.llm = { available: false, findings: [] };
