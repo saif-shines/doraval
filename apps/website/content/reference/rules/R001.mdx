@@ -1,0 +1,28 @@
+---
+title: R001 · frontmatter-presence
+description: "Frontmatter block present"
+sidebar:
+  label: R001 frontmatter-presence
+---
+
+{/* <!-- DORA:GENERATED:START --> */}
+- **Code:** R001
+- **Slug:** `frontmatter-presence`
+- **Tier:** structure
+- **Default severity:** error
+- **Packages:** minimal, recommended, strict
+- **Locked:** No
+- **Doc:** https://doraval.thehacksmith.dev/reference/rules/R001
+{/* <!-- DORA:GENERATED:END --> */}
+
+## What
+
+Checks that the skill starts with a YAML frontmatter block delimited by `---` lines.
+
+## Why
+
+Frontmatter identifies the skill and describes when an agent should load it. Without that metadata, the skill cannot participate reliably in discovery.
+
+## How to fix
+
+Add a YAML frontmatter block at the start of `SKILL.md`. Include at least the required `name` and `description` fields.

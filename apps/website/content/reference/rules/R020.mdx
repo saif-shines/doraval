@@ -1,0 +1,28 @@
+---
+title: R020 · script-security
+description: "Bundled scripts free of dangerous patterns"
+sidebar:
+  label: R020 script-security
+---
+
+{/* <!-- DORA:GENERATED:START --> */}
+- **Code:** R020
+- **Slug:** `script-security`
+- **Tier:** heuristic
+- **Default severity:** warning
+- **Packages:** minimal, recommended, strict
+- **Locked:** Yes (safety: cannot be disabled or demoted)
+- **Doc:** https://doraval.thehacksmith.dev/reference/rules/R020
+{/* <!-- DORA:GENERATED:END --> */}
+
+## What
+
+Scans scripts bundled with a skill for dangerous command and code patterns.
+
+## Why
+
+Bundled scripts run with the user's permissions and can modify files, execute commands, or expose data. This rule is locked so a package cannot suppress the safety warning.
+
+## How to fix
+
+Remove the dangerous operation when possible. If the script requires sensitive behavior, narrow its scope, validate untrusted input, and make the risk explicit to the user.

@@ -1,0 +1,28 @@
+---
+title: R024 · llm-contradiction
+description: "LLM: no contradictions"
+sidebar:
+  label: R024 llm-contradiction
+---
+
+{/* <!-- DORA:GENERATED:START --> */}
+- **Code:** R024
+- **Slug:** `llm-contradiction`
+- **Tier:** llm
+- **Default severity:** error
+- **Packages:** recommended, strict
+- **Locked:** No
+- **Doc:** https://doraval.thehacksmith.dev/reference/rules/R024
+{/* <!-- DORA:GENERATED:END --> */}
+
+## What
+
+Uses the configured language model to find instructions in the skill that conflict with each other.
+
+## Why
+
+Contradictory instructions force the agent to guess which rule wins. That makes the skill's behavior inconsistent across tasks and models.
+
+## How to fix
+
+Remove one of the conflicting instructions or state the precedence explicitly. Keep exceptions next to the rule they modify.

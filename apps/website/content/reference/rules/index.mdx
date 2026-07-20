@@ -1,0 +1,47 @@
+---
+title: Rules catalog
+description: Every rule dora can check, with code, tier, default severity, and package membership.
+sidebar:
+  label: Rules catalog
+  order: 0
+---
+
+The rules catalog lists every check from the rule registry and its default behavior.
+
+This page is generated. Edit the rule registry instead of editing this table.
+
+| Code | Slug | Tier | Default | Packages | Summary |
+| --- | --- | --- | --- | --- | --- |
+| R001 ([docs](/reference/rules/R001)) | `frontmatter-presence` | structure | error | minimal, recommended, strict | Frontmatter block present |
+| R002 🔒 ([docs](/reference/rules/R002)) | `frontmatter-parse` | structure | error | minimal, recommended, strict | Frontmatter parses as valid YAML |
+| R003 🔒 ([docs](/reference/rules/R003)) | `no-injection` | structure | error | minimal, recommended, strict | Frontmatter free of injection vectors |
+| R004 ([docs](/reference/rules/R004)) | `skill-name` | structure | error | recommended, strict | Skill name valid |
+| R005 ([docs](/reference/rules/R005)) | `description` | structure | warning | recommended, strict | Description present and well-sized |
+| R006 ([docs](/reference/rules/R006)) | `body-present` | structure | error | minimal, recommended, strict | Body content present |
+| R007 ([docs](/reference/rules/R007)) | `body-size` | structure | warning | recommended, strict | Body within size budget |
+| R008 ([docs](/reference/rules/R008)) | `allowed-tools-portability` | structure | warning | recommended, strict | allowed-tools is portable |
+| R009 ([docs](/reference/rules/R009)) | `advanced-fields` | structure | FYI | strict | Advanced frontmatter fields used correctly |
+| R010 ([docs](/reference/rules/R010)) | `unknown-fields` | structure | warning | recommended, strict | No unknown frontmatter fields |
+| R011 ([docs](/reference/rules/R011)) | `supporting-dirs` | structure | FYI | strict | Supporting directories recognized |
+| R012 ([docs](/reference/rules/R012)) | `dynamic-injection` | structure | warning | recommended, strict | Dynamic injection markers valid |
+| R013 ([docs](/reference/rules/R013)) | `scenario-file-valid` | structure | error | recommended, strict | scenarios.yaml is valid |
+| R014 ([docs](/reference/rules/R014)) | `drift-trigger` | heuristic | warning | recommended, strict | Trigger clarity (heuristic) |
+| R015 ([docs](/reference/rules/R015)) | `drift-structure` | heuristic | warning | recommended, strict | Structure consistency (heuristic) |
+| R016 ([docs](/reference/rules/R016)) | `drift-voice` | heuristic | warning | recommended, strict | Imperative voice (heuristic) |
+| R017 ([docs](/reference/rules/R017)) | `drift-example` | heuristic | warning | recommended, strict | Example presence (heuristic) |
+| R018 ([docs](/reference/rules/R018)) | `drift-guardrail` | heuristic | warning | recommended, strict | Guardrail presence (heuristic) |
+| R019 ([docs](/reference/rules/R019)) | `drift-clarity` | heuristic | warning | recommended, strict | Clarity (heuristic) |
+| R020 🔒 ([docs](/reference/rules/R020)) | `script-security` | heuristic | warning | minimal, recommended, strict | Bundled scripts free of dangerous patterns |
+| R021 ([docs](/reference/rules/R021)) | `principle-adherence` | heuristic | warning | recommended, strict | Content honors recorded principles |
+| R022 ([docs](/reference/rules/R022)) | `llm-clarity` | llm | warning | recommended, strict | LLM: instructions unambiguous |
+| R023 ([docs](/reference/rules/R023)) | `llm-actionability` | llm | warning | recommended, strict | LLM: instructions executable |
+| R024 ([docs](/reference/rules/R024)) | `llm-contradiction` | llm | error | recommended, strict | LLM: no contradictions |
+| R025 ([docs](/reference/rules/R025)) | `llm-trigger` | llm | warning | recommended, strict | LLM: trigger specific |
+| R026 ([docs](/reference/rules/R026)) | `llm-scope` | llm | warning | recommended, strict | LLM: focused scope |
+| R027 ([docs](/reference/rules/R027)) | `scenario-coverage` | llm | warning | recommended, strict | LLM: documented scenarios covered |
+| R028 ([docs](/reference/rules/R028)) | `session-invoked` | session | FYI | recommended, strict | Skill invoked in recent sessions |
+| R029 ([docs](/reference/rules/R029)) | `session-not-invoked` | session | warning | recommended, strict | Skill never invoked in recent sessions |
+| R030 ([docs](/reference/rules/R030)) | `session-none` | session | FYI | recommended, strict | No recent sessions found |
+| R031 ([docs](/reference/rules/R031)) | `memory-session-presence` | session | FYI | recommended, strict | Memory file present in recent sessions |
+| R032 ([docs](/reference/rules/R032)) | `binding-rule-inventory` | session | FYI | recommended, strict | Binding MUST/NEVER rules inventoried |
+| R033 ([docs](/reference/rules/R033)) | `memory-rule-adherence` | session | warning | recommended, strict | Sessions adhere to memory rules |

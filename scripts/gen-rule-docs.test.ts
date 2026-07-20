@@ -25,7 +25,7 @@ describe("generateRuleDocs", () => {
     await generateRuleDocs({ dir: TMP });
     const page = join(TMP, "R001.mdx");
     const body = (await readFile(page, "utf8")).replace(
-      "<!-- describe what this rule checks -->",
+      "{/* describe what this rule checks */}",
       "HAND WRITTEN CLARITY",
     );
     await writeFile(page, body);

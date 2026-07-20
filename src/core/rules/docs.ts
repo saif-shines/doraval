@@ -1,8 +1,8 @@
 import { BUILTIN_PACKAGES } from "./packages.js";
 import { RULE_DOC_BASE, RULES, type Rule, type RuleSeverity } from "./registry.js";
 
-export const GEN_START = "<!-- DORA:GENERATED:START -->";
-export const GEN_END = "<!-- DORA:GENERATED:END -->";
+export const GEN_START = "{/* <!-- DORA:GENERATED:START --> */}";
+export const GEN_END = "{/* <!-- DORA:GENERATED:END --> */}";
 
 const RULE_DOC_PATH = new URL(RULE_DOC_BASE).pathname;
 
@@ -69,15 +69,15 @@ export function scaffoldRulePage(rule: Rule): string {
     "",
     "## What",
     "",
-    "<!-- describe what this rule checks -->",
+    "{/* describe what this rule checks */}",
     "",
     "## Why",
     "",
-    "<!-- explain why it matters -->",
+    "{/* explain why it matters */}",
     "",
     "## How to fix",
     "",
-    "<!-- concrete remediation steps -->",
+    "{/* concrete remediation steps */}",
     "",
   ].join("\n");
 }
