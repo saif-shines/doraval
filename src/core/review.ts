@@ -290,7 +290,9 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   }
 
   // Tier 2b: principle keyword checks (free, from dora memory)
-  const principles = loadPrinciples(opts.cwd ?? process.cwd());
+  const principles = effective.get(PRINCIPLE_CODE)?.enabled
+    ? loadPrinciples(opts.cwd ?? process.cwd())
+    : [];
   const principleViolations = checkPrinciplesAgainstContent(principles, model.content);
   for (const v of principleViolations) {
     const sev = v.principle.weight >= 7 ? "error" as const : "warning" as const;

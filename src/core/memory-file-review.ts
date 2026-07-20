@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "fs";
 import { dirname, resolve, basename } from "path";
 import { classifySkillDir } from "./skill-classify.js";
-import { llmTierPlan, type ReviewFinding, type ReviewOptions, type ReviewResult } from "./review.js";
+import type { ReviewFinding, ReviewOptions, ReviewResult } from "./review.js";
 import { runJudge, type LintResult } from "./skill-lint.js";
 import { detectCapabilities, resolveJudgeMode, type Capabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig, type EvalConfig } from "./journal-config.js";
@@ -10,7 +10,7 @@ import { PrerequisiteError, NetworkError } from "./errors.js";
 import { loadRecentSessions, type LoadResult } from "./session-evidence.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import { runEval, type EvalResult } from "./session-eval.js";
-import { resolveEffectiveRules } from "./rules/resolve.js";
+import { resolveEffectiveRules, type EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
 import { LINT_CATEGORY_CODES, SESSION_CODES } from "./rules/bindings.js";
 import { ruleByCode } from "./rules/registry.js";
@@ -39,6 +39,10 @@ const CLAUDE_ONLY_MARKERS: { pattern: RegExp; label: string }[] = [
 
 function pad(n: number): string {
   return String(n).padStart(3, "0");
+}
+
+export function memoryLlmTierPlan(effective: Map<string, EffectiveRule>): { runLint: boolean } {
+  return { runLint: ["R022", "R024"].some((code) => effective.get(code)?.enabled) };
 }
 
 /** Binding-style lines from a memory file (MUST / MUST NOT / NEVER / Always). */
@@ -362,9 +366,11 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
       judgePref: evalCfg.judge,
     });
 
-    const principles = loadPrinciples(opts.cwd ?? process.cwd());
+    const principles = effective.get("R021")?.enabled
+      ? loadPrinciples(opts.cwd ?? process.cwd())
+      : [];
     const rubricText = buildPrincipleRubric(principles) || undefined;
-    const plan = llmTierPlan(effective);
+    const plan = memoryLlmTierPlan(effective);
     const prompt = plan.runLint ? buildMemoryLintPrompt(content, basename(path), rubricText) : "";
 
     if (mode === "fail") {
@@ -427,7 +433,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
       ];
 
       // Backlog #9 slice: LLM rule-adherence on the newest session when user asked --sessions
-      if (opts.sessions && loadedSess.sessions.length > 0) {
+      if (opts.sessions && loadedSess.sessions.length > 0 && effective.get("R033")?.enabled) {
         const cfg = ruleCfg;
         const evalCfgPartial: Partial<EvalConfig> = getEvalConfig(cfg);
         const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };

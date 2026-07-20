@@ -1,9 +1,36 @@
 import { describe, expect, test, mock, spyOn } from "bun:test";
 import { llmTierPlan, reviewSkill, reviewAll } from "./review.js";
 import { resolveEffectiveRules } from "./rules/resolve.js";
-import { resolve } from "path";
+import { join, resolve } from "path";
+import { mkdirSync, mkdtempSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures");
+
+async function withPrincipleRule(
+  enabled: boolean,
+  run: () => Promise<void>,
+): Promise<void> {
+  const home = mkdtempSync(join(tmpdir(), "dora-principles-"));
+  const previous = process.env.DORAVAL_HOME;
+  process.env.DORAVAL_HOME = home;
+  writeFileSync(join(home, "config.yml"), [
+    "journal:", "  repo: ''", "  projects: {}", "rules:", "  package: recommended", "  overrides:",
+    `    R021: ${enabled ? "on" : "off"}`, "",
+  ].join("\n"));
+  const globalDir = join(home, "memory", "repo", "global");
+  mkdirSync(globalDir, { recursive: true });
+  writeFileSync(
+    join(globalDir, "principles.md"),
+    `## Never use skill\n\n\`\`\`yaml\nid: t1\nweight: 9\ntags: []\ndate: 2026-07-08\nstatus: active\n\`\`\`\n\nPrinciple fixture.\n`,
+  );
+  try {
+    await run();
+  } finally {
+    if (previous === undefined) delete process.env.DORAVAL_HOME;
+    else process.env.DORAVAL_HOME = previous;
+  }
+}
 
 describe("reviewSkill", () => {
   test("valid skill produces passing structure + heuristic findings", async () => {
@@ -140,6 +167,33 @@ describe("reviewSkill", () => {
       if (prev === undefined) delete process.env.DORAVAL_HOME;
       else process.env.DORAVAL_HOME = prev;
     }
+  });
+
+  test("R021 off skips mechanical principles and API rubric injection", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" } as any);
+    let rubric: string | undefined = "sentinel";
+    try {
+      await withPrincipleRule(false, async () => {
+        const result = await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), {
+          lintFn: async (_model, _caps, _agent, _eval, _platform, extraRubric) => {
+            rubric = extraRubric;
+            return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } };
+          },
+        });
+        expect(result.tiers.heuristics.findings.some((finding) => finding.code === "R021")).toBe(false);
+      });
+      expect(rubric).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("R021 enabled keeps weight-derived mechanical severity", async () => {
+    await withPrincipleRule(true, async () => {
+      const result = await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), { quick: true });
+      expect(result.tiers.heuristics.findings.find((finding) => finding.code === "R021")?.severity).toBe("error");
+    });
   });
 
   test("onProgress fires before the LLM tier runs, with the skill path", async () => {
@@ -288,6 +342,20 @@ describe("reviewAll", () => {
 });
 
 describe("reviewSkill — delegate mode (no API key, not --ci)", () => {
+  test("R021 off omits principles from delegated prompts", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: false, preferred: "none" } as any);
+    try {
+      await withPrincipleRule(false, async () => {
+        const result = await reviewSkill(resolve(FIXTURES, "skills/minimal-good"));
+        expect(result.tiers.llm?.method).toBe("delegated");
+        expect(result.tiers.llm?.prompt).not.toContain("Project Principles");
+        expect(result.tiers.llm?.prompt).not.toContain("Never use skill");
+      });
+    } finally {
+      spy.mockRestore();
+    }
+  });
   test("delegate mode: llm tier carries a prompt, no findings, no throw under --deep", async () => {
     // Isolate from any real ~/.doraval/config.yml on the dev machine (which may
     // have a configured api_key) — point DORAVAL_HOME at an empty temp dir so

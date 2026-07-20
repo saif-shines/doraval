@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "path";
+import { join, resolve } from "path";
+import { mkdtempSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import {
   reviewMemoryFile,
   MEMORY_FILE_NAMES,
@@ -7,9 +9,11 @@ import {
   extractBindingRules,
   memorySessionRuleInventory,
   mapEvalToMemoryFindings,
+  memoryLlmTierPlan,
 } from "./memory-file-review.js";
 import type { LoadResult } from "./session-evidence.js";
 import type { EvalResult } from "./session-eval.js";
+import { resolveEffectiveRules } from "./rules/resolve.js";
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures/memory-files");
 
@@ -41,6 +45,25 @@ const SOME_SESSIONS: LoadResult = {
 
 /** Skip real session/judge I/O when a test only cares about another tier. */
 const hermetic = { loadedSessions: NO_ADAPTERS };
+
+async function withRules(
+  overrides: Record<string, "on" | "off">,
+  run: () => Promise<void>,
+): Promise<void> {
+  const home = mkdtempSync(join(tmpdir(), "dora-rules-"));
+  const previous = process.env.DORAVAL_HOME;
+  process.env.DORAVAL_HOME = home;
+  writeFileSync(join(home, "config.yml"), [
+    "journal:", "  repo: ''", "  projects: {}", "rules:", "  package: recommended", "  overrides:",
+    ...Object.entries(overrides).map(([code, value]) => `    ${code}: ${value}`), "",
+  ].join("\n"));
+  try {
+    await run();
+  } finally {
+    if (previous === undefined) delete process.env.DORAVAL_HOME;
+    else process.env.DORAVAL_HOME = previous;
+  }
+}
 
 describe("MEMORY_FILE_NAMES", () => {
   test("contains the four known memory file basenames", () => {
@@ -125,6 +148,22 @@ describe("reviewMemoryFile — tier 2 (heuristics)", () => {
   });
 });
 
+describe("memoryLlmTierPlan", () => {
+  test("only clarity and contradiction enable memory LLM review", () => {
+    const onlyIrrelevant = resolveEffectiveRules({
+      journal: { repo: "", projects: {} },
+      rules: { package: "minimal", overrides: { R023: "on", R025: "on", R026: "on" } },
+    }).map;
+    expect(memoryLlmTierPlan(onlyIrrelevant)).toEqual({ runLint: false });
+
+    const clarity = resolveEffectiveRules({
+      journal: { repo: "", projects: {} },
+      rules: { package: "minimal", overrides: { R022: "on" } },
+    }).map;
+    expect(memoryLlmTierPlan(clarity)).toEqual({ runLint: true });
+  });
+});
+
 describe("reviewMemoryFile — tier 3 (llm)", () => {
   test("deep mode without a judge under --ci throws E-PRE-004", async () => {
     const capsMod = await import("./capability-detect.js");
@@ -170,6 +209,64 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
       expect(result.tiers.llm?.available).toBe(true);
       expect(result.tiers.llm?.findings[0]?.id).toBe("llm-001");
       expect(result.tiers.llm?.findings[0]?.message).toBe("conflicting rules");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("R021 off omits principles from the memory API prompt", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
+    let prompt = "";
+    try {
+      await withRules({ R021: "off" }, async () => {
+        await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+          ...hermetic,
+          memoryLintFn: async (value) => {
+            prompt = value;
+            return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } };
+          },
+        });
+      });
+      expect(prompt).not.toContain("PROJECT PRINCIPLES");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("irrelevant LLM dimensions do not call or delegate memory review", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    let called = false;
+    const apiSpy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
+    try {
+      await withRules({ R022: "off", R024: "off", R023: "on", R025: "on", R026: "on" }, async () => {
+        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+          ...hermetic,
+          memoryLintFn: async () => {
+            called = true;
+            return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } };
+          },
+        });
+        expect(result.tiers.llm).toEqual({ available: false, findings: [] });
+      });
+      expect(called).toBe(false);
+    } finally {
+      apiSpy.mockRestore();
+    }
+  });
+
+  test("irrelevant LLM dimensions emit no delegated memory prompt", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: false, preferred: "none" });
+    try {
+      await withRules({ R022: "off", R024: "off", R023: "on", R025: "on", R026: "on" }, async () => {
+        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), hermetic);
+        expect(result.tiers.llm).toEqual({ available: false, findings: [] });
+        expect(result.tiers.llm?.prompt).toBeUndefined();
+      });
     } finally {
       spy.mockRestore();
     }
@@ -374,6 +471,33 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
       const msgs = result.tiers.sessions?.findings.map((f) => f.message).join("\n") ?? "";
       expect(msgs).toMatch(/Rule drift|force-push/);
       expect(result.summary.errors).toBeGreaterThan(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("R033 off skips adherence eval while R031 and R032 still emit", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
+    let called = false;
+    try {
+      await withRules({ R033: "off" }, async () => {
+        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+          sessions: true,
+          loadedSessions: SOME_SESSIONS,
+          ...skipLlm,
+          memorySessionEvalFn: async () => {
+            called = true;
+            throw new Error("must not run");
+          },
+        });
+        const codes = result.tiers.sessions?.findings.map((finding) => finding.code) ?? [];
+        expect(codes).toContain("R031");
+        expect(codes).toContain("R032");
+        expect(codes).not.toContain("R033");
+      });
+      expect(called).toBe(false);
     } finally {
       spy.mockRestore();
     }
