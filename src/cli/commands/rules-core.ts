@@ -7,9 +7,9 @@ import {
   type RuleOverride,
   type RulesConfig,
 } from "../../core/journal-config.js";
-import { BUILTIN_PACKAGES, getPackage } from "../../core/rules/packages.js";
+import { BUILTIN_PACKAGES, DEFAULT_PACKAGE, getPackage } from "../../core/rules/packages.js";
 import { resolveEffectiveRules } from "../../core/rules/resolve.js";
-import { RULES, resolveRuleId, type RuleSeverity } from "../../core/rules/registry.js";
+import { RULES, resolveRuleId, type RuleSeverity, type RuleTier } from "../../core/rules/registry.js";
 
 export { readConfig };
 
@@ -152,6 +152,67 @@ export function buildListRows(
       docUrl: rule.docUrl,
     };
   });
+}
+
+/** Active package name for list headers (preview flag wins). */
+export function resolveListPackageName(
+  config: JournalConfig | null,
+  cwd: string,
+  packageFilter?: string,
+): string {
+  if (packageFilter) return packageFilter;
+  const projectName = config ? resolveProjectName(config, cwd) : null;
+  const projectPkg = projectName
+    ? config?.journal.projects[projectName]?.rules?.package
+    : undefined;
+  if (projectPkg) return projectPkg;
+  return config?.rules?.package ?? DEFAULT_PACKAGE;
+}
+
+const TIER_ORDER: readonly RuleTier[] = ["structure", "heuristic", "llm", "session"];
+const TIER_LABEL: Record<RuleTier, string> = {
+  structure: "Structure",
+  heuristic: "Heuristic",
+  llm: "LLM",
+  session: "Session",
+};
+
+/** Human severity column: disabled rules show `off`, not a soft FYI/error leftover. */
+export function listSeverityLabel(row: Pick<RuleRow, "enabled" | "severity">): string {
+  return row.enabled ? row.severity : "off";
+}
+
+/**
+ * Grouped human table for `dora rules list`.
+ * Header carries package/scope counts; tiers nest so 33 rows stay scannable.
+ */
+export function formatRulesListHuman(
+  rows: RuleRow[],
+  meta: { packageName: string; scopeLabel: string },
+): string[] {
+  const on = rows.filter((row) => row.enabled).length;
+  const off = rows.length - on;
+  const slugWidth = Math.max(12, ...rows.map((row) => row.slug.length));
+  const lines: string[] = [
+    `package: ${meta.packageName} · ${meta.scopeLabel} · ${on} on · ${off} off`,
+    "",
+  ];
+
+  for (const tier of TIER_ORDER) {
+    const group = rows.filter((row) => row.tier === tier);
+    if (group.length === 0) continue;
+    lines.push(TIER_LABEL[tier]);
+    for (const row of group) {
+      const mark = row.enabled ? "[x]" : "[ ]";
+      const severity = listSeverityLabel(row).padEnd(8);
+      const lock = row.locked ? " 🔒" : "";
+      lines.push(`${mark} ${row.code}  ${row.slug.padEnd(slugWidth)}  ${severity}${lock}`);
+    }
+    lines.push("");
+  }
+
+  if (lines.at(-1) === "") lines.pop();
+  return lines;
 }
 
 function cfgForPackage(packageName: string): JournalConfig {

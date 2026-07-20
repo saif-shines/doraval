@@ -8,8 +8,10 @@ import {
   applyPackage,
   buildListRows,
   explainRule,
+  formatRulesListHuman,
   persist,
   readRulesConfig,
+  resolveListPackageName,
   resolveScope,
   validatePackagePreview,
   type Scope,
@@ -103,15 +105,20 @@ const rulesList = defineCommand({
     if (packageError) return await failRules(packageError, mode);
 
     await withScope(args, mode, async (config, scope, cwd) => {
-      const rows = buildListRows(config, scope.kind === "global" ? "" : cwd, packageName);
+      const listCwd = scope.kind === "global" ? "" : cwd;
+      const rows = buildListRows(config, listCwd, packageName);
       if (mode.format === "json") {
         outJson(rows);
         return await exit(0);
       }
-      for (const row of rows) {
-        ui.write(
-          `${row.enabled ? "[x]" : "[ ]"} ${row.code}  ${row.slug.padEnd(24)} ${row.severity.padEnd(8)}${row.locked ? " 🔒" : ""}`,
-        );
+      const scopeLabel =
+        scope.kind === "project" ? `scope: project (${scope.name})` : "scope: global";
+      const packageLabel = resolveListPackageName(config, listCwd, packageName);
+      for (const line of formatRulesListHuman(rows, {
+        packageName: packageName ? `${packageLabel} (preview)` : packageLabel,
+        scopeLabel,
+      })) {
+        ui.write(line);
       }
       return await exit(0);
     });
@@ -245,7 +252,7 @@ async function runInteractive(): Promise<void> {
         { value: "__package", label: "Change package…" },
         ...rows.map((row) => ({
           value: row.code,
-          label: `${row.enabled ? "[x]" : "[ ]"} ${row.code} ${row.slug} (${row.severity})${row.locked ? " 🔒" : ""}`,
+          label: `${row.enabled ? "[x]" : "[ ]"} ${row.code} ${row.slug} (${row.enabled ? row.severity : "off"})${row.locked ? " 🔒" : ""}`,
         })),
         { value: "__quit", label: "Save & quit" },
       ],

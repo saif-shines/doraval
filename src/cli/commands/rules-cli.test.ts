@@ -92,6 +92,18 @@ describe("rules machine-mode errors", () => {
   });
 });
 
+describe("rules list human layout", () => {
+  test("prints package header, tier groups, and off for disabled rules", () => {
+    const result = runRules(["list"]);
+    expect(result.exitCode).toBe(0);
+    const out = result.stdout + result.stderr;
+    expect(out).toMatch(/package: recommended · scope: global · \d+ on · \d+ off/);
+    expect(out).toContain("Structure");
+    expect(out).toContain("Heuristic");
+    expect(out).toMatch(/\[ \] R009\s+advanced-fields\s+off/);
+  });
+});
+
 describe("rules explain scope", () => {
   const config = [
     "journal:",

@@ -10,9 +10,12 @@ import {
   buildListRows,
   displaySeverity,
   explainRule,
+  formatRulesListHuman,
+  listSeverityLabel,
   persist,
   readRulesConfig,
   readScopeRules,
+  resolveListPackageName,
   resolveScope,
   validatePackagePreview,
 } from "./rules-core.js";
@@ -142,6 +145,37 @@ describe("buildListRows", () => {
 
   test("labels info severity as FYI", () => {
     expect(buildListRows(null, "/x").some((row) => row.severity === "FYI")).toBe(true);
+  });
+});
+
+describe("formatRulesListHuman", () => {
+  test("headers package/scope counts and groups by tier", () => {
+    const rows = buildListRows(cfg({}, { package: "recommended" }), "/x");
+    const lines = formatRulesListHuman(rows, {
+      packageName: "recommended",
+      scopeLabel: "scope: global",
+    });
+    expect(lines[0]).toMatch(/^package: recommended · scope: global · \d+ on · \d+ off$/);
+    expect(lines).toContain("Structure");
+    expect(lines).toContain("Heuristic");
+    expect(lines).toContain("LLM");
+    expect(lines).toContain("Session");
+    const advanced = lines.find((line) => line.includes("R009"));
+    expect(advanced).toContain("off");
+    expect(advanced).not.toMatch(/\bFYI\b/);
+    const sessionFyi = lines.find((line) => line.includes("R028"));
+    expect(sessionFyi).toContain("FYI");
+  });
+
+  test("listSeverityLabel is off when disabled", () => {
+    expect(listSeverityLabel({ enabled: false, severity: "FYI" })).toBe("off");
+    expect(listSeverityLabel({ enabled: true, severity: "warning" })).toBe("warning");
+  });
+
+  test("resolveListPackageName prefers preview then project then global", () => {
+    expect(resolveListPackageName(null, "/x")).toBe("recommended");
+    expect(resolveListPackageName(cfg({}, { package: "minimal" }), "/x")).toBe("minimal");
+    expect(resolveListPackageName(cfg({}, { package: "minimal" }), "/x", "strict")).toBe("strict");
   });
 });
 

@@ -11,9 +11,13 @@ import { preflight, reviewPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
 import { getFindingDocUrl } from "../../core/doc-registry.js";
 
-/** Dim Docs: line under non-pass findings when a real page exists. */
+/**
+ * Dim Docs: line under non-pass findings that lack a public rule code.
+ * Coded findings already surface R0xx on the line — full URLs stay in JSON.
+ */
 function renderFindingDocs(f: ReviewFinding, indent = 6): void {
   if (f.severity === "pass") return;
+  if (publicRuleCode(f)) return;
   const url = f.docUrl ?? getFindingDocUrl({ code: f.code ?? f.id, tier: f.tier });
   if (url) ui.dim(`${" ".repeat(indent)}Docs: ${url}`);
 }
@@ -36,13 +40,28 @@ export function severityLabel(severity: ReviewFinding["severity"]): string {
   return severity === "info" ? "FYI" : severity;
 }
 
+/** Public rule codes look like R014 — lead with them so review teaches identity. */
+export function publicRuleCode(f: Pick<ReviewFinding, "code">): string | undefined {
+  const code = f.code?.trim();
+  return code && /^R\d{3}$/.test(code) ? code : undefined;
+}
+
+/** Human finding text: `R014  message` when coded; message alone otherwise. */
+export function formatFindingText(f: Pick<ReviewFinding, "code" | "message">): string {
+  const code = publicRuleCode(f);
+  return code ? `${code}  ${f.message}` : f.message;
+}
+
+function renderOneFinding(f: ReviewFinding): void {
+  if (f.severity === "pass") return;
+  const text = formatFindingText(f);
+  if (f.severity === "info") ui.dim(`    ${severityLabel(f.severity)}  ${text}`);
+  else renderCheck(f.severity === "error" ? "fail" : "warn", text, 4);
+  renderFindingDocs(f, 6);
+}
+
 function renderFindings(findings: ReviewFinding[]): void {
-  for (const f of findings) {
-    if (f.severity === "pass") continue;
-    if (f.severity === "info") ui.dim(`    ${severityLabel(f.severity)}  ${f.message}`);
-    else renderCheck(f.severity === "error" ? "fail" : "warn", f.message, 4);
-    renderFindingDocs(f, 6);
-  }
+  for (const f of findings) renderOneFinding(f);
 }
 
 function renderOptionalTier(
@@ -59,14 +78,7 @@ function renderOptionalTier(
       ? `via ${tier.method}`
       : `${tier.count ?? tier.findings?.length ?? 0} sessions found`;
   ui.write(`  ${name.padEnd(18)} ${label}`);
-  for (const f of tier.findings ?? []) {
-    if (f.severity === "info") ui.dim(`    ${severityLabel(f.severity)}  ${f.message}`);
-    else {
-      const status = f.severity === "error" ? "fail" as const : f.severity === "warning" ? "warn" as const : "pass" as const;
-      renderCheck(status, f.message, 4);
-    }
-    renderFindingDocs(f, 6);
-  }
+  for (const f of tier.findings ?? []) renderOneFinding(f);
 }
 
 function renderSingle(r: ReviewResult): void {
