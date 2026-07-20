@@ -204,10 +204,10 @@ describe("memorySessionPresence", () => {
     expect(f[0]!.message).toContain("cursor");
   });
 
-  test("session findings include code + docUrl", () => {
+  test("session findings preserve internal ids and carry public rule identity", () => {
     const f = memorySessionPresence(EMPTY_LOAD);
-    expect(f[0]!.code).toBe("sess-003");
-    expect(f[0]!.docUrl).toContain("/concepts/review-tiers/");
+    expect(f[0]).toMatchObject({ id: "sess-003", code: "R030", slug: "session-none" });
+    expect(f[0]!.docUrl).toContain("/reference/rules/R030");
   });
 });
 
@@ -263,6 +263,7 @@ describe("mapEvalToMemoryFindings", () => {
     expect(f[0]!.id).toBe("sess-006");
     expect(f[0]!.severity).toBe("pass");
     expect(f[0]!.message).toMatch(/aligned/i);
+    expect(f[0]!.code).toBe("R033");
   });
 
   test("DRIFTED MANDATORY → error findings", () => {

@@ -431,7 +431,9 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       tiers.sessions = { available: false, findings: [] };
     } else {
       const skillName = String(model.data.name ?? basename(dir));
-      const sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required: opts.sessions === true });
+      const sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required: opts.sessions === true })
+        .map((finding) => stampRule(finding, finding.code!, effective))
+        .filter((finding): finding is ReviewFinding => finding !== null);
       tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };
     }
   }

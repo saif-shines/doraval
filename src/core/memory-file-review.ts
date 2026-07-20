@@ -10,13 +10,15 @@ import { PrerequisiteError, NetworkError } from "./errors.js";
 import { loadRecentSessions, type LoadResult } from "./session-evidence.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import { runEval, type EvalResult } from "./session-eval.js";
-import { withDocUrl } from "./doc-registry.js";
 import { resolveEffectiveRules } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
-import { LINT_CATEGORY_CODES } from "./rules/bindings.js";
+import { LINT_CATEGORY_CODES, SESSION_CODES } from "./rules/bindings.js";
+import { ruleByCode } from "./rules/registry.js";
 
 function sessFinding(partial: ReviewFinding): ReviewFinding {
-  return withDocUrl({ ...partial, code: partial.code ?? partial.id });
+  const code = SESSION_CODES[partial.id] ?? SESSION_CODES["sess-006"];
+  const rule = ruleByCode(code)!;
+  return { ...partial, code: rule.code, slug: rule.slug, docUrl: rule.docUrl };
 }
 
 export const MEMORY_FILE_NAMES = new Set([
@@ -466,7 +468,10 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
         }
       }
 
-      tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };
+      const filtered = sessFindings
+        .map((finding) => stampRule(finding, finding.code!, effective))
+        .filter((finding): finding is ReviewFinding => finding !== null);
+      tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: filtered };
     }
   }
 

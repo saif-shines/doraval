@@ -3,10 +3,13 @@ import { getAllAdapters } from "./session-adapters/index.js";
 import { SESSION_WINDOW, SESSION_MAX_FILE_BYTES, withinWindow, type SessionAdapter } from "./session-adapters/types.js";
 import type { SessionPrimitives } from "./session-parse.js";
 import type { ReviewFinding } from "./review.js";
-import { withDocUrl } from "./doc-registry.js";
+import { SESSION_CODES } from "./rules/bindings.js";
+import { ruleByCode } from "./rules/registry.js";
 
 function finding(partial: ReviewFinding): ReviewFinding {
-  return withDocUrl({ ...partial, code: partial.code ?? partial.id });
+  const code = SESSION_CODES[partial.id];
+  const rule = code ? ruleByCode(code) : undefined;
+  return rule ? { ...partial, code: rule.code, slug: rule.slug, docUrl: rule.docUrl } : partial;
 }
 
 export interface LoadedSession {

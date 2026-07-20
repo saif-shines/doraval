@@ -25,6 +25,8 @@ describe("collectSessionEvidence", () => {
     expect(f[0]!.severity).toBe("pass");
     expect(f[0]!.message).toContain("Invoked in 1 of 1");
     expect(f[0]!.message).toContain("native");
+    expect(f[0]).toMatchObject({ id: "sess-001", code: "R028", slug: "session-invoked" });
+    expect(f[0]!.docUrl).toContain("/reference/rules/R028");
   });
 
   test("tool-call input path match counts as invoked", () => {
@@ -59,6 +61,7 @@ describe("collectSessionEvidence", () => {
     const f = collectSessionEvidence("any", "/x/any", lr, { required: false });
     expect(f[0]!.severity).toBe("info");
     expect(f[0]!.message).toContain("No sessions found");
+    expect(f[0]!.code).toBe("R030");
   });
 
   test("per-agent breakdown in message", () => {

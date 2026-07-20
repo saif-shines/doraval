@@ -41,12 +41,6 @@ const FINDING_CODE_DOCS: Record<string, string> = {
   "E-INSTALL-UNSUPPORTED": INSTALL,
   "E-INSTALL-SOURCE": GET_STARTED,
   "E-INSTALL-OK": INSTALL,
-  "sess-001": TIERS,
-  "sess-002": TIERS,
-  "sess-003": TIERS,
-  "sess-004": TIERS,
-  "sess-005": TIERS,
-  "sess-006": TIERS,
 };
 
 /** Review tier → overview page (when no more specific code). */
