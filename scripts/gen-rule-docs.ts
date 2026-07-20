@@ -16,13 +16,14 @@ function renderCatalogPage(): string {
     "title: Rules catalog",
     "description: Every rule dora can check, with code, tier, default severity, and package membership.",
     "sidebar:",
-    "  label: Rules catalog",
+    "  label: Catalog",
     "  order: 0",
     "---",
     "",
-    "The rules catalog lists every check from the rule registry and its default behavior.",
+    "Every check dora can raise has a stable code (`R012`) and a slug (`description-length`).",
+    "Findings link here via `docUrl`. Open a code for what it checks and how to fix it.",
     "",
-    "This page is generated. Edit the rule registry instead of editing this table.",
+    "This page is generated from the rule registry — edit the registry, not this table.",
     "",
     renderCatalog(),
     "",
@@ -30,14 +31,15 @@ function renderCatalogPage(): string {
 }
 
 function renderRulesMeta(): string {
-  const pages = ["index", ...RULES.map((rule) => rule.code)].map((page) => JSON.stringify(page)).join(", ");
+  // Only the catalog belongs in the sidebar. Per-rule MDX files stay on disk
+  // (and remain routes) but are sidebar.hidden — listing them here would re-pollute nav.
   return [
     'import { defineMeta } from "blume";',
     "",
     "export default defineMeta({",
     '  title: "Rules",',
     "  order: 1,",
-    `  pages: [${pages}],`,
+    '  pages: ["index"],',
     "});",
     "",
   ].join("\n");

@@ -50,6 +50,13 @@ export default defineConfig({
     sitemap: true,
     robots: true,
   },
+  // Rule detail pages are sidebar.hidden (catalog is the only nav entry) but
+  // still need to be findable when someone searches for a code or slug.
+  search: {
+    indexing: {
+      includeHiddenPages: true,
+    },
+  },
   redirects: redirs([
     // Pre-rename leftovers only (journal → memory, validate → review, …)
     ["/get-started/quickstart-distributors", "/get-started/quickstart/"],

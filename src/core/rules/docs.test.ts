@@ -87,6 +87,7 @@ describe("scaffoldRulePage", () => {
   test("new page carries frontmatter, markers, and prose stubs", () => {
     const page = scaffoldRulePage(ruleByCode("R007")!);
     expect(page).toContain("title: R007 · body-size");
+    expect(page).toContain("hidden: true");
     expect(page).toContain(GEN_START);
     expect(page).toContain(GEN_END);
     expect(page).toContain("## What");

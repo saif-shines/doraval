@@ -59,12 +59,16 @@ export function spliceGeneratedRegion(existing: string, block: string): string {
 }
 
 export function renderRuleFrontmatter(rule: Rule): string {
+  // Individual rule pages stay addressable for CLI docUrl deep-links, but they
+  // must not flood the sidebar — the catalog is the only nav entry (Blume
+  // honors sidebar.hidden for filesystem nav).
   return [
     "---",
     `title: ${rule.code} · ${rule.slug}`,
     `description: ${JSON.stringify(rule.title)}`,
     "sidebar:",
     `  label: ${rule.code} ${rule.slug}`,
+    "  hidden: true",
     "---",
   ].join("\n");
 }

@@ -19,6 +19,11 @@ describe("generateRuleDocs", () => {
       expect(written.some((path) => path.endsWith(`${rule.code}.mdx`))).toBe(true);
     }
     expect(catalog).toContain("/reference/rules/R001");
+    const meta = await readFile(join(TMP, "meta.ts"), "utf8");
+    expect(meta).toContain('pages: ["index"]');
+    expect(meta).not.toContain("R001");
+    const rulePage = await readFile(join(TMP, "R001.mdx"), "utf8");
+    expect(rulePage).toContain("hidden: true");
   });
 
   test("refreshes registry frontmatter and preserves hand-written prose on regen", async () => {
