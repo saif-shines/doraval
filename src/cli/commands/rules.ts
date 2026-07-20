@@ -1,7 +1,7 @@
 import { isCancel, select } from "@clack/prompts";
 import { defineCommand } from "citty";
 import type { RuleOverride } from "../../core/journal-config.js";
-import { ui, outJson, resolveOutputMode } from "../out.js";
+import { outJson, resolveOutputMode, ui, type OutputMode } from "../out.js";
 import { exit } from "../render/exit.js";
 import {
   applyOverride,
@@ -9,8 +9,9 @@ import {
   buildListRows,
   explainRule,
   persist,
-  readConfig,
+  readRulesConfig,
   resolveScope,
+  validatePackagePreview,
   type Scope,
 } from "./rules-core.js";
 
@@ -23,46 +24,86 @@ const scopeArgs = {
   },
 };
 
+const outputArgs = {
+  format: { type: "string" as const, description: "Output format: table | json", default: "table" },
+  json: { type: "boolean" as const, description: "Output JSON", default: false },
+  ci: { type: "boolean" as const, description: "Machine mode (implies JSON)", default: false },
+};
+
+type CommonArgs = {
+  global?: boolean;
+  project?: boolean;
+  cwd?: string;
+  format?: string;
+  json?: boolean;
+  ci?: boolean;
+};
+
+function modeFor(args: CommonArgs): OutputMode {
+  return resolveOutputMode({ format: args.json ? "json" : args.format, ci: args.ci });
+}
+
+async function failRules(message: string, mode: OutputMode): Promise<never> {
+  if (mode.format === "json") {
+    process.stderr.write(JSON.stringify({ error: { message } }) + "\n");
+  } else {
+    ui.fail(message);
+  }
+  return await exit(1);
+}
+
+function emitSuccess(message: string, mode: OutputMode): void {
+  if (mode.format === "json") outJson({ message });
+  else ui.success(message);
+}
+
 function isInteractive(): boolean {
   return process.stdin.isTTY === true && process.stderr.isTTY === true;
 }
 
 async function withScope(
-  args: { global?: boolean; project?: boolean; cwd?: string },
+  args: CommonArgs,
+  mode: OutputMode,
   run: (
-    config: Awaited<ReturnType<typeof readConfig>>,
+    config: Extract<Awaited<ReturnType<typeof readRulesConfig>>, { ok: true }>["config"],
     scope: Scope,
     cwd: string,
   ) => Promise<void>,
 ): Promise<void> {
   const cwd = args.cwd || process.cwd();
-  const config = await readConfig();
-  const result = resolveScope(config, { global: args.global, project: args.project, cwd });
-  if (!result.ok) {
-    ui.fail(result.error);
-    return await exit(1);
+  const loaded = await readRulesConfig();
+  if (!loaded.ok) return await failRules(loaded.error, mode);
+
+  const scoped = resolveScope(loaded.config, {
+    global: args.global,
+    project: args.project,
+    cwd,
+  });
+  if (!scoped.ok) return await failRules(scoped.error, mode);
+
+  try {
+    await run(loaded.config, scoped.scope, cwd);
+  } catch (error) {
+    return await failRules(error instanceof Error ? error.message : String(error), mode);
   }
-  await run(config, result.scope, cwd);
 }
 
 const rulesList = defineCommand({
   meta: { name: "list", description: "List rules and their effective state" },
   args: {
     ...scopeArgs,
+    ...outputArgs,
     package: { type: "string", description: "Preview a package instead of stored config" },
-    format: { type: "string", description: "Output format: table | json", default: "table" },
-    json: { type: "boolean", description: "Output JSON", default: false },
-    ci: { type: "boolean", description: "Machine mode (implies JSON)", default: false },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({
-      format: args.json ? "json" : (args.format as string),
-      ci: args.ci as boolean,
-    });
-    await withScope(args, async (config, scope, cwd) => {
-      const effectiveCwd = scope.kind === "global" ? "" : cwd;
-      const rows = buildListRows(config, effectiveCwd, args.package as string | undefined);
+    const mode = modeFor(args);
+    const packageName = args.package as string | undefined;
+    const packageError = validatePackagePreview(packageName);
+    if (packageError) return await failRules(packageError, mode);
+
+    await withScope(args, mode, async (config, scope, cwd) => {
+      const rows = buildListRows(config, scope.kind === "global" ? "" : cwd, packageName);
       if (mode.format === "json") {
         outJson(rows);
         return await exit(0);
@@ -82,18 +123,17 @@ function onOff(name: "on" | "off", value: RuleOverride) {
     meta: { name, description: `Turn a rule ${name}` },
     args: {
       ...scopeArgs,
+      ...outputArgs,
       rule: { type: "positional" as const, description: "Rule code or slug", required: true },
       cwd: { type: "string" as const, description: "Working directory override" },
     },
     async run({ args }) {
-      await withScope(args, async (config, scope) => {
+      const mode = modeFor(args);
+      await withScope(args, mode, async (config, scope) => {
         const result = applyOverride(config, scope, args.rule as string, value);
-        if (!result.ok) {
-          ui.fail(result.error);
-          return await exit(1);
-        }
+        if (!result.ok) return await failRules(result.error, mode);
         await persist(result.config);
-        ui.success(result.message);
+        emitSuccess(result.message, mode);
         return await exit(0);
       });
     },
@@ -104,6 +144,7 @@ const rulesSet = defineCommand({
   meta: { name: "set", description: "Set a rule severity" },
   args: {
     ...scopeArgs,
+    ...outputArgs,
     rule: { type: "positional", description: "Rule code or slug", required: true },
     assignment: {
       type: "positional",
@@ -113,19 +154,15 @@ const rulesSet = defineCommand({
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
+    const mode = modeFor(args);
     const match = String(args.assignment).match(/^severity=(error|warning|fyi)$/);
-    if (!match) {
-      ui.fail("Expected severity=error|warning|fyi");
-      return await exit(1);
-    }
-    await withScope(args, async (config, scope) => {
+    if (!match) return await failRules("Expected severity=error|warning|fyi", mode);
+
+    await withScope(args, mode, async (config, scope) => {
       const result = applyOverride(config, scope, args.rule as string, match[1] as RuleOverride);
-      if (!result.ok) {
-        ui.fail(result.error);
-        return await exit(1);
-      }
+      if (!result.ok) return await failRules(result.error, mode);
       await persist(result.config);
-      ui.success(result.message);
+      emitSuccess(result.message, mode);
       return await exit(0);
     });
   },
@@ -135,6 +172,7 @@ const rulesPackage = defineCommand({
   meta: { name: "package", description: "Set the base rules package" },
   args: {
     ...scopeArgs,
+    ...outputArgs,
     name: {
       type: "positional",
       description: "recommended | strict | minimal",
@@ -143,14 +181,12 @@ const rulesPackage = defineCommand({
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    await withScope(args, async (config, scope) => {
+    const mode = modeFor(args);
+    await withScope(args, mode, async (config, scope) => {
       const result = applyPackage(config, scope, args.name as string);
-      if (!result.ok) {
-        ui.fail(result.error);
-        return await exit(1);
-      }
+      if (!result.ok) return await failRules(result.error, mode);
       await persist(result.config);
-      ui.success(result.message);
+      emitSuccess(result.message, mode);
       return await exit(0);
     });
   },
@@ -159,27 +195,29 @@ const rulesPackage = defineCommand({
 const rulesExplain = defineCommand({
   meta: { name: "explain", description: "Explain a rule" },
   args: {
+    ...scopeArgs,
+    ...outputArgs,
     rule: { type: "positional", description: "Rule code or slug", required: true },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    const result = explainRule(
-      await readConfig(),
-      (args.cwd as string | undefined) || process.cwd(),
-      args.rule as string,
-    );
-    if (!result.ok) {
-      ui.fail(result.error);
-      return await exit(1);
-    }
-    for (const line of result.lines) ui.write(line);
-    return await exit(0);
+    const mode = modeFor(args);
+    await withScope(args, mode, async (config, scope, cwd) => {
+      const result = explainRule(config, scope.kind === "global" ? "" : cwd, args.rule as string);
+      if (!result.ok) return await failRules(result.error, mode);
+      if (mode.format === "json") outJson({ lines: result.lines });
+      else for (const line of result.lines) ui.write(line);
+      return await exit(0);
+    });
   },
 });
 
 async function runInteractive(): Promise<void> {
+  const loaded = await readRulesConfig();
+  if (!loaded.ok) return await failRules(loaded.error, { format: "table", ci: false });
+
   const cwd = process.cwd();
-  let config = await readConfig();
+  let config = loaded.config;
   const scopeResult = resolveScope(config, { cwd });
   const scope: Scope = scopeResult.ok ? scopeResult.scope : { kind: "global" };
 

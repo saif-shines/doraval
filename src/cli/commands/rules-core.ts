@@ -15,6 +15,9 @@ export { readConfig };
 
 export type Scope = { kind: "global" } | { kind: "project"; name: string };
 export type ScopeResult = { ok: true; scope: Scope } | { ok: false; error: string };
+export type ConfigResult =
+  | { ok: true; config: JournalConfig | null }
+  | { ok: false; error: string };
 
 const UNREGISTERED_PROJECT =
   "Not a registered project. Register it first (dora memory setup) or use --global.";
@@ -23,6 +26,9 @@ export function resolveScope(
   config: JournalConfig | null,
   opts: { global?: boolean; project?: boolean; cwd: string },
 ): ScopeResult {
+  if (opts.global && opts.project) {
+    return { ok: false, error: "Choose either --global or --project, not both." };
+  }
   if (opts.global) return { ok: true, scope: { kind: "global" } };
 
   const name = resolveProjectName(config, opts.cwd);
@@ -90,17 +96,19 @@ export function applyOverride(
   return { ok: true, config: next, message: `${rule.code} ${rule.slug} → ${value}` };
 }
 
+export function validatePackagePreview(packageName: string | undefined): string | null {
+  return packageName && !getPackage(packageName)
+    ? `Unknown package "${packageName}". Built-in: recommended, strict, minimal.`
+    : null;
+}
+
 export function applyPackage(
   config: JournalConfig | null,
   scope: Scope,
   packageName: string,
 ): MutationResult {
-  if (!getPackage(packageName)) {
-    return {
-      ok: false,
-      error: `Unknown package "${packageName}". Built-in: recommended, strict, minimal.`,
-    };
-  }
+  const packageError = validatePackagePreview(packageName);
+  if (packageError) return { ok: false, error: packageError };
 
   const next = structuredClone(config ?? emptyConfig());
   const rules = ensureScopeRules(next, scope);
@@ -148,6 +156,38 @@ export function buildListRows(
 
 function cfgForPackage(packageName: string): JournalConfig {
   return { journal: { repo: "", projects: {} }, rules: { package: packageName } };
+}
+
+export async function readRulesConfig(): Promise<ConfigResult> {
+  let config: unknown;
+  try {
+    config = await readConfig();
+  } catch (error) {
+    return {
+      ok: false,
+      error: `Invalid doraval config: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  if (config === null) return { ok: true, config: null };
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return { ok: false, error: "Invalid doraval config: expected a YAML object." };
+  }
+
+  const journal = (config as Record<string, unknown>).journal;
+  if (!journal || typeof journal !== "object" || Array.isArray(journal)) {
+    return { ok: false, error: "Invalid doraval config: journal must be an object." };
+  }
+  const projects = (journal as Record<string, unknown>).projects;
+  if (!projects || typeof projects !== "object" || Array.isArray(projects)) {
+    return { ok: false, error: "Invalid doraval config: journal.projects must be an object." };
+  }
+  for (const [name, project] of Object.entries(projects)) {
+    if (!project || typeof project !== "object" || Array.isArray(project)) {
+      return { ok: false, error: `Invalid doraval config: project "${name}" must be an object.` };
+    }
+  }
+
+  return { ok: true, config: config as JournalConfig };
 }
 
 export async function persist(config: JournalConfig): Promise<void> {

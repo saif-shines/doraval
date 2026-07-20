@@ -11,8 +11,10 @@ import {
   displaySeverity,
   explainRule,
   persist,
+  readRulesConfig,
   readScopeRules,
   resolveScope,
+  validatePackagePreview,
 } from "./rules-core.js";
 
 test("rules command exports a citty command", () => {
@@ -46,6 +48,11 @@ describe("resolveScope", () => {
       ok: true,
       scope: { kind: "global" },
     });
+  });
+
+  test("rejects simultaneous --global and --project", () => {
+    const result = resolveScope(cfg(), { global: true, project: true, cwd: "/repo" });
+    expect(result).toEqual({ ok: false, error: "Choose either --global or --project, not both." });
   });
 
   test("--global forces global even inside a project", () => {
@@ -113,6 +120,13 @@ describe("applyPackage", () => {
   });
 });
 
+describe("validatePackagePreview", () => {
+  test("rejects unknown package previews", () => {
+    expect(validatePackagePreview("bogus")).toContain('Unknown package "bogus"');
+    expect(validatePackagePreview("strict")).toBeNull();
+  });
+});
+
 describe("buildListRows", () => {
   test("returns each rule with its effective package state", () => {
     const rows = buildListRows(cfg({}, { package: "recommended" }), "/x");
@@ -153,6 +167,22 @@ describe("displaySeverity", () => {
     expect(displaySeverity("info")).toBe("FYI");
     expect(displaySeverity("error")).toBe("error");
   });
+});
+
+test("readRulesConfig rejects malformed persisted config without throwing", async () => {
+  const home = mkdtempSync(join(tmpdir(), "dora-rules-malformed-"));
+  const previous = process.env.DORAVAL_HOME;
+  process.env.DORAVAL_HOME = home;
+  try {
+    await Bun.write(join(home, "config.yml"), "journal: nope\n");
+    const result = await readRulesConfig();
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Invalid doraval config");
+  } finally {
+    if (previous === undefined) delete process.env.DORAVAL_HOME;
+    else process.env.DORAVAL_HOME = previous;
+    rmSync(home, { recursive: true, force: true });
+  }
 });
 
 test("persist round-trips config through DORAVAL_HOME", async () => {
