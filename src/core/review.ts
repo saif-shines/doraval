@@ -346,16 +346,18 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
       const lintPrompt = plan.runLint ? buildLintPrompt(model, undefined, rubricText) : "";
       const scenarioBlock = plan.runScenario && scenarios.length > 0
-        ? [
-            lintPrompt ? "\n---" : "",
-            "## Scenario Coverage Check",
-            "",
-            "Evaluate whether this skill handles each scenario correctly.",
-            "Only add findings for UNCOVERED scenarios, using category \"coverage\".",
-            ...scenarios.map((scenario, index) =>
-              `${index + 1}. When: \"${scenario.when}\" → Expected: \"${scenario.expect}\"${scenario.must_not ? ` | Must NOT: \"${scenario.must_not}\"` : ""}`
-            ),
-          ].filter(Boolean).join("\n")
+        ? lintPrompt
+          ? [
+              "\n---",
+              "## Scenario Coverage Check",
+              "",
+              "Evaluate whether this skill handles each scenario correctly.",
+              "Only add findings for UNCOVERED scenarios, using category \"coverage\".",
+              ...scenarios.map((scenario, index) =>
+                `${index + 1}. When: \"${scenario.when}\" → Expected: \"${scenario.expect}\"${scenario.must_not ? ` | Must NOT: \"${scenario.must_not}\"` : ""}`
+              ),
+            ].join("\n")
+          : buildScenarioPrompt(scenarios, model.content)
         : "";
       const prompt = lintPrompt + scenarioBlock;
       tiers.llm = prompt
