@@ -1,5 +1,6 @@
 import { describe, expect, test, mock, spyOn } from "bun:test";
-import { reviewSkill, reviewAll } from "./review.js";
+import { llmTierPlan, reviewSkill, reviewAll } from "./review.js";
+import { resolveEffectiveRules } from "./rules/resolve.js";
 import { resolve } from "path";
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures");
@@ -167,6 +168,19 @@ describe("reviewSkill", () => {
       onProgress: (msg) => calls.push(msg),
     });
     expect(calls).toEqual([]);
+  });
+});
+
+describe("llmTierPlan", () => {
+  test("coarse-skips independently disabled lint and scenario calls", () => {
+    const all = resolveEffectiveRules(null).map;
+    expect(llmTierPlan(all)).toEqual({ runLint: true, runScenario: true });
+
+    const off = resolveEffectiveRules({
+      journal: { repo: "", projects: {} },
+      rules: { package: "minimal" },
+    }).map;
+    expect(llmTierPlan(off)).toEqual({ runLint: false, runScenario: false });
   });
 });
 

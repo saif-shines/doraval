@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "fs";
 import { dirname, resolve, basename } from "path";
 import { classifySkillDir } from "./skill-classify.js";
-import type { ReviewFinding, ReviewOptions, ReviewResult } from "./review.js";
+import { llmTierPlan, type ReviewFinding, type ReviewOptions, type ReviewResult } from "./review.js";
 import { runJudge, type LintResult } from "./skill-lint.js";
 import { detectCapabilities, resolveJudgeMode, type Capabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig, type EvalConfig } from "./journal-config.js";
@@ -11,6 +11,9 @@ import { loadRecentSessions, type LoadResult } from "./session-evidence.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import { runEval, type EvalResult } from "./session-eval.js";
 import { withDocUrl } from "./doc-registry.js";
+import { resolveEffectiveRules } from "./rules/resolve.js";
+import { stampRule } from "./rules/apply.js";
+import { LINT_CATEGORY_CODES } from "./rules/bindings.js";
 
 function sessFinding(partial: ReviewFinding): ReviewFinding {
   return withDocUrl({ ...partial, code: partial.code ?? partial.id });
@@ -266,6 +269,8 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
   const content = readFileSync(path, "utf-8");
   const lines = content.split("\n");
   const dir = dirname(path);
+  const ruleCfg = await readConfig();
+  const { map: effective, warnings: ruleWarnings } = resolveEffectiveRules(ruleCfg, opts.cwd ?? process.cwd());
 
   let sIdx = 1;
   const structFindings: ReviewFinding[] = [];
@@ -336,7 +341,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
   const tiers: ReviewResult["tiers"] = { structure: structTier, heuristics: heurTier };
 
   if (!opts.quick) {
-    const cfg = await readConfig();
+    const cfg = ruleCfg;
     const evalCfg: Partial<EvalConfig> = getEvalConfig(cfg);
     const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
     const caps: Capabilities = detectCapabilities(evalCfg);
@@ -348,7 +353,8 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
 
     const principles = loadPrinciples(opts.cwd ?? process.cwd());
     const rubricText = buildPrincipleRubric(principles) || undefined;
-    const prompt = buildMemoryLintPrompt(content, basename(path), rubricText);
+    const plan = llmTierPlan(effective);
+    const prompt = plan.runLint ? buildMemoryLintPrompt(content, basename(path), rubricText) : "";
 
     if (mode === "fail") {
       if (opts.deep) {
@@ -358,6 +364,8 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
         });
       }
       tiers.llm = { available: false, findings: [] };
+    } else if (!plan.runLint) {
+      tiers.llm = { available: false, findings: [] };
     } else if (mode === "delegate") {
       tiers.llm = { available: true, method: "delegated", prompt, findings: [] };
     } else {
@@ -366,17 +374,17 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
 
       if (result.ok) {
         let lIdx = 1;
-        tiers.llm = {
-          available: true,
-          method: result.method,
-          findings: result.output.findings.map((f) => ({
-            id: `llm-${pad(lIdx++)}`,
-            tier: "llm" as const,
-            severity: f.severity,
-            message: f.finding,
-            fixable: false,
-          })),
-        };
+        const findings: ReviewFinding[] = [];
+        for (const item of result.output.findings) {
+          const code = LINT_CATEGORY_CODES[item.category];
+          if (!code) continue;
+          const finding = stampRule({
+            id: `llm-${pad(lIdx++)}`, tier: "llm" as const, severity: item.severity,
+            message: item.finding, fixable: false,
+          }, code, effective);
+          if (finding) findings.push(finding);
+        }
+        tiers.llm = { available: true, method: result.method, findings };
       } else {
         if (opts.deep) {
           throw new NetworkError({
@@ -409,7 +417,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
 
       // Backlog #9 slice: LLM rule-adherence on the newest session when user asked --sessions
       if (opts.sessions && loadedSess.sessions.length > 0) {
-        const cfg = await readConfig().catch(() => null);
+        const cfg = ruleCfg;
         const evalCfgPartial: Partial<EvalConfig> = getEvalConfig(cfg);
         const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
         const caps: Capabilities = detectCapabilities(evalCfgPartial);
@@ -478,5 +486,6 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
       warnings: all.filter(f => f.severity === "warning").length,
       errors: all.filter(f => f.severity === "error").length,
     },
+    ...(ruleWarnings.length ? { ruleWarnings } : {}),
   };
 }

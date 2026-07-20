@@ -15,10 +15,11 @@ import type { SkillModel } from "./skill-validate.js";
 import type { Capabilities } from "./capability-detect.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import type { EvalConfig } from "./journal-config.js";
-import { resolveEffectiveRules } from "./rules/resolve.js";
+import { resolveEffectiveRules, type EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
 import {
   DRIFT_CATEGORY_CODES,
+  LINT_CATEGORY_CODES,
   PARSE_FAILURE_CODE,
   PRINCIPLE_CODE,
   SCENARIO_FILE_CODE,
@@ -121,6 +122,13 @@ export interface ReviewOptions {
 
 function pad(n: number): string {
   return String(n).padStart(3, "0");
+}
+
+export function llmTierPlan(effective: Map<string, EffectiveRule>): { runLint: boolean; runScenario: boolean } {
+  return {
+    runLint: ["R022", "R023", "R024", "R025", "R026"].some((code) => effective.get(code)?.enabled),
+    runScenario: effective.get("R027")?.enabled ?? false,
+  };
 }
 
 function makeFix(text: string): ReviewFinding["fix"] | undefined {
@@ -323,6 +331,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       ci: opts.ci ?? false,
       judgePref: evalCfg.judge,
     });
+    const plan = llmTierPlan(effective);
 
     if (mode === "fail") {
       if (opts.deep) {
@@ -333,94 +342,79 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       }
       tiers.llm = { available: false, findings: [] };
     } else if (mode === "delegate") {
-      // Emit ONE combined prompt (skill-quality rubric + scenario coverage) for
-      // the calling agent to judge inline. No API call, no findings here.
       const rubricText = buildPrincipleRubric(principles) || undefined;
       const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
-      const lintPrompt = buildLintPrompt(model, undefined, rubricText);
-      const scenarioBlock = scenarios.length > 0
+      const lintPrompt = plan.runLint ? buildLintPrompt(model, undefined, rubricText) : "";
+      const scenarioBlock = plan.runScenario && scenarios.length > 0
         ? [
-            "",
-            "---",
+            lintPrompt ? "\n---" : "",
             "## Scenario Coverage Check",
             "",
-            "Also evaluate whether this skill handles each scenario correctly.",
+            "Evaluate whether this skill handles each scenario correctly.",
             "Only add findings for UNCOVERED scenarios, using category \"coverage\".",
             ...scenarios.map((scenario, index) =>
               `${index + 1}. When: \"${scenario.when}\" → Expected: \"${scenario.expect}\"${scenario.must_not ? ` | Must NOT: \"${scenario.must_not}\"` : ""}`
             ),
-          ].join("\n")
+          ].filter(Boolean).join("\n")
         : "";
-      tiers.llm = {
-        available: true,
-        method: "delegated",
-        prompt: lintPrompt + scenarioBlock,
-        findings: [],
-      };
+      const prompt = lintPrompt + scenarioBlock;
+      tiers.llm = prompt
+        ? { available: true, method: "delegated", prompt, findings: [] }
+        : { available: false, findings: [] };
     } else {
-      // mode === "api" — existing API path, unchanged below.
-      // Principles go in as an explicit rubric section the judge must enforce
-      // (NOT via the platform slot — that's a PLATFORM_CONTEXT lookup key).
       const rubricText = buildPrincipleRubric(principles) || undefined;
-      const lint = opts.lintFn ?? lintSkill;
-      opts.onProgress?.(`LLM judge (api) · ${dir}`);
-      const result = await lint(model, caps, agentCfg, evalCfg, undefined, rubricText, { ci: opts.ci ?? false });
-      if (result.ok) {
-        let lIdx = 1;
-        const llmFindings: ReviewFinding[] = result.output.findings.map((f) => ({
-          id: `llm-${pad(lIdx++)}`,
-          tier: "llm" as const,
-          severity: f.severity,
-          message: f.finding,
-          fixable: false,
-        }));
+      const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
+      const llmFindings: ReviewFinding[] = [];
+      let lIdx = 1;
+      let method: string | undefined;
+      let available = false;
+      let lintFailed = false;
 
-        // Scenario coverage: a second, separate judge pass — buildScenarioPrompt
-        // asks a different question (does the skill handle each documented
-        // scenario?) than the skill-quality lint above, so it's kept as its
-        // own call rather than merged into one prompt.
-        const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
-        if (scenarios.length > 0) {
-          opts.onProgress?.(`Scenario coverage (api) · ${dir}`);
-          const scenarioPrompt = buildScenarioPrompt(scenarios, model.content);
-          const scenarioJudge = opts.scenarioLintFn ?? runJudge;
-          const scenarioJudgeResult = await scenarioJudge(scenarioPrompt, caps, agentCfg, evalCfg);
-          if (scenarioJudgeResult.ok) {
-            llmFindings.push(
-              ...scenarioJudgeResult.output.findings.map((f) => ({
-                id: `llm-${pad(lIdx++)}`,
-                tier: "llm" as const,
-                severity: f.severity,
-                message: f.finding,
-                fixable: false,
-              }))
-            );
-          } else if (opts.deep) {
-            throw new NetworkError({
-              code: "E-NET-002",
-              message: `Scenario coverage judge failed: ${scenarioJudgeResult.error}`,
-                            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
-            });
-          }
+
+      const stampLintFindings = (findings: Array<{ category: string; severity: ReviewFinding["severity"]; finding: string }>): void => {
+        for (const item of findings) {
+          const code = LINT_CATEGORY_CODES[item.category];
+          if (!code) continue;
+          const finding = stampRule({
+            id: `llm-${pad(lIdx++)}`, tier: "llm" as const, severity: item.severity,
+            message: item.finding, fixable: false,
+          }, code, effective);
+          if (finding) llmFindings.push(finding);
         }
+      };
 
-        tiers.llm = {
-          available: true,
-          method: result.method,
-          findings: llmFindings,
-        };
-      } else {
-        // A judge exists but the call failed. Under --deep that is
-        // "could not run", not a silent downgrade to tiers 1-2.
-        if (opts.deep) {
-          throw new NetworkError({
-            code: "E-NET-002",
-            message: `LLM judge failed: ${result.error}`,
-                        suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
+      if (plan.runLint) {
+        opts.onProgress?.(`LLM judge (api) · ${dir}`);
+        const result = await (opts.lintFn ?? lintSkill)(model, caps, agentCfg, evalCfg, undefined, rubricText, { ci: opts.ci ?? false });
+        if (!result.ok) {
+          lintFailed = true;
+          if (opts.deep) throw new NetworkError({
+            code: "E-NET-002", message: `LLM judge failed: ${result.error}`,
+            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
           });
+        } else {
+          available = true;
+          method = result.method;
+          stampLintFindings(result.output.findings);
         }
-        tiers.llm = { available: false, findings: [] };
       }
+
+      if (!lintFailed && plan.runScenario && scenarios.length > 0) {
+        opts.onProgress?.(`Scenario coverage (api) · ${dir}`);
+        const result = await (opts.scenarioLintFn ?? runJudge)(buildScenarioPrompt(scenarios, model.content), caps, agentCfg, evalCfg);
+        if (!result.ok) {
+          if (opts.deep) throw new NetworkError({
+            code: "E-NET-002", message: `Scenario coverage judge failed: ${result.error}`,
+            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
+          });
+        } else {
+          available = true;
+          method ??= result.method;
+          stampLintFindings(result.output.findings);
+        }
+      }
+
+      tiers.llm = available ? { available: true, method, findings: llmFindings } : { available: false, findings: [] };
     }
   }
 
