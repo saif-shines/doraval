@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { getDocUrl, getProviderDocUrl, getFindingDocUrl, withDocUrl } from "./doc-registry.js";
 
-const SITE = "https://doraval.thehacksmith.dev";
+const SITE = "https://doraval.dev";
 
 describe("getDocUrl", () => {
   test("maps a known code prefix to its doc page", () => {

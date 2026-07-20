@@ -5,7 +5,7 @@
  */
 import type { ProviderId } from "../providers/types.js";
 
-const BASE = "https://doraval.thehacksmith.dev";
+const BASE = "https://doraval.dev";
 
 const REVIEW = `${BASE}/commands/review/`;
 const SCAN = `${BASE}/commands/scan/`;

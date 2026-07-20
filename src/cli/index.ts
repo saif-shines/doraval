@@ -52,7 +52,7 @@ const main = defineCommand({
     description: [
       "Reads your repo and tells you what's broken in agent context.",
       "Primary: scan · review · fix · new --for <agent>.",
-      "Tip: point a coding agent at this CLI, or run `dora` (scan). Docs: https://doraval.thehacksmith.dev",
+      "Tip: point a coding agent at this CLI, or run `dora` (scan). Docs: https://doraval.dev",
     ].join("\n"),
   },
   subCommands: topLevelSubCommands,

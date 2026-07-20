@@ -2,9 +2,13 @@
   "name": "@hacksmith/doraval",
   "version": "0.6.10",
   "author": "Saif",
+  "homepage": "https://doraval.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/saif-shines/doraval.git"
+  },
+  "bugs": {
+    "url": "https://github.com/saif-shines/doraval/issues"
   },
   "devDependencies": {
     "@types/bun": "latest"

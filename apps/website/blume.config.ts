@@ -32,7 +32,7 @@ export default defineConfig({
     },
   },
   deployment: {
-    site: "https://doraval.thehacksmith.dev",
+    site: "https://doraval.dev",
     output: "static",
   },
   ai: {

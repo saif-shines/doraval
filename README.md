@@ -19,7 +19,7 @@ instead of burning tokens on context you cannot rely on.
 [Contributing](#contributing) ·
 [License](#license)
 
-**Learn more about doraval at [doraval.thehacksmith.dev](https://doraval.thehacksmith.dev)**
+**Learn more about doraval at [doraval.dev](https://doraval.dev)**
 
 This repository contains the TypeScript source for the `dora` / `doraval` CLI,
 its validators, and the agent skill shipped via
@@ -63,7 +63,7 @@ dora --version    # same binary as doraval
 ```
 
 Node ≥ 14.18. Alpine/musl: use Bun. See the [changelog](CHANGELOG.md) and
-[installation guide](https://doraval.thehacksmith.dev/get-started/installation/).
+[installation guide](https://doraval.dev/get-started/installation/).
 
 ### First run
 
@@ -87,9 +87,9 @@ $ dora
 Read-only scan. No API key. Exit codes: `0` clean · `1` issues · `2` could not run.
 
 **Paths:**
-[Audit my agent context](https://doraval.thehacksmith.dev/get-started/audit/) ·
-[Quickstart](https://doraval.thehacksmith.dev/get-started/quickstart/) ·
-[Use with your agent](https://doraval.thehacksmith.dev/for-agents/)
+[Audit my agent context](https://doraval.dev/get-started/audit/) ·
+[Quickstart](https://doraval.dev/get-started/quickstart/) ·
+[Use with your agent](https://doraval.dev/for-agents/)
 
 ```sh
 npx @hacksmith/doraval review --all --quick --ci
@@ -110,15 +110,15 @@ bun run build                  # emit bin/doraval.js
 
 ## Documentation
 
-Full documentation: [doraval.thehacksmith.dev](https://doraval.thehacksmith.dev)
+Full documentation: [doraval.dev](https://doraval.dev)
 
 | Path | Contents |
 |------|----------|
-| [Getting started](https://doraval.thehacksmith.dev/get-started/) | Audit vs Quickstart |
-| [Command reference](https://doraval.thehacksmith.dev/commands/) | All flags on one page |
-| [Use with your agent](https://doraval.thehacksmith.dev/for-agents/) | Skill, JSON, exit codes, CI |
-| [Memory](https://doraval.thehacksmith.dev/concepts/memory/) | Principles that stick |
-| [Review tiers](https://doraval.thehacksmith.dev/concepts/review-tiers/) | Structure → heuristics → LLM → sessions |
+| [Getting started](https://doraval.dev/get-started/) | Audit vs Quickstart |
+| [Command reference](https://doraval.dev/commands/) | All flags on one page |
+| [Use with your agent](https://doraval.dev/for-agents/) | Skill, JSON, exit codes, CI |
+| [Memory](https://doraval.dev/concepts/memory/) | Principles that stick |
+| [Review tiers](https://doraval.dev/concepts/review-tiers/) | Structure → heuristics → LLM → sessions |
 
 ### Commands
 

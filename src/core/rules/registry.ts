@@ -13,7 +13,7 @@ export interface Rule {
   source: RuleSource;
 }
 
-export const RULE_DOC_BASE = "https://doraval.thehacksmith.dev/reference/rules";
+export const RULE_DOC_BASE = "https://doraval.dev/reference/rules";
 
 function rule(
   code: string,
