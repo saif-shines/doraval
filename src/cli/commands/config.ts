@@ -25,7 +25,7 @@ export type ConfigKeyDef = {
   legacy?: boolean;
 };
 
-export const JUDGE_OPTIONS = ["auto", "api", "cli"] as const;
+export const JUDGE_OPTIONS = ["auto", "api", "delegate"] as const;
 
 export const KNOWN_CONFIG_KEYS: ConfigKeyDef[] = [
   { key: "eval.model", description: "LLM model id for review/judge (e.g. gpt-4o-mini)" },
@@ -43,7 +43,7 @@ export const KNOWN_CONFIG_KEYS: ConfigKeyDef[] = [
   { key: "eval.base_url", description: "OpenAI-compatible base URL override" },
   {
     key: "eval.judge",
-    description: "Judge backend: auto | api | cli",
+    description: "Judge backend: auto | api | delegate (emit a JUDGE THIS prompt for the calling agent)",
     kind: "enum",
     options: JUDGE_OPTIONS,
   },
@@ -586,7 +586,7 @@ const configSetup = defineCommand({
       ui.info("dora config setup needs a TTY. For scripts:");
       ui.dim("  dora config set eval.provider <name>");
       ui.dim("  dora config set eval.model <id>");
-      ui.dim("  dora config set eval.judge auto|api|cli");
+      ui.dim("  dora config set eval.judge auto|api|delegate");
       await exit(1);
       return;
     }

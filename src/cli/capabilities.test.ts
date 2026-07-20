@@ -18,6 +18,6 @@ describe("buildCapabilities", () => {
     const m = buildCapabilities();
     expect(m.intelligence.mechanical).toBe(true);
     expect(m.intelligence.heuristic).toBe(true);
-    expect(["api", "cli", "none"]).toContain(m.intelligence.llm.via);
+    expect(["api", "delegate"]).toContain(m.intelligence.llm.via);
   });
 });

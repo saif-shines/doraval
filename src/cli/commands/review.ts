@@ -75,6 +75,13 @@ function renderSingle(r: ReviewResult): void {
   renderFindings(h.findings);
 
   renderOptionalTier("LLM review", r.tiers.llm);
+  if (r.tiers.llm?.method === "delegated" && r.tiers.llm.prompt) {
+    ui.blank();
+    ui.write("  JUDGE THIS (delegated — evaluate against the rubric, then fix findings):");
+    ui.write("  " + "─".repeat(60));
+    ui.write(r.tiers.llm.prompt);
+    ui.write("  " + "─".repeat(60));
+  }
   renderOptionalTier("Sessions", r.tiers.sessions);
 
   ui.blank();

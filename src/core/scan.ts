@@ -65,7 +65,7 @@ export interface Suggestion {
 }
 
 export interface IntelligenceStatus {
-  judge: "api" | "cli" | "none";
+  judge: "api" | "delegate";
   detail: string;
   /** B-xi — this host's platform optionalDep / binary health */
   install: PlatformInstallCheck;
@@ -209,16 +209,11 @@ export async function runScan(
   const install = checkPlatformInstall(opts?.installDeps);
   const judgePart =
     caps.preferred === "api"
-      ? { judge: "api" as const, detail: "API key detected — deep review ready" }
-      : caps.preferred === "cli"
-        ? {
-            judge: "cli" as const,
-            detail: `${caps.cliCommand} CLI available as judge — deep review ready`,
-          }
-        : {
-            judge: "none" as const,
-            detail: "no judge found — install a coding agent CLI or set an API key",
-          };
+      ? { judge: "api" as const, detail: "API judge configured — deep review ready" }
+      : {
+          judge: "delegate" as const,
+          detail: "no API key — in-agent runs delegate judging to the caller; --ci needs a key",
+        };
   const contextBudget = measureContextBudget(scope.scanRoot, health.length);
   const intelligence: IntelligenceStatus = { ...judgePart, install, contextBudget };
 
@@ -276,7 +271,7 @@ export async function runScan(
       command: "dora review .mcp.json",
     });
   }
-  if (!empty && intelligence.judge !== "none" && summary.warnings + summary.failed > 0) {
+  if (!empty && summary.warnings + summary.failed > 0) {
     suggestions.push({
       kind: "improve",
       title: "Deep-check quality with an LLM review",

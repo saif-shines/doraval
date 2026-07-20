@@ -156,7 +156,7 @@ function renderHuman(r: ScanResult): void {
 
   ui.blank();
   ui.heading("Intelligence");
-  renderCheck(r.intelligence.judge === "none" ? "warn" : "ok", r.intelligence.detail);
+  renderCheck("ok", r.intelligence.detail);
   {
     const inst = r.intelligence.install;
     const mark =
