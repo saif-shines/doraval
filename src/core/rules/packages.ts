@@ -16,12 +16,12 @@ function parsePackage(raw: string): Package {
   return { name: pkg.name, description: pkg.description, rules: pkg.rules };
 }
 
-export const BUILTIN_PACKAGES: Record<string, Package> = {
+export const BUILTIN_PACKAGES: Record<"recommended" | "strict" | "minimal", Package> = {
   recommended: parsePackage(recommendedRaw),
   strict: parsePackage(strictRaw),
   minimal: parsePackage(minimalRaw),
 };
 
 export function getPackage(name: string): Package | undefined {
-  return BUILTIN_PACKAGES[name];
+  return BUILTIN_PACKAGES[name as keyof typeof BUILTIN_PACKAGES];
 }

@@ -50,7 +50,7 @@ describe("RulesConfig persistence", () => {
     const round = YAML.parse(YAML.stringify(cfg)) as JournalConfig;
     expect(round.rules?.package).toBe("recommended");
     expect(round.rules?.overrides?.["body-size"]).toBe("off");
-    expect(round.journal.projects.doraval.rules?.package).toBe("strict");
+    expect(round.journal.projects.doraval!.rules?.package).toBe("strict");
   });
 });
 
