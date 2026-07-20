@@ -31,9 +31,22 @@ export function overrideToState(
   }
 }
 
-function applyPackage(map: Map<string, EffectiveRule>, packageName: string | undefined): void {
-  const pkg = packageName ? getPackage(packageName) : undefined;
-  const codes = new Set(pkg ? pkg.rules : getPackage(DEFAULT_PACKAGE)!.rules);
+function applyPackage(
+  map: Map<string, EffectiveRule>,
+  packageName: string | undefined,
+  warnings: string[],
+  fallbackToDefault: boolean,
+): void {
+  const resolvedName = packageName ?? (fallbackToDefault ? DEFAULT_PACKAGE : undefined);
+  if (!resolvedName) return;
+
+  const pkg = getPackage(resolvedName);
+  if (!pkg) {
+    warnings.push(`Unknown rules package "${resolvedName}" in config — ignored.`);
+    if (!fallbackToDefault) return;
+  }
+
+  const codes = new Set((pkg ?? getPackage(DEFAULT_PACKAGE)!).rules);
   for (const rule of RULES) map.get(rule.code)!.enabled = codes.has(rule.code);
 }
 
@@ -51,6 +64,11 @@ function applyOverrides(
       continue;
     }
 
+    if (!["off", "on", "fyi", "error", "warning"].includes(value as string)) {
+      warnings.push(`Invalid override "${String(value)}" for ${rule.code} ${rule.slug} — ignored.`);
+      continue;
+    }
+
     const { enabled, severity } = overrideToState(value, rule.defaultSeverity);
     const overridden = value === "error" || value === "warning" || value === "fyi";
     map.set(rule.code, { enabled, severity, overridden });
@@ -65,7 +83,7 @@ export function resolveEffectiveRules(config: JournalConfig | null, cwd?: string
   }
 
   const globalRules: RulesConfig | undefined = config?.rules;
-  applyPackage(map, globalRules?.package);
+  applyPackage(map, globalRules?.package, warnings, true);
   applyOverrides(map, globalRules?.overrides, warnings);
 
   const projectName = config ? resolveProjectName(config, cwd) : null;
@@ -73,7 +91,7 @@ export function resolveEffectiveRules(config: JournalConfig | null, cwd?: string
     ? config?.journal.projects[projectName]?.rules
     : undefined;
   if (projectRules) {
-    if (projectRules.package) applyPackage(map, projectRules.package);
+    if (projectRules.package) applyPackage(map, projectRules.package, warnings, false);
     applyOverrides(map, projectRules.overrides, warnings);
   }
 
@@ -83,9 +101,10 @@ export function resolveEffectiveRules(config: JournalConfig | null, cwd?: string
     if (!effective.enabled) {
       warnings.push(`${rule.code} ${rule.slug} is locked (safety). Cannot disable — kept on.`);
     }
-    if (effective.severity === "info" && rule.defaultSeverity !== "info") {
+    const severityRank: Record<RuleSeverity, number> = { info: 0, warning: 1, error: 2 };
+    if (severityRank[effective.severity] < severityRank[rule.defaultSeverity]) {
       warnings.push(
-        `${rule.code} ${rule.slug} is locked (safety). Cannot demote to FYI — kept at ${rule.defaultSeverity}.`,
+        `${rule.code} ${rule.slug} is locked (safety). Cannot demote to ${effective.severity} — kept at ${rule.defaultSeverity}.`,
       );
     }
     map.set(rule.code, { enabled: true, severity: rule.defaultSeverity, overridden: false });

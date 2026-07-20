@@ -57,6 +57,41 @@ describe("resolveEffectiveRules", () => {
     expect(warnings.some((w) => w.includes("R020"))).toBe(true);
   });
 
+  test("locked error rule cannot be demoted to warning; warns", () => {
+    const { map, warnings } = resolveEffectiveRules(cfg({ rules: { package: "strict", overrides: { "frontmatter-parse": "warning" } } }));
+    expect(map.get("R002")).toEqual({ enabled: true, severity: "error", overridden: false });
+    expect(warnings.some((w) => w.includes("R002") && w.includes("demote"))).toBe(true);
+  });
+
+  test("unknown global package warns and falls back to recommended", () => {
+    const { map, warnings } = resolveEffectiveRules(cfg({ rules: { package: "minimla" } }));
+    expect(map.get("R001")?.enabled).toBe(true);
+    expect(map.get("R009")?.enabled).toBe(false);
+    expect(warnings).toContain('Unknown rules package "minimla" in config — ignored.');
+  });
+
+  test("unknown project package warns without replacing global package", () => {
+    const config = cfg({
+      rules: { package: "minimal" },
+      journal: {
+        repo: "",
+        projects: {
+          proj: { remote_path: "", local_path: "", source_dir: "/repo", rules: { package: "minimla" } },
+        },
+      },
+    });
+    const { map, warnings } = resolveEffectiveRules(config, "/repo");
+    expect(map.get("R007")?.enabled).toBe(false);
+    expect(warnings).toContain('Unknown rules package "minimla" in config — ignored.');
+  });
+
+  test("invalid runtime override warns and is ignored", () => {
+    const config = cfg({ rules: { package: "minimal", overrides: { R007: "warn" as any } } });
+    const { map, warnings } = resolveEffectiveRules(config);
+    expect(map.get("R007")?.enabled).toBe(false);
+    expect(warnings).toContain('Invalid override "warn" for R007 body-size — ignored.');
+  });
+
   test("project package replaces global base; project override wins", () => {
     const config = cfg({
       rules: { package: "strict" },
