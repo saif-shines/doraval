@@ -32,10 +32,15 @@ function renderTierLine(name: string, passed: number, warnings: number, errors: 
   ui.write(`  ${name.padEnd(18)} ${countParts(passed, warnings, errors)}`);
 }
 
+export function severityLabel(severity: ReviewFinding["severity"]): string {
+  return severity === "info" ? "FYI" : severity;
+}
+
 function renderFindings(findings: ReviewFinding[]): void {
   for (const f of findings) {
-    if (f.severity === "pass" || f.severity === "info") continue;
-    renderCheck(f.severity === "error" ? "fail" : "warn", f.message, 4);
+    if (f.severity === "pass") continue;
+    if (f.severity === "info") ui.dim(`    ${severityLabel(f.severity)}  ${f.message}`);
+    else renderCheck(f.severity === "error" ? "fail" : "warn", f.message, 4);
     renderFindingDocs(f, 6);
   }
 }
@@ -55,8 +60,11 @@ function renderOptionalTier(
       : `${tier.count ?? tier.findings?.length ?? 0} sessions found`;
   ui.write(`  ${name.padEnd(18)} ${label}`);
   for (const f of tier.findings ?? []) {
-    const status = f.severity === "error" ? "fail" as const : f.severity === "warning" ? "warn" as const : "pass" as const;
-    renderCheck(status, f.message, 4);
+    if (f.severity === "info") ui.dim(`    ${severityLabel(f.severity)}  ${f.message}`);
+    else {
+      const status = f.severity === "error" ? "fail" as const : f.severity === "warning" ? "warn" as const : "pass" as const;
+      renderCheck(status, f.message, 4);
+    }
     renderFindingDocs(f, 6);
   }
 }
@@ -75,6 +83,13 @@ function renderSingle(r: ReviewResult): void {
   renderFindings(h.findings);
 
   renderOptionalTier("LLM review", r.tiers.llm);
+  if (r.tiers.llm?.method === "delegated" && r.tiers.llm.prompt) {
+    ui.blank();
+    ui.write("  JUDGE THIS (delegated — evaluate against the rubric, then fix findings):");
+    ui.write("  " + "─".repeat(60));
+    ui.write(r.tiers.llm.prompt);
+    ui.write("  " + "─".repeat(60));
+  }
   renderOptionalTier("Sessions", r.tiers.sessions);
 
   ui.blank();
@@ -169,6 +184,7 @@ export default defineCommand({
       sessions: args.sessions as boolean,
       agent: args.agent as string | undefined,
       cwd: root,
+      ci: args.ci as boolean,
       onProgress: spin ? (msg: string) => spin.message(msg) : undefined,
     };
 
@@ -185,6 +201,11 @@ export default defineCommand({
         ? await reviewAll(target, opts)
         : [await reviewSkill(target, opts)];
       spin?.stop("Review complete");
+
+      if (mode.format !== "json") {
+        const warnings = [...new Set(results.flatMap((result) => result.ruleWarnings ?? []))];
+        for (const warning of warnings) ui.dim(`  FYI  ${warning}`);
+      }
 
       if (mode.format === "json") {
         // Machine contract: top-level shape is ALWAYS an array — never flips

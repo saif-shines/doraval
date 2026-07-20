@@ -24,7 +24,7 @@ for (const f of ["llms.txt", "llms-full.txt"] as const) {
     process.exit(1);
   }
   const body = readFileSync(p, "utf8");
-  if (!body.includes("https://doraval.thehacksmith.dev")) {
+  if (!body.includes("https://doraval.dev")) {
     console.error(`check-site: ${f} lacks absolute production URLs`);
     process.exit(1);
   }

@@ -21,6 +21,8 @@ describe("buildCompletionScript", () => {
     expect(r.script).toContain("scan");
     expect(r.script).toContain("memory)");
     expect(r.script).toMatch(/compgen -W ".*add/);
+    expect(r.script).toContain("rules) COMPREPLY=");
+    expect(r.script).toContain("list on off set package explain");
   });
 
   test("zsh script includes _arguments and sessions", async () => {
@@ -30,6 +32,8 @@ describe("buildCompletionScript", () => {
     expect(r.script).toContain("#compdef doraval");
     expect(r.script).toContain("_arguments");
     expect(r.script).toContain("sessions)");
+    expect(r.script).toContain("rules)");
+    expect(r.script).toContain("list on off set package explain");
   });
 
   test("fish script registers complete -c doraval", async () => {
@@ -38,6 +42,8 @@ describe("buildCompletionScript", () => {
     if (!r.ok) return;
     expect(r.script).toContain("complete -c doraval");
     expect(r.script).toContain("config");
+    expect(r.script).toContain("__fish_seen_subcommand_from rules");
+    expect(r.script).toContain("list on off set package explain");
   });
 
   test("missing / unsupported shell returns usage error", async () => {

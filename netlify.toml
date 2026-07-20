@@ -8,22 +8,35 @@
   # Blume requires Node >= 22.12
   NODE_VERSION = "22"
 
-# Domain redirects: doraval.thehacksmith.dev is the canonical domain
+# Canonical: doraval.dev. Old hosts + www → apex.
 [[redirects]]
-  from = "https://thehacksmith.dev/*"
-  to = "https://doraval.thehacksmith.dev/:splat"
-  status = 301
-  force = true
-
-[[redirects]]
-  from = "https://www.thehacksmith.dev/*"
-  to = "https://doraval.thehacksmith.dev/:splat"
+  from = "https://doraval.thehacksmith.dev/*"
+  to = "https://doraval.dev/:splat"
   status = 301
   force = true
 
 [[redirects]]
   from = "https://www.doraval.thehacksmith.dev/*"
-  to = "https://doraval.thehacksmith.dev/:splat"
+  to = "https://doraval.dev/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.doraval.dev/*"
+  to = "https://doraval.dev/:splat"
+  status = 301
+  force = true
+
+# Legacy apex that once hosted docs
+[[redirects]]
+  from = "https://thehacksmith.dev/*"
+  to = "https://doraval.dev/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.thehacksmith.dev/*"
+  to = "https://doraval.dev/:splat"
   status = 301
   force = true
 

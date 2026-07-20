@@ -1,0 +1,8 @@
+name: minimal
+description: Just don't let me ship broken context
+rules:
+  - R001
+  - R002
+  - R003
+  - R006
+  - R020

@@ -68,6 +68,12 @@ file, but you always run the review.
    enforced repo-wide (never run bare `promote`; it prompts). Do not invent
    memories from your own inferences.
 
+If `dora review` output shows the LLM tier as `via delegated` (JSON `method: "delegated"`),
+dora did not run the judge — it handed you the rubric. Read the emitted `JUDGE THIS`
+prompt, evaluate the skill against it yourself, and fix any findings before reporting
+done. "Done" = mechanical tiers clean AND delegated judgment completed. Never report
+done while exit code is 1 or 2.
+
 ## Rules of engagement
 
 - **MUST** treat the exit code as truth: `0` clean, `1` issues, `2` could not

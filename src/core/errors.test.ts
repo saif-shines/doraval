@@ -55,7 +55,7 @@ describe("DoravalError", () => {
         code: "E-VAL-003",
         message: 'unknown field "scope"',
         suggestion: 'Rename to "paths"',
-        docUrl: "https://doraval.thehacksmith.dev/commands/review/",
+        docUrl: "https://doraval.dev/commands/review/",
       },
     });
   });

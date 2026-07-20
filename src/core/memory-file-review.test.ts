@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "path";
+import { join, resolve } from "path";
+import { mkdtempSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import {
   reviewMemoryFile,
   MEMORY_FILE_NAMES,
@@ -7,9 +9,11 @@ import {
   extractBindingRules,
   memorySessionRuleInventory,
   mapEvalToMemoryFindings,
+  memoryLlmTierPlan,
 } from "./memory-file-review.js";
 import type { LoadResult } from "./session-evidence.js";
 import type { EvalResult } from "./session-eval.js";
+import { resolveEffectiveRules } from "./rules/resolve.js";
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures/memory-files");
 
@@ -41,6 +45,25 @@ const SOME_SESSIONS: LoadResult = {
 
 /** Skip real session/judge I/O when a test only cares about another tier. */
 const hermetic = { loadedSessions: NO_ADAPTERS };
+
+async function withRules(
+  overrides: Record<string, "on" | "off">,
+  run: () => Promise<void>,
+): Promise<void> {
+  const home = mkdtempSync(join(tmpdir(), "dora-rules-"));
+  const previous = process.env.DORAVAL_HOME;
+  process.env.DORAVAL_HOME = home;
+  writeFileSync(join(home, "config.yml"), [
+    "journal:", "  repo: ''", "  projects: {}", "rules:", "  package: recommended", "  overrides:",
+    ...Object.entries(overrides).map(([code, value]) => `    ${code}: ${value}`), "",
+  ].join("\n"));
+  try {
+    await run();
+  } finally {
+    if (previous === undefined) delete process.env.DORAVAL_HOME;
+    else process.env.DORAVAL_HOME = previous;
+  }
+}
 
 describe("MEMORY_FILE_NAMES", () => {
   test("contains the four known memory file basenames", () => {
@@ -84,6 +107,15 @@ describe("reviewMemoryFile — tier 1 (structure)", () => {
     const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     expect(result.tiers.sessions).toBeUndefined();
   });
+
+  test("memory mechanical findings carry public rule identity", async () => {
+    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    for (const finding of [...result.tiers.structure.findings, ...result.tiers.heuristics.findings]) {
+      expect(finding.code).toMatch(/^R\d{3}$/);
+      expect(finding.slug).toBeTruthy();
+      expect(finding.docUrl).toContain(`/reference/rules/${finding.code}`);
+    }
+  });
 });
 
 describe("reviewMemoryFile — tier 2 (heuristics)", () => {
@@ -116,15 +148,31 @@ describe("reviewMemoryFile — tier 2 (heuristics)", () => {
   });
 });
 
+describe("memoryLlmTierPlan", () => {
+  test("only clarity and contradiction enable memory LLM review", () => {
+    const onlyIrrelevant = resolveEffectiveRules({
+      journal: { repo: "", projects: {} },
+      rules: { package: "minimal", overrides: { R023: "on", R025: "on", R026: "on" } },
+    }).map;
+    expect(memoryLlmTierPlan(onlyIrrelevant)).toEqual({ runLint: false });
+
+    const clarity = resolveEffectiveRules({
+      journal: { repo: "", projects: {} },
+      rules: { package: "minimal", overrides: { R022: "on" } },
+    }).map;
+    expect(memoryLlmTierPlan(clarity)).toEqual({ runLint: true });
+  });
+});
+
 describe("reviewMemoryFile — tier 3 (llm)", () => {
-  test("deep mode without a judge throws E-PRE-004", async () => {
+  test("deep mode without a judge under --ci throws E-PRE-004", async () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: false, cliCommand: null, preferred: "none",
+      api: false, preferred: "none",
     });
     try {
-      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { deep: true, ...hermetic });
+      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { deep: true, ci: true, ...hermetic });
       expect(true).toBe(false);
     } catch (e: any) {
       expect(e.code).toBe("E-PRE-004");
@@ -137,7 +185,7 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
     let called = false;
     await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
       quick: true,
-      memoryLintFn: async () => { called = true; return { ok: true, method: "cli", output: { overall: "pass", summary: "ok", findings: [] } }; },
+      memoryLintFn: async () => { called = true; return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } }; },
     });
     expect(called).toBe(false);
   });
@@ -146,13 +194,13 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+      api: true, preferred: "api",
     });
     try {
       const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
         ...hermetic,
         memoryLintFn: async () => ({
-          ok: true, method: "cli",
+          ok: true, method: "api",
           output: { overall: "warn", summary: "one issue", findings: [
             { severity: "warning", category: "contradiction", finding: "conflicting rules", suggestion: "pick one" },
           ] },
@@ -166,11 +214,69 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
     }
   });
 
+  test("R021 off omits principles from the memory API prompt", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
+    let prompt = "";
+    try {
+      await withRules({ R021: "off" }, async () => {
+        await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+          ...hermetic,
+          memoryLintFn: async (value) => {
+            prompt = value;
+            return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } };
+          },
+        });
+      });
+      expect(prompt).not.toContain("PROJECT PRINCIPLES");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("irrelevant LLM dimensions do not call or delegate memory review", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    let called = false;
+    const apiSpy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
+    try {
+      await withRules({ R022: "off", R024: "off", R023: "on", R025: "on", R026: "on" }, async () => {
+        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+          ...hermetic,
+          memoryLintFn: async () => {
+            called = true;
+            return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } };
+          },
+        });
+        expect(result.tiers.llm).toEqual({ available: false, findings: [] });
+      });
+      expect(called).toBe(false);
+    } finally {
+      apiSpy.mockRestore();
+    }
+  });
+
+  test("irrelevant LLM dimensions emit no delegated memory prompt", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: false, preferred: "none" });
+    try {
+      await withRules({ R022: "off", R024: "off", R023: "on", R025: "on", R026: "on" }, async () => {
+        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), hermetic);
+        expect(result.tiers.llm).toEqual({ available: false, findings: [] });
+        expect(result.tiers.llm?.prompt).toBeUndefined();
+      });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test("deep mode with a failing judge throws E-NET-002", async () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+      api: true, preferred: "api",
     });
     try {
       await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
@@ -204,10 +310,10 @@ describe("memorySessionPresence", () => {
     expect(f[0]!.message).toContain("cursor");
   });
 
-  test("session findings include code + docUrl", () => {
+  test("session findings preserve internal ids and carry public rule identity", () => {
     const f = memorySessionPresence(EMPTY_LOAD);
-    expect(f[0]!.code).toBe("sess-003");
-    expect(f[0]!.docUrl).toContain("/concepts/review-tiers/");
+    expect(f[0]).toMatchObject({ id: "sess-003", code: "R030", slug: "session-none" });
+    expect(f[0]!.docUrl).toContain("/reference/rules/R030");
   });
 });
 
@@ -255,7 +361,7 @@ describe("mapEvalToMemoryFindings", () => {
     verdictReason: "ok",
     checklist: [],
     ambiguityFlags: [],
-    judgeMethod: "cli",
+    judgeMethod: "api",
   });
 
   test("PASS → sess-006 aligned", () => {
@@ -263,6 +369,7 @@ describe("mapEvalToMemoryFindings", () => {
     expect(f[0]!.id).toBe("sess-006");
     expect(f[0]!.severity).toBe("pass");
     expect(f[0]!.message).toMatch(/aligned/i);
+    expect(f[0]!.code).toBe("R033");
   });
 
   test("DRIFTED MANDATORY → error findings", () => {
@@ -289,7 +396,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+      api: true, preferred: "api",
     });
     try {
       const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
@@ -306,7 +413,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+      api: true, preferred: "api",
     });
     try {
       const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
@@ -329,7 +436,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+      api: true, preferred: "api",
     });
     try {
       const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
@@ -358,7 +465,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
             evidence: "git push --force",
           }],
           ambiguityFlags: [],
-          judgeMethod: "cli" as const,
+          judgeMethod: "api" as const,
         }),
       });
       const msgs = result.tiers.sessions?.findings.map((f) => f.message).join("\n") ?? "";
@@ -369,11 +476,38 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
     }
   });
 
+  test("R033 off skips adherence eval while R031 and R032 still emit", async () => {
+    const capsMod = await import("./capability-detect.js");
+    const { spyOn } = await import("bun:test");
+    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
+    let called = false;
+    try {
+      await withRules({ R033: "off" }, async () => {
+        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+          sessions: true,
+          loadedSessions: SOME_SESSIONS,
+          ...skipLlm,
+          memorySessionEvalFn: async () => {
+            called = true;
+            throw new Error("must not run");
+          },
+        });
+        const codes = result.tiers.sessions?.findings.map((finding) => finding.code) ?? [];
+        expect(codes).toContain("R031");
+        expect(codes).toContain("R032");
+        expect(codes).not.toContain("R033");
+      });
+      expect(called).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test("--sessions with zero sessions throws E-PRE-003", async () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+      api: true, preferred: "api",
     });
     try {
       await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
@@ -393,7 +527,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
     const capsMod = await import("./capability-detect.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, cli: true, cliCommand: "claude", preferred: "cli",
+      api: true, preferred: "api",
     });
     try {
       await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {

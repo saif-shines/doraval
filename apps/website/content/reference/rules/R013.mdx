@@ -1,0 +1,29 @@
+---
+title: R013 · scenario-file-valid
+description: "scenarios.yaml is valid"
+sidebar:
+  label: R013 scenario-file-valid
+  hidden: true
+---
+
+{/* <!-- DORA:GENERATED:START --> */}
+- **Code:** R013
+- **Slug:** `scenario-file-valid`
+- **Tier:** structure
+- **Default severity:** error
+- **Packages:** recommended, strict
+- **Locked:** No
+- **Doc:** https://doraval.dev/reference/rules/R013
+{/* <!-- DORA:GENERATED:END --> */}
+
+## What
+
+Checks that a skill's `scenarios.yaml` file can be parsed and has the expected scenario structure.
+
+## Why
+
+Scenarios define expected trigger behavior. Invalid scenario data cannot be used to evaluate whether the skill activates in the right situations.
+
+## How to fix
+
+Correct the YAML syntax and required fields in `scenarios.yaml`. Keep each scenario focused on one expected trigger or non-trigger case.

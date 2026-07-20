@@ -32,7 +32,7 @@ export default defineConfig({
     },
   },
   deployment: {
-    site: "https://doraval.thehacksmith.dev",
+    site: "https://doraval.dev",
     output: "static",
   },
   ai: {
@@ -49,6 +49,13 @@ export default defineConfig({
     og: { enabled: true },
     sitemap: true,
     robots: true,
+  },
+  // Rule detail pages are sidebar.hidden (catalog is the only nav entry) but
+  // still need to be findable when someone searches for a code or slug.
+  search: {
+    indexing: {
+      includeHiddenPages: true,
+    },
   },
   redirects: redirs([
     // Pre-rename leftovers only (journal → memory, validate → review, …)

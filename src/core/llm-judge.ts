@@ -225,7 +225,7 @@ function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: Ju
       code: "timeout",
       error:
         `Request timed out after ${Math.round(timeoutMs / 1000)}s. ` +
-        `Try a faster model (glm-4.7 / glm-4-flash), increase with "dora config set eval.timeout_ms 300000", or set eval.judge=cli.`,
+        `Try a faster model (glm-4.7 / glm-4-flash) or increase with "dora config set eval.timeout_ms 300000".`
     };
   }
   if (err?.code === "ENOTFOUND" || err?.code === "ECONNREFUSED" || err?.code === "ETIMEDOUT") {
@@ -248,12 +248,12 @@ function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: Ju
         error:
           "Z.ai rejected the call (1113: no balance/package on this endpoint). " +
           "Coding Plan keys need: dora config set eval.base_url https://api.z.ai/api/coding/paas/v4 " +
-          "(pay-as-you-go uses https://api.z.ai/api/paas/v4). Or set eval.judge=cli.",
+          "(pay-as-you-go uses https://api.z.ai/api/paas/v4).",
       };
     }
     return {
       code: "rate_limit",
-      error: "Rate limit exceeded. Wait and retry, or set eval.judge=cli.",
+      error: "Rate limit exceeded. Wait and retry.",
     };
   }
   if (err?.status === 401 || err?.status === 403) {
@@ -269,7 +269,7 @@ function mapJudgeError(e: unknown, timeoutMs: number): { error: string; code: Ju
   ) {
     return {
       code: "model",
-      error: `Model not available or deprecated. Set eval.model to a supported id, or use eval.judge=cli.`,
+      error: "Model not available or deprecated. Set eval.model to a supported id.",
     };
   }
   let error = `Judge API error${err?.status ? ` (${err.status})` : ""}: ${msg}`;
@@ -317,7 +317,7 @@ export function parseJudgeText(text: string): JudgeResult {
   return {
     success: false,
     code: "parse",
-    error: `Judge returned unparseable JSON (${lastIssue}). Try another model or eval.judge=cli.`,
+    error: `Judge returned unparseable JSON (${lastIssue}). Try another model.`,
   };
 }
 
@@ -355,7 +355,7 @@ export async function invokeJudge(
     return {
       success: false,
       code: "config",
-      error: `No API key for eval judge. ${hint} Or set eval.judge=cli to use your coding agent.`,
+      error: `No API key for eval judge. ${hint}`,
     };
   }
 
@@ -399,7 +399,7 @@ export async function invokeJudge(
         success: false,
         code: "empty",
         error:
-          "Judge API returned empty text (common with reasoning models if only reasoning tokens were used). Try glm-4.7 / a non-reasoning model, or eval.judge=cli.",
+          "Judge API returned empty text (common with reasoning models if only reasoning tokens were used). Try glm-4.7 or another non-reasoning model.",
       };
     }
 

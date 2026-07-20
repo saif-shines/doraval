@@ -5,9 +5,8 @@ import { z } from "zod";
 import type { SkillModel } from "./skill-validate.js";
 import type { EvalConfig } from "./journal-config.js";
 import type { AgentConfig } from "./agent-invoke.js";
-import { invokeAgent, getLastInvokeError } from "./agent-invoke.js";
 import { resolveDirectCredentials, DEFAULT_JUDGE_TIMEOUT_MS } from "./llm-judge.js";
-import type { Capabilities } from "./capability-detect.js";
+import { resolveJudgeMode, type Capabilities } from "./capability-detect.js";
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +27,7 @@ export type LintOutput = z.infer<typeof LintSchema>;
 export type LintFinding = z.infer<typeof LintFindingSchema>;
 
 export type LintResult =
-  | { ok: true; output: LintOutput; method: "api" | "cli" }
+  | { ok: true; output: LintOutput; method: "api" | "delegated"; prompt?: string }
   | { ok: false; error: string };
 
 // ── Platform context ───────────────────────────────────────────────────────────
@@ -158,71 +157,38 @@ async function lintViaApi(prompt: string, evalCfg: Partial<EvalConfig>): Promise
   }
 }
 
-// ── CLI path ───────────────────────────────────────────────────────────────────
-
-function mapCliRaw(raw: Record<string, unknown>): LintOutput | null {
-  if (typeof raw.overall !== "string" || !["pass", "warn", "fail"].includes(raw.overall)) return null;
-  if (typeof raw.summary !== "string") return null;
-  if (!Array.isArray(raw.findings)) return null;
-
-  const findings: LintFinding[] = [];
-  for (const item of raw.findings as unknown[]) {
-    if (
-      item !== null &&
-      typeof item === "object" &&
-      typeof (item as Record<string, unknown>).severity === "string" &&
-      typeof (item as Record<string, unknown>).category === "string" &&
-      typeof (item as Record<string, unknown>).finding === "string" &&
-      typeof (item as Record<string, unknown>).suggestion === "string"
-    ) {
-      const f = item as Record<string, unknown>;
-      findings.push({
-        severity: f.severity as LintFinding["severity"],
-        category: f.category as LintFinding["category"],
-        finding: f.finding as string,
-        suggestion: f.suggestion as string,
-      });
-    }
-  }
-  return { overall: raw.overall as LintOutput["overall"], summary: raw.summary, findings };
-}
-
-async function lintViaCli(prompt: string, agentCfg: AgentConfig): Promise<LintResult> {
-  const raw = await invokeAgent(prompt, agentCfg, ["overall", "findings"]);
-  if (!raw) {
-    const detail = getLastInvokeError();
-    return { ok: false, error: detail ? `CLI agent: ${detail}` : "CLI agent returned no response" };
-  }
-  const output = mapCliRaw(raw);
-  if (!output) return { ok: false, error: "CLI agent response did not match lint schema" };
-  return { ok: true, output, method: "cli" };
-}
-
 // ── Public entry point ─────────────────────────────────────────────────────────
 
 export async function runJudge(
   prompt: string,
   caps: Capabilities,
   agentCfg: AgentConfig,
-  evalCfg: Partial<EvalConfig>
+  evalCfg: Partial<EvalConfig>,
+  opts?: { ci?: boolean }
 ): Promise<LintResult> {
-  if (caps.preferred === "api") {
-    const result = await lintViaApi(prompt, evalCfg);
-    if (result.ok) return result;
-    // API failed — fall back to CLI if available
-    if (caps.cli && caps.cliCommand) {
-      return lintViaCli(prompt, { ...agentCfg, command: caps.cliCommand });
-    }
-    return result;
+  const mode = resolveJudgeMode({
+    apiAvailable: caps.api,
+    ci: opts?.ci ?? false,
+    judgePref: evalCfg.judge,
+  });
+
+  if (mode === "api") return lintViaApi(prompt, evalCfg);
+
+  if (mode === "delegate") {
+    return {
+      ok: true,
+      method: "delegated",
+      prompt,
+      output: { overall: "pass", summary: "Delegated to the calling agent for judgment.", findings: [] },
+    };
   }
 
-  if (caps.preferred === "cli") {
-    return lintViaCli(prompt, { ...agentCfg, command: agentCfg.command || caps.cliCommand! });
-  }
-
+  // mode === "fail"
   return {
     ok: false,
-    error: "No judge available. Set an API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) or install claude CLI.",
+    error:
+      "No judge available. Set an API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) " +
+      "or run dora in-agent (without --ci) to delegate judging to the caller.",
   };
 }
 
@@ -232,7 +198,8 @@ export async function lintSkill(
   agentCfg: AgentConfig,
   evalCfg: Partial<EvalConfig>,
   platform?: string,
-  extraRubric?: string
+  extraRubric?: string,
+  opts?: { ci?: boolean }
 ): Promise<LintResult> {
-  return runJudge(buildLintPrompt(model, platform, extraRubric), caps, agentCfg, evalCfg);
+  return runJudge(buildLintPrompt(model, platform, extraRubric), caps, agentCfg, evalCfg, opts);
 }

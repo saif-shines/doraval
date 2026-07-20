@@ -21,7 +21,7 @@ export interface CapabilitiesManifest {
   intelligence: {
     mechanical: boolean;
     heuristic: boolean;
-    llm: { available: boolean; via: "api" | "cli" | "none" };
+    llm: { available: boolean; via: "api" | "delegate" };
   };
 }
 
@@ -92,8 +92,10 @@ export function buildCapabilities(): CapabilitiesManifest {
       mechanical: true,
       heuristic: true,
       llm: {
-        available: caps.preferred !== "none",
-        via: caps.preferred === "none" ? "none" : caps.preferred,
+        // Delegate is always available (interactively) — the API-vs-delegate
+        // choice never leaves `dora review` without an LLM tier.
+        available: true,
+        via: caps.preferred === "api" ? "api" : "delegate",
       },
     },
   };

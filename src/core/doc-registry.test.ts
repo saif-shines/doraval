@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { getDocUrl, getProviderDocUrl, getFindingDocUrl, withDocUrl } from "./doc-registry.js";
 
-const SITE = "https://doraval.thehacksmith.dev";
+const SITE = "https://doraval.dev";
 
 describe("getDocUrl", () => {
   test("maps a known code prefix to its doc page", () => {
@@ -9,7 +9,6 @@ describe("getDocUrl", () => {
   });
 
   test("maps exact finding codes", () => {
-    expect(getDocUrl("sess-003")).toBe(`${SITE}/concepts/review-tiers/`);
     expect(getDocUrl("E-SCAN-SHADOW")).toBe(`${SITE}/commands/scan/`);
     expect(getDocUrl("E-INSTALL-MISSING")).toBe(`${SITE}/get-started/installation/`);
   });
@@ -42,12 +41,12 @@ describe("getFindingDocUrl", () => {
 
 describe("withDocUrl", () => {
   test("attaches docUrl from code", () => {
-    const f = withDocUrl({ code: "sess-002", message: "x" });
-    expect(f.docUrl).toBe(`${SITE}/concepts/review-tiers/`);
+    const f = withDocUrl({ code: "E-SCAN-SHADOW", message: "x" });
+    expect(f.docUrl).toBe(`${SITE}/commands/scan/`);
   });
 
   test("preserves existing docUrl", () => {
-    const f = withDocUrl({ code: "sess-002", docUrl: "https://example.com/keep", message: "x" });
+    const f = withDocUrl({ code: "R028", docUrl: "https://example.com/keep", message: "x" });
     expect(f.docUrl).toBe("https://example.com/keep");
   });
 });

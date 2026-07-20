@@ -24,7 +24,7 @@ run the tier you required," not "clean."
     { "severity": "conflict", "message": "...", "sources": [ { "file": "..." } ] }
   ],
   "summary": { "passed": 3, "warnings": 1, "failed": 1 },
-  "intelligence": { "judge": "none" },
+  "intelligence": { "judge": "delegate" },
   "suggestions": [ { "kind": "fix", "command": "dora fix ...", "title": "..." } ],
   "empty": false
 }
@@ -35,8 +35,10 @@ run the tier you required," not "clean."
 - `.contradictions[].severity === "conflict"` → cross-agent conflict; run
   `dora reconcile`.
 - `.health[].status` is `"pass" | "warn" | "fail"` per artifact.
-- `.intelligence.judge` is `"api" | "cli" | "none"` — `"none"` means no LLM
-  tier ran; a clean `--quick` result is structural only.
+- `.intelligence.judge` is `"api" | "delegate"`. `"api"` means dora can call the
+  configured judge directly. `"delegate"` means the calling agent should evaluate
+  the emitted `JUDGE THIS` block inline; `--ci` still requires API credentials.
+  A clean `--quick` result is structural only.
 
 ## For hooks
 `dora memory context --json` emits the active memory set for injection into an

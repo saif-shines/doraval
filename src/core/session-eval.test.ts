@@ -191,3 +191,55 @@ describe("runEval — UNCLEAR to ambiguityFlags wiring", () => {
     expect(unclearInstructions).toEqual(fakeJudgeOutput.ambiguityFlags);
   });
 });
+
+describe("runEval — API-or-fail (no CLI-spawn fallback)", () => {
+  test("delegate preference never calls the API even when credentials exist", async () => {
+    const res = await runEval(
+      mockPrimitives,
+      "some-skill",
+      "skill body",
+      { command: "" },
+      {
+        model: "test-model",
+        api_key: "must-not-be-used",
+        base_url: "http://127.0.0.1:1",
+        max_tool_calls: 200,
+        save_history: true,
+        judge: "delegate",
+      },
+    );
+
+    expect(res.verdict).toBe("UNKNOWN");
+    expect(res.judgeMethod).toBe("unknown");
+  });
+
+  test("no API judge -> UNKNOWN evidence result, no spawn", async () => {
+    // The repo's dev .env (auto-loaded by Bun) sets ZAI_API_KEY — clear every
+    // provider key/base-url env var so this exercises the true no-key path.
+    const keysToClear = [
+      "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GROQ_API_KEY", "ZAI_API_KEY",
+      "ZHIPU_API_KEY", "GLM_API_KEY", "OPENROUTER_API_KEY",
+      "ZAI_BASE_URL", "OPENAI_BASE_URL",
+    ];
+    const prevValues: Record<string, string | undefined> = {};
+    for (const k of keysToClear) {
+      prevValues[k] = process.env[k];
+      delete process.env[k];
+    }
+    try {
+      const res = await runEval(
+        mockPrimitives,
+        "some-skill",
+        "skill body",
+        { command: "" },
+        { model: "", max_tool_calls: 200, save_history: true, judge: "auto" },
+      );
+      expect(res.verdict).toBe("UNKNOWN");
+      expect(res.judgeMethod).toBe("unknown");
+    } finally {
+      for (const k of keysToClear) {
+        if (prevValues[k] !== undefined) process.env[k] = prevValues[k];
+      }
+    }
+  });
+});

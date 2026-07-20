@@ -5,6 +5,13 @@ import { YAML } from "bun";
 
 // ── Types ──────────────────────────────────────────────────────────
 
+export type RuleOverride = "on" | "off" | "error" | "warning" | "fyi";
+
+export interface RulesConfig {
+  package?: string;
+  overrides?: Record<string, RuleOverride>;
+}
+
 export interface ProjectMapping {
   remote_path: string;
   local_path: string;
@@ -17,6 +24,7 @@ export interface ProjectMapping {
    * when two different projects share a basename (e.g. two "api" repos).
    */
   source_dir?: string;
+  rules?: RulesConfig;
 }
 
 export interface EvalConfig {
@@ -28,7 +36,7 @@ export interface EvalConfig {
   max_tool_calls: number;
   save_history: boolean;
   /** Explicit judge backend preference. "auto" (default) prefers direct API when credentials available. */
-  judge?: 'auto' | 'api' | 'cli';
+  judge?: 'auto' | 'api' | 'delegate';
   /** Per-call timeout for direct API judge (ms). Default 180s for reasoning models. */
   timeout_ms?: number;
 }
@@ -45,6 +53,7 @@ export interface JournalConfig {
     cwd_flag?: string;
   };
   eval?: Partial<EvalConfig>;
+  rules?: RulesConfig;
 }
 
 // ── Paths ──────────────────────────────────────────────────────────

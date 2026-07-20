@@ -2,9 +2,13 @@
   "name": "@hacksmith/doraval",
   "version": "0.6.10",
   "author": "Saif",
+  "homepage": "https://doraval.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/saif-shines/doraval.git"
+  },
+  "bugs": {
+    "url": "https://github.com/saif-shines/doraval/issues"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -51,7 +55,9 @@
     "test:invoke-judge": "bun run scripts/test-invoke-judge.ts",
     "jsr:publish": "bunx jsr publish",
     "site:dev": "cd apps/website && bun run dev",
-    "site:build": "cd apps/website && bun run build",
+    "gen:rules": "bun scripts/gen-rule-docs.ts",
+    "gen:rules:check": "bun scripts/gen-rule-docs.ts --check",
+    "site:build": "bun run gen:rules:check && cd apps/website && bun run build",
     "site:preview": "cd apps/website && bun run preview"
   },
   "type": "module",

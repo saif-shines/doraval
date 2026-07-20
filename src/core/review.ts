@@ -1,11 +1,11 @@
 import { readFileSync, readdirSync, statSync } from "fs";
 import { resolve as resolvePath, relative, basename } from "path";
-import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
+import { loadSkillFromDir, validateSkillModelTagged } from "./skill-validate.js";
 import { analyzeDrift, scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
-import { lintSkill, runJudge, type LintResult } from "./skill-lint.js";
+import { lintSkill, runJudge, buildLintPrompt, type LintResult } from "./skill-lint.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
-import { detectCapabilities } from "./capability-detect.js";
+import { detectCapabilities, resolveJudgeMode } from "./capability-detect.js";
 import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
@@ -15,6 +15,17 @@ import type { SkillModel } from "./skill-validate.js";
 import type { Capabilities } from "./capability-detect.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import type { EvalConfig } from "./journal-config.js";
+import { resolveEffectiveRules, type EffectiveRule } from "./rules/resolve.js";
+import { stampRule } from "./rules/apply.js";
+import {
+  DRIFT_CATEGORY_CODES,
+  LINT_CATEGORY_CODES,
+  PARSE_FAILURE_CODE,
+  PRINCIPLE_CODE,
+  SCENARIO_FILE_CODE,
+  SCRIPT_SECURITY_CODE,
+} from "./rules/bindings.js";
+import { ruleByCode } from "./rules/registry.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -29,8 +40,10 @@ export interface ReviewFinding {
   line?: number;
   fixable: boolean;
   fix?: { type: "rename_field" | "add_field" | "content"; description: string };
-  /** Machine code for doc lookup (e.g. sess-003, E-VAL-001). */
+  /** Stable public rule/error code. */
   code?: string;
+  /** Stable human rule handle. */
+  slug?: string;
   /** Resolved doc URL (real site page only — see doc-registry). */
   docUrl?: string;
 }
@@ -48,11 +61,12 @@ export interface ReviewResult {
   tiers: {
     structure: TierResult;
     heuristics: TierResult;
-    llm?: { available: boolean; method?: string; findings: ReviewFinding[] };
+    llm?: { available: boolean; method?: string; prompt?: string; findings: ReviewFinding[] };
     sessions?: { available: boolean; count?: number; findings: ReviewFinding[] };
   };
   scenarioCount?: number;
   summary: { passed: number; warnings: number; errors: number };
+  ruleWarnings?: string[];
 }
 
 export interface ReviewOptions {
@@ -61,6 +75,8 @@ export interface ReviewOptions {
   sessions?: boolean;
   agent?: string;
   cwd?: string;
+  /** Headless context (from --ci). No caller to delegate to → no-key judge fails hard. */
+  ci?: boolean;
   /** Preloaded session evidence (reviewAll threads this; also a test seam). */
   loadedSessions?: LoadResult;
   /** Called before each skill's LLM tier runs (progress reporting). */
@@ -72,7 +88,8 @@ export interface ReviewOptions {
     agentCfg: AgentConfig,
     evalCfg: Partial<EvalConfig>,
     platform?: string,
-    extraRubric?: string
+    extraRubric?: string,
+    opts?: { ci?: boolean }
   ) => Promise<LintResult>;
   /** Test seam: overrides the judge call for memory-file review's LLM tier. */
   memoryLintFn?: (
@@ -105,6 +122,13 @@ export interface ReviewOptions {
 
 function pad(n: number): string {
   return String(n).padStart(3, "0");
+}
+
+export function llmTierPlan(effective: Map<string, EffectiveRule>): { runLint: boolean; runScenario: boolean } {
+  return {
+    runLint: ["R022", "R023", "R024", "R025", "R026"].some((code) => effective.get(code)?.enabled),
+    runScenario: effective.get("R027")?.enabled ?? false,
+  };
 }
 
 function makeFix(text: string): ReviewFinding["fix"] | undefined {
@@ -147,12 +171,16 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   const loaded = await loadSkillFromDir(dir);
 
   if (!loaded.ok) {
+    const rule = ruleByCode(PARSE_FAILURE_CODE)!;
     const finding: ReviewFinding = {
       id: "struct-001",
       tier: "structure",
       severity: "error",
       message: loaded.error,
       fixable: false,
+      code: rule.code,
+      slug: rule.slug,
+      docUrl: rule.docUrl,
     };
     return {
       path: dir,
@@ -166,53 +194,50 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   }
 
   const { model, existingDirs } = loaded;
+  const ruleCfg = await readConfig();
+  const { map: effective, warnings: ruleWarnings } = resolveEffectiveRules(ruleCfg, opts.cwd ?? process.cwd());
 
   // Tier 1: structure
-  const validation = validateSkillModel(model, { existingDirs });
   let sIdx = 1;
-  const structFindings: ReviewFinding[] = [
-    ...validation.errors.map((e) => {
-      const fix = makeFix(e.text);
-      return {
+  const structFindings: ReviewFinding[] = [];
+  for (const { code, result } of validateSkillModelTagged(model, { existingDirs })) {
+    const items = [
+      ...(result.errors ?? []).map((item) => ({ severity: "error" as const, text: item.text })),
+      ...(result.warnings ?? []).map((item) => ({ severity: "warning" as const, text: item.text })),
+      ...(result.passes ?? []).map((item) => ({ severity: "pass" as const, text: item.text })),
+    ];
+    for (const item of items) {
+      const fix = item.severity === "pass" ? undefined : makeFix(item.text);
+      const finding = stampRule({
         id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-        severity: "error" as const, message: e.text, fixable: !!fix, ...(fix ? { fix } : {}),
-      };
-    }),
-    ...validation.warnings.map((w) => {
-      const fix = makeFix(w.text);
-      return {
-        id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-        severity: "warning" as const, message: w.text, fixable: !!fix, ...(fix ? { fix } : {}),
-      };
-    }),
-    ...validation.passes.map((p) => ({
-      id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-      severity: "pass" as const, message: p.text, fixable: false,
-    })),
-  ];
+        severity: item.severity, message: item.text, fixable: !!fix, ...(fix ? { fix } : {}),
+      }, code, effective);
+      if (finding) structFindings.push(finding);
+    }
+  }
 
-  // Tier 1b: scenario file validation
   const scenarioResult = loadScenarios(dir);
   let scenarioCount = 0;
   if (!scenarioResult.ok) {
-    structFindings.push({
+    const finding = stampRule({
       id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
       severity: "error" as const, message: scenarioResult.error, fixable: false,
-    });
+    }, SCENARIO_FILE_CODE, effective);
+    if (finding) structFindings.push(finding);
   } else if (scenarioResult.scenarios.length > 0) {
     scenarioCount = scenarioResult.scenarios.length;
-    structFindings.push({
-      id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-      severity: "info" as const,
+    const finding = stampRule({
+      id: `struct-${pad(sIdx++)}`, tier: "structure" as const, severity: "info" as const,
       message: `${scenarioCount} scenario(s) validated from scenarios.yaml (structure only — behavioral coverage checked in the LLM tier when a judge is available)`,
       fixable: false,
-    });
+    }, SCENARIO_FILE_CODE, effective);
+    if (finding) structFindings.push(finding);
   }
 
   const structTier: TierResult = {
-    passed: validation.passes.length,
-    warnings: validation.warnings.length,
-    errors: validation.errors.length + (!scenarioResult.ok ? 1 : 0),
+    passed: structFindings.filter((finding) => finding.severity === "pass").length,
+    warnings: structFindings.filter((finding) => finding.severity === "warning").length,
+    errors: structFindings.filter((finding) => finding.severity === "error").length,
     findings: structFindings,
   };
 
@@ -220,14 +245,20 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   const desc = String(model.data.description ?? "");
   const drift = analyzeDrift({ description: desc, content: model.content });
   let hIdx = 1;
-  const heurFindings: ReviewFinding[] = drift.drifts.map((d) => ({
-    id: `heur-${pad(hIdx++)}`,
-    tier: "heuristics" as const,
-    severity: d.drifted ? ("warning" as const) : ("pass" as const),
-    message: d.detail,
-    fixable: d.drifted,
-    ...(d.drifted ? { fix: { type: "content" as const, description: d.detail } } : {}),
-  }));
+  const heurFindings: ReviewFinding[] = [];
+  for (const item of drift.drifts) {
+    const code = DRIFT_CATEGORY_CODES[item.category];
+    if (!code) continue;
+    const finding = stampRule({
+      id: `heur-${pad(hIdx++)}`,
+      tier: "heuristics" as const,
+      severity: item.drifted ? ("warning" as const) : ("pass" as const),
+      message: item.detail,
+      fixable: item.drifted,
+      ...(item.drifted ? { fix: { type: "content" as const, description: item.detail } } : {}),
+    }, code, effective);
+    if (finding) heurFindings.push(finding);
+  }
 
   // Tier 2a: scripts/ security scan — outbound network calls, secret prompts.
   // Only runs when a scripts/ dir exists; a clean scan still records a pass so
@@ -236,38 +267,43 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     const scriptFiles = readScriptFiles(resolvePath(dir, "scripts"));
     const scriptHits = scanScriptSecurity(scriptFiles);
     if (scriptHits.length === 0) {
-      heurFindings.push({
+      const finding = stampRule({
         id: `heur-${pad(hIdx++)}`,
         tier: "heuristics" as const,
         severity: "pass" as const,
         message: "scripts/ contains no suspicious network-call or secret-prompt patterns",
         fixable: false,
-      });
+      }, SCRIPT_SECURITY_CODE, effective);
+      if (finding) heurFindings.push(finding);
     } else {
       for (const hit of scriptHits) {
-        heurFindings.push({
+        const finding = stampRule({
           id: `heur-${pad(hIdx++)}`,
           tier: "heuristics" as const,
           severity: "warning" as const,
           message: hit.detail,
           fixable: false,
-        });
+        }, SCRIPT_SECURITY_CODE, effective);
+        if (finding) heurFindings.push(finding);
       }
     }
   }
 
   // Tier 2b: principle keyword checks (free, from dora memory)
-  const principles = loadPrinciples(opts.cwd ?? process.cwd());
+  const principles = effective.get(PRINCIPLE_CODE)?.enabled
+    ? loadPrinciples(opts.cwd ?? process.cwd())
+    : [];
   const principleViolations = checkPrinciplesAgainstContent(principles, model.content);
   for (const v of principleViolations) {
     const sev = v.principle.weight >= 7 ? "error" as const : "warning" as const;
-    heurFindings.push({
+    const finding = stampRule({
       id: `heur-${pad(hIdx++)}`,
       tier: "heuristics" as const,
       severity: sev,
       message: `violates "${v.principle.title}" (w${v.principle.weight}) — ${v.detail}`,
       fixable: false,
-    });
+    }, PRINCIPLE_CODE, effective, { keepSeverity: true });
+    if (finding) heurFindings.push(finding);
   }
 
   const heurErrors = heurFindings.filter(f => f.severity === "error").length;
@@ -287,12 +323,19 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   if (!opts.quick) {
     // Honor credentials/model/judge-preference stored via `dora config set eval.*`,
     // not just env vars — and use the configured agent command when present.
-    const cfg = await readConfig();
+    const cfg = ruleCfg;
     const evalCfg = getEvalConfig(cfg);
     const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
 
     const caps = detectCapabilities(evalCfg);
-    if (caps.preferred === "none") {
+    const mode = resolveJudgeMode({
+      apiAvailable: caps.api,
+      ci: opts.ci ?? false,
+      judgePref: evalCfg.judge,
+    });
+    const plan = llmTierPlan(effective);
+
+    if (mode === "fail") {
       if (opts.deep) {
         throw new PrerequisiteError({
           code: "E-PRE-004",
@@ -300,69 +343,82 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
         });
       }
       tiers.llm = { available: false, findings: [] };
-    } else {
-      // Principles go in as an explicit rubric section the judge must enforce
-      // (NOT via the platform slot — that's a PLATFORM_CONTEXT lookup key).
+    } else if (mode === "delegate") {
       const rubricText = buildPrincipleRubric(principles) || undefined;
-      const lint = opts.lintFn ?? lintSkill;
-      opts.onProgress?.(`LLM judge (${caps.preferred}) · ${dir}`);
-      const result = await lint(model, caps, agentCfg, evalCfg, undefined, rubricText);
-      if (result.ok) {
-        let lIdx = 1;
-        const llmFindings: ReviewFinding[] = result.output.findings.map((f) => ({
-          id: `llm-${pad(lIdx++)}`,
-          tier: "llm" as const,
-          severity: f.severity,
-          message: f.finding,
-          fixable: false,
-        }));
+      const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
+      const lintPrompt = plan.runLint ? buildLintPrompt(model, undefined, rubricText) : "";
+      const scenarioBlock = plan.runScenario && scenarios.length > 0
+        ? lintPrompt
+          ? [
+              "\n---",
+              "## Scenario Coverage Check",
+              "",
+              "Evaluate whether this skill handles each scenario correctly.",
+              "Only add findings for UNCOVERED scenarios, using category \"coverage\".",
+              ...scenarios.map((scenario, index) =>
+                `${index + 1}. When: \"${scenario.when}\" → Expected: \"${scenario.expect}\"${scenario.must_not ? ` | Must NOT: \"${scenario.must_not}\"` : ""}`
+              ),
+            ].join("\n")
+          : buildScenarioPrompt(scenarios, model.content)
+        : "";
+      const prompt = lintPrompt + scenarioBlock;
+      tiers.llm = prompt
+        ? { available: true, method: "delegated", prompt, findings: [] }
+        : { available: false, findings: [] };
+    } else {
+      const rubricText = buildPrincipleRubric(principles) || undefined;
+      const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
+      const llmFindings: ReviewFinding[] = [];
+      let lIdx = 1;
+      let method: string | undefined;
+      let available = false;
+      let lintFailed = false;
 
-        // Scenario coverage: a second, separate judge pass — buildScenarioPrompt
-        // asks a different question (does the skill handle each documented
-        // scenario?) than the skill-quality lint above, so it's kept as its
-        // own call rather than merged into one prompt.
-        const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
-        if (scenarios.length > 0) {
-          opts.onProgress?.(`Scenario coverage (${caps.preferred}) · ${dir}`);
-          const scenarioPrompt = buildScenarioPrompt(scenarios, model.content);
-          const scenarioJudge = opts.scenarioLintFn ?? runJudge;
-          const scenarioJudgeResult = await scenarioJudge(scenarioPrompt, caps, agentCfg, evalCfg);
-          if (scenarioJudgeResult.ok) {
-            llmFindings.push(
-              ...scenarioJudgeResult.output.findings.map((f) => ({
-                id: `llm-${pad(lIdx++)}`,
-                tier: "llm" as const,
-                severity: f.severity,
-                message: f.finding,
-                fixable: false,
-              }))
-            );
-          } else if (opts.deep) {
-            throw new NetworkError({
-              code: "E-NET-002",
-              message: `Scenario coverage judge failed: ${scenarioJudgeResult.error}`,
-              suggestion: "Re-run, check the judge CLI/API credentials, or drop --deep to review without the LLM tier",
-            });
-          }
+
+      const stampLintFindings = (findings: Array<{ category: string; severity: ReviewFinding["severity"]; finding: string }>): void => {
+        for (const item of findings) {
+          const code = LINT_CATEGORY_CODES[item.category];
+          if (!code) continue;
+          const finding = stampRule({
+            id: `llm-${pad(lIdx++)}`, tier: "llm" as const, severity: item.severity,
+            message: item.finding, fixable: false,
+          }, code, effective);
+          if (finding) llmFindings.push(finding);
         }
+      };
 
-        tiers.llm = {
-          available: true,
-          method: result.method,
-          findings: llmFindings,
-        };
-      } else {
-        // A judge exists but the call failed. Under --deep that is
-        // "could not run", not a silent downgrade to tiers 1-2.
-        if (opts.deep) {
-          throw new NetworkError({
-            code: "E-NET-002",
-            message: `LLM judge failed: ${result.error}`,
-            suggestion: "Re-run, check the judge CLI/API credentials, or drop --deep to review without the LLM tier",
+      if (plan.runLint) {
+        opts.onProgress?.(`LLM judge (api) · ${dir}`);
+        const result = await (opts.lintFn ?? lintSkill)(model, caps, agentCfg, evalCfg, undefined, rubricText, { ci: opts.ci ?? false });
+        if (!result.ok) {
+          lintFailed = true;
+          if (opts.deep) throw new NetworkError({
+            code: "E-NET-002", message: `LLM judge failed: ${result.error}`,
+            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
           });
+        } else {
+          available = true;
+          method = result.method;
+          stampLintFindings(result.output.findings);
         }
-        tiers.llm = { available: false, findings: [] };
       }
+
+      if (!lintFailed && plan.runScenario && scenarios.length > 0) {
+        opts.onProgress?.(`Scenario coverage (api) · ${dir}`);
+        const result = await (opts.scenarioLintFn ?? runJudge)(buildScenarioPrompt(scenarios, model.content), caps, agentCfg, evalCfg);
+        if (!result.ok) {
+          if (opts.deep) throw new NetworkError({
+            code: "E-NET-002", message: `Scenario coverage judge failed: ${result.error}`,
+            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
+          });
+        } else {
+          available = true;
+          method ??= result.method;
+          stampLintFindings(result.output.findings);
+        }
+      }
+
+      tiers.llm = available ? { available: true, method, findings: llmFindings } : { available: false, findings: [] };
     }
   }
 
@@ -379,7 +435,9 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       tiers.sessions = { available: false, findings: [] };
     } else {
       const skillName = String(model.data.name ?? basename(dir));
-      const sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required: opts.sessions === true });
+      const sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required: opts.sessions === true })
+        .map((finding) => stampRule(finding, finding.code!, effective))
+        .filter((finding): finding is ReviewFinding => finding !== null);
       tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };
     }
   }
@@ -401,6 +459,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       warnings: all.filter((f) => f.severity === "warning").length,
       errors: all.filter((f) => f.severity === "error").length,
     },
+    ...(ruleWarnings.length ? { ruleWarnings } : {}),
   };
 }
 

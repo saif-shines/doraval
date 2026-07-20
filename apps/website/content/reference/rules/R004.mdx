@@ -1,0 +1,29 @@
+---
+title: R004 · skill-name
+description: "Skill name valid"
+sidebar:
+  label: R004 skill-name
+  hidden: true
+---
+
+{/* <!-- DORA:GENERATED:START --> */}
+- **Code:** R004
+- **Slug:** `skill-name`
+- **Tier:** structure
+- **Default severity:** error
+- **Packages:** recommended, strict
+- **Locked:** No
+- **Doc:** https://doraval.dev/reference/rules/R004
+{/* <!-- DORA:GENERATED:END --> */}
+
+## What
+
+Checks that the skill's `name` follows the supported naming format.
+
+## Why
+
+Agents and tooling use the name as a stable skill identifier. Invalid names can prevent discovery or create inconsistent references.
+
+## How to fix
+
+Change the frontmatter `name` to a valid, concise identifier. Use lowercase words separated by hyphens.

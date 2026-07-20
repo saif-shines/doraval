@@ -47,6 +47,7 @@ export const memory = defineGroup(
 
 // config command module already defines its own subCommands (set/get)
 export const config = () => import("./commands/config.js").then((m) => m.default);
+export const rules = () => import("./commands/rules.js").then((m) => m.default);
 
 /** The exact subCommands map used to build the root `doraval` command. */
 export const topLevelSubCommands = {
@@ -58,6 +59,7 @@ export const topLevelSubCommands = {
   memory: () => Promise.resolve(memory),
   reconcile: () => import("./commands/reconcile.js").then((m) => m.default),
   config,
+  rules,
   sessions: () => import("./commands/sessions.js").then((m) => m.default),
   // ── tooling ────────────────────────────────────────────────────
   bump: () => import("./commands/bump.js").then((m) => m.default),

@@ -15,7 +15,7 @@ describe("doraval CLI", () => {
       expect(stdout).toContain("fix");
       expect(stdout).toContain("Primary:");
       expect(stdout).toContain("point a coding agent");
-      expect(stdout).toContain("https://doraval.thehacksmith.dev");
+      expect(stdout).toContain("https://doraval.dev");
       // Root COMMANDS blurbs stay short (detail lives on subcommand --help).
       expect(stdout).not.toContain("skill = reusable SKILL.md");
       expect(stdout).not.toContain("common: eval.model");
