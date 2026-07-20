@@ -14,10 +14,13 @@ describe("reviewSkill", () => {
     expect(result.tiers.llm).toBeUndefined();
   });
 
-  test("invalid skill dir returns a load-error finding", async () => {
+  test("invalid skill dir returns a stamped load-error finding", async () => {
     const result = await reviewSkill("/nonexistent/skill", { quick: true });
     expect(result.summary.errors).toBeGreaterThan(0);
-    expect(result.tiers.structure.findings.some(f => f.severity === "error")).toBe(true);
+    expect(result.tiers.structure.findings[0]).toMatchObject({
+      severity: "error", code: "R002", slug: "frontmatter-parse",
+    });
+    expect(result.tiers.structure.findings[0]?.docUrl).toContain("/reference/rules/R002");
   });
 
   test("findings have sequential ids per tier", async () => {
@@ -36,6 +39,15 @@ describe("reviewSkill", () => {
   test("sessions tier is omitted entirely in quick mode", async () => {
     const result = await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), { quick: true });
     expect(result.tiers.sessions).toBeUndefined();
+  });
+
+  test("mechanical findings carry public rule identity", async () => {
+    const result = await reviewSkill(resolve(FIXTURES, "skills/minimal-good"), { quick: true });
+    for (const finding of [...result.tiers.structure.findings, ...result.tiers.heuristics.findings]) {
+      expect(finding.code).toMatch(/^R\d{3}$/);
+      expect(finding.slug).toBeTruthy();
+      expect(finding.docUrl).toContain(`/reference/rules/${finding.code}`);
+    }
   });
 
   test("deep mode without LLM under --ci throws PrerequisiteError", async () => {

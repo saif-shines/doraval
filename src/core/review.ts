@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync, statSync } from "fs";
 import { resolve as resolvePath, relative, basename } from "path";
-import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
+import { loadSkillFromDir, validateSkillModelTagged } from "./skill-validate.js";
 import { analyzeDrift, scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
 import { lintSkill, runJudge, buildLintPrompt, type LintResult } from "./skill-lint.js";
 import { findSkillDirs } from "./skill-discovery.js";
@@ -15,6 +15,16 @@ import type { SkillModel } from "./skill-validate.js";
 import type { Capabilities } from "./capability-detect.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import type { EvalConfig } from "./journal-config.js";
+import { resolveEffectiveRules } from "./rules/resolve.js";
+import { stampRule } from "./rules/apply.js";
+import {
+  DRIFT_CATEGORY_CODES,
+  PARSE_FAILURE_CODE,
+  PRINCIPLE_CODE,
+  SCENARIO_FILE_CODE,
+  SCRIPT_SECURITY_CODE,
+} from "./rules/bindings.js";
+import { ruleByCode } from "./rules/registry.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -55,6 +65,7 @@ export interface ReviewResult {
   };
   scenarioCount?: number;
   summary: { passed: number; warnings: number; errors: number };
+  ruleWarnings?: string[];
 }
 
 export interface ReviewOptions {
@@ -152,12 +163,16 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   const loaded = await loadSkillFromDir(dir);
 
   if (!loaded.ok) {
+    const rule = ruleByCode(PARSE_FAILURE_CODE)!;
     const finding: ReviewFinding = {
       id: "struct-001",
       tier: "structure",
       severity: "error",
       message: loaded.error,
       fixable: false,
+      code: rule.code,
+      slug: rule.slug,
+      docUrl: rule.docUrl,
     };
     return {
       path: dir,
@@ -171,53 +186,50 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   }
 
   const { model, existingDirs } = loaded;
+  const ruleCfg = await readConfig();
+  const { map: effective, warnings: ruleWarnings } = resolveEffectiveRules(ruleCfg, opts.cwd ?? process.cwd());
 
   // Tier 1: structure
-  const validation = validateSkillModel(model, { existingDirs });
   let sIdx = 1;
-  const structFindings: ReviewFinding[] = [
-    ...validation.errors.map((e) => {
-      const fix = makeFix(e.text);
-      return {
+  const structFindings: ReviewFinding[] = [];
+  for (const { code, result } of validateSkillModelTagged(model, { existingDirs })) {
+    const items = [
+      ...(result.errors ?? []).map((item) => ({ severity: "error" as const, text: item.text })),
+      ...(result.warnings ?? []).map((item) => ({ severity: "warning" as const, text: item.text })),
+      ...(result.passes ?? []).map((item) => ({ severity: "pass" as const, text: item.text })),
+    ];
+    for (const item of items) {
+      const fix = item.severity === "pass" ? undefined : makeFix(item.text);
+      const finding = stampRule({
         id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-        severity: "error" as const, message: e.text, fixable: !!fix, ...(fix ? { fix } : {}),
-      };
-    }),
-    ...validation.warnings.map((w) => {
-      const fix = makeFix(w.text);
-      return {
-        id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-        severity: "warning" as const, message: w.text, fixable: !!fix, ...(fix ? { fix } : {}),
-      };
-    }),
-    ...validation.passes.map((p) => ({
-      id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-      severity: "pass" as const, message: p.text, fixable: false,
-    })),
-  ];
+        severity: item.severity, message: item.text, fixable: !!fix, ...(fix ? { fix } : {}),
+      }, code, effective);
+      if (finding) structFindings.push(finding);
+    }
+  }
 
-  // Tier 1b: scenario file validation
   const scenarioResult = loadScenarios(dir);
   let scenarioCount = 0;
   if (!scenarioResult.ok) {
-    structFindings.push({
+    const finding = stampRule({
       id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
       severity: "error" as const, message: scenarioResult.error, fixable: false,
-    });
+    }, SCENARIO_FILE_CODE, effective);
+    if (finding) structFindings.push(finding);
   } else if (scenarioResult.scenarios.length > 0) {
     scenarioCount = scenarioResult.scenarios.length;
-    structFindings.push({
-      id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-      severity: "info" as const,
+    const finding = stampRule({
+      id: `struct-${pad(sIdx++)}`, tier: "structure" as const, severity: "info" as const,
       message: `${scenarioCount} scenario(s) validated from scenarios.yaml (structure only — behavioral coverage checked in the LLM tier when a judge is available)`,
       fixable: false,
-    });
+    }, SCENARIO_FILE_CODE, effective);
+    if (finding) structFindings.push(finding);
   }
 
   const structTier: TierResult = {
-    passed: validation.passes.length,
-    warnings: validation.warnings.length,
-    errors: validation.errors.length + (!scenarioResult.ok ? 1 : 0),
+    passed: structFindings.filter((finding) => finding.severity === "pass").length,
+    warnings: structFindings.filter((finding) => finding.severity === "warning").length,
+    errors: structFindings.filter((finding) => finding.severity === "error").length,
     findings: structFindings,
   };
 
@@ -225,14 +237,20 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   const desc = String(model.data.description ?? "");
   const drift = analyzeDrift({ description: desc, content: model.content });
   let hIdx = 1;
-  const heurFindings: ReviewFinding[] = drift.drifts.map((d) => ({
-    id: `heur-${pad(hIdx++)}`,
-    tier: "heuristics" as const,
-    severity: d.drifted ? ("warning" as const) : ("pass" as const),
-    message: d.detail,
-    fixable: d.drifted,
-    ...(d.drifted ? { fix: { type: "content" as const, description: d.detail } } : {}),
-  }));
+  const heurFindings: ReviewFinding[] = [];
+  for (const item of drift.drifts) {
+    const code = DRIFT_CATEGORY_CODES[item.category];
+    if (!code) continue;
+    const finding = stampRule({
+      id: `heur-${pad(hIdx++)}`,
+      tier: "heuristics" as const,
+      severity: item.drifted ? ("warning" as const) : ("pass" as const),
+      message: item.detail,
+      fixable: item.drifted,
+      ...(item.drifted ? { fix: { type: "content" as const, description: item.detail } } : {}),
+    }, code, effective);
+    if (finding) heurFindings.push(finding);
+  }
 
   // Tier 2a: scripts/ security scan — outbound network calls, secret prompts.
   // Only runs when a scripts/ dir exists; a clean scan still records a pass so
@@ -241,22 +259,24 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     const scriptFiles = readScriptFiles(resolvePath(dir, "scripts"));
     const scriptHits = scanScriptSecurity(scriptFiles);
     if (scriptHits.length === 0) {
-      heurFindings.push({
+      const finding = stampRule({
         id: `heur-${pad(hIdx++)}`,
         tier: "heuristics" as const,
         severity: "pass" as const,
         message: "scripts/ contains no suspicious network-call or secret-prompt patterns",
         fixable: false,
-      });
+      }, SCRIPT_SECURITY_CODE, effective);
+      if (finding) heurFindings.push(finding);
     } else {
       for (const hit of scriptHits) {
-        heurFindings.push({
+        const finding = stampRule({
           id: `heur-${pad(hIdx++)}`,
           tier: "heuristics" as const,
           severity: "warning" as const,
           message: hit.detail,
           fixable: false,
-        });
+        }, SCRIPT_SECURITY_CODE, effective);
+        if (finding) heurFindings.push(finding);
       }
     }
   }
@@ -266,13 +286,14 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   const principleViolations = checkPrinciplesAgainstContent(principles, model.content);
   for (const v of principleViolations) {
     const sev = v.principle.weight >= 7 ? "error" as const : "warning" as const;
-    heurFindings.push({
+    const finding = stampRule({
       id: `heur-${pad(hIdx++)}`,
       tier: "heuristics" as const,
       severity: sev,
       message: `violates "${v.principle.title}" (w${v.principle.weight}) — ${v.detail}`,
       fixable: false,
-    });
+    }, PRINCIPLE_CODE, effective, { keepSeverity: true });
+    if (finding) heurFindings.push(finding);
   }
 
   const heurErrors = heurFindings.filter(f => f.severity === "error").length;
@@ -292,7 +313,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   if (!opts.quick) {
     // Honor credentials/model/judge-preference stored via `dora config set eval.*`,
     // not just env vars — and use the configured agent command when present.
-    const cfg = await readConfig();
+    const cfg = ruleCfg;
     const evalCfg = getEvalConfig(cfg);
     const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
 
@@ -438,6 +459,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       warnings: all.filter((f) => f.severity === "warning").length,
       errors: all.filter((f) => f.severity === "error").length,
     },
+    ...(ruleWarnings.length ? { ruleWarnings } : {}),
   };
 }
 

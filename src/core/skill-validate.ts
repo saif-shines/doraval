@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { resolve } from "path";
 import { parseFrontmatter } from "./frontmatter.js";
 import type { CheckItem } from "../validators/types.js";
+import { STRUCTURE_CHECK_CODES } from "./rules/bindings.js";
 
 export interface SkillModel {
   data: Record<string, unknown>;
@@ -253,6 +254,19 @@ const checks: Check[] = [
   checkSupportingDirs,
   checkDynamicInjection,
 ];
+
+export const TAGGED_CHECKS: ReadonlyArray<{ code: string; check: Check }> = checks.map((check) => {
+  const code = STRUCTURE_CHECK_CODES[check.name];
+  if (!code) throw new Error(`skill-validate: check "${check.name}" has no rule-code binding`);
+  return { code, check };
+});
+
+export function validateSkillModelTagged(
+  model: SkillModel,
+  context: SkillValidateContext = { existingDirs: [] },
+): Array<{ code: string; result: CheckResult }> {
+  return TAGGED_CHECKS.map(({ code, check }) => ({ code, result: check(model, context) }));
+}
 
 export function validateSkillModel(
   model: SkillModel,
