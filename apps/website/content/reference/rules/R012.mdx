@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R012
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Notes dynamic injection markers in the body (`!\`...\``, ` ```! ` blocks, `$ARGUMENTS`, session substitutions). |
+| **Why** | Dynamic injection is powerful and agent-specific. Surfacing it helps authors verify markers are intentional and portable enough for their audience. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Keep only markers your target agent supports. Document required arguments next to `$ARGUMENTS` / `$0`. Prefer static examples when injection is optional.

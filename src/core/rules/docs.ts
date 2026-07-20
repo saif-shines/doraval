@@ -81,6 +81,21 @@ export function refreshRulePage(existing: string, rule: Rule): string {
   return spliceGeneratedRegion(withFrontmatter, renderGeneratedBlock(rule));
 }
 
+/** Hand-authored body skeleton: What/Why as a scan table; How stays free-form. */
+export function scaffoldRuleBody(): string {
+  return [
+    "| | |",
+    "| --- | --- |",
+    "| **What** | {/* one or two sentences: what this rule checks */} |",
+    "| **Why** | {/* one or two sentences: why it matters */} |",
+    "",
+    "## How to fix",
+    "",
+    "{/* steps, examples, code — keep out of the table */}",
+    "",
+  ].join("\n");
+}
+
 export function scaffoldRulePage(rule: Rule): string {
   return [
     renderRuleFrontmatter(rule),
@@ -89,17 +104,6 @@ export function scaffoldRulePage(rule: Rule): string {
     renderGeneratedBlock(rule),
     GEN_END,
     "",
-    "## What",
-    "",
-    "{/* describe what this rule checks */}",
-    "",
-    "## Why",
-    "",
-    "{/* explain why it matters */}",
-    "",
-    "## How to fix",
-    "",
-    "{/* concrete remediation steps */}",
-    "",
+    scaffoldRuleBody(),
   ].join("\n");
 }

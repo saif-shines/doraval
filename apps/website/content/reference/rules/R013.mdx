@@ -16,22 +16,17 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R013
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Checks that a skill's `scenarios.yaml` file can be parsed and has the expected scenario structure.
-
-## Why
-
-Scenarios define expected trigger behavior. Invalid scenario data cannot be used to evaluate whether the skill activates in the right situations.
+| | |
+| --- | --- |
+| **What** | Checks that `scenarios.yaml` parses and has the expected scenario structure (when the file exists). |
+| **Why** | Scenarios turn “test before you ship” into data dora can re-run. Invalid YAML cannot evaluate triggers. |
 
 ## How to fix
 
-Correct the YAML syntax and required fields in `scenarios.yaml`.
-
-Include at least:
+Fix YAML syntax and required fields. Include at least:
 
 - one case the skill **should** handle
-- one case it **should not** fire (negative / ignore)
+- one case it **should not** fire
 - optionally one edge case
 
-Each scenario should name a success criterion you can grade. Coverage of those cases is judged under [R027](/reference/rules/R027).
+Name a success criterion per scenario. Coverage is judged under [R027](/reference/rules/R027).

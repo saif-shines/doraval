@@ -84,13 +84,15 @@ describe("spliceGeneratedRegion", () => {
 });
 
 describe("scaffoldRulePage", () => {
-  test("new page carries frontmatter, markers, and prose stubs", () => {
+  test("new page carries frontmatter, markers, and What/Why table + How", () => {
     const page = scaffoldRulePage(ruleByCode("R007")!);
     expect(page).toContain("title: R007 · body-size");
     expect(page).toContain("hidden: true");
     expect(page).toContain(GEN_START);
     expect(page).toContain(GEN_END);
-    expect(page).toContain("## What");
+    expect(page).toContain("| **What** |");
+    expect(page).toContain("| **Why** |");
     expect(page).toContain("## How to fix");
+    expect(page).not.toContain("## What");
   });
 });

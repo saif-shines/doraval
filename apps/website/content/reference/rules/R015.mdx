@@ -16,27 +16,20 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R015
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Heuristic check that the body has some structure — ordered steps (`1.`) or checklist bullets (`-` / `*`).
-
-## Why
-
-Agents execute better with a scannable sequence than a wall of paragraphs. Structure is not the same as micromanagement: list outcomes and checkpoints, not every keystroke.
+| | |
+| --- | --- |
+| **What** | Heuristic: body has structure — ordered steps (`1.`) or checklist bullets (`-` / `*`). |
+| **Why** | Agents execute better with a scannable sequence than a wall of paragraphs. Structure means checkpoints, not keystroke-level micromanagement. |
 
 ## How to fix
 
-Add a short sequence of **goals or checkpoints**, not a brittle four-step file-edit recipe:
+Add short **goals or checkpoints**:
 
 ```markdown
 ## Do
 1. Update the database port in config to the user-specified value.
 2. Run the project’s config tests.
 3. Report what changed.
-
-## Constraints
-- Never push directly to main.
-- Always run tests before opening a PR.
 ```
 
-If step order is safety-critical and step 3 before step 2 breaks the system, put that path in a **script** under `scripts/` and have the skill call it — do not encode fragile orchestration only in prose. Related: [R023](/reference/rules/R023).
+If order is safety-critical, put it in `scripts/` and call the script from the skill ([R023](/reference/rules/R023)).

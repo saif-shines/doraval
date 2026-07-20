@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R020
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Scans scripts bundled with a skill for dangerous command and code patterns.
-
-## Why
-
-Bundled scripts run with the user's permissions and can modify files, execute commands, or expose data. This rule is locked so a package cannot suppress the safety warning.
+| | |
+| --- | --- |
+| **What** | Scans bundled `scripts/` for dangerous network and secret-prompt patterns. **Locked** (safety). |
+| **Why** | Scripts run with the user’s permissions. Locked so a package cannot suppress security warnings. |
 
 ## How to fix
 
-Remove the dangerous operation when possible. If the script requires sensitive behavior, narrow its scope, validate untrusted input, and make the risk explicit to the user.
+Remove the dangerous operation when possible. If you must keep it, narrow scope, validate input, and make the risk explicit in the skill body.

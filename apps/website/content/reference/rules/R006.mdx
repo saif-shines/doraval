@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R006
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Checks that `SKILL.md` contains Markdown instructions after its frontmatter block.
-
-## Why
-
-Metadata can trigger a skill, but the body tells the agent what to do. An empty body leaves the skill without executable guidance.
+| | |
+| --- | --- |
+| **What** | Checks that `SKILL.md` has Markdown instructions after the frontmatter block. |
+| **Why** | Metadata can select a skill, but the body tells the agent what to do. An empty body has no executable guidance. |
 
 ## How to fix
 
-Add concrete instructions after the closing `---` line. Describe the workflow, required constraints, and expected output.
+Add concrete instructions after the closing `---` line: workflow, constraints, and expected output.

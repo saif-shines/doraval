@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R009
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Reports (FYI) when advanced frontmatter fields beyond `name` / `description` are present. Default package: **strict** only. |
+| **Why** | Extra fields can be useful, but they are agent-specific. This is informational so authors notice non-portable metadata. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Confirm each advanced field is intentional and supported by your target agents. Remove unused keys. Prefer body instructions when a field is experimental.

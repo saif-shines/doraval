@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R032
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Session-tier FYI: inventories binding MUST/NEVER-style rules visible from memory/session context. |
+| **Why** | Makes hard constraints inspectable so you can see what the agent was asked to honor. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Review the inventory for stale or conflicting constraints. Promote durable rules via `dora memory promote` when they belong in AGENTS.md.

@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R026
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | LLM-tier: skill scope is focused — not a grab-bag of unrelated jobs. |
+| **Why** | Wide-scope skills are hard to trigger correctly and hard to maintain. Progressive disclosure prefers one job per skill. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Split into separate skills or move secondary topics into `references/` loaded only when needed. Tighten the description to the primary job ([R025](/reference/rules/R025)).

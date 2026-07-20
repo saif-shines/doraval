@@ -16,18 +16,15 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R023
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-LLM-tier judgment: instructions should be executable — the agent can act without inventing missing steps or APIs.
-
-## Why
-
-Trivia and background do not ship work. Prefer directives and outcomes over encyclopedias. Over-specified micro-workflows also fail: they block recovery when reality diverges from the author’s three test prompts.
+| | |
+| --- | --- |
+| **What** | LLM-tier: instructions should be executable — the agent can act without inventing missing steps or APIs. |
+| **Why** | Trivia does not ship work. Over-specified micro-workflows also fail when reality diverges from a few test prompts. |
 
 ## How to fix
 
 - Lead with **what success looks like**, then constraints.
 - Give one concrete example ([R017](/reference/rules/R017)).
-- Say why a constraint exists when it generalizes (“model Y is deprecated and returns errors”).
-- Avoid overfitting to a single happy path; cover the failure you care about in `scenarios.yaml` ([R027](/reference/rules/R027)).
-- Fragile multi-step order → script, not a novel-length procedure.
+- Explain why a constraint generalizes (“model Y is deprecated and returns errors”).
+- Cover failures in `scenarios.yaml` ([R027](/reference/rules/R027)).
+- Fragile multi-step order → script, not a long procedure.

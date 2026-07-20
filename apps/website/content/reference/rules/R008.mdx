@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R008
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Flags use of experimental `allowed-tools` in frontmatter for portability awareness. |
+| **Why** | `allowed-tools` is well supported in some agents (for example Claude Code) and uneven elsewhere. Callers need to know the skill may not constrain tools on every platform. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Keep `allowed-tools` only when you target agents that honor it. Document the assumption in the body, or drop the field and express tool policy in prose for portable skills.

@@ -16,16 +16,13 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R025
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-LLM-tier judgment: the skill’s trigger (description / when-to-use) is specific enough that the model knows when to activate — and, ideally, when not to.
-
-## Why
-
-Most skill failures are **trigger** failures, not body failures. Fix the description before rewriting the essay. Broad triggers (“any coding task”) starve other skills and waste context.
+| | |
+| --- | --- |
+| **What** | LLM-tier: the skill’s trigger (description / when-to-use) is specific enough to know when to activate — and ideally when not to. |
+| **Why** | Most skill failures are **trigger** failures. Fix the description before rewriting the body. Broad triggers starve other skills. |
 
 ## How to fix
 
-1. State domain + situation + optional non-triggers (see [R014](/reference/rules/R014)).
-2. Test both should-fire and should-not-fire prompts (add them to `scenarios.yaml` when you can — [R013](/reference/rules/R013), [R027](/reference/rules/R027)).
-3. If the skill should only run when the user asks, use manual-invocation frontmatter for your agent instead of a vague description.
+1. State domain + situation + optional non-triggers ([R014](/reference/rules/R014)).
+2. Test should-fire and should-not-fire cases in `scenarios.yaml` ([R013](/reference/rules/R013), [R027](/reference/rules/R027)).
+3. For manual-only tools, use your agent’s manual-invocation frontmatter instead of a vague description.

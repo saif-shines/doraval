@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R024
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Uses the configured language model to find instructions in the skill that conflict with each other.
-
-## Why
-
-Contradictory instructions force the agent to guess which rule wins. That makes the skill's behavior inconsistent across tasks and models.
+| | |
+| --- | --- |
+| **What** | LLM-tier: finds instructions in the skill that contradict each other. |
+| **Why** | Contradictions force the agent to guess which rule wins. Behavior becomes inconsistent across tasks and models. |
 
 ## How to fix
 
-Remove one of the conflicting instructions or state the precedence explicitly. Keep exceptions next to the rule they modify.
+Remove one of the conflicting instructions, or state precedence next to the exception. Keep exceptions beside the rule they modify.

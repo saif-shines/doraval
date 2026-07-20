@@ -16,14 +16,21 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R001
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Checks that the skill starts with a YAML frontmatter block delimited by `---` lines.
-
-## Why
-
-Frontmatter identifies the skill and describes when an agent should load it. Without that metadata, the skill cannot participate reliably in discovery.
+| | |
+| --- | --- |
+| **What** | Checks that the skill starts with a YAML frontmatter block delimited by `---` lines. |
+| **Why** | Frontmatter identifies the skill and describes when an agent should load it. Without that metadata, discovery is unreliable. |
 
 ## How to fix
 
-Add a YAML frontmatter block at the start of `SKILL.md`. Include at least the required `name` and `description` fields.
+Add a YAML frontmatter block at the start of `SKILL.md`. Include at least `name` and `description`:
+
+```markdown
+---
+name: my-skill
+description: Use when …
+---
+
+## Instructions
+…
+```

@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R019
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Heuristic: flags ambiguous hedging in the body (`maybe`, `possibly`, `consider`, `you might want to`, `perhaps`). |
+| **Why** | Hedge words leave the agent without a decision. Under load, vague skills produce inconsistent results. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Replace hedges with a decision or a condition (“If X, do Y; otherwise Z”). Pair with [R022](/reference/rules/R022) for deeper LLM clarity review.

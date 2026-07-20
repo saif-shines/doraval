@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R004
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Checks that the skill's `name` follows the supported naming format.
-
-## Why
-
-Agents and tooling use the name as a stable skill identifier. Invalid names can prevent discovery or create inconsistent references.
+| | |
+| --- | --- |
+| **What** | Checks that frontmatter `name` is a valid, portable skill identifier (kebab-case, length bounds). |
+| **Why** | Agents and tooling use `name` as a stable handle. Invalid names break discovery and packaging. |
 
 ## How to fix
 
-Change the frontmatter `name` to a valid, concise identifier. Use lowercase words separated by hyphens.
+Set `name` to lowercase words separated by hyphens (for example `review-pr`). Prefer 2–64 characters.

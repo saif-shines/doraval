@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R010
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Warns on frontmatter keys that are not in dora’s known field set. |
+| **Why** | Unknown keys are often typos (`descripton`) or stale experiment names. They do nothing useful and confuse readers. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Rename typos to the intended field, or remove keys you no longer need. If you rely on a newer agent-specific field, document it in the body.

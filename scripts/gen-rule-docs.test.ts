@@ -33,7 +33,7 @@ describe("generateRuleDocs", () => {
       .replace("title: R001 · frontmatter-presence", "title: stale")
       .replace('description: "Frontmatter block present"', 'description: "stale"')
       .replace("label: R001 frontmatter-presence", "label: stale")
-      .replace("{/* describe what this rule checks */}", "HAND WRITTEN CLARITY");
+      .replace("{/* one or two sentences: what this rule checks */}", "HAND WRITTEN CLARITY");
     await writeFile(page, body);
     await generateRuleDocs({ dir: TMP });
     const after = await readFile(page, "utf8");

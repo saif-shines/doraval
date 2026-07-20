@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R030
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Session-tier FYI: no recent session files were found for this project. |
+| **Why** | Session rules cannot judge invocation without transcripts. This is a data-availability signal, not a skill defect. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+Run agents against the project so sessions exist, or ignore session-tier findings until you use an adapter dora supports. Other tiers still apply.

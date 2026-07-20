@@ -16,17 +16,14 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R007
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Warns when the `SKILL.md` body exceeds roughly **20 000 characters** (~5k tokens at a 4 chars/token estimate).
-
-## Why
-
-Skills load in layers: frontmatter always, body when the skill triggers, `references/` / `scripts/` / `assets/` only on demand. A long body steals context from the actual task. Industry guidance keeps the body lean (often cited as under ~500 lines); dora’s budget is the character threshold above.
+| | |
+| --- | --- |
+| **What** | Warns when the `SKILL.md` body exceeds roughly **20 000 characters** (~5k tokens at ~4 chars/token). |
+| **Why** | Skills load in layers: frontmatter always, body on trigger, `references/` / `scripts/` / `assets/` on demand. A long body steals context from the task. |
 
 ## How to fix
 
-1. Keep procedural core in `SKILL.md`.
-2. Move deep API tables, multi-cloud variants, and long examples into `references/` (one topic per file).
-3. For a reference file that is itself huge, add a short table of contents with section anchors at the top so the agent can jump.
-4. Prefer a script under `scripts/` when the procedure is fragile and order-critical — see [R023](/reference/rules/R023).
+1. Keep the procedural core in `SKILL.md`.
+2. Move deep tables and long examples into `references/` (one topic per file).
+3. For a huge reference file, add a short table of contents at the top.
+4. Prefer a script under `scripts/` for fragile, order-critical work — see [R023](/reference/rules/R023).

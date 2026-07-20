@@ -16,21 +16,18 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R014
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Heuristic check that the skill description (and `when_to_use` when present) includes an activation cue such as **“Use when…”**, **trigger**, or **invoke**.
-
-## Why
-
-Without a when-clause, the agent has no reliable signal to load the skill. This is the mechanical half of “nail the description”; size alone is [R005](/reference/rules/R005), semantic specificity is [R025](/reference/rules/R025).
+| | |
+| --- | --- |
+| **What** | Heuristic: description (and `when_to_use` when present) includes an activation cue such as **Use when…**, **trigger**, or **invoke**. |
+| **Why** | Without a when-clause the agent has no reliable signal to load the skill. Size alone is [R005](/reference/rules/R005); semantic specificity is [R025](/reference/rules/R025). |
 
 ## How to fix
 
-Rewrite the description to include both capability and situation:
+Rewrite the description to include capability and situation:
 
 ```text
 Use when working with PDF files. Do NOT use for general document editing,
 spreadsheets, or plain text files.
 ```
 
-Optional: add a short quoted user phrase (“review this PR”) so the model can match natural wording. Include a **negative** case when the skill is easy to over-apply.
+Optional: a short quoted user phrase (“review this PR”). Include a **negative** case when over-apply is likely.

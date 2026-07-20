@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R003
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Scans every string value in the skill's YAML frontmatter for `<` or `>` characters.
-
-## Why
-
-Angle brackets in frontmatter can be parsed as tags and inject unintended instructions when metadata loads into a system prompt. This rule is locked because that creates a prompt-injection risk.
+| | |
+| --- | --- |
+| **What** | Scans every string in frontmatter for `<` or `>` characters. **Locked** (safety). |
+| **Why** | Angle brackets can be read as tags and inject instructions when Level‑1 metadata enters a system prompt. |
 
 ## How to fix
 
-Remove `<` and `>` from frontmatter values, or move that content into the Markdown body where it is not treated as metadata.
+Remove `<` and `>` from frontmatter values, or move that text into the Markdown body where it is not treated as metadata.

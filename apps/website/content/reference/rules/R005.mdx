@@ -16,17 +16,14 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R005
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Checks that frontmatter includes a `description` field and that it stays within the agentskills.io max (**1024 characters**).
-
-## Why
-
-The description is the **trigger**. Agents load name + description before the body. Missing or oversized descriptions hide the skill or waste always-on context. Vague copy (“helps with documents”) never fires; overly broad copy hijacks every request.
+| | |
+| --- | --- |
+| **What** | Checks that frontmatter includes a `description` and that it stays within the agentskills.io max (**1024 characters**). |
+| **Why** | The description is the **trigger**. Agents load name + description before the body. Missing or oversized text hides the skill or wastes always-on context. |
 
 ## How to fix
 
-1. Add a `description` that states **what** the skill does and **when** to use it.
+1. State **what** the skill does and **when** to use it.
 2. Prefer concrete triggers over slogans.
 
 ```yaml
@@ -39,5 +36,5 @@ description: >-
   multi-turn chat, image generation, or streaming.
 ```
 
-3. If you need more than ~1k characters, move detail into the body or `references/` — do not pad the description.
-4. Pair with [R014](/reference/rules/R014) / [R025](/reference/rules/R025) so the *content* of the description is trigger-ready, not only present.
+3. Move long detail into the body or `references/` — do not pad the description.
+4. Pair with [R014](/reference/rules/R014) / [R025](/reference/rules/R025) so the *content* of the description is trigger-ready.

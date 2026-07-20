@@ -16,14 +16,13 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R033
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-{/* describe what this rule checks */}
-
-## Why
-
-{/* explain why it matters */}
+| | |
+| --- | --- |
+| **What** | Session-tier: recent sessions appear not to honor binding memory rules. |
+| **Why** | Recorded principles only help if agents follow them. Drift here is a process or skill-guidance problem. |
 
 ## How to fix
 
-{/* concrete remediation steps */}
+1. Confirm principles are current (`dora memory`).
+2. Strengthen skill guardrails that encode the same rules ([R018](/reference/rules/R018)).
+3. Promote high-weight principles into AGENTS.md when they should always apply.

@@ -16,17 +16,13 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R022
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-LLM-tier judgment: instructions in the skill body should be unambiguous — one clear meaning per rule, no contradictory or foggy guidance.
-
-## Why
-
-Long, essay-like skills often hide conflicting advice. Ambiguity multiplies across millions of invocations; the agent cannot “read between the lines” reliably under load.
+| | |
+| --- | --- |
+| **What** | LLM-tier: skill instructions should be unambiguous — one clear meaning per rule, no foggy or self-conflicting guidance. |
+| **Why** | Essay-like skills hide ambiguity. Agents cannot reliably “read between the lines” across many invocations. |
 
 ## How to fix
 
 1. Split multi-topic skills or move side topics into `references/`.
-2. Replace hedging (“maybe”, “consider”, “perhaps”) with a decision or a condition.
+2. Replace hedging with a decision or condition ([R019](/reference/rules/R019)).
 3. If two paths are valid, state the **decision rule** that picks between them.
-4. Mechanical ambiguity cues also surface under [R019](/reference/rules/R019).

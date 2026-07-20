@@ -16,14 +16,11 @@ sidebar:
 - **Doc:** https://doraval.dev/reference/rules/R002
 {/* <!-- DORA:GENERATED:END --> */}
 
-## What
-
-Parses the skill's frontmatter as YAML and reports malformed syntax.
-
-## Why
-
-Invalid YAML prevents agents from reading the skill's metadata. This rule is locked because malformed metadata makes later checks unreliable.
+| | |
+| --- | --- |
+| **What** | Parses the skill's frontmatter as YAML and reports malformed syntax. **Locked** (safety). |
+| **Why** | Invalid YAML blocks every later check that depends on metadata. Locked so packages cannot silence parse failures. |
 
 ## How to fix
 
-Correct the YAML syntax between the opening and closing `---` lines. Check indentation, quoting, and list formatting, then run `dora` again.
+Fix YAML between the opening and closing `---` lines: indentation, quotes, and lists. Re-run `dora review` until this rule is clean.
