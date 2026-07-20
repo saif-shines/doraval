@@ -3,7 +3,7 @@ import { dirname, resolve, basename } from "path";
 import { classifySkillDir } from "./skill-classify.js";
 import type { ReviewFinding, ReviewOptions, ReviewResult } from "./review.js";
 import { runJudge, type LintResult } from "./skill-lint.js";
-import { detectCapabilities, type Capabilities } from "./capability-detect.js";
+import { detectCapabilities, resolveJudgeMode, type Capabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig, type EvalConfig } from "./journal-config.js";
 import { loadPrinciples, buildPrincipleRubric } from "./memory-rubric.js";
 import { PrerequisiteError, NetworkError } from "./errors.js";
@@ -340,8 +340,17 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     const evalCfg: Partial<EvalConfig> = getEvalConfig(cfg);
     const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
     const caps: Capabilities = detectCapabilities(evalCfg);
+    const mode = resolveJudgeMode({
+      apiAvailable: caps.api,
+      ci: opts.ci ?? false,
+      judgePref: evalCfg.judge,
+    });
 
-    if (caps.preferred === "none") {
+    const principles = loadPrinciples(opts.cwd ?? process.cwd());
+    const rubricText = buildPrincipleRubric(principles) || undefined;
+    const prompt = buildMemoryLintPrompt(content, basename(path), rubricText);
+
+    if (mode === "fail") {
       if (opts.deep) {
         throw new PrerequisiteError({
           code: "E-PRE-004",
@@ -349,12 +358,11 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
         });
       }
       tiers.llm = { available: false, findings: [] };
+    } else if (mode === "delegate") {
+      tiers.llm = { available: true, method: "delegated", prompt, findings: [] };
     } else {
-      const principles = loadPrinciples(opts.cwd ?? process.cwd());
-      const rubricText = buildPrincipleRubric(principles) || undefined;
-      const prompt = buildMemoryLintPrompt(content, basename(path), rubricText);
       const judge = opts.memoryLintFn ?? runJudge;
-      const result: LintResult = await judge(prompt, caps, agentCfg, evalCfg);
+      const result: LintResult = await judge(prompt, caps, agentCfg, evalCfg, { ci: opts.ci ?? false });
 
       if (result.ok) {
         let lIdx = 1;
