@@ -16,7 +16,7 @@ import { LINT_CATEGORY_CODES, SESSION_CODES } from "./rules/bindings.js";
 import { ruleByCode } from "./rules/registry.js";
 
 function sessFinding(partial: ReviewFinding): ReviewFinding {
-  const code = SESSION_CODES[partial.id] ?? SESSION_CODES["sess-006"];
+  const code = SESSION_CODES[partial.id] ?? SESSION_CODES["sess-006"]!;
   const rule = ruleByCode(code)!;
   return { ...partial, code: rule.code, slug: rule.slug, docUrl: rule.docUrl };
 }

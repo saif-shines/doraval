@@ -12,7 +12,7 @@ describe("stampRule", () => {
       effective({ R005: { enabled: true, severity: "warning", overridden: true } }),
     );
     expect(result).toMatchObject({ code: "R005", slug: "description", severity: "warning" });
-    expect(result?.docUrl).toContain("/reference/rules/R005");
+    expect((result as { docUrl?: string } | null)?.docUrl).toContain("/reference/rules/R005");
   });
 
   test("preserves emitted severity without an explicit override", () => {
