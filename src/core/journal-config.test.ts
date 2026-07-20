@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import { YAML } from "bun";
 import { getEvalsDir, getEvalConfig, getDoravalDir, resolveProjectName, type JournalConfig } from "./journal-config.js";
 import { join } from "path";
 
@@ -27,6 +28,29 @@ describe("getEvalConfig", () => {
     expect(result.max_tool_calls).toBe(300);
     expect(result.save_history).toBe(false);
     expect(result.judge).toBe('api');
+  });
+});
+
+describe("RulesConfig persistence", () => {
+  test("global + per-project rules round-trip through YAML", () => {
+    const cfg: JournalConfig = {
+      journal: {
+        repo: "r",
+        projects: {
+          doraval: {
+            remote_path: "a",
+            local_path: "b",
+            source_dir: "/x",
+            rules: { package: "strict", overrides: { "scenario-coverage": "off" } },
+          },
+        },
+      },
+      rules: { package: "recommended", overrides: { "body-size": "off", "drift-trigger": "error" } },
+    };
+    const round = YAML.parse(YAML.stringify(cfg)) as JournalConfig;
+    expect(round.rules?.package).toBe("recommended");
+    expect(round.rules?.overrides?.["body-size"]).toBe("off");
+    expect(round.journal.projects.doraval.rules?.package).toBe("strict");
   });
 });
 

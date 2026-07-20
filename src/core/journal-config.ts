@@ -5,6 +5,13 @@ import { YAML } from "bun";
 
 // ── Types ──────────────────────────────────────────────────────────
 
+export type RuleOverride = "on" | "off" | "error" | "warning" | "fyi";
+
+export interface RulesConfig {
+  package?: string;
+  overrides?: Record<string, RuleOverride>;
+}
+
 export interface ProjectMapping {
   remote_path: string;
   local_path: string;
@@ -17,6 +24,7 @@ export interface ProjectMapping {
    * when two different projects share a basename (e.g. two "api" repos).
    */
   source_dir?: string;
+  rules?: RulesConfig;
 }
 
 export interface EvalConfig {
@@ -45,6 +53,7 @@ export interface JournalConfig {
     cwd_flag?: string;
   };
   eval?: Partial<EvalConfig>;
+  rules?: RulesConfig;
 }
 
 // ── Paths ──────────────────────────────────────────────────────────
