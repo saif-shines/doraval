@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readConfig, type JournalConfig } from "../../core/journal-config.js";
+import rulesCommand from "./rules.js";
 import {
   applyOverride,
   applyPackage,
@@ -13,6 +14,18 @@ import {
   readScopeRules,
   resolveScope,
 } from "./rules-core.js";
+
+test("rules command exports a citty command", () => {
+  expect(rulesCommand.meta?.name).toBe("rules");
+  expect(Object.keys(rulesCommand.subCommands ?? {})).toEqual([
+    "list",
+    "on",
+    "off",
+    "set",
+    "package",
+    "explain",
+  ]);
+});
 
 const cfg = (
   projects: JournalConfig["journal"]["projects"] = {},
