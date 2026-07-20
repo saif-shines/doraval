@@ -169,6 +169,7 @@ export default defineCommand({
       sessions: args.sessions as boolean,
       agent: args.agent as string | undefined,
       cwd: root,
+      ci: args.ci as boolean,
       onProgress: spin ? (msg: string) => spin.message(msg) : undefined,
     };
 

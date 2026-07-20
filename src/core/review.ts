@@ -2,10 +2,10 @@ import { readFileSync, readdirSync, statSync } from "fs";
 import { resolve as resolvePath, relative, basename } from "path";
 import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
 import { analyzeDrift, scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
-import { lintSkill, runJudge, type LintResult } from "./skill-lint.js";
+import { lintSkill, runJudge, buildLintPrompt, type LintResult } from "./skill-lint.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
-import { detectCapabilities } from "./capability-detect.js";
+import { detectCapabilities, resolveJudgeMode } from "./capability-detect.js";
 import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
@@ -48,7 +48,7 @@ export interface ReviewResult {
   tiers: {
     structure: TierResult;
     heuristics: TierResult;
-    llm?: { available: boolean; method?: string; findings: ReviewFinding[] };
+    llm?: { available: boolean; method?: string; prompt?: string; findings: ReviewFinding[] };
     sessions?: { available: boolean; count?: number; findings: ReviewFinding[] };
   };
   scenarioCount?: number;
@@ -61,6 +61,8 @@ export interface ReviewOptions {
   sessions?: boolean;
   agent?: string;
   cwd?: string;
+  /** Headless context (from --ci). No caller to delegate to → no-key judge fails hard. */
+  ci?: boolean;
   /** Preloaded session evidence (reviewAll threads this; also a test seam). */
   loadedSessions?: LoadResult;
   /** Called before each skill's LLM tier runs (progress reporting). */
@@ -72,7 +74,8 @@ export interface ReviewOptions {
     agentCfg: AgentConfig,
     evalCfg: Partial<EvalConfig>,
     platform?: string,
-    extraRubric?: string
+    extraRubric?: string,
+    opts?: { ci?: boolean }
   ) => Promise<LintResult>;
   /** Test seam: overrides the judge call for memory-file review's LLM tier. */
   memoryLintFn?: (
@@ -292,7 +295,13 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
     const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
 
     const caps = detectCapabilities(evalCfg);
-    if (caps.preferred === "none") {
+    const mode = resolveJudgeMode({
+      apiAvailable: caps.api,
+      ci: opts.ci ?? false,
+      judgePref: evalCfg.judge,
+    });
+
+    if (mode === "fail") {
       if (opts.deep) {
         throw new PrerequisiteError({
           code: "E-PRE-004",
@@ -300,13 +309,30 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
         });
       }
       tiers.llm = { available: false, findings: [] };
+    } else if (mode === "delegate") {
+      // Emit ONE combined prompt (skill-quality rubric + scenario coverage) for
+      // the calling agent to judge inline. No API call, no findings here.
+      const rubricText = buildPrincipleRubric(principles) || undefined;
+      const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
+      const lintPrompt = buildLintPrompt(model, undefined, rubricText);
+      const scenarioBlock =
+        scenarios.length > 0
+          ? `\n\n---\nALSO judge scenario coverage:\n${buildScenarioPrompt(scenarios, model.content)}`
+          : "";
+      tiers.llm = {
+        available: true,
+        method: "delegated",
+        prompt: lintPrompt + scenarioBlock,
+        findings: [],
+      };
     } else {
+      // mode === "api" — existing API path, unchanged below.
       // Principles go in as an explicit rubric section the judge must enforce
       // (NOT via the platform slot — that's a PLATFORM_CONTEXT lookup key).
       const rubricText = buildPrincipleRubric(principles) || undefined;
       const lint = opts.lintFn ?? lintSkill;
-      opts.onProgress?.(`LLM judge (${caps.preferred}) · ${dir}`);
-      const result = await lint(model, caps, agentCfg, evalCfg, undefined, rubricText);
+      opts.onProgress?.(`LLM judge (api) · ${dir}`);
+      const result = await lint(model, caps, agentCfg, evalCfg, undefined, rubricText, { ci: opts.ci ?? false });
       if (result.ok) {
         let lIdx = 1;
         const llmFindings: ReviewFinding[] = result.output.findings.map((f) => ({
@@ -323,7 +349,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
         // own call rather than merged into one prompt.
         const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
         if (scenarios.length > 0) {
-          opts.onProgress?.(`Scenario coverage (${caps.preferred}) · ${dir}`);
+          opts.onProgress?.(`Scenario coverage (api) · ${dir}`);
           const scenarioPrompt = buildScenarioPrompt(scenarios, model.content);
           const scenarioJudge = opts.scenarioLintFn ?? runJudge;
           const scenarioJudgeResult = await scenarioJudge(scenarioPrompt, caps, agentCfg, evalCfg);
