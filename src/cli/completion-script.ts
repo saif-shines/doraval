@@ -9,8 +9,8 @@ const commands = Object.keys(topLevelSubCommands);
 
 async function subCommandNames(name: string): Promise<string[]> {
   if (name === "memory") return Object.keys(memory.subCommands ?? {});
-  if (name === "config") {
-    const mod = await topLevelSubCommands.config();
+  if (name === "config" || name === "rules") {
+    const mod = await topLevelSubCommands[name]();
     return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
   }
   if (name === "sessions") {
@@ -30,7 +30,7 @@ export async function buildCompletionScript(
   }
 
   const subCommands: Record<string, string[]> = {};
-  for (const name of ["memory", "config", "sessions"]) {
+  for (const name of ["memory", "config", "rules", "sessions"]) {
     subCommands[name] = await subCommandNames(name);
   }
 
@@ -50,6 +50,7 @@ _doraval_completions() {
     case "$prev" in
       memory) COMPREPLY=( $(compgen -W "${(subCommands.memory ?? []).join(" ")}" -- "$cur") ) ;;
       config) COMPREPLY=( $(compgen -W "${(subCommands.config ?? []).join(" ")}" -- "$cur") ) ;;
+      rules) COMPREPLY=( $(compgen -W "${(subCommands.rules ?? []).join(" ")}" -- "$cur") ) ;;
       sessions) COMPREPLY=( $(compgen -W "${(subCommands.sessions ?? []).join(" ")}" -- "$cur") ) ;;
     esac
   fi
@@ -84,6 +85,9 @@ _doraval() {
         config)
           _describe 'subcommand' (${(subCommands.config ?? []).join(" ")})
           ;;
+        rules)
+          _describe 'subcommand' (${(subCommands.rules ?? []).join(" ")})
+          ;;
         sessions)
           _describe 'subcommand' (${(subCommands.sessions ?? []).join(" ")})
           ;;
@@ -106,6 +110,7 @@ complete -c doraval -n '__fish_use_subcommand' -a '${commands.join(" ")}'
 
 complete -c doraval -n '__fish_seen_subcommand_from memory' -a '${(subCommands.memory ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from config' -a '${(subCommands.config ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from rules' -a '${(subCommands.rules ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from sessions' -a '${(subCommands.sessions ?? []).join(" ")}'
 `,
     };
