@@ -325,14 +325,23 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     });
   }
 
+  const stampedStruct = structFindings
+    .map((finding) => stampRule(
+      finding,
+      finding.message.includes("@import") ? "R012" : finding.message.includes("line") ? "R007" : "R006",
+      effective,
+    ))
+    .filter((finding): finding is ReviewFinding => finding !== null);
   const structTier = {
-    passed: structFindings.filter(f => f.severity === "pass").length,
-    warnings: structFindings.filter(f => f.severity === "warning").length,
-    errors: structFindings.filter(f => f.severity === "error").length,
-    findings: structFindings,
+    passed: stampedStruct.filter(f => f.severity === "pass").length,
+    warnings: stampedStruct.filter(f => f.severity === "warning").length,
+    errors: stampedStruct.filter(f => f.severity === "error").length,
+    findings: stampedStruct,
   };
 
-  const heurFindings = buildHeuristicsFindings(content, path, dir);
+  const heurFindings = buildHeuristicsFindings(content, path, dir)
+    .map((finding) => stampRule(finding, "R019", effective))
+    .filter((finding): finding is ReviewFinding => finding !== null);
   const heurTier = {
     passed: heurFindings.filter(f => f.severity === "pass").length,
     warnings: heurFindings.filter(f => f.severity === "warning").length,

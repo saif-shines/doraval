@@ -84,6 +84,15 @@ describe("reviewMemoryFile — tier 1 (structure)", () => {
     const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     expect(result.tiers.sessions).toBeUndefined();
   });
+
+  test("memory mechanical findings carry public rule identity", async () => {
+    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    for (const finding of [...result.tiers.structure.findings, ...result.tiers.heuristics.findings]) {
+      expect(finding.code).toMatch(/^R\d{3}$/);
+      expect(finding.slug).toBeTruthy();
+      expect(finding.docUrl).toContain(`/reference/rules/${finding.code}`);
+    }
+  });
 });
 
 describe("reviewMemoryFile — tier 2 (heuristics)", () => {
