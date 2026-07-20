@@ -29,8 +29,10 @@ export interface ReviewFinding {
   line?: number;
   fixable: boolean;
   fix?: { type: "rename_field" | "add_field" | "content"; description: string };
-  /** Machine code for doc lookup (e.g. sess-003, E-VAL-001). */
+  /** Stable public rule/error code. */
   code?: string;
+  /** Stable human rule handle. */
+  slug?: string;
   /** Resolved doc URL (real site page only — see doc-registry). */
   docUrl?: string;
 }
