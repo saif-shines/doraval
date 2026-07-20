@@ -290,6 +290,8 @@ describe("reviewSkill — delegate mode (no API key, not --ci)", () => {
       expect(r.tiers.llm?.available).toBe(true);
       expect(r.tiers.llm?.method).toBe("delegated");
       expect(typeof r.tiers.llm?.prompt).toBe("string");
+      expect(r.tiers.llm?.prompt?.match(/CRITICAL: Return ONLY/g)?.length).toBe(1);
+      expect(r.tiers.llm?.prompt?.match(/\nBODY:\n/g)?.length).toBe(1);
       expect(r.tiers.llm?.findings).toEqual([]);
     } finally {
       if (prevHome === undefined) delete process.env.DORAVAL_HOME;

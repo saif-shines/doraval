@@ -176,7 +176,7 @@ export async function runEval(
   let usedMethod: "api" | "unknown" = "unknown";
 
   const shouldTryApi =
-    (preference === 'api' || canUseApiJudge(evalCfg)) && !!evalCfg.model;
+    (preference === 'api' || (preference === 'auto' && canUseApiJudge(evalCfg))) && !!evalCfg.model;
 
   if (shouldTryApi) {
     const timeoutMs = evalCfg.timeout_ms ?? 180_000;

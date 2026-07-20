@@ -315,10 +315,19 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
       const rubricText = buildPrincipleRubric(principles) || undefined;
       const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
       const lintPrompt = buildLintPrompt(model, undefined, rubricText);
-      const scenarioBlock =
-        scenarios.length > 0
-          ? `\n\n---\nALSO judge scenario coverage:\n${buildScenarioPrompt(scenarios, model.content)}`
-          : "";
+      const scenarioBlock = scenarios.length > 0
+        ? [
+            "",
+            "---",
+            "## Scenario Coverage Check",
+            "",
+            "Also evaluate whether this skill handles each scenario correctly.",
+            "Only add findings for UNCOVERED scenarios, using category \"coverage\".",
+            ...scenarios.map((scenario, index) =>
+              `${index + 1}. When: \"${scenario.when}\" → Expected: \"${scenario.expect}\"${scenario.must_not ? ` | Must NOT: \"${scenario.must_not}\"` : ""}`
+            ),
+          ].join("\n")
+        : "";
       tiers.llm = {
         available: true,
         method: "delegated",

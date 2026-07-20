@@ -193,6 +193,26 @@ describe("runEval — UNCLEAR to ambiguityFlags wiring", () => {
 });
 
 describe("runEval — API-or-fail (no CLI-spawn fallback)", () => {
+  test("delegate preference never calls the API even when credentials exist", async () => {
+    const res = await runEval(
+      mockPrimitives,
+      "some-skill",
+      "skill body",
+      { command: "" },
+      {
+        model: "test-model",
+        api_key: "must-not-be-used",
+        base_url: "http://127.0.0.1:1",
+        max_tool_calls: 200,
+        save_history: true,
+        judge: "delegate",
+      },
+    );
+
+    expect(res.verdict).toBe("UNKNOWN");
+    expect(res.judgeMethod).toBe("unknown");
+  });
+
   test("no API judge -> UNKNOWN evidence result, no spawn", async () => {
     // The repo's dev .env (auto-loaded by Bun) sets ZAI_API_KEY — clear every
     // provider key/base-url env var so this exercises the true no-key path.

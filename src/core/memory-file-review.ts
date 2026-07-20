@@ -413,7 +413,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
         const evalCfgPartial: Partial<EvalConfig> = getEvalConfig(cfg);
         const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
         const caps: Capabilities = detectCapabilities(evalCfgPartial);
-        if (caps.preferred !== "none") {
+        if (caps.preferred === "api" && evalCfgPartial.judge !== "delegate") {
           const newest = [...loadedSess.sessions].sort((a, b) => b.mtime - a.mtime)[0]!;
           const evalCfg: EvalConfig = {
             model: evalCfgPartial.model ?? "",
@@ -452,7 +452,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
             id: "sess-006",
             tier: "sessions",
             severity: "info",
-            message: "Rule adherence scoring skipped — no LLM judge (set API key or install a coding agent CLI)",
+            message: "Rule adherence scoring skipped — session evaluation requires an API judge",
             fixable: false,
           }));
         }
