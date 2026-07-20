@@ -28,7 +28,7 @@ export interface EvalConfig {
   max_tool_calls: number;
   save_history: boolean;
   /** Explicit judge backend preference. "auto" (default) prefers direct API when credentials available. */
-  judge?: 'auto' | 'api' | 'cli';
+  judge?: 'auto' | 'api' | 'delegate';
   /** Per-call timeout for direct API judge (ms). Default 180s for reasoning models. */
   timeout_ms?: number;
 }
