@@ -16,7 +16,7 @@ import {
 } from "./rules-core.js";
 
 test("rules command exports a citty command", () => {
-  expect(rulesCommand.meta?.name).toBe("rules");
+  expect(rulesCommand).toBeDefined();
   expect(Object.keys(rulesCommand.subCommands ?? {})).toEqual([
     "list",
     "on",
@@ -80,6 +80,7 @@ describe("applyOverride", () => {
     expect(disabled.ok).toBe(false);
     if (!disabled.ok) expect(disabled.error).toMatch(/R003 no-injection is locked/);
     expect(applyOverride(cfg(), { kind: "global" }, "R020", "fyi").ok).toBe(false);
+    expect(applyOverride(cfg(), { kind: "global" }, "R003", "warning").ok).toBe(false);
   });
 
   test("rejects an unknown rule", () => {

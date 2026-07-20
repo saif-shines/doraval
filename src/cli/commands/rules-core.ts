@@ -68,7 +68,15 @@ export function applyOverride(
 ): MutationResult {
   const rule = resolveRuleId(idOrSlug);
   if (!rule) return { ok: false, error: `Unknown rule "${idOrSlug}". Try "dora rules list".` };
-  if (rule.locked && (value === "off" || value === "fyi")) {
+  const severityRank: Record<"fyi" | RuleSeverity, number> = {
+    fyi: 0,
+    info: 0,
+    warning: 1,
+    error: 2,
+  };
+  const demotesLockedRule =
+    value in severityRank && severityRank[value as "fyi" | RuleSeverity] < severityRank[rule.defaultSeverity];
+  if (rule.locked && (value === "off" || demotesLockedRule)) {
     return {
       ok: false,
       error: `${rule.code} ${rule.slug} is locked (safety). Cannot ${value === "off" ? "disable" : "demote"}.`,
