@@ -1,11 +1,15 @@
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
 import type { SkillModel } from "./skill-validate.js";
 import type { EvalConfig } from "./journal-config.js";
 import type { AgentConfig } from "./agent-invoke.js";
-import { resolveDirectCredentials, DEFAULT_JUDGE_TIMEOUT_MS } from "./llm-judge.js";
+import {
+  resolveDirectCredentials,
+  DEFAULT_JUDGE_TIMEOUT_MS,
+  extractCandidates,
+} from "./llm-judge.js";
 import { resolveJudgeMode, type Capabilities } from "./capability-detect.js";
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
@@ -131,24 +135,81 @@ function makeProvider(baseUrl: string, apiKey: string, providerName: string) {
 
 // ── API path ───────────────────────────────────────────────────────────────────
 
+/**
+ * True when the provider is known to support OpenAI-style json_schema structured outputs.
+ * Z.ai Coding Plan (and most OpenAI-compat gateways) reject response_format json_schema —
+ * generateObject then fails with "No object generated: response did not match schema".
+ */
+function supportsStructuredOutputs(providerName: string, baseUrl: string): boolean {
+  if (providerName === "openai" && baseUrl.includes("api.openai.com")) return true;
+  return false;
+}
+
+function parseLintText(text: string): LintResult {
+  const candidates = extractCandidates(text);
+  let lastIssue = "no JSON object found";
+  for (const c of candidates) {
+    const parsed = LintSchema.safeParse(c);
+    if (parsed.success) return { ok: true, output: parsed.data, method: "api" };
+    lastIssue = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+  }
+  return {
+    ok: false,
+    error: `Lint judge returned unparseable JSON (${lastIssue}). Try another model.`,
+  };
+}
+
 async function lintViaApi(prompt: string, evalCfg: Partial<EvalConfig>): Promise<LintResult> {
   const { apiKey, baseUrl, model, providerName } = resolveDirectCredentials(evalCfg);
   if (!apiKey) {
     return { ok: false, error: "No API key configured for lint judge" };
   }
   const provider = makeProvider(baseUrl, apiKey, providerName);
+  const timeoutMs = evalCfg.timeout_ms ?? DEFAULT_JUDGE_TIMEOUT_MS;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_JUDGE_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const system =
+    "You are a strict linter. Return ONLY a valid JSON object matching the schema. No markdown, no prose. First char '{', last char '}'.";
   try {
-    const { object } = await generateObject({
+    // OpenAI: structured outputs. Everyone else (Z.ai Coding Plan, Groq, OpenRouter): text + parse.
+    if (supportsStructuredOutputs(providerName, baseUrl)) {
+      try {
+        const { object } = await generateObject({
+          model: provider(model),
+          schema: LintSchema,
+          system,
+          prompt,
+          temperature: 0,
+          abortSignal: controller.signal,
+        });
+        return { ok: true, output: object, method: "api" };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Fall through to text+parse for transient schema failures
+        if (!/object generated|schema|JSON|parse/i.test(msg)) {
+          return { ok: false, error: msg };
+        }
+      }
+    }
+
+    const { text } = await generateText({
       model: provider(model),
-      schema: LintSchema,
-      system: "You are a strict linter. Return ONLY a valid JSON object matching the schema. No markdown, no prose.",
+      system,
       prompt,
       temperature: 0,
+      // Cap output so reasoning models don't burn the full timeout on chain-of-thought.
+      maxTokens: 4096,
       abortSignal: controller.signal,
     });
-    return { ok: true, output: object, method: "api" };
+
+    if (!text?.trim()) {
+      return {
+        ok: false,
+        error:
+          "Lint judge returned empty text (common with reasoning models). Try glm-4.5-air or another non-reasoning model.",
+      };
+    }
+    return parseLintText(text);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "API lint request failed";
     return { ok: false, error: msg };
