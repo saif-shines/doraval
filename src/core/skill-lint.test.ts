@@ -128,6 +128,19 @@ describe("runJudge", () => {
     }
   });
 
+  test("pre-resolved mode wins over caps (no second-guess)", async () => {
+    // caps say no API, but caller already decided delegate — must not fail.
+    const r = await runJudge("PROMPT", NO_API, AGENT, { ...EVAL, judge: "api" }, {
+      ci: true,
+      mode: "delegate",
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.method).toBe("delegated");
+      expect(r.prompt).toBe("PROMPT");
+    }
+  });
+
   test("no key, --ci -> fail (not ok)", async () => {
     const r = await runJudge("RUBRIC PROMPT BODY", NO_API, AGENT, EVAL, { ci: true });
     expect(r.ok).toBe(false);

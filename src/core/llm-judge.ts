@@ -188,9 +188,10 @@ export function hasDirectApiCredentials(evalCfg?: Partial<EvalConfig> | null): b
   return canUseApiJudge(evalCfg ?? {});
 }
 
-// ── Provider factory ───────────────────────────────────────────────────────────
+// ── Provider factory (shared with skill-lint transport) ────────────────────────
 
-function makeProvider(baseUrl: string, apiKey: string, providerName: string) {
+/** OpenAI vs OpenAI-compatible provider for the direct-API judge path. */
+export function createJudgeProvider(baseUrl: string, apiKey: string, providerName: string) {
   if (providerName === "openai" || baseUrl === "https://api.openai.com/v1") {
     return createOpenAI({ apiKey, baseURL: baseUrl });
   }
@@ -200,6 +201,9 @@ function makeProvider(baseUrl: string, apiKey: string, providerName: string) {
     baseURL: baseUrl.replace(/\/+$/, ""),
   });
 }
+
+/** @deprecated use createJudgeProvider — kept as internal alias */
+const makeProvider = createJudgeProvider;
 
 // ── Error mapping ──────────────────────────────────────────────────────────────
 
@@ -326,10 +330,12 @@ export function parseJudgeText(text: string): JudgeResult {
  * Z.ai Coding Plan (and most OpenAI-compat gateways) reject response_format json_schema —
  * generateObject then fails with "No object generated: response did not match schema".
  */
-function supportsStructuredOutputs(providerName: string, baseUrl: string): boolean {
+export function providerSupportsStructuredOutputs(providerName: string, baseUrl: string): boolean {
   if (providerName === "openai" && baseUrl.includes("api.openai.com")) return true;
   return false;
 }
+
+const supportsStructuredOutputs = providerSupportsStructuredOutputs;
 
 // ── invokeJudge ────────────────────────────────────────────────────────────────
 

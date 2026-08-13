@@ -1,7 +1,8 @@
 import type { AgentConfig } from "./agent-invoke.js";
-import { invokeJudge, canUseApiJudge, type JudgeResult, type JudgeOutput } from "./llm-judge.js";
+import { invokeJudge, type JudgeResult, type JudgeOutput } from "./llm-judge.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
+import { decideJudgeMode } from "./judge-runtime.js";
 
 export interface ChecklistItem {
   instruction: string;
@@ -162,23 +163,21 @@ export async function runEval(
   primitives: SessionPrimitives,
   skillName: string,
   skillContent: string,
-  agentCfg: AgentConfig,
+  _agentCfg: AgentConfig,
   evalCfg: EvalConfig,
-  opts?: { artifactKind?: EvalArtifactKind },
+  opts?: { artifactKind?: EvalArtifactKind; ci?: boolean },
 ): Promise<EvalResult> {
   const prompt = buildEvalPrompt(primitives, skillContent, evalCfg.max_tool_calls, opts);
-
-  const preference = evalCfg.judge ?? 'auto';
 
   let judged: JudgeOutput | null = null;
   let judgeError: string | undefined;
   let judgeCode: string | undefined;
   let usedMethod: "api" | "unknown" = "unknown";
 
-  const shouldTryApi =
-    (preference === 'api' || (preference === 'auto' && canUseApiJudge(evalCfg))) && !!evalCfg.model;
+  // Same mode owner as review / skill-lint (api | delegate | fail).
+  const mode = decideJudgeMode(evalCfg, { ci: opts?.ci ?? false });
 
-  if (shouldTryApi) {
+  if (mode === "api") {
     const timeoutMs = evalCfg.timeout_ms ?? 180_000;
     const result: JudgeResult = await invokeJudge(prompt, evalCfg, { timeoutMs });
     if (result.success) {
@@ -193,10 +192,16 @@ export async function runEval(
   if (!judged) {
     const err = judgeError;
     const codeSuffix = judgeCode ? ` [${judgeCode}]` : "";
+    const fallback =
+      mode === "delegate"
+        ? "LLM call skipped — judge mode is delegate (no API judge)"
+        : mode === "fail"
+          ? "LLM call failed — no judge available"
+          : "LLM call failed — no response";
     return makeUnknownResult(
       primitives,
       skillName,
-      err ? `LLM call failed${codeSuffix}: ${err}` : "LLM call failed — no response"
+      err ? `LLM call failed${codeSuffix}: ${err}` : fallback,
     );
   }
 

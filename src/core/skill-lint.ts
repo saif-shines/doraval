@@ -1,6 +1,4 @@
 import { generateObject, generateText } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
 import type { SkillModel } from "./skill-validate.js";
 import type { EvalConfig } from "./journal-config.js";
@@ -9,8 +7,10 @@ import {
   resolveDirectCredentials,
   DEFAULT_JUDGE_TIMEOUT_MS,
   extractCandidates,
+  createJudgeProvider,
+  providerSupportsStructuredOutputs,
 } from "./llm-judge.js";
-import { resolveJudgeMode, type Capabilities } from "./capability-detect.js";
+import { resolveJudgeMode, type Capabilities, type JudgeMode } from "./capability-detect.js";
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
 
@@ -120,30 +120,7 @@ CRITICAL: Return ONLY a JSON object. No markdown, no prose. First char '{', last
 }`;
 }
 
-// ── Provider factory (mirrors llm-judge.ts, kept local to avoid coupling) ─────
-
-function makeProvider(baseUrl: string, apiKey: string, providerName: string) {
-  if (providerName === "openai" || baseUrl === "https://api.openai.com/v1") {
-    return createOpenAI({ apiKey, baseURL: baseUrl });
-  }
-  return createOpenAICompatible({
-    name: providerName,
-    apiKey,
-    baseURL: baseUrl.replace(/\/+$/, ""),
-  });
-}
-
-// ── API path ───────────────────────────────────────────────────────────────────
-
-/**
- * True when the provider is known to support OpenAI-style json_schema structured outputs.
- * Z.ai Coding Plan (and most OpenAI-compat gateways) reject response_format json_schema —
- * generateObject then fails with "No object generated: response did not match schema".
- */
-function supportsStructuredOutputs(providerName: string, baseUrl: string): boolean {
-  if (providerName === "openai" && baseUrl.includes("api.openai.com")) return true;
-  return false;
-}
+// ── API path (shared transport: createJudgeProvider from llm-judge) ───────────
 
 function parseLintText(text: string): LintResult {
   const candidates = extractCandidates(text);
@@ -164,7 +141,7 @@ async function lintViaApi(prompt: string, evalCfg: Partial<EvalConfig>): Promise
   if (!apiKey) {
     return { ok: false, error: "No API key configured for lint judge" };
   }
-  const provider = makeProvider(baseUrl, apiKey, providerName);
+  const provider = createJudgeProvider(baseUrl, apiKey, providerName);
   const timeoutMs = evalCfg.timeout_ms ?? DEFAULT_JUDGE_TIMEOUT_MS;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -172,7 +149,7 @@ async function lintViaApi(prompt: string, evalCfg: Partial<EvalConfig>): Promise
     "You are a strict linter. Return ONLY a valid JSON object matching the schema. No markdown, no prose. First char '{', last char '}'.";
   try {
     // OpenAI: structured outputs. Everyone else (Z.ai Coding Plan, Groq, OpenRouter): text + parse.
-    if (supportsStructuredOutputs(providerName, baseUrl)) {
+    if (providerSupportsStructuredOutputs(providerName, baseUrl)) {
       try {
         const { object } = await generateObject({
           model: provider(model),
@@ -220,18 +197,27 @@ async function lintViaApi(prompt: string, evalCfg: Partial<EvalConfig>): Promise
 
 // ── Public entry point ─────────────────────────────────────────────────────────
 
+export type JudgeCallOpts = { ci?: boolean; mode?: JudgeMode };
+
+/**
+ * Run a lint-shaped judge. Prefer passing `opts.mode` from the orchestrator
+ * (already decided once via decideJudgeMode / resolveJudgeContext).
+ * `agentCfg` is unused (CLI judge removed) — kept for call-site stability.
+ */
 export async function runJudge(
   prompt: string,
   caps: Capabilities,
-  agentCfg: AgentConfig,
+  _agentCfg: AgentConfig,
   evalCfg: Partial<EvalConfig>,
-  opts?: { ci?: boolean }
+  opts?: JudgeCallOpts
 ): Promise<LintResult> {
-  const mode = resolveJudgeMode({
-    apiAvailable: caps.api,
-    ci: opts?.ci ?? false,
-    judgePref: evalCfg.judge,
-  });
+  const mode =
+    opts?.mode ??
+    resolveJudgeMode({
+      apiAvailable: caps.api,
+      ci: opts?.ci ?? false,
+      judgePref: evalCfg.judge,
+    });
 
   if (mode === "api") return lintViaApi(prompt, evalCfg);
 
@@ -260,7 +246,7 @@ export async function lintSkill(
   evalCfg: Partial<EvalConfig>,
   platform?: string,
   extraRubric?: string,
-  opts?: { ci?: boolean }
+  opts?: JudgeCallOpts
 ): Promise<LintResult> {
   return runJudge(buildLintPrompt(model, platform, extraRubric), caps, agentCfg, evalCfg, opts);
 }
