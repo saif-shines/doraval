@@ -195,6 +195,16 @@ describe("runScan", () => {
     expect(result.suggestions.some((s) => s.command.includes(".mcp.json"))).toBe(true);
   });
 
+  test("invalid skill health errors stamp public rule codes (not E-VAL-001)", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".claude/skills/bad", 'name: Bad_Name\ndescription: "Use when testing bad names"');
+    const result = await runScan(root, noneInstalled);
+    const bad = result.health.find((h) => h.path.includes("bad"))!;
+    expect(bad.status).toBe("fail");
+    expect(bad.errors.some((e) => e.code === "R004")).toBe(true);
+    expect(bad.errors.every((e) => e.code !== "E-VAL-001")).toBe(true);
+  });
+
   test("health items with codes carry docUrl for JSON consumers", async () => {
     const root = makeRepo();
     writeSkill(root, ".claude/skills/bad", 'name: Bad_Name\ndescription: "Use when testing"');

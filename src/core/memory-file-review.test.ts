@@ -87,6 +87,13 @@ describe("reviewMemoryFile — tier 1 (structure)", () => {
     expect(result.tiers.structure.findings.some(f => f.severity === "error" && f.message.toLowerCase().includes("empty"))).toBe(true);
   });
 
+  test("unresolved @import stamps R012 from code-at-birth (not message map)", async () => {
+    const result = await reviewMemoryFile(resolve(FIXTURES, "broken-import-CLAUDE.md"), { quick: true });
+    const imp = result.tiers.structure.findings.find((f) => f.message.includes("@import not found"));
+    expect(imp?.code).toBe("R012");
+    expect(imp?.slug).toBeTruthy();
+  });
+
   test("unresolved @import produces a structure error", async () => {
     const result = await reviewMemoryFile(resolve(FIXTURES, "broken-import-CLAUDE.md"), { quick: true });
     expect(result.tiers.structure.errors).toBeGreaterThan(0);

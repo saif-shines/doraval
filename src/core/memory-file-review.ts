@@ -2,18 +2,17 @@ import { readFileSync, existsSync } from "fs";
 import { dirname, resolve, basename } from "path";
 import { classifySkillDir } from "./skill-classify.js";
 import type { ReviewFinding, ReviewOptions, ReviewResult } from "./review.js";
-import { runJudge, type LintResult } from "./skill-lint.js";
-import { detectCapabilities, resolveJudgeMode, type Capabilities } from "./capability-detect.js";
-import { readConfig, getEvalConfig, type EvalConfig } from "./journal-config.js";
+import { runJudge, type LintResult, type JudgeCallOpts } from "./skill-lint.js";
+import type { EvalConfig } from "./journal-config.js";
 import { loadPrinciples, buildPrincipleRubric } from "./memory-rubric.js";
 import { PrerequisiteError, NetworkError } from "./errors.js";
 import { loadRecentSessions, type LoadResult } from "./session-evidence.js";
-import type { AgentConfig } from "./agent-invoke.js";
 import { runEval, type EvalResult } from "./session-eval.js";
-import { resolveEffectiveRules, type EffectiveRule } from "./rules/resolve.js";
+import type { EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
 import { LINT_CATEGORY_CODES, SESSION_CODES } from "./rules/bindings.js";
 import { ruleByCode } from "./rules/registry.js";
+import { loadReviewContext, resolveJudgeContext, padIdx, tallyFindings } from "./review-control.js";
 
 function sessFinding(partial: ReviewFinding): ReviewFinding {
   const code = SESSION_CODES[partial.id] ?? SESSION_CODES["sess-006"]!;
@@ -37,9 +36,7 @@ const CLAUDE_ONLY_MARKERS: { pattern: RegExp; label: string }[] = [
   { pattern: /^@[^\s]+\s*$/m, label: "@import" },
 ];
 
-function pad(n: number): string {
-  return String(n).padStart(3, "0");
-}
+const pad = padIdx;
 
 export function memoryLlmTierPlan(effective: Map<string, EffectiveRule>): { runLint: boolean } {
   return { runLint: ["R022", "R024"].some((code) => effective.get(code)?.enabled) };
@@ -275,8 +272,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
   const content = readFileSync(path, "utf-8");
   const lines = content.split("\n");
   const dir = dirname(path);
-  const ruleCfg = await readConfig();
-  const { map: effective, warnings: ruleWarnings } = resolveEffectiveRules(ruleCfg, opts.cwd ?? process.cwd());
+  const { config: ruleCfg, effective, ruleWarnings } = await loadReviewContext(opts.cwd ?? process.cwd());
 
   let sIdx = 1;
   const structFindings: ReviewFinding[] = [];
@@ -285,12 +281,12 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
   if (trimmed.length === 0) {
     structFindings.push({
       id: `struct-${pad(sIdx++)}`, tier: "structure", severity: "error",
-      message: `${basename(path)} is empty`, fixable: false,
+      message: `${basename(path)} is empty`, fixable: false, code: "R006",
     });
   } else {
     structFindings.push({
       id: `struct-${pad(sIdx++)}`, tier: "structure", severity: "pass",
-      message: `${basename(path)} is non-empty`, fixable: false,
+      message: `${basename(path)} is non-empty`, fixable: false, code: "R006",
     });
   }
 
@@ -298,12 +294,12 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     structFindings.push({
       id: `struct-${pad(sIdx++)}`, tier: "structure", severity: "warning",
       message: `${lines.length} lines exceeds the ${SIZE_BUDGET_LINES}-line guidance budget for always-loaded context`,
-      fixable: false,
+      fixable: false, code: "R007",
     });
   } else if (trimmed.length > 0) {
     structFindings.push({
       id: `struct-${pad(sIdx++)}`, tier: "structure", severity: "pass",
-      message: `within the ${SIZE_BUDGET_LINES}-line size budget (${lines.length} lines)`, fixable: false,
+      message: `within the ${SIZE_BUDGET_LINES}-line size budget (${lines.length} lines)`, fixable: false, code: "R007",
     });
   }
 
@@ -318,53 +314,33 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
       brokenImports++;
       structFindings.push({
         id: `struct-${pad(sIdx++)}`, tier: "structure", severity: "error",
-        message: `@import not found: ${importMatch[1]} (resolved to ${importPath})`, fixable: false,
+        message: `@import not found: ${importMatch[1]} (resolved to ${importPath})`, fixable: false, code: "R012",
       });
     }
   }
   if (importCount > 0 && brokenImports === 0) {
     structFindings.push({
       id: `struct-${pad(sIdx++)}`, tier: "structure", severity: "pass",
-      message: `${importCount} @import(s) resolved`, fixable: false,
+      message: `${importCount} @import(s) resolved`, fixable: false, code: "R012",
     });
   }
 
+  // Codes attached at birth — stamp once via finding.code (no English-substring map).
   const stampedStruct = structFindings
-    .map((finding) => stampRule(
-      finding,
-      finding.message.includes("@import") ? "R012" : finding.message.includes("line") ? "R007" : "R006",
-      effective,
-    ))
+    .map((finding) => stampRule(finding, finding.code!, effective))
     .filter((finding): finding is ReviewFinding => finding !== null);
-  const structTier = {
-    passed: stampedStruct.filter(f => f.severity === "pass").length,
-    warnings: stampedStruct.filter(f => f.severity === "warning").length,
-    errors: stampedStruct.filter(f => f.severity === "error").length,
-    findings: stampedStruct,
-  };
+  const structTier = tallyFindings(stampedStruct);
 
   const heurFindings = buildHeuristicsFindings(content, path, dir)
     .map((finding) => stampRule(finding, "R019", effective))
     .filter((finding): finding is ReviewFinding => finding !== null);
-  const heurTier = {
-    passed: heurFindings.filter(f => f.severity === "pass").length,
-    warnings: heurFindings.filter(f => f.severity === "warning").length,
-    errors: heurFindings.filter(f => f.severity === "error").length,
-    findings: heurFindings,
-  };
+  const heurTier = tallyFindings(heurFindings);
 
   const tiers: ReviewResult["tiers"] = { structure: structTier, heuristics: heurTier };
 
   if (!opts.quick) {
-    const cfg = ruleCfg;
-    const evalCfg: Partial<EvalConfig> = getEvalConfig(cfg);
-    const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
-    const caps: Capabilities = detectCapabilities(evalCfg);
-    const mode = resolveJudgeMode({
-      apiAvailable: caps.api,
-      ci: opts.ci ?? false,
-      judgePref: evalCfg.judge,
-    });
+    const { evalCfg, agentCfg, caps, mode } = resolveJudgeContext(ruleCfg, { ci: opts.ci });
+    const judgeOpts: JudgeCallOpts = { ci: opts.ci ?? false, mode };
 
     const principles = effective.get("R021")?.enabled
       ? loadPrinciples(opts.cwd ?? process.cwd())
@@ -387,7 +363,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
       tiers.llm = { available: true, method: "delegated", prompt, findings: [] };
     } else {
       const judge = opts.memoryLintFn ?? runJudge;
-      const result: LintResult = await judge(prompt, caps, agentCfg, evalCfg, { ci: opts.ci ?? false });
+      const result: LintResult = await judge(prompt, caps, agentCfg, evalCfg, judgeOpts);
 
       if (result.ok) {
         let lIdx = 1;
@@ -432,27 +408,15 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
         ...memorySessionRuleInventory(content),
       ];
 
-      // Backlog #9 slice: LLM rule-adherence on the newest session when user asked --sessions
+      // Backlog #9: adherence uses the same judge mode owner as LLM tier.
       if (opts.sessions && loadedSess.sessions.length > 0 && effective.get("R033")?.enabled) {
-        const cfg = ruleCfg;
-        const evalCfgPartial: Partial<EvalConfig> = getEvalConfig(cfg);
-        const agentCfg: AgentConfig = cfg?.agent ?? { command: "" };
-        const caps: Capabilities = detectCapabilities(evalCfgPartial);
-        if (caps.preferred === "api" && evalCfgPartial.judge !== "delegate") {
+        const { evalCfg, agentCfg, mode } = resolveJudgeContext(ruleCfg, { ci: opts.ci });
+        if (mode === "api") {
           const newest = [...loadedSess.sessions].sort((a, b) => b.mtime - a.mtime)[0]!;
-          const evalCfg: EvalConfig = {
-            model: evalCfgPartial.model ?? "",
-            api_key: evalCfgPartial.api_key,
-            base_url: evalCfgPartial.base_url,
-            max_tool_calls: evalCfgPartial.max_tool_calls ?? 200,
-            save_history: evalCfgPartial.save_history ?? true,
-            judge: evalCfgPartial.judge ?? "auto",
-            timeout_ms: evalCfgPartial.timeout_ms,
-          };
           const truncated = content.length > 12_000 ? content.slice(0, 12_000) + "\n[truncated]" : content;
           const evalFn = opts.memorySessionEvalFn ??
             ((prims, name, body, agent, ec) =>
-              runEval(prims, name, body, agent, ec, { artifactKind: "memory" }));
+              runEval(prims, name, body, agent, ec, { artifactKind: "memory", ci: opts.ci }));
           try {
             const evalResult = await evalFn(
               newest.primitives,
@@ -496,16 +460,13 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     ...(tiers.llm?.findings ?? []),
     ...(tiers.sessions?.findings ?? []),
   ];
+  const summary = tallyFindings(all);
 
   return {
     path,
     origin,
     tiers,
-    summary: {
-      passed: all.filter(f => f.severity === "pass").length,
-      warnings: all.filter(f => f.severity === "warning").length,
-      errors: all.filter(f => f.severity === "error").length,
-    },
+    summary: { passed: summary.passed, warnings: summary.warnings, errors: summary.errors },
     ...(ruleWarnings.length ? { ruleWarnings } : {}),
   };
 }

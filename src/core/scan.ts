@@ -17,7 +17,7 @@ import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { resolveScanScope, type ScanScope } from "./scan-scope.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { detectSkillShadows, shadowWarningText, type SkillShadow } from "./skill-shadow.js";
-import { loadSkillFromDir, validateSkillModel } from "./skill-validate.js";
+import { loadSkillFromDir, validateSkillModelTagged } from "./skill-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
 import { detectCapabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig } from "./journal-config.js";
@@ -38,6 +38,10 @@ import {
   type SkillOverlapInput,
 } from "./skill-overlap.js";
 import { withDocUrl } from "./doc-registry.js";
+import { resolveEffectiveRules } from "./rules/resolve.js";
+import { stampRule } from "./rules/apply.js";
+import { DRIFT_CATEGORY_CODES, PARSE_FAILURE_CODE } from "./rules/bindings.js";
+import { ruleByCode } from "./rules/registry.js";
 
 function healthItem(item: HealthItem): HealthItem {
   return withDocUrl(item);
@@ -103,6 +107,10 @@ export async function runScan(
   const crossAgent = scanCrossAgent(scope.scanRoot);
   const contradictions = detectContradictions(scope.scanRoot);
 
+  // Same rules seam as review — packages/overrides gate scan health too.
+  const cfg = await readConfig().catch(() => null);
+  const { map: effective } = resolveEffectiveRules(cfg, scope.scanRoot);
+
   const skillDirs = findSkillDirs(scope.scanRoot);
   const health: HealthEntry[] = [];
   const overlapInputs: SkillOverlapInput[] = [];
@@ -113,11 +121,23 @@ export async function runScan(
     const loaded = await loadSkillFromDir(dir);
 
     if (!loaded.ok) {
+      const parseRule = ruleByCode(PARSE_FAILURE_CODE);
+      const stamped = stampRule(
+        { severity: "error" as const, code: PARSE_FAILURE_CODE },
+        PARSE_FAILURE_CODE,
+        effective,
+      );
       health.push({
         path: rel,
         origin,
-        status: "fail",
-        errors: [healthItem({ text: loaded.error, code: "E-VAL-001" })],
+        status: stamped ? "fail" : "pass",
+        errors: stamped
+          ? [healthItem({
+              text: loaded.error,
+              code: stamped.code ?? PARSE_FAILURE_CODE,
+              ...(parseRule?.docUrl ? { docUrl: parseRule.docUrl } : {}),
+            })]
+          : [],
         warnings: [],
       });
       continue;
@@ -135,24 +155,62 @@ export async function runScan(
       description,
     });
 
-    const validation = validateSkillModel(loaded.model, { existingDirs: loaded.existingDirs });
+    const errors: HealthItem[] = [];
+    const warnings: HealthItem[] = [];
+
+    for (const { code, result } of validateSkillModelTagged(loaded.model, {
+      existingDirs: loaded.existingDirs,
+    })) {
+      for (const e of result.errors ?? []) {
+        const stamped = stampRule(
+          { severity: "error" as const, code, docUrl: undefined as string | undefined },
+          code,
+          effective,
+        );
+        if (!stamped) continue;
+        errors.push(healthItem({
+          text: e.text,
+          hint: e.hint,
+          code: stamped.code ?? code,
+          ...(stamped.docUrl ? { docUrl: stamped.docUrl } : {}),
+        }));
+      }
+      for (const w of result.warnings ?? []) {
+        const stamped = stampRule(
+          { severity: "warning" as const, code, docUrl: undefined as string | undefined },
+          code,
+          effective,
+        );
+        if (!stamped) continue;
+        warnings.push(healthItem({
+          text: w.text,
+          hint: w.hint,
+          code: stamped.code ?? code,
+          ...(stamped.docUrl ? { docUrl: stamped.docUrl } : {}),
+        }));
+      }
+    }
+
     const drift = analyzeDrift({
       description: String(loaded.model.data["description"] ?? ""),
       content: loaded.model.content,
     });
-    const heuristicWarnings = drift.drifts
-      .filter((d) => d.drifted)
-      .map((d) => healthItem({ text: `${d.category}: ${d.detail}`, code: "E-VAL-001" }));
-
-    const errors = validation.errors.map((e) =>
-      healthItem({ text: e.text, hint: e.hint, code: e.code ?? "E-VAL-001" }),
-    );
-    const warnings = [
-      ...validation.warnings.map((w) =>
-        healthItem({ text: w.text, hint: w.hint, code: w.code ?? "E-VAL-001" }),
-      ),
-      ...heuristicWarnings,
-    ];
+    for (const d of drift.drifts) {
+      if (!d.drifted) continue;
+      const code = DRIFT_CATEGORY_CODES[d.category];
+      if (!code) continue;
+      const stamped = stampRule(
+        { severity: "warning" as const, code, docUrl: undefined as string | undefined },
+        code,
+        effective,
+      );
+      if (!stamped) continue;
+      warnings.push(healthItem({
+        text: `${d.category}: ${d.detail}`,
+        code: stamped.code ?? code,
+        ...(stamped.docUrl ? { docUrl: stamped.docUrl } : {}),
+      }));
+    }
 
     health.push({
       path: rel,
@@ -203,8 +261,7 @@ export async function runScan(
     failed: health.filter((h) => h.status === "fail").length,
   };
 
-  // Include config-stored eval credentials, not just env vars
-  const cfg = await readConfig().catch(() => null);
+  // cfg loaded above for rules; reuse for judge credentials
   const caps = detectCapabilities(getEvalConfig(cfg));
   const install = checkPlatformInstall(opts?.installDeps);
   const judgePart =

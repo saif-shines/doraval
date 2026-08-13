@@ -1,9 +1,6 @@
 import { spawnSync } from "bun";
-import { canUseApiJudge as _canUseApiJudge, invokeJudge as _invokeJudge } from "./llm-judge.js";
 
-// Re-exports for backward compatibility during transition
-export { canUseApiJudge } from "./llm-judge.js";
-export { invokeJudge } from "./llm-judge.js";
+// Judge path lives in llm-judge / skill-lint / judge-runtime — not here.
 
 export interface AgentConfig {
   command: string;
