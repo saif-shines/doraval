@@ -1023,3 +1023,9 @@ Also bump up the patch versions
 <user_query>
 once you have worked int he issues close them?
 </user_query>
+
+---
+
+<user_query>
+let's continue with /mattpocock-skills:implement 
+</user_query>
