@@ -1,0 +1,47 @@
+Fix the one failing CI test on saif-shines/doraval so `bun test` is green. Do not bump versions. Do not publish. Do not start extra refactors.
+
+## Workspace
+You are in an isolated git worktree of /Users/saif/Experiments/doraval (main). Commit on this worktree when green. Do not push unless you are sure. Prefer one focused commit.
+
+## Failure (CI Test on macos/ubuntu/windows, run 32248554731)
+Exactly 1 fail:
+
+`src/core/memory-file-review.test.ts` — `reviewMemoryFile — tier 4 (sessions presence) > --sessions runs adherence eval seam and maps DRIFTED findings`
+
+```
+expect(msgs).toMatch(/Rule drift|force-push/);
+Received:
+"2 recent sessions found (claude-code, cursor)
+No binding MUST/MUST NOT/NEVER rules found to score against sessions
+Rule adherence scoring skipped — session evaluation requires an API judge"
+```
+
+Test is at `src/core/memory-file-review.test.ts` around line 442. It spies `detectCapabilities` (api:true) and `runEval` (returns FAIL + DRIFTED "MUST NOT force-push"), then calls `reviewMem(valid-CLAUDE.md, { sessions: true, loadedSessions: SOME_SESSIONS, ...skipLlm })`.
+
+Likely cause: Judge refactor (#24, commit 4c23c53) or review(path) unification (#21) changed the session-eval path. `runEval` is no longer reached. Production now skips with "session evaluation requires an API judge" and/or "No binding MUST/MUST NOT/NEVER rules found".
+
+## Repo rules (Agents.md / ponytail)
+1. YAGNI — smallest fix.
+2. Reuse existing seams. Do not add deps.
+3. One small test change is OK if the test no longer matches the public Judge/`review()` contract. Prefer fixing the production seam so `--sessions` still maps DRIFTED findings when a judge/eval is injectable.
+4. Never commit publish-time optionalDependencies.
+5. No version bumps.
+
+## How to work
+1. Read the test + `reviewMem` helper + skipLlm + valid-CLAUDE.md fixture.
+2. Trace the `--sessions` / adherence path: `src/core/memory-file-review.ts`, `src/core/review.ts`, `src/core/session-eval.ts`, `src/core/judge.ts`. Find why `runEval` is not called.
+3. Restore the intended contract: `--sessions` runs adherence eval and maps DRIFTED items to findings (message matching Rule drift / force-push).
+4. If the new Judge API is the public seam, inject/spy `judge` instead of `runEval` — but only if production actually uses `judge` here. Do not leave a dead spy.
+5. Confirm binding-rule extraction still works for the fixture; if valid-CLAUDE.md has no MUST/MUST NOT/NEVER, either use a fixture that does or keep the existing extract path working.
+6. Run:
+   - `bun test src/core/memory-file-review.test.ts`
+   - `bun test` (full suite — this is what CI runs)
+7. If other tests fail from your change, fix those too. Do not expand scope to unrelated reds that already existed only if they are not in this suite.
+8. Commit with a conventional message (fix: …). Follow commit-messages skill: imperative, capitalized subject, 72-char wrap.
+
+## Report back
+- Root cause in 2-4 sentences
+- Files changed
+- Commands run + pass/fail
+- Commit hash
+- Whether main still needs a merge from this worktree

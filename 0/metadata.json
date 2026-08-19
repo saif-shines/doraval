@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0D2RG5RMG2B7TK8CWVX9H0H",
+  "session_id": "01a01a29-8fbb-7462-a6b3-a530849a8b41",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-19T13:18:23.597823Z",
+  "branch": "fix/sessions-adherence-eval-gate",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/core/memory-file-review.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "80c39d556b02",
+  "initial_attribution": {
+    "calculated_at": "2026-08-19T13:18:23.551516Z",
+    "agent_lines": 3,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 3,
+    "total_lines_changed": 4,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 20,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_removed_per_file": {
+        "test/fixtures/examples/my-codex-plugin/.agents/plugins/marketplace.json": 20
+      }
+    }
+  ]
+}
