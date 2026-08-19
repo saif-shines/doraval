@@ -341,6 +341,45 @@ describe("doraval CLI", () => {
     });
   });
 
+  describe("dora review (workspace)", () => {
+    test("bare review includes cwd Memory files", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-review-bare-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, ".claude", "skills", "solo");
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(
+        join(skill, "SKILL.md"),
+        '---\nname: solo\ndescription: "Use when testing bare review"\n---\n\n1. Run it\n',
+      );
+      writeFileSync(join(dir, "AGENTS.md"), "# Project\n\nAlways write tests.\n");
+      const { stdout } = runDoraval(["review", ".", "--quick", "--format", "json", "--cwd", dir]);
+      const parsed = JSON.parse(stdout);
+      const paths = parsed.map((r: { path: string }) => r.path);
+      expect(paths.some((p: string) => p.endsWith("AGENTS.md"))).toBe(true);
+      expect(paths.some((p: string) => p.endsWith("solo"))).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("json without --all reviews first 10 of a large set", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-review-cap-"));
+      mkdirSync(join(dir, ".git"));
+      for (let i = 0; i < 12; i++) {
+        const skill = join(dir, ".claude", "skills", `s${String(i).padStart(2, "0")}`);
+        mkdirSync(skill, { recursive: true });
+        writeFileSync(
+          join(skill, "SKILL.md"),
+          `---\nname: s${String(i).padStart(2, "0")}\ndescription: "Use when testing review cap"\n---\n\n1. Run it\n`,
+        );
+      }
+      const { stdout, stderr } = runDoraval(["review", ".", "--quick", "--format", "json", "--cwd", dir]);
+      const parsed = JSON.parse(stdout);
+      expect(parsed).toHaveLength(10);
+      expect(stderr).toContain("first 10");
+      expect(stderr).toContain("--all");
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
+
   describe("dora sessions", () => {
     test("lists sessions from an injected-free real run (no adapters detected in a scratch dir is fine — just must not crash)", () => {
       const dir = mkdtempSync(join(tmpdir(), "dora-sessions-"));

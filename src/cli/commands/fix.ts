@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import pc from "picocolors";
 import { confirm, isCancel } from "@clack/prompts";
-import { reviewSkill, reviewAll } from "../../core/review.js";
+import { review } from "../../core/review.js";
 import { collectFixes, type FixEdit, type FixResult } from "../../core/fix-engine.js";
 
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../out.js";
@@ -125,10 +125,7 @@ export default defineCommand({
     const interactive = canPromptInteractively(yes, dryRun, mode.format);
 
     try {
-      const isSkillDir = existsSync(resolve(target, "SKILL.md"));
-      const results = isSkillDir
-        ? [await reviewSkill(target, { quick: true })]
-        : await reviewAll(target, { quick: true });
+      const results = await review(target, { quick: true, cwd: root });
 
       let totalMech = 0;
       let totalApplied = 0;

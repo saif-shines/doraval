@@ -1,10 +1,8 @@
 import { defineCommand } from "citty";
-import { existsSync, statSync } from "fs";
-import { resolve, basename } from "path";
+import { resolve } from "path";
 import pc from "picocolors";
-import { spinner } from "@clack/prompts";
-import { reviewSkill, reviewAll, type ReviewResult, type ReviewFinding } from "../../core/review.js";
-import { reviewMemoryFile, MEMORY_FILE_NAMES } from "../../core/memory-file-review.js";
+import { isCancel, select, spinner } from "@clack/prompts";
+import { listReviewTargets, review, type ReviewResult, type ReviewFinding } from "../../core/review.js";
 
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
 import { preflight, reviewPreflightMessage } from "../preflight.js";
@@ -123,6 +121,23 @@ function renderSingle(r: ReviewResult): void {
 /** Human aggregate list cap — B34 large-N (JSON still returns full array). */
 const REVIEW_AGGREGATE_CAP = 50;
 
+/** Default work cap. `--all` lifts it. */
+export const REVIEW_DEFAULT_LIMIT = 10;
+
+/** Human TTY only. JSON/CI and `--all` skip the question. */
+export function shouldAskReviewLimit(opts: {
+  format: string;
+  all: boolean;
+  stdinTty?: boolean;
+  stderrTty?: boolean;
+}): boolean {
+  if (opts.all) return false;
+  if (opts.format === "json") return false;
+  const stdinTty = opts.stdinTty ?? process.stdin.isTTY === true;
+  const stderrTty = opts.stderrTty ?? process.stderr.isTTY === true;
+  return stdinTty && stderrTty;
+}
+
 function renderAggregate(results: ReviewResult[]): void {
   ui.blank();
   ui.heading("dora review --all");
@@ -164,7 +179,7 @@ export default defineCommand({
     quick: { type: "boolean", description: "Tiers 1–2 only (structure + heuristics, no LLM)", default: false },
     deep: { type: "boolean", description: "Require LLM tier; exit 2 if no judge", default: false },
     sessions: { type: "boolean", description: "Require the session-evidence tier (exit 2 if no recent sessions)", default: false },
-    all: { type: "boolean", description: "Review every artifact under the path", default: false },
+    all: { type: "boolean", description: "Review every artifact (skip the 10-item question)", default: false },
     for: { type: "string", description: "Filter by agent name (planned)" },
     agent: { type: "string", description: "Session filter (planned)" },
     "fail-on": { type: "string", description: "Exit 1 trigger: error (default) | warning", default: "error" },
@@ -187,6 +202,34 @@ export default defineCommand({
     // caller happened to spell --cwd.
     const root = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const target = resolve(root, (args.path as string) || ".");
+    const useAll = args.all as boolean;
+    const targets = listReviewTargets(target, root);
+    let limit: number | undefined;
+    if (targets.length > REVIEW_DEFAULT_LIMIT && !useAll) {
+      if (shouldAskReviewLimit({ format: mode.format, all: useAll })) {
+        const choice = await select({
+          message: `Found ${targets.length} artifacts. Review can call an LLM for each one.`,
+          options: [
+            { value: "limit", label: `Review first ${REVIEW_DEFAULT_LIMIT}` },
+            { value: "all", label: `Review all ${targets.length}` },
+            { value: "cancel", label: "Cancel" },
+          ],
+          output: process.stderr,
+        });
+        if (isCancel(choice) || choice === "cancel") {
+          ui.dim("  Cancelled.");
+          await exit(0);
+          return;
+        }
+        if (choice === "limit") limit = REVIEW_DEFAULT_LIMIT;
+      } else {
+        limit = REVIEW_DEFAULT_LIMIT;
+        process.stderr.write(
+          `Found ${targets.length} artifacts — reviewing first ${REVIEW_DEFAULT_LIMIT}. Pass --all for the rest.\n`,
+        );
+      }
+    }
+
     const useSpinner =
       mode.format !== "json" && !args.quick && process.stderr.isTTY === true;
     const spin = useSpinner ? spinner({ output: process.stderr }) : null;
@@ -197,21 +240,13 @@ export default defineCommand({
       agent: args.agent as string | undefined,
       cwd: root,
       ci: args.ci as boolean,
+      ...(limit != null ? { limit } : {}),
       onProgress: spin ? (msg: string) => spin.message(msg) : undefined,
     };
 
     try {
       spin?.start("Reviewing");
-      const isMemoryFile =
-        existsSync(target) && statSync(target).isFile() && MEMORY_FILE_NAMES.has(basename(target));
-      const isSkillDir = !isMemoryFile && existsSync(resolve(target, "SKILL.md"));
-      const useAll = !isMemoryFile && ((args.all as boolean) || !isSkillDir);
-
-      const results: ReviewResult[] = isMemoryFile
-        ? [await reviewMemoryFile(target, opts)]
-        : useAll
-        ? await reviewAll(target, opts)
-        : [await reviewSkill(target, opts)];
+      const results: ReviewResult[] = await review(target, opts);
       spin?.stop("Review complete");
 
       if (mode.format !== "json") {

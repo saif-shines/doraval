@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatFindingText, publicRuleCode, severityLabel } from "./review.js";
+import { formatFindingText, publicRuleCode, severityLabel, shouldAskReviewLimit } from "./review.js";
 
 describe("severityLabel", () => {
   test("renders info as FYI without changing other severities", () => {
@@ -19,5 +19,17 @@ describe("formatFindingText", () => {
     );
     expect(formatFindingText({ code: "E-SCAN-SHADOW", message: "shadowed" })).toBe("shadowed");
     expect(formatFindingText({ message: "plain" })).toBe("plain");
+  });
+});
+
+describe("shouldAskReviewLimit", () => {
+  test("asks on an interactive table TTY", () => {
+    expect(shouldAskReviewLimit({ format: "table", all: false, stdinTty: true, stderrTty: true })).toBe(true);
+  });
+
+  test("skips for --all, json, and non-TTY", () => {
+    expect(shouldAskReviewLimit({ format: "table", all: true, stdinTty: true, stderrTty: true })).toBe(false);
+    expect(shouldAskReviewLimit({ format: "json", all: false, stdinTty: true, stderrTty: true })).toBe(false);
+    expect(shouldAskReviewLimit({ format: "table", all: false, stdinTty: false, stderrTty: true })).toBe(false);
   });
 });
