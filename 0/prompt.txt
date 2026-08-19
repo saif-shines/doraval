@@ -993,3 +993,9 @@ when I went into a directoy and there are 100 fiels in there it started triggeri
 ◒  LLM judge (api) ·
 ◇  Canceled can we limit them to 10 or ask user a question? instead
 </user_query>
+
+---
+
+<user_query>
+cool let's to to the next issue and /mattpocock-skills:implement it
+</user_query>
