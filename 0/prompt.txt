@@ -1005,3 +1005,9 @@ cool let's to to the next issue and /mattpocock-skills:implement it
 <user_query>
 give me instructions to test it
 </user_query>
+
+---
+
+<user_query>
+let's /mattpocock-skills:implement next issue
+</user_query>
