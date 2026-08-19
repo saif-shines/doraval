@@ -13,7 +13,7 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Skill** | A directory with `SKILL.md` (frontmatter + body) that agents load as specialized instructions. |
 | **Review** | One `review(path)`. Tiered quality pass over a Skill and/or Memory file: structure → heuristics → optional LLM judge → optional sessions. Workspace and Skill reviews also include cwd Memory files (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `copilot-instructions.md`). |
 | **Scan** | Fast workspace health check (`dora` bare): agents present, skill validation, shadows/overlaps, install/intelligence. |
-| **Rule** | Stable coded check identity (`R001`…`R033`) with slug, default severity, tier, and optional `locked` flag. Users toggle via packages/overrides. |
+| **Rule** | One module (`src/core/rules`). Registry, packages, resolve, stamp, and mutation. CLI only renders and writes config. |
 | **Package** | Named enable-set of rules: `recommended` (default), `strict`, `minimal`. |
 | **Judge** | One module (`judge()`). Owns mode (**api** / **delegate** / **fail**) and transport. Review passes prompt, schema, and `ci`. |
 | **Memory** | Product term for principles, artifacts, and always-on files (`AGENTS.md`, `CLAUDE.md`, …) under `~/.doraval/memory/` and project roots. |
