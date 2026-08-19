@@ -3,6 +3,7 @@ import { dirname, resolve, basename } from "path";
 import { classifySkillDir } from "./skill-classify.js";
 import type { ReviewFinding, ReviewOptions, ReviewResult } from "./review.js";
 import { LintSchema, LINT_SYSTEM, type LintOutput } from "./skill-lint.js";
+import { detectCapabilities } from "./capability-detect.js";
 import { decideJudgeMode, judge } from "./judge.js";
 import type { EvalConfig } from "./journal-config.js";
 import { loadPrinciples, buildPrincipleRubric } from "./memory-rubric.js";
@@ -410,7 +411,8 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
       // Backlog #9: adherence uses the same judge mode owner as LLM tier.
       if (opts.sessions && loadedSess.sessions.length > 0 && effective.get("R033")?.enabled) {
         const { evalCfg, agentCfg } = reviewEval(ruleCfg);
-        if (decideJudgeMode(evalCfg, { ci: opts.ci }) === "api") {
+        const caps = detectCapabilities(evalCfg);
+        if (decideJudgeMode(evalCfg, { ci: opts.ci, apiAvailable: caps.api }) === "api") {
           const newest = [...loadedSess.sessions].sort((a, b) => b.mtime - a.mtime)[0]!;
           const truncated = content.length > 12_000 ? content.slice(0, 12_000) + "\n[truncated]" : content;
           try {
