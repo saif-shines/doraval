@@ -1,8 +1,9 @@
 import type { AgentConfig } from "./agent-invoke.js";
-import { invokeJudge, type JudgeResult, type JudgeOutput } from "./llm-judge.js";
+import { JudgeSchema, type JudgeOutput } from "./llm-judge.js";
+import { judge } from "./judge.js";
 import type { EvalConfig } from "./journal-config.js";
 import { truncateToolCalls, type SessionPrimitives, type ToolCall } from "./session-parse.js";
-import { decideJudgeMode } from "./judge-runtime.js";
+
 
 export interface ChecklistItem {
   instruction: string;
@@ -174,28 +175,21 @@ export async function runEval(
   let judgeCode: string | undefined;
   let usedMethod: "api" | "unknown" = "unknown";
 
-  // Same mode owner as review / skill-lint (api | delegate | fail).
-  const mode = decideJudgeMode(evalCfg, { ci: opts?.ci ?? false });
-
-  if (mode === "api") {
-    const timeoutMs = evalCfg.timeout_ms ?? 180_000;
-    const result: JudgeResult = await invokeJudge(prompt, evalCfg, { timeoutMs });
-    if (result.success) {
-      judged = result.data;
-      usedMethod = "api";
-    } else {
-      judgeError = result.error;
-      judgeCode = result.code;
-    }
+  const outcome = await judge({ prompt, schema: JudgeSchema, ci: opts?.ci ?? false, evalCfg });
+  if (outcome.mode === "api" && outcome.ok) {
+    judged = outcome.data;
+    usedMethod = "api";
+  } else if (outcome.mode === "api") {
+    judgeError = outcome.error;
   }
 
   if (!judged) {
     const err = judgeError;
     const codeSuffix = judgeCode ? ` [${judgeCode}]` : "";
     const fallback =
-      mode === "delegate"
+      outcome.mode === "delegate"
         ? "LLM call skipped — judge mode is delegate (no API judge)"
-        : mode === "fail"
+        : outcome.mode === "fail"
           ? "LLM call failed — no judge available"
           : "LLM call failed — no response";
     return makeUnknownResult(

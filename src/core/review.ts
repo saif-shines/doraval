@@ -2,16 +2,14 @@ import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import { resolve as resolvePath, relative, basename } from "path";
 import { scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
 import { checkSkill } from "./skill-check.js";
-import { runJudge, buildLintPrompt, type LintResult, type JudgeCallOpts } from "./skill-lint.js";
+import { buildLintPrompt, LintSchema, LINT_SYSTEM, type LintOutput } from "./skill-lint.js";
+import { judge, type JudgeOutcome, type JudgeRequest } from "./judge.js";
 import { findSkillDirs, isSkillDir } from "./skill-discovery.js";
 import type { SkillOrigin } from "./skill-classify.js";
 import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
 import { loadRecentSessions, collectSessionEvidence, type LoadResult } from "./session-evidence.js";
-import type { Capabilities } from "./capability-detect.js";
-import type { AgentConfig } from "./agent-invoke.js";
-import type { EvalConfig } from "./journal-config.js";
 import type { EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
 import {
@@ -20,7 +18,7 @@ import {
   SCENARIO_FILE_CODE,
   SCRIPT_SECURITY_CODE,
 } from "./rules/bindings.js";
-import { loadReviewContext, resolveJudgeContext, padIdx, tallyFindings } from "./review-control.js";
+import { loadReviewContext, reviewEval, padIdx, tallyFindings } from "./review-control.js";
 import { MEMORY_FILE_NAMES, reviewMemoryFile } from "./memory-file-review.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -63,14 +61,8 @@ export interface ReviewOptions {
   limit?: number;
   /** Called before each skill's LLM tier runs (progress reporting). */
   onProgress?: (msg: string) => void;
-  /** Test seam: one Judge fake. Ticket #24 owns the real Judge. */
-  judge?: (
-    prompt: string,
-    caps: Capabilities,
-    agentCfg: AgentConfig,
-    evalCfg: Partial<EvalConfig>,
-    opts?: JudgeCallOpts
-  ) => Promise<LintResult>;
+  /** Test seam: Judge adapter. */
+  judge?: (req: JudgeRequest<LintOutput>) => Promise<JudgeOutcome<LintOutput>>;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -211,29 +203,33 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
 
   const tiers: ReviewResult["tiers"] = { structure: structTier, heuristics: heurTier };
 
-  // Tier 3: llm
+  // Tier 3: llm — Judge owns mode + transport
   if (!opts.quick) {
-    // Mode decided once here; leaf runJudge/lintSkill receive mode (no re-route).
-    const { evalCfg, agentCfg, caps, mode: resolvedMode } = resolveJudgeContext(ruleCfg, { ci: opts.ci });
-    const mode = opts.judge ? "api" : resolvedMode;
+    const { evalCfg } = reviewEval(ruleCfg);
     const plan = llmTierPlan(effective);
-    const judgeOpts: JudgeCallOpts = { ci: opts.ci ?? false, mode };
-    const judge = opts.judge ?? runJudge;
+    const run = opts.judge ?? judge;
+    const rubricText = buildPrincipleRubric(principles) || undefined;
+    const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
+    const lintPrompt = plan.runLint ? buildLintPrompt(model, undefined, rubricText) : "";
+    const scenarioPrompt = plan.runScenario && scenarios.length > 0
+      ? buildScenarioPrompt(scenarios, model.content)
+      : "";
 
-    if (mode === "fail") {
-      if (opts.deep) {
-        throw new PrerequisiteError({
-          code: "E-PRE-004",
-          message: "Deep review requires an LLM judge",
-        });
+    const applyOutcome = async (
+      prompt: string,
+      label: string,
+    ): Promise<{ fail: boolean; data?: LintOutput }> => {
+      if (!prompt) return { fail: false };
+      opts.onProgress?.(`${label} · ${dir}`);
+      const outcome = await run({ prompt, schema: LintSchema, ci: opts.ci, evalCfg, system: LINT_SYSTEM });
+      if (outcome.mode === "fail") {
+        if (opts.deep) {
+          throw new PrerequisiteError({ code: "E-PRE-004", message: "Deep review requires an LLM judge" });
+        }
+        return { fail: true };
       }
-      tiers.llm = { available: false, findings: [] };
-    } else if (mode === "delegate") {
-      const rubricText = buildPrincipleRubric(principles) || undefined;
-      const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
-      const lintPrompt = plan.runLint ? buildLintPrompt(model, undefined, rubricText) : "";
-      const scenarioBlock = plan.runScenario && scenarios.length > 0
-        ? lintPrompt
+      if (outcome.mode === "delegate") {
+        const combined = [lintPrompt, scenarioPrompt && lintPrompt
           ? [
               "\n---",
               "## Scenario Coverage Check",
@@ -244,24 +240,29 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
                 `${index + 1}. When: \"${scenario.when}\" → Expected: \"${scenario.expect}\"${scenario.must_not ? ` | Must NOT: \"${scenario.must_not}\"` : ""}`
               ),
             ].join("\n")
-          : buildScenarioPrompt(scenarios, model.content)
-        : "";
-      const prompt = lintPrompt + scenarioBlock;
-      tiers.llm = prompt
-        ? { available: true, method: "delegated", prompt, findings: [] }
-        : { available: false, findings: [] };
+          : scenarioPrompt].filter(Boolean).join("");
+        tiers.llm = combined
+          ? { available: true, method: "delegated", prompt: combined, findings: [] }
+          : { available: false, findings: [] };
+        return { fail: true };
+      }
+      if (!outcome.ok) {
+        if (opts.deep) throw new NetworkError({
+          code: "E-NET-002", message: `LLM judge failed: ${outcome.error}`,
+          suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
+        });
+        return { fail: true };
+      }
+      return { fail: false, data: outcome.data };
+    };
+
+    if (!lintPrompt && !scenarioPrompt) {
+      tiers.llm = { available: false, findings: [] };
     } else {
-      const rubricText = buildPrincipleRubric(principles) || undefined;
-      const scenarios: Scenario[] = scenarioResult.ok ? scenarioResult.scenarios : [];
       const llmFindings: ReviewFinding[] = [];
       let lIdx = 1;
-      let method: string | undefined;
-      let available = false;
-      let lintFailed = false;
-
-
-      const stampLintFindings = (findings: Array<{ category: string; severity: ReviewFinding["severity"]; finding: string }>): void => {
-        for (const item of findings) {
+      const stampLintFindings = (items: LintOutput["findings"]): void => {
+        for (const item of items) {
           const code = LINT_CATEGORY_CODES[item.category];
           if (!code) continue;
           const finding = stampRule({
@@ -272,44 +273,22 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
         }
       };
 
-      if (plan.runLint) {
-        opts.onProgress?.(`LLM judge (api) · ${dir}`);
-        const result = await judge(buildLintPrompt(model, undefined, rubricText), caps, agentCfg, evalCfg, judgeOpts);
-        if (!result.ok) {
-          lintFailed = true;
-          if (opts.deep) throw new NetworkError({
-            code: "E-NET-002", message: `LLM judge failed: ${result.error}`,
-            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
-          });
-        } else {
-          available = true;
-          method = result.method;
-          stampLintFindings(result.output.findings);
+      const first = await applyOutcome(lintPrompt || scenarioPrompt, lintPrompt ? "LLM judge (api)" : "Scenario coverage (api)");
+      if (first.fail && tiers.llm) {
+        // fail / delegate already set tiers.llm
+      } else if (first.fail) {
+        tiers.llm = { available: false, findings: [] };
+      } else {
+        if (first.data) stampLintFindings(first.data.findings);
+        if (lintPrompt && scenarioPrompt) {
+          const second = await applyOutcome(scenarioPrompt, "Scenario coverage (api)");
+          if (second.fail && !tiers.llm) tiers.llm = { available: false, findings: [] };
+          else if (second.data) stampLintFindings(second.data.findings);
+        }
+        if (!tiers.llm) {
+          tiers.llm = { available: true, method: "api", findings: llmFindings };
         }
       }
-
-      if (!lintFailed && plan.runScenario && scenarios.length > 0) {
-        opts.onProgress?.(`Scenario coverage (api) · ${dir}`);
-        const result = await judge(
-          buildScenarioPrompt(scenarios, model.content),
-          caps,
-          agentCfg,
-          evalCfg,
-          judgeOpts,
-        );
-        if (!result.ok) {
-          if (opts.deep) throw new NetworkError({
-            code: "E-NET-002", message: `Scenario coverage judge failed: ${result.error}`,
-            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
-          });
-        } else {
-          available = true;
-          method ??= result.method;
-          stampLintFindings(result.output.findings);
-        }
-      }
-
-      tiers.llm = available ? { available: true, method, findings: llmFindings } : { available: false, findings: [] };
     }
   }
 

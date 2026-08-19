@@ -1,16 +1,5 @@
-import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SkillModel } from "./skill-validate.js";
-import type { EvalConfig } from "./journal-config.js";
-import type { AgentConfig } from "./agent-invoke.js";
-import {
-  resolveDirectCredentials,
-  DEFAULT_JUDGE_TIMEOUT_MS,
-  extractCandidates,
-  createJudgeProvider,
-  providerSupportsStructuredOutputs,
-} from "./llm-judge.js";
-import { resolveJudgeMode, type Capabilities, type JudgeMode } from "./capability-detect.js";
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
 
@@ -30,9 +19,8 @@ export const LintSchema = z.object({
 export type LintOutput = z.infer<typeof LintSchema>;
 export type LintFinding = z.infer<typeof LintFindingSchema>;
 
-export type LintResult =
-  | { ok: true; output: LintOutput; method: "api" | "delegated"; prompt?: string }
-  | { ok: false; error: string };
+export const LINT_SYSTEM =
+  "You are a strict linter. Return ONLY a valid JSON object matching the schema. No markdown, no prose. First char '{', last char '}'.";
 
 // ── Platform context ───────────────────────────────────────────────────────────
 
@@ -120,133 +108,3 @@ CRITICAL: Return ONLY a JSON object. No markdown, no prose. First char '{', last
 }`;
 }
 
-// ── API path (shared transport: createJudgeProvider from llm-judge) ───────────
-
-function parseLintText(text: string): LintResult {
-  const candidates = extractCandidates(text);
-  let lastIssue = "no JSON object found";
-  for (const c of candidates) {
-    const parsed = LintSchema.safeParse(c);
-    if (parsed.success) return { ok: true, output: parsed.data, method: "api" };
-    lastIssue = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
-  }
-  return {
-    ok: false,
-    error: `Lint judge returned unparseable JSON (${lastIssue}). Try another model.`,
-  };
-}
-
-async function lintViaApi(prompt: string, evalCfg: Partial<EvalConfig>): Promise<LintResult> {
-  const { apiKey, baseUrl, model, providerName } = resolveDirectCredentials(evalCfg);
-  if (!apiKey) {
-    return { ok: false, error: "No API key configured for lint judge" };
-  }
-  const provider = createJudgeProvider(baseUrl, apiKey, providerName);
-  const timeoutMs = evalCfg.timeout_ms ?? DEFAULT_JUDGE_TIMEOUT_MS;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const system =
-    "You are a strict linter. Return ONLY a valid JSON object matching the schema. No markdown, no prose. First char '{', last char '}'.";
-  try {
-    // OpenAI: structured outputs. Everyone else (Z.ai Coding Plan, Groq, OpenRouter): text + parse.
-    if (providerSupportsStructuredOutputs(providerName, baseUrl)) {
-      try {
-        const { object } = await generateObject({
-          model: provider(model),
-          schema: LintSchema,
-          system,
-          prompt,
-          temperature: 0,
-          abortSignal: controller.signal,
-        });
-        return { ok: true, output: object, method: "api" };
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        // Fall through to text+parse for transient schema failures
-        if (!/object generated|schema|JSON|parse/i.test(msg)) {
-          return { ok: false, error: msg };
-        }
-      }
-    }
-
-    const { text } = await generateText({
-      model: provider(model),
-      system,
-      prompt,
-      temperature: 0,
-      // Cap output so reasoning models don't burn the full timeout on chain-of-thought.
-      maxTokens: 4096,
-      abortSignal: controller.signal,
-    });
-
-    if (!text?.trim()) {
-      return {
-        ok: false,
-        error:
-          "Lint judge returned empty text (common with reasoning models). Try glm-4.5-air or another non-reasoning model.",
-      };
-    }
-    return parseLintText(text);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "API lint request failed";
-    return { ok: false, error: msg };
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// ── Public entry point ─────────────────────────────────────────────────────────
-
-export type JudgeCallOpts = { ci?: boolean; mode?: JudgeMode };
-
-/**
- * Run a lint-shaped judge. Prefer passing `opts.mode` from the orchestrator
- * (already decided once via decideJudgeMode / resolveJudgeContext).
- * `agentCfg` is unused (CLI judge removed) — kept for call-site stability.
- */
-export async function runJudge(
-  prompt: string,
-  caps: Capabilities,
-  _agentCfg: AgentConfig,
-  evalCfg: Partial<EvalConfig>,
-  opts?: JudgeCallOpts
-): Promise<LintResult> {
-  const mode =
-    opts?.mode ??
-    resolveJudgeMode({
-      apiAvailable: caps.api,
-      ci: opts?.ci ?? false,
-      judgePref: evalCfg.judge,
-    });
-
-  if (mode === "api") return lintViaApi(prompt, evalCfg);
-
-  if (mode === "delegate") {
-    return {
-      ok: true,
-      method: "delegated",
-      prompt,
-      output: { overall: "pass", summary: "Delegated to the calling agent for judgment.", findings: [] },
-    };
-  }
-
-  // mode === "fail"
-  return {
-    ok: false,
-    error:
-      "No judge available. Set an API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) " +
-      "or run dora in-agent (without --ci) to delegate judging to the caller.",
-  };
-}
-
-export async function lintSkill(
-  model: SkillModel,
-  caps: Capabilities,
-  agentCfg: AgentConfig,
-  evalCfg: Partial<EvalConfig>,
-  platform?: string,
-  extraRubric?: string,
-  opts?: JudgeCallOpts
-): Promise<LintResult> {
-  return runJudge(buildLintPrompt(model, platform, extraRubric), caps, agentCfg, evalCfg, opts);
-}

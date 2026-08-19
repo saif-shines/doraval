@@ -2,7 +2,8 @@ import { readFileSync, existsSync } from "fs";
 import { dirname, resolve, basename } from "path";
 import { classifySkillDir } from "./skill-classify.js";
 import type { ReviewFinding, ReviewOptions, ReviewResult } from "./review.js";
-import { runJudge, type LintResult, type JudgeCallOpts } from "./skill-lint.js";
+import { LintSchema, LINT_SYSTEM, type LintOutput } from "./skill-lint.js";
+import { decideJudgeMode, judge } from "./judge.js";
 import type { EvalConfig } from "./journal-config.js";
 import { loadPrinciples, buildPrincipleRubric } from "./memory-rubric.js";
 import { PrerequisiteError, NetworkError } from "./errors.js";
@@ -12,7 +13,7 @@ import type { EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
 import { LINT_CATEGORY_CODES, SESSION_CODES } from "./rules/bindings.js";
 import { ruleByCode } from "./rules/registry.js";
-import { loadReviewContext, resolveJudgeContext, padIdx, tallyFindings } from "./review-control.js";
+import { loadReviewContext, reviewEval, padIdx, tallyFindings } from "./review-control.js";
 
 function sessFinding(partial: ReviewFinding): ReviewFinding {
   const code = SESSION_CODES[partial.id] ?? SESSION_CODES["sess-006"]!;
@@ -267,6 +268,7 @@ function buildHeuristicsFindings(content: string, path: string, dir: string): Re
   return findings;
 }
 
+/** Internal. Callers use `review(path)`. */
 export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): Promise<ReviewResult> {
   const origin = classifySkillDir(path, { cwd: opts.cwd ?? process.cwd() });
   const content = readFileSync(path, "utf-8");
@@ -339,9 +341,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
   const tiers: ReviewResult["tiers"] = { structure: structTier, heuristics: heurTier };
 
   if (!opts.quick) {
-    const { evalCfg, agentCfg, caps, mode } = resolveJudgeContext(ruleCfg, { ci: opts.ci });
-    const judgeOpts: JudgeCallOpts = { ci: opts.ci ?? false, mode };
-
+    const { evalCfg } = reviewEval(ruleCfg);
     const principles = effective.get("R021")?.enabled
       ? loadPrinciples(opts.cwd ?? process.cwd())
       : [];
@@ -349,26 +349,34 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
     const plan = memoryLlmTierPlan(effective);
     const prompt = plan.runLint ? buildMemoryLintPrompt(content, basename(path), rubricText) : "";
 
-    if (mode === "fail") {
-      if (opts.deep) {
-        throw new PrerequisiteError({
-          code: "E-PRE-004",
-          message: "Deep review requires an LLM judge",
-        });
-      }
+    if (!plan.runLint || !prompt) {
       tiers.llm = { available: false, findings: [] };
-    } else if (!plan.runLint) {
-      tiers.llm = { available: false, findings: [] };
-    } else if (mode === "delegate") {
-      tiers.llm = { available: true, method: "delegated", prompt, findings: [] };
     } else {
-      const judge = opts.memoryLintFn ?? runJudge;
-      const result: LintResult = await judge(prompt, caps, agentCfg, evalCfg, judgeOpts);
-
-      if (result.ok) {
+      const run = opts.judge ?? judge;
+      const outcome = await run({ prompt, schema: LintSchema, ci: opts.ci, evalCfg, system: LINT_SYSTEM });
+      if (outcome.mode === "fail") {
+        if (opts.deep) {
+          throw new PrerequisiteError({
+            code: "E-PRE-004",
+            message: "Deep review requires an LLM judge",
+          });
+        }
+        tiers.llm = { available: false, findings: [] };
+      } else if (outcome.mode === "delegate") {
+        tiers.llm = { available: true, method: "delegated", prompt: outcome.prompt, findings: [] };
+      } else if (!outcome.ok) {
+        if (opts.deep) {
+          throw new NetworkError({
+            code: "E-NET-002",
+            message: `LLM judge failed: ${outcome.error}`,
+            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
+          });
+        }
+        tiers.llm = { available: false, findings: [] };
+      } else {
         let lIdx = 1;
         const findings: ReviewFinding[] = [];
-        for (const item of result.output.findings) {
+        for (const item of (outcome.data as LintOutput).findings) {
           const code = LINT_CATEGORY_CODES[item.category];
           if (!code) continue;
           const finding = stampRule({
@@ -377,16 +385,7 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
           }, code, effective);
           if (finding) findings.push(finding);
         }
-        tiers.llm = { available: true, method: result.method, findings };
-      } else {
-        if (opts.deep) {
-          throw new NetworkError({
-            code: "E-NET-002",
-            message: `LLM judge failed: ${result.error}`,
-            suggestion: "Re-run, check the API judge credentials, or drop --deep to review without the LLM tier",
-          });
-        }
-        tiers.llm = { available: false, findings: [] };
+        tiers.llm = { available: true, method: "api", findings };
       }
     }
   }
@@ -410,20 +409,18 @@ export async function reviewMemoryFile(path: string, opts: ReviewOptions = {}): 
 
       // Backlog #9: adherence uses the same judge mode owner as LLM tier.
       if (opts.sessions && loadedSess.sessions.length > 0 && effective.get("R033")?.enabled) {
-        const { evalCfg, agentCfg, mode } = resolveJudgeContext(ruleCfg, { ci: opts.ci });
-        if (mode === "api") {
+        const { evalCfg, agentCfg } = reviewEval(ruleCfg);
+        if (decideJudgeMode(evalCfg, { ci: opts.ci }) === "api") {
           const newest = [...loadedSess.sessions].sort((a, b) => b.mtime - a.mtime)[0]!;
           const truncated = content.length > 12_000 ? content.slice(0, 12_000) + "\n[truncated]" : content;
-          const evalFn = opts.memorySessionEvalFn ??
-            ((prims, name, body, agent, ec) =>
-              runEval(prims, name, body, agent, ec, { artifactKind: "memory", ci: opts.ci }));
           try {
-            const evalResult = await evalFn(
+            const evalResult = await runEval(
               newest.primitives,
               basename(path),
               truncated,
               agentCfg,
               evalCfg,
+              { artifactKind: "memory", ci: opts.ci },
             );
             sessFindings.push(...mapEvalToMemoryFindings(evalResult));
           } catch {

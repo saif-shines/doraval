@@ -1,15 +1,10 @@
 import { describe, it, test, expect } from "bun:test";
-import { buildLintPrompt, runJudge, type LintOutput } from "./skill-lint.js";
-import type { Capabilities } from "./capability-detect.js";
+import { buildLintPrompt, type LintOutput } from "./skill-lint.js";
 
 const exampleModel = {
   data: { name: "my-skill", description: "Does something useful" },
   content: "## Instructions\n\nDo the thing when asked.",
 };
-
-const NO_API: Capabilities = { api: false, preferred: "none" };
-const AGENT = { command: "" };
-const EVAL = { model: "", max_tool_calls: 200, save_history: true, judge: "auto" as const };
 
 describe("buildLintPrompt", () => {
   it("includes frontmatter fields", () => {
@@ -102,47 +97,3 @@ describe("LintOutput shape (type safety smoke test)", () => {
   });
 });
 
-describe("runJudge", () => {
-  it("returns 'no judge available' error when caps.preferred is 'none' and --ci", async () => {
-    const { runJudge } = await import("./skill-lint.js");
-    const result = await runJudge(
-      "irrelevant prompt",
-      { api: false, preferred: "none" },
-      { command: "" },
-      {},
-      { ci: true }
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("No judge available");
-    }
-  });
-
-  test("no key, interactive -> delegated result carrying the prompt", async () => {
-    const r = await runJudge("RUBRIC PROMPT BODY", NO_API, AGENT, EVAL, { ci: false });
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.method).toBe("delegated");
-      expect(r.prompt).toContain("RUBRIC PROMPT BODY");
-      expect(r.output.findings).toEqual([]);
-    }
-  });
-
-  test("pre-resolved mode wins over caps (no second-guess)", async () => {
-    // caps say no API, but caller already decided delegate — must not fail.
-    const r = await runJudge("PROMPT", NO_API, AGENT, { ...EVAL, judge: "api" }, {
-      ci: true,
-      mode: "delegate",
-    });
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.method).toBe("delegated");
-      expect(r.prompt).toBe("PROMPT");
-    }
-  });
-
-  test("no key, --ci -> fail (not ok)", async () => {
-    const r = await runJudge("RUBRIC PROMPT BODY", NO_API, AGENT, EVAL, { ci: true });
-    expect(r.ok).toBe(false);
-  });
-});

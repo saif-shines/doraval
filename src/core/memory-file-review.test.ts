@@ -3,7 +3,6 @@ import { join, resolve } from "path";
 import { mkdtempSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import {
-  reviewMemoryFile,
   MEMORY_FILE_NAMES,
   memorySessionPresence,
   extractBindingRules,
@@ -11,9 +10,15 @@ import {
   mapEvalToMemoryFindings,
   memoryLlmTierPlan,
 } from "./memory-file-review.js";
+import { review, type ReviewOptions, type ReviewResult } from "./review.js";
 import type { LoadResult } from "./session-evidence.js";
 import type { EvalResult } from "./session-eval.js";
 import { resolveEffectiveRules } from "./rules/resolve.js";
+
+async function reviewMem(path: string, opts: ReviewOptions = {}): Promise<ReviewResult> {
+  const results = await review(path, { cwd: FIXTURES, ...opts });
+  return results.find((r) => r.path === path) ?? results[0]!;
+}
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures/memory-files");
 
@@ -76,47 +81,47 @@ describe("MEMORY_FILE_NAMES", () => {
 
 describe("reviewMemoryFile — tier 1 (structure)", () => {
   test("valid file with a resolving @import passes structure tier", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     expect(result.tiers.structure.errors).toBe(0);
     expect(result.tiers.structure.findings.some(f => f.severity === "pass")).toBe(true);
   });
 
   test("empty file produces a structure error", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "empty-AGENTS.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "empty-AGENTS.md"), { quick: true });
     expect(result.tiers.structure.errors).toBeGreaterThan(0);
     expect(result.tiers.structure.findings.some(f => f.severity === "error" && f.message.toLowerCase().includes("empty"))).toBe(true);
   });
 
   test("unresolved @import stamps R012 from code-at-birth (not message map)", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "broken-import-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "broken-import-CLAUDE.md"), { quick: true });
     const imp = result.tiers.structure.findings.find((f) => f.message.includes("@import not found"));
     expect(imp?.code).toBe("R012");
     expect(imp?.slug).toBeTruthy();
   });
 
   test("unresolved @import produces a structure error", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "broken-import-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "broken-import-CLAUDE.md"), { quick: true });
     expect(result.tiers.structure.errors).toBeGreaterThan(0);
     expect(result.tiers.structure.findings.some(f => f.severity === "error" && f.message.includes("does-not-exist.md"))).toBe(true);
   });
 
   test("findings have sequential struct- ids", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     expect(result.tiers.structure.findings.every(f => f.id.startsWith("struct-"))).toBe(true);
   });
 
   test("origin is classified", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     expect(["authored", "imported", "global"]).toContain(result.origin);
   });
 
   test("quick mode omits sessions tier", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     expect(result.tiers.sessions).toBeUndefined();
   });
 
   test("memory mechanical findings carry public rule identity", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     for (const finding of [...result.tiers.structure.findings, ...result.tiers.heuristics.findings]) {
       expect(finding.code).toMatch(/^R\d{3}$/);
       expect(finding.slug).toBeTruthy();
@@ -127,21 +132,21 @@ describe("reviewMemoryFile — tier 1 (structure)", () => {
 
 describe("reviewMemoryFile — tier 2 (heuristics)", () => {
   test("dead markdown link produces a heuristics warning", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "heuristics-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "heuristics-CLAUDE.md"), { quick: true });
     expect(result.tiers.heuristics.findings.some(
       f => f.severity === "warning" && f.message.includes("missing-style-guide.md")
     )).toBe(true);
   });
 
   test("duplicate line produces a heuristics warning", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "heuristics-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "heuristics-CLAUDE.md"), { quick: true });
     expect(result.tiers.heuristics.findings.some(
       f => f.severity === "warning" && f.message.toLowerCase().includes("duplicate")
     )).toBe(true);
   });
 
   test("AGENTS.md with $ARGUMENTS gets flagged as Claude-only syntax in a shared file", async () => {
-    const result = await reviewMemoryFile(resolve(FIXTURES, "claude-syntax-shared/AGENTS.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "claude-syntax-shared/AGENTS.md"), { quick: true });
     expect(result.tiers.heuristics.findings.some(
       f => f.severity === "warning" && f.message.includes("$ARGUMENTS")
     )).toBe(true);
@@ -150,7 +155,7 @@ describe("reviewMemoryFile — tier 2 (heuristics)", () => {
   test("CLAUDE.md itself is NOT flagged for Claude-only syntax", async () => {
     // valid-CLAUDE.md contains an @import — Claude-only syntax — but since
     // the file IS CLAUDE.md (not the shared AGENTS.md), this check doesn't apply.
-    const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
+    const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), { quick: true });
     expect(result.tiers.heuristics.findings.some(f => f.message.includes("Claude-only"))).toBe(false);
   });
 });
@@ -173,26 +178,21 @@ describe("memoryLlmTierPlan", () => {
 
 describe("reviewMemoryFile — tier 3 (llm)", () => {
   test("deep mode without a judge under --ci throws E-PRE-004", async () => {
-    const capsMod = await import("./capability-detect.js");
-    const { spyOn } = await import("bun:test");
-    const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
-      api: false, preferred: "none",
-    });
     try {
-      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), { deep: true, ci: true, ...hermetic });
+      await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
+        deep: true, ci: true, ...hermetic, judge: async () => ({ mode: "fail" }),
+      });
       expect(true).toBe(false);
     } catch (e: any) {
       expect(e.code).toBe("E-PRE-004");
-    } finally {
-      spy.mockRestore();
     }
   });
 
   test("quick mode never invokes the judge", async () => {
     let called = false;
-    await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+    await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
       quick: true,
-      memoryLintFn: async () => { called = true; return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } }; },
+      judge: async () => { called = true; return { mode: "api", ok: true, data: { overall: "pass", summary: "ok", findings: [] } }; },
     });
     expect(called).toBe(false);
   });
@@ -204,11 +204,11 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
       api: true, preferred: "api",
     });
     try {
-      const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
         ...hermetic,
-        memoryLintFn: async () => ({
-          ok: true, method: "api",
-          output: { overall: "warn", summary: "one issue", findings: [
+        judge: async () => ({
+          mode: "api", ok: true,
+          data: { overall: "warn", summary: "one issue", findings: [
             { severity: "warning", category: "contradiction", finding: "conflicting rules", suggestion: "pick one" },
           ] },
         }),
@@ -228,11 +228,11 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
     let prompt = "";
     try {
       await withRules({ R021: "off" }, async () => {
-        await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+        await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
           ...hermetic,
-          memoryLintFn: async (value) => {
-            prompt = value;
-            return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } };
+          judge: async (req) => {
+            prompt = req.prompt;
+            return { mode: "api", ok: true, data: { overall: "pass", summary: "ok", findings: [] } };
           },
         });
       });
@@ -249,11 +249,11 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
     const apiSpy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
     try {
       await withRules({ R022: "off", R024: "off", R023: "on", R025: "on", R026: "on" }, async () => {
-        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+        const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
           ...hermetic,
-          memoryLintFn: async () => {
+          judge: async () => {
             called = true;
-            return { ok: true, method: "api", output: { overall: "pass", summary: "ok", findings: [] } };
+            return { mode: "api", ok: true, data: { overall: "pass", summary: "ok", findings: [] } };
           },
         });
         expect(result.tiers.llm).toEqual({ available: false, findings: [] });
@@ -270,7 +270,7 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: false, preferred: "none" });
     try {
       await withRules({ R022: "off", R024: "off", R023: "on", R025: "on", R026: "on" }, async () => {
-        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), hermetic);
+        const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), hermetic);
         expect(result.tiers.llm).toEqual({ available: false, findings: [] });
         expect(result.tiers.llm?.prompt).toBeUndefined();
       });
@@ -286,10 +286,10 @@ describe("reviewMemoryFile — tier 3 (llm)", () => {
       api: true, preferred: "api",
     });
     try {
-      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
         deep: true,
         ...hermetic,
-        memoryLintFn: async () => ({ ok: false, error: "judge timed out" }),
+        judge: async () => ({ mode: "api", ok: false, error: "judge timed out" }),
       });
       expect(true).toBe(false);
     } catch (e: any) {
@@ -396,7 +396,7 @@ describe("mapEvalToMemoryFindings", () => {
 describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
   // Skip live judge — these tests only assert tiers.sessions.
   const skipLlm = {
-    memoryLintFn: async () => ({ ok: false, error: "skip" }) as any,
+    judge: async () => ({ mode: "api" as const, ok: false as const, error: "skip" }),
   };
 
   test("no adapters → sessions available false", async () => {
@@ -406,7 +406,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
       api: true, preferred: "api",
     });
     try {
-      const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
         loadedSessions: NO_ADAPTERS,
         ...skipLlm,
       });
@@ -423,7 +423,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
       api: true, preferred: "api",
     });
     try {
-      const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
         loadedSessions: SOME_SESSIONS,
         ...skipLlm,
       });
@@ -441,71 +441,73 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
 
   test("--sessions runs adherence eval seam and maps DRIFTED findings", async () => {
     const capsMod = await import("./capability-detect.js");
+    const evalMod = await import("./session-eval.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({
       api: true, preferred: "api",
     });
+    const evalSpy = spyOn(evalMod, "runEval").mockResolvedValue({
+      schemaVersion: 1 as const,
+      sessionId: "s1",
+      timestamp: new Date().toISOString(),
+      agent: "claude-code",
+      model: "x",
+      skill: "CLAUDE.md",
+      userFamiliarity: 5,
+      userFamiliarityReason: "",
+      closure: "1-shot" as const,
+      userTurnsAfterSkill: 1,
+      skillsInvoked: [],
+      toolCallCounts: {},
+      verdict: "FAIL" as const,
+      verdictReason: "drifted",
+      checklist: [{
+        instruction: "MUST NOT force-push",
+        bindingness: "MANDATORY" as const,
+        itemVerdict: "DRIFTED" as const,
+        evidence: "git push --force",
+      }],
+      ambiguityFlags: [],
+      judgeMethod: "api" as const,
+    });
     try {
-      const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
         sessions: true,
         loadedSessions: SOME_SESSIONS,
         ...skipLlm,
-        memorySessionEvalFn: async () => ({
-          schemaVersion: 1 as const,
-          sessionId: "s1",
-          timestamp: new Date().toISOString(),
-          agent: "claude-code",
-          model: "x",
-          skill: "CLAUDE.md",
-          userFamiliarity: 5,
-          userFamiliarityReason: "",
-          closure: "1-shot" as const,
-          userTurnsAfterSkill: 1,
-          skillsInvoked: [],
-          toolCallCounts: {},
-          verdict: "FAIL" as const,
-          verdictReason: "drifted",
-          checklist: [{
-            instruction: "MUST NOT force-push",
-            bindingness: "MANDATORY" as const,
-            itemVerdict: "DRIFTED" as const,
-            evidence: "git push --force",
-          }],
-          ambiguityFlags: [],
-          judgeMethod: "api" as const,
-        }),
       });
       const msgs = result.tiers.sessions?.findings.map((f) => f.message).join("\n") ?? "";
       expect(msgs).toMatch(/Rule drift|force-push/);
       expect(result.summary.errors).toBeGreaterThan(0);
     } finally {
+      evalSpy.mockRestore();
       spy.mockRestore();
     }
   });
 
   test("R033 off skips adherence eval while R031 and R032 still emit", async () => {
     const capsMod = await import("./capability-detect.js");
+    const evalMod = await import("./session-eval.js");
     const { spyOn } = await import("bun:test");
     const spy = spyOn(capsMod, "detectCapabilities").mockReturnValue({ api: true, preferred: "api" });
-    let called = false;
+    const evalSpy = spyOn(evalMod, "runEval").mockImplementation(async () => {
+      throw new Error("must not run");
+    });
     try {
       await withRules({ R033: "off" }, async () => {
-        const result = await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+        const result = await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
           sessions: true,
           loadedSessions: SOME_SESSIONS,
           ...skipLlm,
-          memorySessionEvalFn: async () => {
-            called = true;
-            throw new Error("must not run");
-          },
         });
         const codes = result.tiers.sessions?.findings.map((finding) => finding.code) ?? [];
         expect(codes).toContain("R031");
         expect(codes).toContain("R032");
         expect(codes).not.toContain("R033");
       });
-      expect(called).toBe(false);
+      expect(evalSpy).not.toHaveBeenCalled();
     } finally {
+      evalSpy.mockRestore();
       spy.mockRestore();
     }
   });
@@ -517,7 +519,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
       api: true, preferred: "api",
     });
     try {
-      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
         sessions: true,
         loadedSessions: EMPTY_LOAD,
         ...skipLlm,
@@ -537,7 +539,7 @@ describe("reviewMemoryFile — tier 4 (sessions presence)", () => {
       api: true, preferred: "api",
     });
     try {
-      await reviewMemoryFile(resolve(FIXTURES, "valid-CLAUDE.md"), {
+      await reviewMem(resolve(FIXTURES, "valid-CLAUDE.md"), {
         sessions: true,
         loadedSessions: NO_ADAPTERS,
         ...skipLlm,

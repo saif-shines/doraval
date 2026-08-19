@@ -344,13 +344,15 @@ const supportsStructuredOutputs = providerSupportsStructuredOutputs;
  * Uses generateObject only on OpenAI; otherwise generateText + JSON parse
  * (Z.ai / Groq / OpenRouter / custom often lack structuredOutputs).
  */
-export async function invokeJudge(
+export async function callJudgeApi<T>(
   promptText: string,
-  evalCfg: EvalConfig,
-  opts?: { timeoutMs?: number }
-): Promise<JudgeResult> {
+  schema: z.ZodType<T>,
+  evalCfg: Partial<EvalConfig>,
+  opts?: { timeoutMs?: number; system?: string },
+): Promise<{ ok: true; data: T } | { ok: false; error: string; code?: JudgeErrorCode }> {
   silenceAiSdkWarnings();
   const timeoutMs = opts?.timeoutMs ?? DEFAULT_JUDGE_TIMEOUT_MS;
+  const system = opts?.system ?? JUDGE_SYSTEM_JSON;
   const { apiKey, baseUrl, model, providerName } = resolveDirectCredentials(evalCfg);
 
   if (!apiKey) {
@@ -358,14 +360,10 @@ export async function invokeJudge(
     const hint = detected
       ? `Set ${detected.provider.envKey} in your environment.`
       : `Set one of: ${PROVIDERS.filter((p) => p.requiresApiKey).map((p) => p.envKey).join(", ")}.`;
-    return {
-      success: false,
-      code: "config",
-      error: `No API key for eval judge. ${hint}`,
-    };
+    return { ok: false, code: "config", error: `No API key for eval judge. ${hint}` };
   }
 
-  const provider = makeProvider(baseUrl, apiKey, providerName);
+  const provider = createJudgeProvider(baseUrl, apiKey, providerName);
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
   const modelRef = provider(model);
@@ -375,26 +373,25 @@ export async function invokeJudge(
       try {
         const { object } = await generateObject({
           model: modelRef,
-          schema: JudgeSchema,
-          system: JUDGE_SYSTEM_JSON,
+          schema,
+          system,
           prompt: promptText,
           temperature: 0,
           abortSignal: abortController.signal,
         });
-        return { success: true, data: object };
+        return { ok: true, data: object };
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        // Fall through to text+parse for transient schema failures
         if (!/object generated|schema|JSON|parse/i.test(msg)) {
           const mapped = mapJudgeError(e, timeoutMs);
-          return { success: false, error: mapped.error, code: mapped.code };
+          return { ok: false, error: mapped.error, code: mapped.code };
         }
       }
     }
 
     const { text } = await generateText({
       model: modelRef,
-      system: JUDGE_SYSTEM_JSON,
+      system,
       prompt: promptText,
       temperature: 0,
       abortSignal: abortController.signal,
@@ -402,18 +399,39 @@ export async function invokeJudge(
 
     if (!text?.trim()) {
       return {
-        success: false,
+        ok: false,
         code: "empty",
         error:
           "Judge API returned empty text (common with reasoning models if only reasoning tokens were used). Try glm-4.7 or another non-reasoning model.",
       };
     }
 
-    return parseJudgeText(text);
+    const candidates = extractCandidates(text);
+    let lastIssue = "no JSON object found";
+    for (const c of candidates) {
+      const parsed = schema.safeParse(c);
+      if (parsed.success) return { ok: true, data: parsed.data };
+      lastIssue = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    }
+    return { ok: false, code: "parse", error: `Judge returned unparseable JSON (${lastIssue}). Try another model.` };
   } catch (e: unknown) {
     const mapped = mapJudgeError(e, timeoutMs);
-    return { success: false, error: mapped.error, code: mapped.code };
+    return { ok: false, error: mapped.error, code: mapped.code };
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+export async function invokeJudge(
+  promptText: string,
+  evalCfg: EvalConfig,
+  opts?: { timeoutMs?: number },
+): Promise<JudgeResult> {
+  const result = await callJudgeApi(promptText, JudgeSchema, evalCfg, {
+    timeoutMs: opts?.timeoutMs,
+    system: JUDGE_SYSTEM_JSON,
+  });
+  return result.ok
+    ? { success: true, data: result.data }
+    : { success: false, error: result.error, code: result.code };
 }

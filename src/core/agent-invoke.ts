@@ -1,6 +1,6 @@
 import { spawnSync } from "bun";
 
-// Judge path lives in llm-judge / skill-lint / judge-runtime — not here.
+// Judge path lives in judge.ts — not here.
 
 export interface AgentConfig {
   command: string;

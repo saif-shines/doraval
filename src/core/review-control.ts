@@ -4,7 +4,6 @@
  */
 import { readConfig, getEvalConfig, type JournalConfig, type EvalConfig } from "./journal-config.js";
 import { resolveEffectiveRules, type EffectiveRule } from "./rules/resolve.js";
-import { detectCapabilities, resolveJudgeMode, type Capabilities, type JudgeMode } from "./capability-detect.js";
 import type { AgentConfig } from "./agent-invoke.js";
 
 export type FindingSeverity = "error" | "warning" | "info" | "pass";
@@ -34,22 +33,12 @@ export async function loadReviewContext(cwd: string): Promise<{
   return { config, effective, ruleWarnings };
 }
 
-export function resolveJudgeContext(
-  config: JournalConfig | null,
-  opts?: { ci?: boolean },
-): {
+export function reviewEval(config: JournalConfig | null): {
   evalCfg: EvalConfig;
   agentCfg: AgentConfig;
-  caps: Capabilities;
-  mode: JudgeMode;
 } {
-  const evalCfg = getEvalConfig(config);
-  const agentCfg: AgentConfig = config?.agent ?? { command: "" };
-  const caps = detectCapabilities(evalCfg);
-  const mode = resolveJudgeMode({
-    apiAvailable: caps.api,
-    ci: opts?.ci ?? false,
-    judgePref: evalCfg.judge,
-  });
-  return { evalCfg, agentCfg, caps, mode };
+  return {
+    evalCfg: getEvalConfig(config),
+    agentCfg: config?.agent ?? { command: "" },
+  };
 }

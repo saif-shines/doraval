@@ -15,7 +15,7 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Scan** | Fast workspace health check (`dora` bare): agents present, skill validation, shadows/overlaps, install/intelligence. |
 | **Rule** | Stable coded check identity (`R001`…`R033`) with slug, default severity, tier, and optional `locked` flag. Users toggle via packages/overrides. |
 | **Package** | Named enable-set of rules: `recommended` (default), `strict`, `minimal`. |
-| **Judge** | LLM path that scores skill/memory quality. Modes: **api** (direct credentials), **delegate** (emit prompt for the calling agent), **fail** (no judge, e.g. `--ci` without a key). |
+| **Judge** | One module (`judge()`). Owns mode (**api** / **delegate** / **fail**) and transport. Review passes prompt, schema, and `ci`. |
 | **Memory** | Product term for principles, artifacts, and always-on files (`AGENTS.md`, `CLAUDE.md`, …) under `~/.doraval/memory/` and project roots. |
 | **Config** | Global product config at `~/.doraval/config.yml`. Code type is still `JournalConfig` (legacy name — not a “journal product”). Holds projects, `eval.*` judge settings, rules, agent command. |
 | **Session** | Past agent conversation transcript, normalized via **session adapters** into primitives for evidence and adherence eval. |

@@ -195,7 +195,7 @@ describe("buildScenarioPrompt", () => {
   });
 
   test("requests the standard LintOutput JSON shape (overall/summary/findings), not a bespoke results array", () => {
-    // buildScenarioPrompt's output is dispatched through runJudge, which is
+    // buildScenarioPrompt's output is dispatched through judge(), which is
     // hard-coupled to LintSchema ({overall, summary, findings}) on both the
     // API path (zod generateObject) and the CLI path (mapCliRaw). A prompt
     // asking for any other shape would silently get coerced/rejected.
