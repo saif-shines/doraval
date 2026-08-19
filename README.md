@@ -21,9 +21,8 @@ instead of burning tokens on context you cannot rely on.
 
 **Learn more about doraval at [doraval.dev](https://doraval.dev)**
 
-This repository contains the TypeScript source for the `dora` / `doraval` CLI,
-its validators, and the agent skill shipped via
-`npx skills add saif-shines/doraval`.
+This repository contains the TypeScript source for the `dora` / `doraval` CLI
+and the agent skill shipped via `npx skills add saif-shines/doraval`.
 
 **Pronunciation:** *dor-uh-val* · Doraemon + eval
 
@@ -151,8 +150,7 @@ Shell completions: `dora --completion zsh` (or `bash` / `fish`).
 |------|----------|
 | `src/cli/` | citty CLI surface (`dora` / `doraval`) |
 | `src/core/` | Scan, review, fix, memory, sessions, scaffold |
-| `src/validators/` | Per-agent validators (Claude, Cursor, Codex, Copilot, Grok) |
-| `src/providers/` | Packaging / provider specs |
+| `src/providers/` | Packaging / provider specs (`dora new`, `dora providers`) |
 | `skills/doraval/` | Agent skill shipped via `npx skills add saif-shines/doraval` |
 | `apps/website/` | Docs site ([Blume](https://github.com/saif-shines/blume)) |
 | `scripts/` | Release, platform packages, publish helpers |

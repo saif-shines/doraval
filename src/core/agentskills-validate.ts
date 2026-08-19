@@ -1,7 +1,6 @@
 import { existsSync } from "fs";
 import { basename, resolve } from "path";
-import type { CheckItem } from "../validators/types.js";
-import type { SkillModel } from "./skill-validate.js";
+import type { CheckItem, SkillModel } from "./skill-validate.js";
 import {
   DESCRIPTION_MAX_LENGTH,
   estimateTokens,

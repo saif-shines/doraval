@@ -5,7 +5,7 @@ import type { ProviderId } from "./types.js";
  * Single source of truth for manifest paths, marketplace paths, MCP filenames, etc.
  * Derived from plans/006-multi-provider-master.md (authstack reference).
  *
- * Adapters and future validators should read from here to prevent drift.
+ * `dora new` and `dora providers` read from here.
  */
 export const PROVIDER_SPECS = {
   claude: {

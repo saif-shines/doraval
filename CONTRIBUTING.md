@@ -51,8 +51,7 @@ Canonical user docs live in `apps/website/content/` (MDX). When writing or editi
 | Area | Path |
 |---|---|
 | CLI commands | `src/cli/commands/` |
-| Validators (per agent: claude/codex/cursor/copilot) | `src/validators/` |
 | Core logic (review, fix, scaffold, memory) | `src/core/` |
-| Provider specs (manifest paths, adapters) | `src/providers/` |
+| Provider specs (`dora new`, `dora providers`) | `src/providers/` |
 | Website / docs | `apps/website/` |
 | Docs style prompt | `apps/website/.devex-kit/style-prompt-block.md` |

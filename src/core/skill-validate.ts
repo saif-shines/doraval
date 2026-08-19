@@ -1,8 +1,13 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
 import { parseFrontmatter } from "./frontmatter.js";
-import type { CheckItem } from "../validators/types.js";
 import { STRUCTURE_CHECK_CODES } from "./rules/bindings.js";
+
+export interface CheckItem {
+  text: string;
+  hint?: string;
+  code?: string;
+}
 
 export interface SkillModel {
   data: Record<string, unknown>;

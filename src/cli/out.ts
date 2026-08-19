@@ -1,6 +1,5 @@
 import pc from "picocolors";
 import { currentBackend } from "./render/index.js";
-import type { ValidateResult } from "../validators/types.js";
 import { errorToJson, isDoravalError } from "../core/errors.js";
 
 /**
@@ -51,20 +50,6 @@ export function renderCheck(status: CheckStatus, text: string, indent = 2): void
   ui.write(`${" ".repeat(indent)}${statusIcon(status)}  ${text}`);
 }
 
-/** Render validation checks as a simple aligned list, indented to sit under a tree node.
- *  Use for --format table human output to avoid "pretty basic" flat lists.
- *  No extra deps (per nodejs-cli-best-practices §2.1).
- */
-export function renderChecksTable(
-  checks: Array<{ status: CheckStatus; text: string | { text: string } }>,
-  opts: { indent?: number } = {}
-): void {
-  for (const c of checks) {
-    const t = typeof c.text === "string" ? c.text : c.text.text;
-    renderCheck(c.status, t, opts.indent);
-  }
-}
-
 /** Explicit "Next:" action line. Use for developer guidance (see skill + plan 019). */
 export function nextAction(s: string): void {
   ui.write(`\n  ${pc.white("Next:")} ${pc.dim(s)}`);
@@ -101,70 +86,6 @@ export function guidedError(opts: {
 /** One-line summary (counts, totals, etc.). */
 export function summaryLine(s: string): void {
   ui.write(`  ${pc.dim(s)}`);
-}
-
-/**
- * Canonical renderer for validation results.
- * Single place to evolve table presentation, next actions, hints, etc.
- * Keeps "table" mode friendly for pipes/grep while being more structured.
- */
-export function renderValidationReport(
-  allResults: Array<{ id: string; name: string; result: ValidateResult }>,
-  opts: { path: string; verbose?: boolean }
-): void {
-  const totalErrors = allResults.reduce((n, r) => n + r.result.errors.length, 0);
-  const totalWarnings = allResults.reduce((n, r) => n + r.result.warnings.length, 0);
-
-  ui.heading(`dora validate — ${allResults.length} validator(s)`);
-  ui.info(`  Path:  ${opts.path}`);
-  summaryLine(`${allResults.length} validators • ${totalErrors} errors • ${totalWarnings} warnings\n`);
-
-  for (const { id, name, result } of allResults) {
-    const errCount = result.errors.length;
-    const warnCount = result.warnings.length;
-    const passCount = result.passes.length;
-    const hasIssues = errCount > 0 || warnCount > 0;
-    const expand = hasIssues || !!opts.verbose;
-
-    const countLabel = errCount > 0
-      ? pc.red(`${errCount} error${errCount === 1 ? "" : "s"}`)
-      : warnCount > 0
-      ? pc.yellow(`${warnCount} warning${warnCount === 1 ? "" : "s"}`)
-      : pc.green(`${passCount} passed`);
-
-    ui.write(`  ${pc.dim(expand ? "▾" : "▸")} ${pc.bold(name)} ${pc.dim(`(${id})`)}  ${countLabel}`);
-
-    if (!expand) continue;
-
-    const checks: Array<{ status: CheckStatus; text: string }> = [];
-
-    for (const e of result.errors) {
-      const item = typeof e === "string" ? { text: e } : e;
-      const txt = item.code ? `${item.text} (${item.code})` : item.text;
-      checks.push({ status: "fail", text: item.hint ? `${txt} — ${item.hint}` : txt });
-    }
-    for (const w of result.warnings) {
-      const item = typeof w === "string" ? { text: w } : w;
-      checks.push({ status: "warn", text: item.hint ? `${item.text} — ${item.hint}` : item.text });
-    }
-    if (opts.verbose) {
-      for (const p of result.passes) {
-        const item = typeof p === "string" ? { text: p } : p;
-        checks.push({ status: "pass", text: item.text });
-      }
-    }
-
-    renderChecksTable(checks, { indent: 4 });
-    ui.blank();
-  }
-
-  if (totalErrors === 0 && totalWarnings === 0) {
-    nextAction(`dora review ${opts.path}   or   dora memory add "..."`);
-  } else if (totalErrors > 0) {
-    nextAction(`dora review ${opts.path} --deep`);
-  } else {
-    nextAction(`dora review ${opts.path} --quick`);
-  }
 }
 
 // ── Output mode + machine contract (plan items B6, A5) ─────────────────────
