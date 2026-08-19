@@ -1,51 +1,32 @@
-import { readFileSync, readdirSync, statSync } from "fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import { resolve as resolvePath, relative, basename } from "path";
-import { loadSkillFromDir, validateSkillModelTagged } from "./skill-validate.js";
-import { analyzeDrift, scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
-import { lintSkill, runJudge, buildLintPrompt, type LintResult, type JudgeCallOpts } from "./skill-lint.js";
-import { findSkillDirs } from "./skill-discovery.js";
-import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
+import { scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
+import { checkSkill } from "./skill-check.js";
+import { runJudge, buildLintPrompt, type LintResult, type JudgeCallOpts } from "./skill-lint.js";
+import { findSkillDirs, isSkillDir } from "./skill-discovery.js";
+import type { SkillOrigin } from "./skill-classify.js";
 import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
 import { loadRecentSessions, collectSessionEvidence, type LoadResult } from "./session-evidence.js";
-import type { SkillModel } from "./skill-validate.js";
 import type { Capabilities } from "./capability-detect.js";
 import type { AgentConfig } from "./agent-invoke.js";
 import type { EvalConfig } from "./journal-config.js";
 import type { EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
 import {
-  DRIFT_CATEGORY_CODES,
   LINT_CATEGORY_CODES,
-  PARSE_FAILURE_CODE,
   PRINCIPLE_CODE,
   SCENARIO_FILE_CODE,
   SCRIPT_SECURITY_CODE,
 } from "./rules/bindings.js";
-import { ruleByCode } from "./rules/registry.js";
 import { loadReviewContext, resolveJudgeContext, padIdx, tallyFindings } from "./review-control.js";
+import { MEMORY_FILE_NAMES, reviewMemoryFile } from "./memory-file-review.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type ReviewTier = "structure" | "heuristics" | "llm" | "sessions";
-
-export interface ReviewFinding {
-  id: string;
-  tier: ReviewTier;
-  severity: "error" | "warning" | "info" | "pass";
-  message: string;
-  file?: string;
-  line?: number;
-  fixable: boolean;
-  fix?: { type: "rename_field" | "add_field" | "content"; description: string };
-  /** Stable public rule/error code. */
-  code?: string;
-  /** Stable human rule handle. */
-  slug?: string;
-  /** Resolved doc URL (real site page only — see doc-registry). */
-  docUrl?: string;
-}
+export type { Finding, FindingTier as ReviewTier } from "./finding.js";
+export type ReviewFinding = Finding;
 
 interface TierResult {
   passed: number;
@@ -78,39 +59,12 @@ export interface ReviewOptions {
   ci?: boolean;
   /** Preloaded session evidence (reviewAll threads this; also a test seam). */
   loadedSessions?: LoadResult;
+  /** Cap how many artifacts to review (first N after path sort). */
+  limit?: number;
   /** Called before each skill's LLM tier runs (progress reporting). */
   onProgress?: (msg: string) => void;
-  /** Test seam: overrides the lintSkill call for the LLM tier. */
-  lintFn?: (
-    model: SkillModel,
-    caps: Capabilities,
-    agentCfg: AgentConfig,
-    evalCfg: Partial<EvalConfig>,
-    platform?: string,
-    extraRubric?: string,
-    opts?: JudgeCallOpts
-  ) => Promise<LintResult>;
-  /** Test seam: overrides the judge call for memory-file review's LLM tier. */
-  memoryLintFn?: (
-    prompt: string,
-    caps: Capabilities,
-    agentCfg: AgentConfig,
-    evalCfg: Partial<EvalConfig>,
-    opts?: JudgeCallOpts
-  ) => Promise<LintResult>;
-  /**
-   * Test seam: overrides session rule-adherence eval for memory files (backlog #9).
-   * When omitted, `runEval` is used when `--sessions` is set and a judge is available.
-   */
-  memorySessionEvalFn?: (
-    primitives: import("./session-parse.js").SessionPrimitives,
-    name: string,
-    content: string,
-    agentCfg: AgentConfig,
-    evalCfg: EvalConfig,
-  ) => Promise<import("./session-eval.js").EvalResult>;
-  /** Test seam: overrides the judge call for scenario-coverage checking. */
-  scenarioLintFn?: (
+  /** Test seam: one Judge fake. Ticket #24 owns the real Judge. */
+  judge?: (
     prompt: string,
     caps: Capabilities,
     agentCfg: AgentConfig,
@@ -128,12 +82,6 @@ export function llmTierPlan(effective: Map<string, EffectiveRule>): { runLint: b
     runLint: ["R022", "R023", "R024", "R025", "R026"].some((code) => effective.get(code)?.enabled),
     runScenario: effective.get("R027")?.enabled ?? false,
   };
-}
-
-function makeFix(text: string): ReviewFinding["fix"] | undefined {
-  if (text.includes("Unknown frontmatter field")) return { type: "rename_field", description: text };
-  if (text.includes("Missing")) return { type: "add_field", description: text };
-  return undefined;
 }
 
 function readScriptFiles(scriptsDir: string): ScriptFile[] {
@@ -165,54 +113,29 @@ function readScriptFiles(scriptsDir: string): ScriptFile[] {
 
 // ── reviewSkill ────────────────────────────────────────────────────────────────
 
-export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<ReviewResult> {
-  const origin = classifySkillDir(dir, { cwd: opts.cwd ?? process.cwd() });
-  const loaded = await loadSkillFromDir(dir);
+async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<ReviewResult> {
+  const { config: ruleCfg, effective, ruleWarnings } = await loadReviewContext(opts.cwd ?? process.cwd());
+  const checked = await checkSkill(dir, effective, { cwd: opts.cwd });
+  const origin = checked.origin;
 
-  if (!loaded.ok) {
-    const rule = ruleByCode(PARSE_FAILURE_CODE)!;
-    const finding: ReviewFinding = {
-      id: "struct-001",
-      tier: "structure",
-      severity: "error",
-      message: loaded.error,
-      fixable: false,
-      code: rule.code,
-      slug: rule.slug,
-      docUrl: rule.docUrl,
-    };
+  if (!checked.model) {
+    const structTier = tallyFindings(checked.findings);
     return {
       path: dir,
       origin,
       tiers: {
-        structure: { passed: 0, warnings: 0, errors: 1, findings: [finding] },
+        structure: structTier,
         heuristics: { passed: 0, warnings: 0, errors: 0, findings: [] },
       },
-      summary: { passed: 0, warnings: 0, errors: 1 },
+      summary: { passed: structTier.passed, warnings: structTier.warnings, errors: structTier.errors },
+      ...(ruleWarnings.length ? { ruleWarnings } : {}),
     };
   }
 
-  const { model, existingDirs } = loaded;
-  const { config: ruleCfg, effective, ruleWarnings } = await loadReviewContext(opts.cwd ?? process.cwd());
-
-  // Tier 1: structure
-  let sIdx = 1;
-  const structFindings: ReviewFinding[] = [];
-  for (const { code, result } of validateSkillModelTagged(model, { existingDirs })) {
-    const items = [
-      ...(result.errors ?? []).map((item) => ({ severity: "error" as const, text: item.text })),
-      ...(result.warnings ?? []).map((item) => ({ severity: "warning" as const, text: item.text })),
-      ...(result.passes ?? []).map((item) => ({ severity: "pass" as const, text: item.text })),
-    ];
-    for (const item of items) {
-      const fix = item.severity === "pass" ? undefined : makeFix(item.text);
-      const finding = stampRule({
-        id: `struct-${pad(sIdx++)}`, tier: "structure" as const,
-        severity: item.severity, message: item.text, fixable: !!fix, ...(fix ? { fix } : {}),
-      }, code, effective);
-      if (finding) structFindings.push(finding);
-    }
-  }
+  const model = checked.model;
+  const existingDirs = checked.existingDirs ?? [];
+  const structFindings: ReviewFinding[] = checked.findings.filter((f) => f.tier === "structure");
+  let sIdx = structFindings.length + 1;
 
   const scenarioResult = loadScenarios(dir);
   let scenarioCount = 0;
@@ -234,24 +157,9 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
 
   const structTier: TierResult = tallyFindings(structFindings);
 
-  // Tier 2: heuristics
-  const desc = String(model.data.description ?? "");
-  const drift = analyzeDrift({ description: desc, content: model.content });
-  let hIdx = 1;
-  const heurFindings: ReviewFinding[] = [];
-  for (const item of drift.drifts) {
-    const code = DRIFT_CATEGORY_CODES[item.category];
-    if (!code) continue;
-    const finding = stampRule({
-      id: `heur-${pad(hIdx++)}`,
-      tier: "heuristics" as const,
-      severity: item.drifted ? ("warning" as const) : ("pass" as const),
-      message: item.detail,
-      fixable: item.drifted,
-      ...(item.drifted ? { fix: { type: "content" as const, description: item.detail } } : {}),
-    }, code, effective);
-    if (finding) heurFindings.push(finding);
-  }
+  // Tier 2: heuristics (drift from Skill-check; scripts + principles stay Review-only)
+  const heurFindings: ReviewFinding[] = checked.findings.filter((f) => f.tier === "heuristics");
+  let hIdx = heurFindings.length + 1;
 
   // Tier 2a: scripts/ security scan — outbound network calls, secret prompts.
   // Only runs when a scripts/ dir exists; a clean scan still records a pass so
@@ -306,9 +214,11 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   // Tier 3: llm
   if (!opts.quick) {
     // Mode decided once here; leaf runJudge/lintSkill receive mode (no re-route).
-    const { evalCfg, agentCfg, caps, mode } = resolveJudgeContext(ruleCfg, { ci: opts.ci });
+    const { evalCfg, agentCfg, caps, mode: resolvedMode } = resolveJudgeContext(ruleCfg, { ci: opts.ci });
+    const mode = opts.judge ? "api" : resolvedMode;
     const plan = llmTierPlan(effective);
     const judgeOpts: JudgeCallOpts = { ci: opts.ci ?? false, mode };
+    const judge = opts.judge ?? runJudge;
 
     if (mode === "fail") {
       if (opts.deep) {
@@ -364,7 +274,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
 
       if (plan.runLint) {
         opts.onProgress?.(`LLM judge (api) · ${dir}`);
-        const result = await (opts.lintFn ?? lintSkill)(model, caps, agentCfg, evalCfg, undefined, rubricText, judgeOpts);
+        const result = await judge(buildLintPrompt(model, undefined, rubricText), caps, agentCfg, evalCfg, judgeOpts);
         if (!result.ok) {
           lintFailed = true;
           if (opts.deep) throw new NetworkError({
@@ -380,7 +290,7 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
 
       if (!lintFailed && plan.runScenario && scenarios.length > 0) {
         opts.onProgress?.(`Scenario coverage (api) · ${dir}`);
-        const result = await (opts.scenarioLintFn ?? runJudge)(
+        const result = await judge(
           buildScenarioPrompt(scenarios, model.content),
           caps,
           agentCfg,
@@ -441,22 +351,37 @@ export async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promis
   };
 }
 
-// ── reviewAll ──────────────────────────────────────────────────────────────────
-
-export async function reviewAll(root: string, opts: ReviewOptions = {}): Promise<ReviewResult[]> {
-  const dirs = findSkillDirs(root);
-  const cwd = opts.cwd ?? root;
-  const loadedSessions = opts.quick ? undefined : (opts.loadedSessions ?? loadRecentSessions(cwd));
-  const optsWithCwd = { ...opts, cwd, ...(loadedSessions ? { loadedSessions } : {}) };
-
-  // Sequential when LLM tier is active (non-quick) to avoid rate limits.
-  // Parallel for quick mode (tiers 1–2 are CPU-only).
-  let results: ReviewResult[];
-  if (opts.quick) {
-    results = await Promise.all(dirs.map((d) => reviewSkill(d, optsWithCwd)));
-  } else {
-    results = [];
-    for (const d of dirs) results.push(await reviewSkill(d, optsWithCwd));
+function listCwdMemory(cwd: string): string[] {
+  const out: string[] = [];
+  for (const name of MEMORY_FILE_NAMES) {
+    const file = resolvePath(cwd, name);
+    if (existsSync(file)) out.push(file);
   }
-  return results.sort((a, b) => b.summary.errors - a.summary.errors);
+  return out;
+}
+
+/** Paths `review(path)` would visit, sorted. Does not run checks. */
+export function listReviewTargets(path: string, cwd: string = process.cwd()): string[] {
+  if (isSkillDir(path)) {
+    return [path, ...listCwdMemory(cwd)].sort((a, b) => a.localeCompare(b));
+  }
+  if (existsSync(path) && statSync(path).isFile()) return [path];
+  return [...findSkillDirs(path), ...listCwdMemory(cwd)].sort((a, b) => a.localeCompare(b));
+}
+
+/** Public Review interface: one path in, one list out. */
+export async function review(path: string, opts: ReviewOptions = {}): Promise<ReviewResult[]> {
+  const cwd = opts.cwd ?? process.cwd();
+  let targets = listReviewTargets(path, cwd);
+  if (opts.limit != null) targets = targets.slice(0, opts.limit);
+
+  const loadedSessions = opts.quick ? undefined : (opts.loadedSessions ?? loadRecentSessions(cwd));
+  const per = { ...opts, cwd, ...(loadedSessions ? { loadedSessions } : {}) };
+  const one = (target: string) =>
+    isSkillDir(target) ? reviewSkill(target, per) : reviewMemoryFile(target, per);
+
+  if (opts.quick) return Promise.all(targets.map(one));
+  const results: ReviewResult[] = [];
+  for (const target of targets) results.push(await one(target));
+  return results;
 }
