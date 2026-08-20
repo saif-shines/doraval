@@ -21,6 +21,27 @@ export default defineConfig({
     repo: "doraval",
     branch: "main",
   },
+  navigation: {
+    sidebar: {
+      display: "flat",
+      items: [
+        "/get-started",
+        "/get-started/installation",
+        "/get-started/quickstart",
+        "/get-started/skills",
+        {
+          label: "Reference",
+          items: [
+            "/commands",
+            "/concepts/memory",
+            "/concepts/review-tiers",
+            "/reference/scenarios",
+            "/reference/rules",
+          ],
+        },
+      ],
+    },
+  },
   theme: {
     accent: "oklch(58% 0.20 256)",
     radius: "sm",

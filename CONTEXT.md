@@ -21,6 +21,31 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Session** | Past agent conversation transcript, normalized via **session adapters** into primitives for evidence and adherence eval. |
 | **Finding** | One Skill-check outcome (tier + severity + message + optional rule code / docUrl). The Skill-check module sets `structure` or `heuristics`. Review adds `llm` and `sessions`. Scan presents Skill Findings as health; shadows, overlaps, MCP, budget, and install stay Scan-only. |
 
+## Docs voice
+
+Two addressees. Do not mix them on one surface.
+
+| Term | Meaning |
+|------|---------|
+| **Reader** | The human. “you” on README, install, and `get-started`. |
+| **Runner** | The agent that executes `dora`. “you” on the skill and on per-command `--help`. |
+
+The website is mixed. Do not mix the two voices on one page.
+
+**`--help` voice:** top-level / most-common help talks to the **Reader**. Per-command help (`dora review --help`, and the rest) talks to the **Runner**.
+
+**First loop:** `npx skills add saif-shines/doraval`, then `dora review --quick` so findings show before JSON, LLM, or CI flags.
+
+**README:** Reader surface. Follows the agent-browser README shape (install → quick start → long pasteable command catalog).
+
+**Site catalog:** Same long catalog as the README. Path follows agent-browser (they use `/commands` for this page). The skill still does not copy a flag encyclopedia.
+
+**This pass is done when:** every in-scope surface uses the new voice and the first loop; home + README use the agent-browser shape; `/for-agents/` is gone; `#4-review-quality` still works; **and** a Reader can finish one real `--quick` review from the README alone.
+
+**`llms.txt`:** generated from the site. Fix the pages. Do not hand-write a second index.
+
+_Avoid_: one “you” for both; an agent page that still talks to a human (“use with your agent”); leading with `--format json` before a `--quick` review.
+
 ## Naming debt (intentional)
 
 - **`JournalConfig` / `journal:`** — historical. Prefer saying **config** in docs and new code comments. Full rename is not required for correctness.

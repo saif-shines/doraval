@@ -1,33 +1,21 @@
 ---
-title: Getting started
-description: Two paths — audit agent context in minutes, or take the full quickstart tutorial.
+title: Introduction
+description: Context-engineering CLI for coding agents. Install, then review.
 sidebar:
-  label: Overview
+  label: Introduction
   order: 1
 ---
 
-**doraval** is a **context engineering toolkit** for coding agents. Make agent context work on every try across Claude, Cursor, Codex, Copilot, and Grok.
+`dora` reviews skills, rules, and memory so Claude, Cursor, Codex, Copilot, and Grok run from context you can trust.
 
-**First step for agent automation:** `npx skills add saif-shines/doraval`. The `dora` CLI is the engine that skill (and you) run.
+```bash
+npx skills add saif-shines/doraval
+dora review --quick
+```
 
-## Choose a path
+`--quick` is structure and heuristics. No Judge. No API key.
 
-| Path | Best when | Time |
-| --- | --- | --- |
-| **[Audit my agent context](/get-started/audit/)** | You want the skill installed and a real `dora review` now | ~3 minutes |
-| **[Quickstart](/get-started/quickstart/)** | You want the full tour: install, scan, review, fix, scaffold, memory | ~10–15 minutes |
-
-## Why this exists
-
-- Skills ship broken or never fire  
-- Claude and Cursor disagree on the same convention  
-- Decisions die in chat  
-- Always-on files grow until nothing is high-signal  
-
-doraval makes the check **repeatable** before you (or an agent) call the work done.
-
-## Next
-
-1. **[Audit my agent context](/get-started/audit/)** — skill + review  
-2. **[Quickstart](/get-started/quickstart/)** — full tutorial  
-3. **[Installation](/get-started/installation/)** — skill + CLI install reference  
+- [Installation](/get-started/installation/) — CLI + skill
+- [Quick Start](/get-started/quickstart/) — the loop
+- [Skills](/get-started/skills/) — `npx skills add` and `AGENTS.md`
+- [Commands](/commands/) — pasteable catalog

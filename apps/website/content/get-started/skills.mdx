@@ -1,0 +1,37 @@
+---
+title: Skills
+description: Install the doraval skill and point AGENTS.md at dora.
+sidebar:
+  label: Skills
+  order: 4
+---
+
+The shipped skill is the **Runner** guide. Coding assistants load it after `npx skills add`.
+
+```bash
+npx skills add saif-shines/doraval
+npx skills list
+```
+
+The skill tells the agent to run `dora review --quick` first. Then JSON. Then fix. It does not hang on TTY prompts.
+
+## AGENTS.md
+
+Add this if you want the same loop without the skill:
+
+```markdown
+## Context review
+
+Use `dora` to review agent context. Run `dora --help` for all commands.
+
+Core workflow:
+1. `dora review --quick` — structure and heuristics, no Judge
+2. `dora fix <path> --yes` — mechanical fixes
+3. Re-run `dora review --quick` until exit `0`
+```
+
+If `dora` is not on `PATH`, use `npx @hacksmith/doraval`.
+
+## Next
+
+[Quick Start](/get-started/quickstart/) · [Installation](/get-started/installation/)

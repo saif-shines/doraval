@@ -6,16 +6,13 @@ sidebar:
   order: 1
 ---
 
-**Memory** is doraval’s store of project (and optional global) principles. It is the only path for durable decisions; the old journal command is gone.
+**Memory** is the store of project (and optional global) principles. Review enforces them. Promote writes hard rules into `AGENTS.md`.
 
-## Why it exists
-
-Sessions forget. README bullets rot. Memory keeps short, weighted principles where:
-
-1. Humans can list and edit them (`dora memory list` / `add`)
-2. Review can enforce them as a rubric
-3. Promote can write hard rules into `AGENTS.md`
-4. Hooks can inject them at session start
+```bash
+dora memory add "Never use default exports" --weight 8
+dora memory list
+dora memory promote
+```
 
 ## Weights
 
@@ -55,6 +52,5 @@ dora memory context --json
 
 ## Related
 
-- [dora memory](/commands/#memory)
-- [dora review](/commands/#review)
-- [Use with your agent](/for-agents/)
+- [Commands](/commands/#memory)
+- [Review](/commands/#review)

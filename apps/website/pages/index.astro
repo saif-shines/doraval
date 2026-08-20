@@ -8,18 +8,12 @@ import Footer from "./_home/Footer.astro";
 
 const { config } = data;
 
-/** Compact terminal for first-fold height. First loop, then a Review. */
-const heroDemo = `npx skills add saif-shines/doraval
-dora review --quick
+/** Same shape as agent-browser’s home install block. */
+const heroInstall = `npm install -g @hacksmith/doraval     # all platforms
+brew install saif-shines/tap/doraval  # macOS
 
-$ dora review --quick
-  Reviewing artifacts — tiers: structure + heuristics; no LLM.
-
-  Reviewing .
-  Structure          ✓ 8 passed
-  Heuristics         ⚠ 1 warning
-
-  8 passed · 1 warning · 0 errors`;
+npx skills add saif-shines/doraval    # agent skill
+dora review --quick                   # Findings, no LLM`;
 ---
 
 <PageLayout
@@ -52,23 +46,16 @@ $ dora review --quick
           Review skills, rules, and memory. <code>--quick</code> is structure
           and heuristics. No Judge. You see Findings first.
         </p>
-        <div class="hero__ctas">
-          <code class="cmd">npx skills add saif-shines/doraval</code>
-          <code class="cmd">dora review --quick</code>
-        </div>
+        <CodeBlock code={heroInstall} lang="bash" />
         <p class="hero__note">
-          Needs <code>dora</code> on PATH ·{" "}
           <a href="/get-started/installation/">Install</a> ·{" "}
           <a href="/get-started/">Docs</a>
         </p>
       </div>
-      <div class="hero__demo reveal">
-        <CodeBlock code={heroDemo} lang="bash" title="terminal" />
-      </div>
     </section>
   </div>
 
-  <Footer slot="footer" title={config.title} description={config.description} />
+  <Footer slot="footer" />
 </PageLayout>
 
 <style>
@@ -78,14 +65,21 @@ $ dora review --quick
     --home-space-xl: 2rem;
     --home-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-    max-width: 72rem;
+    max-width: 40rem;
     margin-inline: auto;
     padding-inline: var(--home-space-md);
-    /* fill fold under sticky header (~4rem) + compact footer */
-    min-height: calc(100dvh - 7.5rem);
+    padding-block: var(--home-space-lg);
+  }
+
+  /* Pin the thin footer to the window edge so it is not a mid-page band. */
+  :global(body:has(.home)) {
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+  }
+
+  :global(body:has(.home) #blume-content) {
+    flex: 1;
   }
 
   .home-eyebrow {
@@ -99,18 +93,7 @@ $ dora review --quick
   }
 
   .hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--home-space-xl);
-    padding-block: var(--home-space-lg);
-    align-items: center;
-  }
-
-  @media (min-width: 768px) {
-    .hero {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: var(--home-space-xl);
-    }
+    display: block;
   }
 
   .hero__title {
@@ -166,38 +149,6 @@ $ dora review --quick
     font-size: 0.85em;
   }
 
-  .hero__ctas {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .cmd {
-    display: inline-block;
-    font-family: var(--blume-font-mono);
-    font-size: 0.8rem;
-    line-height: 1.4;
-    padding: 0.45rem 0.7rem;
-    border-radius: var(--blume-radius);
-    border: 1px solid var(--blume-border);
-    background: color-mix(in oklch, var(--blume-foreground) 4%, transparent);
-    color: var(--blume-foreground);
-    overflow-wrap: anywhere;
-  }
-
-  .hero__demo {
-    min-width: 0;
-  }
-
-  /* keep terminal from forcing scroll on short viewports */
-  .hero__demo :global(pre) {
-    max-height: min(42vh, 18rem);
-    overflow: auto;
-    font-size: 0.78rem !important;
-    line-height: 1.4 !important;
-  }
-
   .reveal {
     animation: home-reveal 600ms var(--home-ease-out) both;
   }
@@ -219,8 +170,4 @@ $ dora review --quick
     }
   }
 
-  /* compact site footer on home only */
-  :global(.home-footer) {
-    padding-block: 0.75rem !important;
-  }
 </style>

@@ -31,9 +31,22 @@ dora review --quick
 
 You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run.
 
-## Docs
+## Commands
 
-[doraval.dev](https://doraval.dev) has get started, command reference, and review tiers.
+```sh
+dora                         # scan
+dora review --quick .        # Findings first, no LLM
+dora review --quick --format json
+dora fix . --yes             # mechanical; no TTY
+dora new skill --for claude --name review-pr --yes
+dora memory add "Never use default exports" --weight 8
+dora reconcile --dry-run
+dora sessions
+dora config setup
+dora --help                  # flags
+```
+
+More: [doraval.dev/commands](https://doraval.dev/commands/).
 
 ## Building from source
 
