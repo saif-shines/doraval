@@ -1,0 +1,31 @@
+Implement GitHub issue #31 on Doraval. Isolated worktree. Commit there. Do not push. Do not bump versions. Do not close the issue.
+
+## Issue
+https://github.com/saif-shines/doraval/issues/31
+Parent: https://github.com/saif-shines/doraval/issues/26
+Blocked by #28 (done on main: 2b3c9b5).
+
+## What to build
+The shipped skill is the **Runner** guide. Full workflow. Not a stub. Not a flag encyclopedia.
+
+## Acceptance
+- Skill “you” is the agent that runs `dora`.
+- First Review command is `dora review --quick` (or equivalent). `--format json` comes after.
+- Exit codes: do not report done on 1 or 2.
+- No TTY-only `fix` / `reconcile` / `memory promote`.
+- Skill points at `--help` for flags. It does not copy the command catalog.
+
+## Voice
+**Runner** = the agent executing `dora`. Imperative. Do not address a human (“your project”, “ask the user” is OK when the agent must ask).
+
+## Scope
+Shipped skill only: `skills/doraval/` (SKILL.md + references/).
+Do NOT rewrite README, website pages, or CLI --help (other tickets).
+
+## Verify
+Read the skill and confirm the first Review line is `--quick` before json.
+
+Commit: `docs: skill is the Runner guide`
+
+## Report
+Files, commit hash, worktree needs merge? Quote the first-loop lines from the skill.
