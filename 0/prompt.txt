@@ -1,0 +1,35 @@
+Implement GitHub issue #30 on Doraval. Isolated worktree. Commit there. Do not push. Do not bump versions. Do not close the issue.
+
+## Issue
+https://github.com/saif-shines/doraval/issues/30
+Parent: https://github.com/saif-shines/doraval/issues/26
+Blocked by #29 (done on main: 0943edb). First loop already exists on README + home.
+
+## What to build
+README and the site carry the same long pasteable command catalog as agent-browser’s Commands section. Short `#` comments. Not a second flag man-page.
+
+## Acceptance
+- README has a Commands section AFTER the existing Quick Start / first loop: pasteable lines for Scan, Review, Fix, Memory, Rule, and Config.
+- Site `/commands` has the same catalog (twins OK, not byte-identical).
+- `--quick` is the Review line shown first. `--help` still owns full flags.
+- Site check still passes (no banned retired strings: dora validate/check/eval/drift/init/journal).
+
+## Voice
+Catalog on README is **Reader** (agent-browser README style: bash lines + `#` comments).
+Site `/commands` is the twin catalog. Keep Reader-shaped pasteable lines (same as README). Do not write a human tutorial dump.
+
+## Scope
+- README.md — add Commands after first loop. Keep the first loop. Do not undo #29.
+- `apps/website/content/commands/index.mdx` — replace feature-build notes with the catalog.
+- Do NOT rewrite install, home, skill, or --help.
+- Do NOT add a generator.
+
+Reference shape: https://github.com/vercel-labs/agent-browser README ## Commands (bash + # comments).
+
+## Verify
+`cd apps/website && bun run build` if feasible. check-site must pass.
+
+Commit: `docs: pasteable command catalog on README and site`
+
+## Report
+Files, commit hash, worktree needs merge? Confirm first-loop strings still in README.

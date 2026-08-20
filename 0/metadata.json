@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0EP8RRQDB579ZXDJ4VFMKT0",
+  "session_id": "01a01d5e-cf71-7b41-9ee1-ef4db3bbf783",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-20T04:18:34.025052Z",
+  "branch": "docs/pasteable-command-catalog",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "apps/website/content/commands/index.mdx"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "a3487f83e535",
+  "initial_attribution": {
+    "calculated_at": "2026-08-20T04:18:33.984304Z",
+    "agent_lines": 162,
+    "agent_removed": 343,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 162,
+    "total_lines_changed": 505,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 25,
+      "user_lines_removed": 20,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "CONTEXT.md": 25
+      },
+      "user_removed_per_file": {
+        "test/fixtures/examples/my-codex-plugin/.agents/plugins/marketplace.json": 20
+      }
+    }
+  ]
+}
