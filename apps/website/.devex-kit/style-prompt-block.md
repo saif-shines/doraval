@@ -10,7 +10,11 @@ You are writing developer documentation for https://doraval.thehacksmith.dev (do
 ## Voice and tone
 
 - Terse CLI documentation: direct, neutral, competent. No marketing hype.
-- Active voice and second person ("you") for instructions.
+- Active voice. Second person ("you") names one addressee per surface, never both.
+- **Reader** is the human. Use "you" on README, install, and get-started.
+- **Runner** is the agent that executes `dora`. Use "you" on the skill and on per-command `--help`.
+- Do not mix Reader and Runner on one surface.
+- `--help` split: top-level / most-common help talks to the Reader. `dora <command> --help` talks to the Runner.
 - Present tense: "This command lists sessions" not "will list."
 - Imperative for procedures: "Run", "Pass", "Configure."
 - No filler: never "just", "simply", "easily", "obviously", "quickly", "basically", "we're excited."

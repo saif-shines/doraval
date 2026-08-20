@@ -40,7 +40,9 @@ Prefer `dora report` from inside a project using doraval. It drafts a sanitized 
 
 ## Website docs
 
-Canonical user docs live in `apps/website/content/` (MDX). When writing or editing them:
+Canonical user docs live in `apps/website/content/` (MDX). Pick one addressee per page: **Reader** (human: README, install, get-started) or **Runner** (the agent that executes `dora`: skill, per-command `--help`). Do not mix them. Terms match `CONTEXT.md`.
+
+When writing or editing them:
 
 1. Follow the style prompt in `apps/website/.devex-kit/style-prompt-block.md` (or load the `docs-writing-style` skill in review mode).
 2. Prefer website MDX over `docs/developer-journey.md`. The journey file is product narrative with a command rename map at the top; it is not shipping user docs.
