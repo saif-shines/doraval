@@ -65,4 +65,5 @@ export const topLevelSubCommands = {
   bump: () => import("./commands/bump.js").then((m) => m.default),
   update: () => import("./commands/update.js").then((m) => m.default),
   providers: () => import("./commands/providers.js").then((m) => m.default),
+  "agent-help": () => import("./commands/agent-help.js").then((m) => m.default),
 };

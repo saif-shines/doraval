@@ -3,16 +3,19 @@ import pc from "picocolors";
 import { confirm, isCancel } from "@clack/prompts";
 import { runScan, type ScanResult } from "../../core/scan.js";
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
+import { isAgentCaller } from "../agent-detect.js";
 import { exit } from "../render/exit.js";
 import { getFindingDocUrl } from "../../core/doc-registry.js";
 
-/** Human TTY only. JSON/CI, --yes, and non-interactive pipes skip the gate. */
+/** Human TTY only. JSON/CI, --yes, detected agents, and pipes skip the gate. */
 export function shouldConfirmScan(opts: {
   format: string;
   yes: boolean;
   stdinTty?: boolean;
   stderrTty?: boolean;
+  agent?: boolean;
 }): boolean {
+  if (opts.agent) return false;
   const stdinTty = opts.stdinTty ?? process.stdin.isTTY === true;
   const stderrTty = opts.stderrTty ?? process.stderr.isTTY === true;
   return !opts.yes && opts.format !== "json" && stdinTty && stderrTty;
@@ -185,10 +188,19 @@ function renderHuman(r: ScanResult): void {
 export default defineCommand({
   meta: {
     name: "scan",
-    description: "Scan the repo: agent surfaces, skill health, next actions",
+    description: [
+      "Scan the repo: agent surfaces, skill health, next actions",
+      "",
+      "Examples:",
+      "  dora",
+      "  dora --json",
+      "  dora --yes",
+      "Exit: 0 clean · 1 issues · 2 could not run",
+    ].join("\n"),
   },
   args: {
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
     cwd: { type: "string", description: "Directory to scan (CI / coding agents)" },
     yes: {
@@ -199,11 +211,11 @@ export default defineCommand({
     },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     const dir = (args.cwd as string) || process.cwd();
     const yes = Boolean(args.yes);
 
-    if (shouldConfirmScan({ format: mode.format, yes })) {
+    if (shouldConfirmScan({ format: mode.format, yes, agent: isAgentCaller() })) {
       const go = await confirmScanProceed(dir);
       if (!go) await exit(0);
     }

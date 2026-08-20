@@ -2,7 +2,7 @@
 
 Flags live on `--help`. Run `dora <command> --help`. Do not copy a flag catalog here.
 
-Machine manifest (commands, flags, exit codes): `dora --capabilities`.
+Live command map (commands, flags, exit codes): `dora agent-help` or `dora agent-help --json`.
 
 | Command | Job |
 | --- | --- |

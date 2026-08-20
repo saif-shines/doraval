@@ -11,10 +11,11 @@ export default defineCommand({
   meta: { name: "list", description: "List active principles from memory" },
   args: {
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     const migration = runJournalMigrationIfNeeded();
     if (mode.format !== "json") reportMigration(migration);
 

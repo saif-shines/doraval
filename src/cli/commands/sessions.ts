@@ -34,6 +34,7 @@ export default defineCommand({
     agent: { type: "string", description: "Filter by agent (claude, grok, cursor, codex, copilot)" },
     limit: { type: "string", description: "Max sessions per agent", default: "10" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
   },
   subCommands: {
@@ -47,7 +48,7 @@ export default defineCommand({
     const cliArgs = process.argv.slice(2);
     if (cliArgs[0] === "sessions" && cliArgs[1] === "show") return;
 
-    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     const agent = args.agent as string | undefined;
 
     try {

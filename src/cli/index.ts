@@ -6,29 +6,6 @@ import { topLevelSubCommands } from "./command-tree.js";
 
 registerLifecycleHandlers();
 
-/** True when the user asked for machine JSON on this invocation. */
-function wantsJsonFormat(argv: string[]): boolean {
-  if (argv.includes("--ci")) return true;
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === "--format=json" || a === "-f=json") return true;
-    if ((a === "--format" || a === "-f") && argv[i + 1] === "json") return true;
-  }
-  return false;
-}
-
-if (process.argv.includes("--capabilities")) {
-  // B39: human discoverability — banner on stderr unless --format json / --ci
-  if (!wantsJsonFormat(process.argv) && process.stderr.isTTY !== false) {
-    process.stderr.write(
-      "This is a machine-readable manifest for coding agents driving dora. Humans: see `dora --help`.\n",
-    );
-  }
-  const { buildCapabilities } = await import("./capabilities.js");
-  process.stdout.write(JSON.stringify(buildCapabilities(), null, 2) + "\n");
-  process.exit(0);
-}
-
 {
   // Install plumbing — not a product command (same early-exit pattern as --capabilities).
   const { parseCompletionArg, buildCompletionScript } = await import("./completion-script.js");
@@ -44,6 +21,17 @@ if (process.argv.includes("--capabilities")) {
   }
 }
 
+{
+  const argv = process.argv.slice(2);
+  const first = argv[0];
+  if (first && !first.startsWith("-") && !(first in topLevelSubCommands)) {
+    const { ui, nextAction } = await import("./out.js");
+    ui.fail(`Unknown command: ${first}`);
+    nextAction("dora --help");
+    process.exit(1);
+  }
+}
+
 const main = defineCommand({
   meta: {
     name: "doraval",
@@ -51,8 +39,12 @@ const main = defineCommand({
     // Multi-line: citty prints this as the help banner (version appended on last line).
     description: [
       "Reads your repo and tells you what's broken in agent context.",
-      "Primary: scan · review · fix · new --for <agent>.",
-      "Tip: point a coding agent at this CLI, or run `dora` (scan). Docs: https://doraval.dev",
+      "",
+      "Start here:",
+      "  npx skills add saif-shines/doraval",
+      "  dora review --quick",
+      "",
+      "Scan (default): dora    Map: dora agent-help    Docs: https://doraval.dev",
     ].join("\n"),
   },
   subCommands: topLevelSubCommands,
@@ -61,6 +53,7 @@ const main = defineCommand({
   // value token gets left as a stray positional and misrouted as a subcommand.
   args: {
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
     cwd: { type: "string", description: "Directory to scan (CI / coding agents)" },
     yes: {
@@ -68,11 +61,6 @@ const main = defineCommand({
       description: "Skip the scan proceed/stop prompt (agents / scripts)",
       default: false,
       alias: "y",
-    },
-    capabilities: {
-      type: "boolean",
-      description: "Machine JSON command manifest (for agents/CI — not a human command)",
-      default: false,
     },
     completion: {
       type: "string",

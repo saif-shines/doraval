@@ -6,6 +6,7 @@ import { applyPromote, planPromote, DEFAULT_MIN_WEIGHT } from "../../../core/mem
 import { runJournalMigrationIfNeeded } from "../../../core/memory-migrate.js";
 import { reportMigration } from "./migration-report.js";
 import { canPromptInteractively } from "../fix.js";
+import { isAgentCaller, refuseAgentWrite, shouldBlockAgentWrite } from "../../agent-detect.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
@@ -31,16 +32,22 @@ export default defineCommand({
     yes: { type: "boolean", description: "Apply without confirmation", default: false },
     "dry-run": { type: "boolean", description: "Show the planned AGENTS.md diff, write nothing", default: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: false });
+    const mode = resolveOutputMode({ format: args.format as string, json: args.json as boolean });
     const migration = runJournalMigrationIfNeeded();
     if (mode.format !== "json") reportMigration(migration);
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const dryRun = Boolean(args["dry-run"]);
     const yes = Boolean(args.yes);
     const interactive = canPromptInteractively(yes, dryRun, mode.format);
+    if (shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun })) {
+      refuseAgentWrite("dora memory promote --dry-run");
+      await exit(2);
+      return;
+    }
     const minWeight = Math.max(1, Math.min(10, Number(args.weight) || DEFAULT_MIN_WEIGHT));
 
     try {

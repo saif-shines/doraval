@@ -5,6 +5,7 @@ import { isCancel, select, spinner } from "@clack/prompts";
 import { listReviewTargets, review, type ReviewResult, type ReviewFinding } from "../../core/review.js";
 
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
+import { isAgentCaller } from "../agent-detect.js";
 import { preflight, reviewPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
 import { getFindingDocUrl } from "../../core/doc-registry.js";
@@ -130,8 +131,9 @@ export function shouldAskReviewLimit(opts: {
   all: boolean;
   stdinTty?: boolean;
   stderrTty?: boolean;
+  agent?: boolean;
 }): boolean {
-  if (opts.all) return false;
+  if (opts.all || opts.agent) return false;
   if (opts.format === "json") return false;
   const stdinTty = opts.stdinTty ?? process.stdin.isTTY === true;
   const stderrTty = opts.stderrTty ?? process.stderr.isTTY === true;
@@ -173,7 +175,20 @@ function renderAggregate(results: ReviewResult[]): void {
 // ── Command ────────────────────────────────────────────────────────────────────
 
 export default defineCommand({
-  meta: { name: "review", description: "Multi-tier skill review (structure → heuristics → LLM → sessions)" },
+  meta: {
+    name: "review",
+    description: [
+      "Multi-tier skill review (structure → heuristics → LLM → sessions)",
+      "",
+      "Start here: dora review --quick",
+      "Examples:",
+      "  dora review --quick .",
+      "  dora review --quick --json",
+      "  dora review --deep .",
+      "Exit: 0 clean · 1 issues · 2 could not run",
+      "Map: dora agent-help review",
+    ].join("\n"),
+  },
   args: {
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
     quick: { type: "boolean", description: "Tiers 1–2 only (structure + heuristics, no LLM)", default: false },
@@ -184,11 +199,12 @@ export default defineCommand({
     agent: { type: "string", description: "Session filter (planned)" },
     "fail-on": { type: "string", description: "Exit 1 trigger: error (default) | warning", default: "error" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     preflight(
       mode,
       reviewPreflightMessage({
@@ -206,7 +222,7 @@ export default defineCommand({
     const targets = listReviewTargets(target, root);
     let limit: number | undefined;
     if (targets.length > REVIEW_DEFAULT_LIMIT && !useAll) {
-      if (shouldAskReviewLimit({ format: mode.format, all: useAll })) {
+      if (shouldAskReviewLimit({ format: mode.format, all: useAll, agent: isAgentCaller() })) {
         const choice = await select({
           message: `Found ${targets.length} artifacts. Review can call an LLM for each one.`,
           options: [

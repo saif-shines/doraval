@@ -15,6 +15,7 @@ import {
   type ResolutionOption,
 } from "../../core/cross-agent.js";
 import { canPromptInteractively } from "./fix.js";
+import { isAgentCaller, refuseAgentWrite, shouldBlockAgentWrite } from "../agent-detect.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction, renderCheck } from "../out.js";
 import { preflight, reconcilePreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
@@ -80,16 +81,22 @@ export default defineCommand({
       default: false,
     },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: false });
+    const mode = resolveOutputMode({ format: args.format as string, json: args.json as boolean });
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const dryRun = Boolean(args["dry-run"]);
     const applyFlag = Boolean(args.apply);
     const yes = Boolean(args.yes) || applyFlag;
     preflight(mode, reconcilePreflightMessage({ dryRun, apply: applyFlag }));
     const interactive = canPromptInteractively(yes, dryRun, mode.format);
+    if (shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun, apply: applyFlag })) {
+      refuseAgentWrite("dora reconcile --dry-run");
+      await exit(2);
+      return;
+    }
 
     try {
       let plan: ReconcilePlan;

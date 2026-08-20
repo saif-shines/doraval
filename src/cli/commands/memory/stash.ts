@@ -19,6 +19,7 @@ export default defineCommand({
   args: {
     file: { type: "positional", description: "File to stash (relative to cwd)", required: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     cwd: { type: "string", description: "Working directory override" },
     fzf: {
       type: "boolean",
@@ -28,7 +29,7 @@ export default defineCommand({
     },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: false });
+    const mode = resolveOutputMode({ format: args.format as string, json: args.json as boolean });
     const migration = runJournalMigrationIfNeeded();
     if (mode.format !== "json") reportMigration(migration);
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();

@@ -25,10 +25,11 @@ export default defineCommand({
     yes: { type: "boolean", description: "Skip per-file confirmation", default: false },
     "dry-run": { type: "boolean", description: "Show diffs but write nothing", default: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: false });
+    const mode = resolveOutputMode({ format: args.format as string, json: args.json as boolean });
     const migration = runJournalMigrationIfNeeded();
     if (mode.format !== "json") reportMigration(migration);
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();

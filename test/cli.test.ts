@@ -13,12 +13,38 @@ describe("doraval CLI", () => {
       expect(stdout).toContain("scan");
       expect(stdout).toContain("review");
       expect(stdout).toContain("fix");
-      expect(stdout).toContain("Primary:");
-      expect(stdout).toContain("point a coding agent");
+      expect(stdout).toContain("npx skills add saif-shines/doraval");
+      expect(stdout).toContain("dora review --quick");
       expect(stdout).toContain("https://doraval.dev");
       // Root COMMANDS blurbs stay short (detail lives on subcommand --help).
       expect(stdout).not.toContain("skill = reusable SKILL.md");
       expect(stdout).not.toContain("common: eval.model");
+    });
+
+    test("review --help shows examples and exit codes", () => {
+      const { exitCode, stdout } = runDoraval(["review", "--help"]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("dora review --quick");
+      expect(stdout).toMatch(/0.*clean/);
+      expect(stdout).toMatch(/1.*issues/);
+      expect(stdout).toMatch(/2.*could not run/);
+    });
+
+    test("fix --help shows dry-run then yes", () => {
+      const { exitCode, stdout } = runDoraval(["fix", "--help"]);
+      expect(exitCode).toBe(0);
+      const dry = stdout.indexOf("--dry-run");
+      const yes = stdout.indexOf("--yes");
+      expect(dry).toBeGreaterThan(-1);
+      expect(yes).toBeGreaterThan(dry);
+    });
+
+    test("scan --help shows bare dora and json/yes", () => {
+      const { exitCode, stdout } = runDoraval(["scan", "--help"]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toMatch(/\bdora\b/);
+      expect(stdout).toContain("--json");
+      expect(stdout).toContain("--yes");
     });
 
     test("--version prints package version", () => {
@@ -159,6 +185,15 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
+    test("review --json is an alias for --format json", () => {
+      const dir = emptyRepo();
+      const viaFlag = runDoraval(["review", "--quick", "--json", "--cwd", dir]);
+      const viaFormat = runDoraval(["review", "--quick", "--format", "json", "--cwd", dir]);
+      expect(viaFlag.exitCode).toBe(viaFormat.exitCode);
+      expect(JSON.parse(viaFlag.stdout)).toEqual(JSON.parse(viaFormat.stdout));
+      rmSync(dir, { recursive: true, force: true });
+    });
+
     test("bare invocation accepts --format json in both space and equals form", () => {
       const dir = emptyRepo();
       const spaceForm = runDoraval(["--format", "json", "--cwd", dir]);
@@ -206,6 +241,16 @@ describe("doraval CLI", () => {
   });
 
   describe("dora init removal", () => {
+    test("unknown command is one line plus Next, no help dump", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["nosuch"]);
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Unknown command: nosuch");
+      expect(stderr).toContain("Next: dora --help");
+      expect(stdout).not.toContain("USAGE");
+      expect(stdout).not.toContain("COMMANDS");
+      expect(stderr).not.toContain("USAGE");
+    });
+
     test("top-level init is gone", () => {
       const { exitCode, stderr } = runDoraval(["init"]);
       expect(exitCode).not.toBe(0);
@@ -234,13 +279,48 @@ describe("doraval CLI", () => {
     });
   });
 
-  describe("dora --capabilities", () => {
-    test("emits a valid manifest", () => {
-      const { stdout, exitCode } = runDoraval(["--capabilities"]);
+  describe("dora agent-help", () => {
+    test("lists every verb with a read-only or writes label", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["agent-help"]);
+      const out = stdout + stderr;
+      expect(exitCode).toBe(0);
+      expect(out).toContain("review");
+      expect(out).toContain("fix");
+      expect(out).toContain("read-only");
+      expect(out).toContain("writes");
+      expect(out).toContain("dora review --quick");
+    });
+
+    test("--json is the same tree", () => {
+      const { exitCode, stdout } = runDoraval(["agent-help", "--json"]);
       expect(exitCode).toBe(0);
       const m = JSON.parse(stdout);
-      expect(m.commands.some((c: { name: string }) => c.name === "scan")).toBe(true);
-      expect(m.intelligence.mechanical).toBe(true);
+      expect(m.commands.some((c: { name: string; label: string }) => c.name === "review" && c.label === "read-only")).toBe(true);
+      expect(m.commands.some((c: { name: string; label: string }) => c.name === "fix" && c.label === "writes")).toBe(true);
+      expect(m.commands.find((c: { name: string }) => c.name === "scan").examples.length).toBeGreaterThan(0);
+    });
+
+    test("agent-help review drills into one verb", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["agent-help", "review"]);
+      const out = stdout + stderr;
+      expect(exitCode).toBe(0);
+      expect(out).toContain("review");
+      expect(out).toContain("read-only");
+      expect(out).toContain("--quick");
+    });
+
+    test("unknown name exits 1 with Next", () => {
+      const { exitCode, stderr } = runDoraval(["agent-help", "nosuch"]);
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Next: dora agent-help");
+    });
+  });
+
+  describe("dora --capabilities", () => {
+    test("is gone", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["--capabilities"]);
+      expect(exitCode).not.toBe(0);
+      expect(stdout + stderr).not.toMatch(/"commands"\s*:/);
     });
   });
 
@@ -258,6 +338,26 @@ describe("doraval CLI", () => {
       );
       return dir;
     }
+
+    test("detected agent without --yes or --dry-run exits 2 and writes nothing", () => {
+      const dir = fixableSkillRepo();
+      const { exitCode, stderr } = runDoraval(["fix", ".", "--cwd", dir], { env: { CI: "1" } });
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("Next:");
+      expect(stderr).toContain("--dry-run");
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("detected agent reconcile and promote also exit 2", () => {
+      const dir = fixableSkillRepo();
+      const rec = runDoraval(["reconcile", "--cwd", dir], { env: { CI: "1" } });
+      expect(rec.exitCode).toBe(2);
+      expect(rec.stderr).toContain("reconcile --dry-run");
+      const pro = runDoraval(["memory", "promote", "--cwd", dir], { env: { CI: "1" } });
+      expect(pro.exitCode).toBe(2);
+      expect(pro.stderr).toContain("promote --dry-run");
+      rmSync(dir, { recursive: true, force: true });
+    });
 
     test("--dry-run with outstanding mechanical fixes exits 1, not 0", () => {
       const dir = fixableSkillRepo();

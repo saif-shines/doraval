@@ -28,23 +28,35 @@ Two addressees. Do not mix them on one surface.
 | Term | Meaning |
 |------|---------|
 | **Reader** | The human. “you” on README, install, and `get-started`. |
-| **Runner** | The agent that executes `dora`. “you” on the skill and on per-command `--help`. |
+| **Runner** | The agent that executes `dora`. “you” on the skill, on `dora --help`, and on per-command `--help`. |
 
 The website is mixed. Do not mix the two voices on one page.
 
-**`--help` voice:** top-level / most-common help talks to the **Reader**. Per-command help (`dora review --help`, and the rest) talks to the **Runner**.
+**`--help` voice:** top-level `dora --help` talks to the **Runner** (the agent), same as per-command `--help`. README, install, and `get-started` stay **Reader**. See `docs/adr/0001-help-talks-to-runner.md`.
 
-**First loop:** `npx skills add saif-shines/doraval`, then `dora review --quick` so findings show before JSON, LLM, or CI flags.
+**First loop:** `npx skills add saif-shines/doraval`, then `dora review --quick` so findings show before JSON, LLM, or CI flags. The same two lines open README Quick start **and** `dora --help`.
 
 **README:** Reader surface. Follows the agent-browser README shape (install → quick start → long pasteable command catalog).
 
 **Site catalog:** Same long catalog as the README. Path follows agent-browser (they use `/commands` for this page). The skill still does not copy a flag encyclopedia.
 
-**This pass is done when:** every in-scope surface uses the new voice and the first loop; home + README use the agent-browser shape; `/for-agents/` is gone; `#4-review-quality` still works; **and** a Reader can finish one real `--quick` review from the README alone.
+**This pass** is lockstep, not a docs rewrite. The binary (`dora --help`, per-command `--help`, unknown-command, `dora agent-help`) is the work. README and `/commands` change only when a new help line would disagree with them.
+
+**agent-help:** The live command map for agents. Bare prints text. `dora agent-help --json` is the same tree. `dora agent-help review` drills into one verb. Each verb is labeled **read-only** or **writes**. `--capabilities` is removed. See `docs/adr/0004-agent-help.md` and `docs/adr/0005-drop-capabilities.md`.
+
+**`--json`:** Alias for `--format json`. Both work. `--ci` still implies JSON. Errors stay on stderr.
+
+**This pass is done when:** `dora --help` names the same first Review as the README (`dora review --quick`); `dora agent-help` exists and `--capabilities` is gone; per-command `--help` for review / fix / scan shows examples; `dora nosuch` prints one error and `Next: dora --help` (no help dump); `--json` works; agent scan skips the proceed gate; agent writes without `--yes`/`--dry-run` exit `2`; **and** README / `/commands` still agree with those lines.
+
+Grill for this pass is settled (2026-08-20). Next: `/to-spec`, then tickets. Do not implement from this glossary alone.
 
 **`llms.txt`:** generated from the site. Fix the pages. Do not hand-write a second index.
 
-_Avoid_: one “you” for both; an agent page that still talks to a human (“use with your agent”); leading with `--format json` before a `--quick` review.
+_Avoid_: one “you” for both on a **Reader** page; an agent page that still talks to a human (“use with your agent”); leading with `--format json` before a `--quick` review. Top-level `--help` is allowed to say “for agents.”
+
+**Interactive gate:** A TTY confirm before work. A human on a real terminal still sees it. A caller we treat as an agent does not. Detection is an env/TTY rule, not a new flag. See `docs/adr/0002-agent-skips-scan-prompt.md`.
+
+**Write gate:** `fix`, `reconcile`, and `memory promote` write files. A detected agent that omits `--yes` / `--dry-run` gets exit `2` and a Next line. No prompt. No write. See `docs/adr/0003-agent-write-needs-flag.md`.
 
 ## Naming debt (intentional)
 

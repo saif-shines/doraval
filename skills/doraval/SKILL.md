@@ -72,7 +72,7 @@ The gate is Review. Do not skip it.
    dora fix <path> --yes
    ```
 
-   `--yes` applies only mechanical fixes (frontmatter, formatting, missing fields). Never run bare `dora fix`. It prompts and hangs.
+   `--yes` applies only mechanical fixes (frontmatter, formatting, missing fields). Never run bare `dora fix`. A detected agent exits `2`. A human TTY is asked.
 4. **Judgement fixes.** Anything `--yes` cannot apply comes from `dora fix <path> --brief`. Hand-edit those. Do not wait for `--yes` to do judgement work.
 5. **Re-verify.** After every fix or hand-edit, run `dora review --quick <path>` again. The gate is passed only when the exit code is `0`.
 6. **Delegated Judge.** If a later Review (without `--quick`) shows LLM as `via delegated` (JSON `method: "delegated"`), dora handed you the rubric. Read the `JUDGE THIS` prompt. Evaluate the Skill against it. Fix findings before you report done. Done means mechanical tiers are clean and delegated judgment is complete.
@@ -111,7 +111,7 @@ You run in a loop that cannot answer TTY prompts.
 - MUST add `--ci` in CI or a non-interactive subagent.
 - MUST look up flags with `dora <command> --help`. MUST NOT copy a flag catalog into this skill.
 
-Bare Scan (`dora`) also prompts on a TTY. Use `dora --yes` or `dora --format json`. Machine manifest: `dora --capabilities`. Short verb list: [`references/commands.md`](references/commands.md).
+Bare Scan (`dora`) asks a human on a TTY. A detected agent skips that gate. Use `dora --yes` or `dora --json` if you want no prompt. Live command map: `dora agent-help` (add `--json` to parse). Short verb list: [`references/commands.md`](references/commands.md).
 
 ## What dora does not do
 

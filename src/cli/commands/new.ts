@@ -68,6 +68,11 @@ export default defineCommand({
       description: "Output format: table | json",
       default: "table",
     },
+    json: {
+      type: "boolean",
+      description: "Alias for --format json",
+      default: false,
+    },
     ci: {
       type: "boolean",
       description: "Machine mode (implies --format json)",
@@ -79,7 +84,7 @@ export default defineCommand({
     },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     const cwd = args.cwd ? String(args.cwd) : process.cwd();
     const yes = Boolean(args.yes);
 

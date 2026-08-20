@@ -28,4 +28,10 @@ describe("shouldConfirmScan", () => {
       shouldConfirmScan({ format: "table", yes: false, stdinTty: true, stderrTty: false })
     ).toBe(false);
   });
+
+  test("skips for a detected agent", () => {
+    expect(
+      shouldConfirmScan({ format: "table", yes: false, stdinTty: true, stderrTty: true, agent: true })
+    ).toBe(false);
+  });
 });

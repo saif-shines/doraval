@@ -31,5 +31,6 @@ describe("shouldAskReviewLimit", () => {
     expect(shouldAskReviewLimit({ format: "table", all: true, stdinTty: true, stderrTty: true })).toBe(false);
     expect(shouldAskReviewLimit({ format: "json", all: false, stdinTty: true, stderrTty: true })).toBe(false);
     expect(shouldAskReviewLimit({ format: "table", all: false, stdinTty: false, stderrTty: true })).toBe(false);
+    expect(shouldAskReviewLimit({ format: "table", all: false, stdinTty: true, stderrTty: true, agent: true })).toBe(false);
   });
 });

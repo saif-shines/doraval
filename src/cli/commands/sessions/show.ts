@@ -15,9 +15,10 @@ export default defineCommand({
     id: { type: "positional", description: "Session ID (from `dora sessions`)", required: true },
     agent: { type: "string", description: "Restrict lookup to this agent" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: false });
+    const mode = resolveOutputMode({ format: args.format as string, json: args.json as boolean });
     const id = args.id as string;
 
     try {

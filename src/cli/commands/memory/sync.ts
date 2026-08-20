@@ -23,10 +23,11 @@ export default defineCommand({
       description: "Commit message when there are local changes",
     },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     preflight(mode, memorySyncPreflightMessage());
     const migration = runJournalMigrationIfNeeded();
     if (mode.format !== "json") reportMigration(migration);

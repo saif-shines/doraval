@@ -95,11 +95,11 @@ export interface OutputMode {
   ci: boolean;
 }
 
-/** Single place that decides table vs json. `--ci` implies json. */
-export function resolveOutputMode(args?: { format?: string; ci?: boolean }): OutputMode {
+/** Single place that decides table vs json. `--ci` and `--json` imply json. */
+export function resolveOutputMode(args?: { format?: string; ci?: boolean; json?: boolean }): OutputMode {
   const ci = args?.ci === true;
   const format: OutputMode["format"] =
-    ci || args?.format === "json" ? "json" : "table";
+    ci || args?.json === true || args?.format === "json" ? "json" : "table";
   return { format, ci };
 }
 

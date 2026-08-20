@@ -11,6 +11,10 @@ describe("resolveOutputMode", () => {
     expect(resolveOutputMode({ format: "json" })).toEqual({ format: "json", ci: false });
   });
 
+  test("--json alias selects json", () => {
+    expect(resolveOutputMode({ json: true })).toEqual({ format: "json", ci: false });
+  });
+
   test("--ci implies json", () => {
     expect(resolveOutputMode({ ci: true })).toEqual({ format: "json", ci: true });
   });

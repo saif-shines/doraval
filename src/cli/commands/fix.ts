@@ -7,6 +7,7 @@ import { review } from "../../core/review.js";
 import { collectFixes, type FixEdit, type FixResult } from "../../core/fix-engine.js";
 
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../out.js";
+import { isAgentCaller, refuseAgentWrite, shouldBlockAgentWrite } from "../agent-detect.js";
 import { exit } from "../render/exit.js";
 
 function renderDiff(diff: string): void {
@@ -101,18 +102,29 @@ function buildBriefPrompt(perSkill: SkillJudgments[]): string {
 }
 
 export default defineCommand({
-  meta: { name: "fix", description: "Apply mechanical review fixes; surface judgment items" },
+  meta: {
+    name: "fix",
+    description: [
+      "Apply mechanical review fixes; surface judgment items",
+      "",
+      "Examples:",
+      "  dora fix . --dry-run",
+      "  dora fix . --yes",
+      "Exit: 0 clean · 1 issues · 2 could not run",
+    ].join("\n"),
+  },
   args: {
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
     yes: { type: "boolean", description: "Pre-approve all fixes (for agents/CI)", default: false },
     "dry-run": { type: "boolean", description: "Show diffs but write nothing", default: false },
     brief: { type: "boolean", description: "Emit an agent-ready prompt for judgment fixes", default: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
     cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
-    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean });
+    const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     // Resolve --cwd to an absolute path: it's hashed into the memory
     // project slug (getProjectSlug), so a relative string here would give
     // the same physical project two different slugs depending on how the
@@ -123,6 +135,11 @@ export default defineCommand({
     const yes = (args.yes as boolean) || false;
     const brief = (args.brief as boolean) || false;
     const interactive = canPromptInteractively(yes, dryRun, mode.format);
+    if (shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun, brief })) {
+      refuseAgentWrite("dora fix . --dry-run");
+      await exit(2);
+      return;
+    }
 
     try {
       const results = await review(target, { quick: true, cwd: root });
