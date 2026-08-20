@@ -1,0 +1,40 @@
+Implement GitHub issue #27 on Doraval. Isolated worktree is fine. Commit on the worktree. Do not push unless asked. Do not bump versions. Do not rewrite user-facing docs pages (acceptance: no page rewrite).
+
+## Issue
+https://github.com/saif-shines/doraval/issues/27
+Parent: https://github.com/saif-shines/doraval/issues/26
+
+**What to build:** House style names two addressees: **Reader** (human) and **Runner** (the agent that runs `dora`). Later doc tickets must not mix “you” on one surface.
+
+**Acceptance:**
+- Writer guidance says Reader vs Runner, not one generic “you.”
+- The two terms match CONTEXT.md glossary (root of repo).
+- No user-facing page rewrite in this ticket.
+
+## Glossary (must match)
+
+**Reader:** The human. “you” on README, install, and get-started.
+**Runner:** The agent that executes `dora`. “you” on the skill and on per-command `--help`.
+Do not mix them on one surface.
+`--help` split: top-level / most-common help = Reader; `dora <command> --help` = Runner.
+
+## What to change
+The writer prompt that currently says all docs use second person "you":
+`apps/website/.devex-kit/style-prompt-block.md` (line ~13: Active voice and second person ("you") for instructions).
+
+Also update any *writer* guidance that forces one “you” (e.g. CONTRIBUTING.md if it says the same). Do not edit `apps/website/content/**`, README, or the shipped skill.
+
+If CONTRIBUTING.md only talks about site pages, point it at Reader vs Runner.
+
+## How
+- Smallest change. No new deps. No new files unless you must.
+- No TDD for a style block (no product behavior). If you add a check, it must be one tiny assertion on the style file containing both words Reader and Runner — only if a similar check already exists. Prefer no new test.
+- After edit: `bun test` is optional if you touched no TS. Do not break the site.
+- Commit with conventional message: `docs: name Reader and Runner in writer style`
+- Do not close the GitHub issue (parent session will).
+
+## Report
+- Files changed
+- Commit hash
+- Whether main needs a merge/cherry-pick from this worktree
+- Quote the new voice rule in 2-4 lines
