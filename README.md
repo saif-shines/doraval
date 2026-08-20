@@ -1,98 +1,39 @@
-<div align="center">
+# doraval
 
-<h1>
-  <img alt="doraval" src="https://raw.githubusercontent.com/saif-shines/doraval/main/apps/website/public/icon.svg" width="72">
-  <br>
-  doraval (<code>dora</code>)
-</h1>
+Context-engineering CLI for coding agents. It reviews skills, rules, and memory so Claude, Cursor, Codex, Copilot, and Grok work from context you can trust.
 
-**doraval** is a context engineering toolkit for coding agents. It scans,
-reviews, fixes, and remembers agent context — skills, plugins, rules, and
-decisions — so Claude, Cursor, Codex, Copilot, and Grok work on every try
-instead of burning tokens on context you cannot rely on.
+`dora` and `doraval` are the same binary. Pronunciation: *dor-uh-val* (Doraemon + eval).
 
-[Installing](#installing) ·
-[Building from source](#building-from-source) ·
-[Documentation](#documentation) ·
-[Repository layout](#repository-layout) ·
-[Development](#development) ·
-[Contributing](#contributing) ·
-[License](#license)
-
-**Learn more about doraval at [doraval.dev](https://doraval.dev)**
-
-This repository contains the TypeScript source for the `dora` / `doraval` CLI
-and the agent skill shipped via `npx skills add saif-shines/doraval`.
-
-**Pronunciation:** *dor-uh-val* · Doraemon + eval
-
-</div>
-
----
-
-## Installing
-
-### Skill (recommended first step)
-
-Installs the agent skill so coding agents load the Doraval checklist when you
-edit skills, plugins, rules, or agent config:
+## Installation
 
 ```sh
-npx skills add saif-shines/doraval
+npm install -g @hacksmith/doraval
 ```
 
-### CLI
-
-Prebuilt binaries for macOS, Linux, and Windows:
-
 ```sh
-# one-shot (no install)
-npx @hacksmith/doraval
-
-# permanent
-npm install -g @hacksmith/doraval
-
 # macOS
 brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
 
 # Bun
 bun add -g @hacksmith/doraval
-
-dora --version    # same binary as doraval
 ```
 
-Node ≥ 14.18. Alpine/musl: use Bun. See the [changelog](CHANGELOG.md) and
-[installation guide](https://doraval.dev/get-started/installation/).
+Node ≥ 14.18. Alpine/musl: use Bun. See the [installation guide](https://doraval.dev/get-started/installation/).
 
-### First run
+## Quick start
 
 ```sh
-npx @hacksmith/doraval              # scan this project
-npx @hacksmith/doraval review .     # quality gate
+npx skills add saif-shines/doraval
+dora review --quick
 ```
 
-```text
-$ dora
+`--quick` is structure and heuristics only. No Judge. No API key.
 
-  Health
-    ✓ .claude/skills/review    valid
-    ✗ .claude/skills/deploy    Missing "description"
+You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run.
 
-  Next
-    1. dora fix .claude/skills/deploy
-    2. dora review --all
-```
+## Docs
 
-Read-only scan. No API key. Exit codes: `0` clean · `1` issues · `2` could not run.
-
-**Paths:**
-[Audit my agent context](https://doraval.dev/get-started/audit/) ·
-[Quickstart](https://doraval.dev/get-started/quickstart/) ·
-[Use with your agent](https://doraval.dev/for-agents/)
-
-```sh
-npx @hacksmith/doraval review --all --quick --ci
-```
+[doraval.dev](https://doraval.dev) has get started, command reference, and review tiers.
 
 ## Building from source
 
@@ -106,43 +47,6 @@ bun install
 bun run dev -- --help          # run CLI from source
 bun run build                  # emit bin/doraval.js
 ```
-
-## Documentation
-
-Full documentation: [doraval.dev](https://doraval.dev)
-
-| Path | Contents |
-|------|----------|
-| [Getting started](https://doraval.dev/get-started/) | Audit vs Quickstart |
-| [Command reference](https://doraval.dev/commands/) | All flags on one page |
-| [Use with your agent](https://doraval.dev/for-agents/) | Skill, JSON, exit codes, CI |
-| [Memory](https://doraval.dev/concepts/memory/) | Principles that stick |
-| [Review tiers](https://doraval.dev/concepts/review-tiers/) | Structure → heuristics → LLM → sessions |
-
-### Commands
-
-| Command | Job |
-|---------|-----|
-| `dora` / `scan` | Surfaces, health, contradictions, next actions |
-| `review` | Quality gate (structure → heuristics → LLM → sessions) |
-| `fix` | Mechanical fixes (`--yes` / `--dry-run` / `--brief`) |
-| `new --for` | Scaffold skill, rule, agent, or plugin |
-| `memory` | Principles; enforce in review; promote to AGENTS.md |
-| `reconcile` | Cross-agent contradictions → shared AGENTS.md |
-| `sessions` | List / show recent agent sessions |
-| `config` | Judge / model / settings |
-| `bump` | Semver in plugin / marketplace manifests |
-| `providers` | Packaging/spec matrix |
-| `update` | Self-update |
-
-```sh
-dora review . --quick --ci
-dora fix . --dry-run
-dora memory add "Never use default exports" --weight 8
-dora reconcile --dry-run
-```
-
-Shell completions: `dora --completion zsh` (or `bash` / `fish`).
 
 ## Repository layout
 
@@ -167,8 +71,7 @@ bun run typecheck
 bun run build                  # emit bin/doraval.js
 ```
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md) for
-conventions (ponytail ladder, no version bumps unless releasing).
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md) for conventions (ponytail ladder, no version bumps unless releasing).
 
 ## Contributing
 
@@ -176,4 +79,4 @@ Issues and PRs are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-MIT — see [`package.json`](package.json) (`"license": "MIT"`).
+MIT. See [`package.json`](package.json) (`"license": "MIT"`).

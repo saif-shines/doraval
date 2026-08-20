@@ -1,6 +1,6 @@
 ---
 // Hallmark · genre: modern-minimal · macrostructure: Workbench · theme: Cobalt
-// Single fold: hero only — skill install first, then dora on the project
+// Single fold: short pitch, then the first loop (skill add + review --quick)
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
 import data from "blume:data";
@@ -8,16 +8,18 @@ import Footer from "./_home/Footer.astro";
 
 const { config } = data;
 
-/** Compact terminal for first-fold height. */
-const heroDemo = `# 1) install the doraval skill
-npx skills add saif-shines/doraval
+/** Compact terminal for first-fold height. First loop, then a Review. */
+const heroDemo = `npx skills add saif-shines/doraval
+dora review --quick
 
-# 2) review this project
-npx @hacksmith/doraval
+$ dora review --quick
+  Reviewing artifacts — tiers: structure + heuristics; no LLM.
 
-$ dora
-  Health  ✗ .claude/skills/deploy  Missing description
-  Next    1. dora fix …  2. dora review …`;
+  Reviewing .
+  Structure          ✓ 8 passed
+  Heuristics         ⚠ 1 warning
+
+  8 passed · 1 warning · 0 errors`;
 ---
 
 <PageLayout
@@ -44,23 +46,19 @@ $ dora
         <p class="home-eyebrow">FOR CODING AGENTS</p>
         <h1 class="hero__title">Make agent context work on every try</h1>
         <h2 class="hero__subtitle">
-          Context engineering toolkit — scan, review, fix, and remember
+          Context-engineering CLI for coding agents
         </h2>
         <p class="hero__lede">
-          Broken skills, silent Claude-vs-Cursor contradictions, decisions that
-          vanish next session. Install the skill first, then check with{" "}
-          <strong>dora</strong>.
+          Review skills, rules, and memory. <code>--quick</code> is structure
+          and heuristics. No Judge. You see Findings first.
         </p>
         <div class="hero__ctas">
-          <a class="btn btn--primary" href="/get-started/audit/"
-            >Audit my agent context</a
-          >
-          <a class="btn btn--ghost" href="/get-started/quickstart/"
-            >Quickstart</a
-          >
+          <code class="cmd">npx skills add saif-shines/doraval</code>
+          <code class="cmd">dora review --quick</code>
         </div>
         <p class="hero__note">
-          doraval · <em>dor-uh-val</em> · Doraemon + eval ·{" "}
+          Needs <code>dora</code> on PATH ·{" "}
+          <a href="/get-started/installation/">Install</a> ·{" "}
           <a href="/get-started/">Docs</a>
         </p>
       </div>
@@ -153,10 +151,6 @@ $ dora
     color: var(--blume-muted-foreground);
   }
 
-  .hero__note em {
-    font-style: italic;
-  }
-
   .hero__note a {
     color: var(--blume-accent);
     text-decoration: none;
@@ -166,10 +160,30 @@ $ dora
     text-decoration: underline;
   }
 
+  .hero__lede code,
+  .hero__note code {
+    font-family: var(--blume-font-mono);
+    font-size: 0.85em;
+  }
+
   .hero__ctas {
     display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .cmd {
+    display: inline-block;
+    font-family: var(--blume-font-mono);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--blume-radius);
+    border: 1px solid var(--blume-border);
+    background: color-mix(in oklch, var(--blume-foreground) 4%, transparent);
+    color: var(--blume-foreground);
+    overflow-wrap: anywhere;
   }
 
   .hero__demo {
@@ -182,51 +196,6 @@ $ dora
     overflow: auto;
     font-size: 0.78rem !important;
     line-height: 1.4 !important;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--blume-radius);
-    padding: 0.55rem 1rem;
-    font-weight: 500;
-    font-size: 0.9rem;
-    text-decoration: none;
-    white-space: nowrap;
-    transition:
-      transform 160ms var(--home-ease-out),
-      background-color 160ms var(--home-ease-out),
-      border-color 160ms var(--home-ease-out);
-  }
-
-  .btn:active {
-    transform: scale(0.97);
-  }
-
-  .btn--primary {
-    background: var(--blume-accent);
-    color: var(--blume-accent-foreground);
-    border: 1px solid var(--blume-accent);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .btn--primary:hover {
-      background: color-mix(in oklch, var(--blume-accent), black 8%);
-    }
-  }
-
-  .btn--ghost {
-    background: transparent;
-    color: var(--blume-foreground);
-    border: 1px solid var(--blume-border);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .btn--ghost:hover {
-      border-color: var(--blume-accent);
-      color: var(--blume-accent);
-    }
   }
 
   .reveal {
