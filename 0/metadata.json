@@ -1,0 +1,44 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0ENP2407QAT6Q49BER65SPD",
+  "session_id": "01a01d55-f71d-71c2-884a-33c24664fccf",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-20T04:08:20.957805Z",
+  "branch": "docs/install-skill-drop-for-agents",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/website/content/for-agents/index.mdx",
+    "apps/website/content/for-agents/meta.ts",
+    "apps/website/content/get-started/installation.mdx"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "5897e7308697",
+  "initial_attribution": {
+    "calculated_at": "2026-08-20T04:08:20.910154Z",
+    "agent_lines": 51,
+    "agent_removed": 143,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 51,
+    "total_lines_changed": 194,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 25,
+      "user_lines_removed": 20,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "CONTEXT.md": 25
+      },
+      "user_removed_per_file": {
+        "test/fixtures/examples/my-codex-plugin/.agents/plugins/marketplace.json": 20
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+Implement GitHub issue #28 on Doraval. Isolated worktree. Commit there. Do not push. Do not bump versions. Do not close the issue.
+
+## Issue
+https://github.com/saif-shines/doraval/issues/28
+Parent: https://github.com/saif-shines/doraval/issues/26
+Blocked by #27 (done on main: 0d0f728).
+
+## What to build
+Install works like agent-browser `/installation` “AI agent setup”: `npx skills add` + a short AGENTS.md snippet next to CLI install. Delete the standalone “use with your agent” page.
+
+## Acceptance
+- Install page is **Reader** voice. It includes `npx skills add saif-shines/doraval` and an AGENTS.md snippet.
+- `/for-agents/` is gone (no page, no nav).
+- No new redirect for that path.
+- Existing journal/validate redirects in the site config stay.
+
+## Voice
+Reader = human. “you” on install/get-started. Do not talk about “your agent” as if the page is for the agent.
+
+Follow writer style in `apps/website/.devex-kit/style-prompt-block.md`.
+
+## Scope
+- `apps/website/content/get-started/installation.mdx` (and get-started overview only if it links to for-agents)
+- Remove `apps/website/content/for-agents/`
+- Sidebar/nav meta so for-agents is gone
+- Do NOT rewrite README or home (ticket #29 owns those)
+- Do NOT rewrite the shipped skill (ticket #31)
+- Do NOT add blume redirects for /for-agents/
+
+## Verify
+If you can run `bun run build` in apps/website, do it. Site check must still pass. Confirm /for-agents/ is not in the build.
+
+Commit: `docs: put skill setup on install; drop for-agents`
+
+## Report
+Files, commit hash, worktree needs merge? Any leftover links to /for-agents/ you did not touch (list them).
