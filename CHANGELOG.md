@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## 0.6.19
+
+### Features
+
+- **`--help` talks to the Runner.** Opens with the same first loop as the README:
+  `npx skills add saif-shines/doraval` then `dora review --quick`.
+- **`dora agent-help`.** Live command map: text table, `--json`, and
+  `dora agent-help review` drill-in. Each verb is `read-only` or `writes`.
+- **`--json`** is an alias for `--format json` on commands that already
+  accept `--format`. `--ci` still implies JSON.
+- **Unknown command** prints one error and `Next: dora --help` (no help dump).
+- **Agent gates.** Detected agents (`CI`, `GIT_TERMINAL_PROMPT=0`, known
+  agent CLI env) skip the Scan proceed prompt. Bare `fix` / `reconcile` /
+  `memory promote` from an agent exits `2` with a Next line — no write.
+  `--brief` is not a write. Humans on a TTY still see confirms.
+
+### Breaking
+
+- **`dora --capabilities` is removed.** Use `dora agent-help --json`.
+
 ## 0.6.5
 
 ### Features

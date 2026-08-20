@@ -20,7 +20,7 @@ Exit `0` clean · `1` issues · `2` could not run.
 
 ```bash
 dora                         # workspace health (alias: dora scan)
-dora --format json
+dora --json                  # same as --format json
 dora --ci                    # implies JSON
 dora --cwd "$GITHUB_WORKSPACE"
 ```
@@ -41,7 +41,7 @@ dora review CLAUDE.md
 `--quick` is the first Review. JSON comes after:
 
 ```bash
-dora review --quick --format json
+dora review --quick --json
 ```
 
 Tiers: [Review tiers](/concepts/review-tiers/).
@@ -137,6 +137,16 @@ dora update
 dora update --check
 dora update --via npm
 ```
+
+## Agent-help
+
+```bash
+dora agent-help              # every verb, read-only vs writes
+dora agent-help --json       # same tree
+dora agent-help review       # one verb
+```
+
+Replaces `--capabilities`.
 
 ## Completions
 

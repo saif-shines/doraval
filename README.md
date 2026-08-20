@@ -36,14 +36,15 @@ You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not ru
 ```sh
 dora                         # scan
 dora review --quick .        # Findings first, no LLM
-dora review --quick --format json
+dora review --quick --json
 dora fix . --yes             # mechanical; no TTY
 dora new skill --for claude --name review-pr --yes
 dora memory add "Never use default exports" --weight 8
 dora reconcile --dry-run
 dora sessions
 dora config setup
-dora --help                  # flags
+dora --help                  # first loop
+dora agent-help              # live map
 ```
 
 More: [doraval.dev/commands](https://doraval.dev/commands/).
