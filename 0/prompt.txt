@@ -1,0 +1,217 @@
+<user_query>
+I'm seeing this build errors after I pust to netlify 
+
+10:19:05 AM: build-image version: 969defd95f3977f8de9cb1f48802a7e6f3d8c0b3 (noble-new-builds)
+10:19:05 AM: buildbot version: da63a41ba26f85f58b2c491a6835c07caf8e7aa6
+10:19:05 AM: Fetching cached dependencies
+10:19:05 AM: Starting to download cache of 195.7MB (Last modified: 2026-08-19 13:19:55 +0000 UTC)
+10:19:06 AM: Downloaded cache in 597ms
+10:19:08 AM: Extracted cache in 2.242s
+10:19:08 AM: Fetched cache in 2.889s
+10:19:08 AM: Starting to prepare the repo for build
+10:19:08 AM: Preparing Git Reference refs/heads/main
+10:19:10 AM: Custom publish path detected. Proceeding with the specified path: 'apps/website/dist'
+10:19:10 AM: Custom build command detected. Proceeding with the specified command: 'bun install && bun run site:build'
+10:19:10 AM: Installing dependencies
+10:19:10 AM: mise ~/.config/mise/config.toml tools: python@3.14.3
+10:19:10 AM: mise ~/.config/mise/config.toml tools: ruby@3.4.8
+10:19:10 AM: mise ~/.config/mise/config.toml tools: go@1.26.2
+10:19:11 AM: Downloading and installing node v22.23.2...
+10:19:11 AM: Downloading https://nodejs.org/dist/v22.23.2/node-v22.23.2-linux-x64.tar.xz...
+10:19:11 AM: Computing checksum with sha256sum
+10:19:11 AM: Checksums matched!
+10:19:14 AM: Now using node v22.23.2 (npm v10.9.8)
+10:19:14 AM: Enabling Node.js Corepack
+10:19:14 AM: mise bun@1.2.23      [1/3] install
+10:19:14 AM: mise bun@1.2.23      [1/3] download bun-linux-x64.zip
+10:19:14 AM: mise bun@1.2.23      [2/3] generate checksum bun-linux-x64.zip
+10:19:14 AM: mise bun@1.2.23      [3/3] extract bun-linux-x64.zip
+10:19:15 AM: mise bun@1.2.23      [3/3] bun -v
+10:19:15 AM: mise bun@1.2.23      [3/3] 1.2.23
+10:19:15 AM: mise bun@1.2.23    ✓ installed
+10:19:15 AM: Bun version set to 1.2
+10:19:15 AM: Installing npm packages using bun version 1.2.23
+10:19:15 AM: bun install v1.2.23 (cf136713)
+10:19:15 AM: 1 package installed [21.00ms]
+10:19:15 AM: npm packages installed using bun
+10:19:15 AM: Successfully installed dependencies
+10:19:15 AM: Detected 0 framework(s)
+10:19:16 AM: Starting build script
+10:19:16 AM: Section completed: initializing
+10:19:18 AM: ​
+10:19:18 AM: Netlify Build                                                 
+10:19:18 AM: ────────────────────────────────────────────────────────────────
+10:19:18 AM: ​
+10:19:18 AM: ❯ Version
+10:19:18 AM:   @netlify/build 36.2.4
+10:19:18 AM: ​
+10:19:18 AM: ❯ Flags
+10:19:18 AM:   accountId: 5e81a2def56a483cf969b6ed
+10:19:18 AM:   baseRelDir: true
+10:19:18 AM:   buildId: 6a8687407088c5000818f4ee
+10:19:18 AM:   deployId: 6a8687407088c5000818f4f0
+10:19:18 AM: ​
+10:19:18 AM: ❯ Current directory
+10:19:18 AM:   /opt/build/repo
+10:19:18 AM: ​
+10:19:18 AM: ❯ Config file
+10:19:18 AM:   /opt/build/repo/netlify.toml
+10:19:18 AM: ​
+10:19:18 AM: ❯ Context
+10:19:18 AM:   production
+10:19:18 AM: ​
+10:19:18 AM: build.command from netlify.toml                               
+10:19:18 AM: ────────────────────────────────────────────────────────────────
+10:19:18 AM: ​
+10:19:18 AM: $ bun install && bun run site:build
+10:19:18 AM: bun install v1.2.23 (cf136713)
+10:19:18 AM: 1 package installed [30.00ms]
+10:19:18 AM: $ bun run gen:rules:check && cd apps/website && bun run build
+10:19:18 AM: $ bun scripts/gen-rule-docs.ts --check
+10:19:18 AM: 86 |     ].filter(Boolean).join("; "));
+10:19:18 AM: 87 |   }
+10:19:18 AM: 88 |
+10:19:18 AM: 89 |   const catalogPath = join(dir, "index.mdx");
+10:19:18 AM: 90 |   if (await Bun.file(catalogPath).text() !== renderCatalogPage()) {
+10:19:18 AM: 91 |     throw new Error("Stale generated rule docs: index.mdx");
+10:19:18 AM:                    ^
+10:19:18 AM: error: Stale generated rule docs: index.mdx
+10:19:18 AM:       at checkRuleDocs (/opt/build/repo/scripts/gen-rule-docs.ts:91:15)
+10:19:18 AM: 
+10:19:18 AM: Bun v1.2.23 (Linux x64)
+10:19:18 AM: error: script "gen:rules:check" exited with code 1
+10:19:18 AM: error: script "site:build" exited with code 1
+10:19:18 AM: ​
+10:19:18 AM: "build.command" failed                                        
+10:19:18 AM: ────────────────────────────────────────────────────────────────
+10:19:18 AM: ​
+10:19:18 AM:   Error message
+10:19:18 AM:   Command failed with exit code 1: bun install && bun run site:build (https://ntl.fyi/exit-code-1)
+10:19:18 AM: ​
+10:19:18 AM:   Error location
+10:19:18 AM:   In build.command from netlify.toml:
+10:19:18 AM:   bun install && bun run site:build
+10:19:18 AM: ​
+10:19:18 AM:   Resolved config
+10:19:18 AM:   build:
+10:19:18 AM:     command: bun install && bun run site:build
+10:19:18 AM:     commandOrigin: config
+10:19:18 AM:     environment:
+10:19:18 AM:       - BUN_VERSION
+10:19:18 AM:       - NODE_VERSION
+10:19:18 AM:     publish: /opt/build/repo/apps/website/dist
+10:19:18 AM:     publishOrigin: config
+10:19:18 AM:   redirects:
+10:19:18 AM:     - from: /get-started/quickstart-distributors
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /get-started/quickstart/
+10:19:18 AM:     - from: /get-started/quickstart-orchestrators
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /get-started/quickstart/
+10:19:18 AM:     - from: /commands/journal-add
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/journal-list
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/journal-sync
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/journal-update
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/journal-init
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /concepts/memory/
+10:19:18 AM:     - from: /concepts/agent-journal
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /concepts/memory/
+10:19:18 AM:     - from: /concepts/journal-rationale
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /concepts/memory/
+10:19:18 AM:     - from: /commands/validate
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/lint
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/drift
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/eval
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/evals-setup
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/judge
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/init
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/claude-new
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/codex-new
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/cursor-new
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/copilot-new
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/ui
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /
+10:19:18 AM:     - from: /commands/memory-add
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/memory-list
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/memory-context
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/memory-promote
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/memory-stash
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/memory-restore
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /commands/memory-sync
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /commands/
+10:19:18 AM:     - from: /concepts/three-tier-verification
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: /concepts/review-tiers/
+10:19:18 AM:     - force: true
+10:19:18 AM:       from: https://doraval.thehacksmith.dev/*
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: https://doraval.dev/:splat
+10:19:18 AM:     - force: true
+10:19:18 AM:       from: https://www.doraval.thehacksmith.dev/*
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: https://doraval.dev/:splat
+10:19:18 AM:     - force: true
+10:19:18 AM:       from: https://www.doraval.dev/*
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: https://doraval.dev/:splat
+10:19:18 AM:     - force: true
+10:19:18 AM:       from: https://thehacksmith.dev/*
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: https://doraval.dev/:splat
+10:19:18 AM:     - force: true
+10:19:18 AM:       from: https://www.thehacksmith.dev/*
+10:19:18 AM:       status: 301
+10:19:18 AM:       to: https://doraval.dev/:splat
+10:19:18 AM:   redirectsOrigin: config
+10:19:19 AM: Failed during stage 'building site': Build script returned non-zero exit code: 2 (https://ntl.fyi/exit-code-2)
+10:19:19 AM: Build failed due to a user error: Build script returned non-zero exit code: 2
+10:19:19 AM: Failing build: Failed to build site
+10:19:19 AM: Finished processing build request in 13.593s
+</user_query>
