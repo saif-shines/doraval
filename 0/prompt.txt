@@ -1,0 +1,1517 @@
+<system-reminder>
+Background subagent "01a018d6-4e23-7ef2-9419-9125a8481a9f" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 102.9s | Tool calls: 17 | Turns: 5
+Use get_task_output("01a018d6-4e23-7ef2-9419-9125a8481a9f") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friction log: the first success view was still far from being to understand, because after findingd docs, doing quickstart, and I thought entire session list was success, until I had to discover a push would show up an checkpoint in the entire dashboard. 
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a018d8-87a8-7142-8e60-f6d0f719b9ee" (general-purpose: "Log first-success checkpoint gap") completed successfully.
+Duration: 14.6s | Tool calls: 37 | Turns: 17
+Use get_task_output("01a018d8-87a8-7142-8e60-f6d0f719b9ee") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friction log : nitpic "Tl;dr" sounds odd; could be "TL;DR" caps. I think the UI that appears AFTER soethign in captured in doraval, should show up before itself, so that useres already know what ot expect but just that data will be blurred. 
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a018df-9d1a-7b82-8254-8fdac3355d36" (general-purpose: "Log TL;DR and preview UI") completed successfully.
+Duration: 13.0s | Tool calls: 40 | Turns: 19
+Use get_task_output("01a018df-9d1a-7b82-8254-8fdac3355d36") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friction log: One thing I began to wonder after pushing my first 3 commit ( 1 check point) is when does an "checkpoint" happen? When worked on my own personal project called doraval.dev (still closed and early) I called them "agent assisted decisions" or decision graph. It's tempting to build mental model like "commit" but in "commit" I fully control when that snapshot happens, here it's kind of fuzzy and https://docs.entire.io/guides/checkpoints/overview does fully help either.
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a018e2-5484-7fd1-8b4c-210cdcbef993" (general-purpose: "Log when checkpoint happens") completed successfully.
+Duration: 15.4s | Tool calls: 43 | Turns: 21
+Use get_task_output("01a018e2-5484-7fd1-8b4c-210cdcbef993") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a018e4-09c6-70d2-b751-4055ba59fc59" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 22.9s | Tool calls: 21 | Turns: 7
+Use get_task_output("01a018e4-09c6-70d2-b751-4055ba59fc59") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friction log: The skills are very invisible until now in the journey I did not find the skills. it was there later in the journey https://docs.entire.io/guides/skills/overview but even then there's not npx xommand I copy paste, then I go to the github repo and thing find there. disjointed. but hardwork is done.
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a018e8-9179-7323-ab73-4c54c0ec28d0" (general-purpose: "Log Entire skills discoverability") completed successfully.
+Duration: 12.1s | Tool calls: 46 | Turns: 23
+Use get_task_output("01a018e8-9179-7323-ab73-4c54c0ec28d0") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friction log: when I finally ran npx skills add https://github.com/entireio/skills --all it created a skills directory ideally it should have installed gloabally, even if it's project level it should be behind agent/skilsl or something, I am not sure what happened here. I know npx skills is controllbed by vercel but it doesn not happen with other skill repos you may want to look into it? also attach evidence if you can
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a018eb-4adf-7b22-a2b0-cb44f92265a8" (general-purpose: "Log skills install evidence") completed successfully.
+Duration: 24.8s | Tool calls: 49 | Turns: 26
+Use get_task_output("01a018eb-4adf-7b22-a2b0-cb44f92265a8") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+I see skilsl dir created unnecessarily can you simply remove it because I installe same skils globally.
+</user_query>
+
+---
+
+<user_query>
+/ask-matt when shoujld I use wayfinder?
+</user_query>
+<skill_information>
+<skills_referenced>
+<skill name="ask-matt" path="/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/ask-matt/SKILL.md"/>
+</skills_referenced>
+<skill name="ask-matt" args="when shoujld I use wayfinder?">
+# Ask Matt
+
+You don't remember every skill, so ask.
+
+A **flow** is a path through the skills. Most paths run along one **main flow**, and two **on-ramps** merge onto it. Everything else is standalone, or a vocabulary layer that runs underneath.
+
+## The main flow: idea → ship
+
+The route most work travels. You have an idea and want it built.
+
+1. **`/grill-with-docs`** — sharpen the idea by interview. Start here whenever you are **working in a working directory**: it's stateful, retaining what it learns in `CONTEXT.md` and ADRs. (No working directory? Use `/grill-me` — see Standalone. Both run the same `/grilling` primitive; `grill-with-docs` is the one that leaves a paper trail, which makes it the better of the two whenever a repo is there to leave it in.)
+2. **Branch — can you settle every question in conversation?** If a question needs a runnable answer (state, business logic, a UI you have to see), detour through a prototype, bridged by **`/handoff`** in both directions (a prototype lives in its own directory, which is exactly what `/handoff` is for — see Phase boundaries):
+   - **`/handoff`** out, then open a fresh session against that file,
+   - **`/prototype`** to answer the question with throwaway code,
+   - **`/handoff`** back what you learned, and reference it from the original idea thread.
+3. **Branch — is this a multi-session build?**
+   - **Yes** → **`/to-spec`** (turn the thread into a spec), then **`/to-tickets`** to split it into tracer-bullet tickets, each declaring its **blocking edges**. On a local tracker that's one file per ticket under `.scratch/<feature>/issues/`, worked blockers-first by hand; on a real tracker the edges become native blocking links, so any ticket whose blockers are done can be grabbed — kick off **`/implement`** per ticket, **`/clear`ing context between each one**. Each ticket is self-contained, so the last one's context is disposable.
+   - **No** → **`/implement`** right here, in the same context window.
+
+   Either way, **`/implement`** builds each issue by driving **`/tdd`** internally — one red-green slice at a time — then closes out by running **`/code-review`**, a two-axis review (Standards + Spec) of the diff, before committing. Reach for **`/tdd`** on its own when you just want to build a concrete behaviour test-first without a full spec, and **`/code-review`** on its own whenever you want to review a branch or PR against a fixed point.
+
+### Context hygiene
+
+Keep steps 1–3 in **one unbroken context window** — don't compact or clear until after `/to-tickets` — so the grilling, spec, and tickets all build on the same thinking. Each `/implement` then starts fresh, working from the ticket.
+
+The limit on this is the **[smart zone](https://www.aihero.dev/ai-coding-dictionary/smart-zone)**: the window (~150k tokens on state-of-the-art models) within which the model still reasons sharply. If a session approaches it before `/to-tickets`, don't push on degraded — `/compact` at the nearest phase boundary and carry on (see Phase boundaries).
+
+## On-ramps
+
+A starting situation that generates work, then merges onto the main flow.
+
+- **Bugs and requests piling up** → **`/triage`**. It moves issues through triage roles and produces agent-ready issues, which **`/implement`** later picks up.
+
+  Triage is only for issues **you didn't create** — bug reports, incoming feature requests, anything that arrives raw. Tickets that `/to-tickets` produced are already agent-ready, so **don't triage them**.
+
+- **Something's broken** → **`/diagnosing-bugs`**. For the hard ones: the bug that resists a first glance, the intermittent flake, the regression that crept in between two known-good states. It refuses to theorise until it has a **tight feedback loop** — one command that already goes red on *this* bug — then fixes with a regression test. Its post-mortem hands off to **`/improve-codebase-architecture`** when the real finding is that there's no good seam to lock the bug down.
+
+- **A huge, foggy effort — a greenfield project or a huge feature build, too big for one session** → **`/wayfinder`**, the most cognitively demanding flow here. When the way from here to the destination isn't visible yet, it charts a **shared map** of **decision tickets** on the issue tracker and resolves them one at a time — producing **decisions, not deliverables** — until the fog is pushed back and the way is clear. Where **`/grill-with-docs`** sharpens an idea you can hold in one session, wayfinder is for the idea you can't — and it's slower and denser, so save it for exactly that, never a well-scoped feature.
+
+  When the map clears, **it hands off, it doesn't build**: merge onto the main flow at **`/to-spec`**, which collapses the map's linked decisions into a buildable plan, then `/to-tickets` and `/implement` as usual. Looping the map straight into `/implement` skips that collapse and throws the linked detail away — go straight to `/implement` only when the effort turned out genuinely small.
+
+## Codebase health
+
+Not feature work — upkeep.
+
+- **`/improve-codebase-architecture`** — run whenever you have a spare moment to keep the codebase good for agents to operate in. It surfaces **deepening opportunities**; picking one _generates an idea_ you can take into the main flow at `/grill-with-docs`. It's the survey that finds the candidates; **`/codebase-design`** (below) is the bench you design the chosen one on.
+
+## Vocabulary underneath
+
+Two model-invoked references that run *beneath* the other skills — each the single source of truth for its vocabulary. Reach for them directly when the **words**, not the process, are the problem; or let the skills above pull them in.
+
+- **`/domain-modeling`** — sharpen the project's *domain* language: challenge a fuzzy term, resolve an overloaded word ("account" doing three jobs), record a hard-to-reverse decision as an ADR. It's the active discipline `/grill-with-docs` drives to keep `CONTEXT.md` a clean glossary.
+- **`/codebase-design`** — the deep-module vocabulary (module, interface, depth, seam, adapter, leverage, locality) for designing a module's *shape*: a lot of behaviour behind a small interface at a clean seam. `/tdd` and `/improve-codebase-architecture` both speak it.
+
+## Phase boundaries
+
+A **phase** is a chunk of work inside a session — the grilling, the implementation, the QA. At the **boundary** between two of them you have five options, and picking between them is the fuzziest decision in this whole map:
+
+- **Continue** — stay put. Costs nothing, loses nothing.
+- **`/clear`** — empty the window, when nothing here matters to what's next.
+- **`/handoff`** — write a portable markdown file. Narrow: only for a **new harness**, a **new directory**, a **colleague**, or forking a side task **mid-phase**. What it buys is portability.
+- **Subagent** — send a tightly-scoped task to its own window and get a report back.
+- **`/compact`** — compress this context and seed a fresh session with it. The **default**, at the bottom of the tree rather than the first reach.
+
+Read [PHASE-BOUNDARIES.md](/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/ask-matt/PHASE-BOUNDARIES.md) for the ordered tree — the five questions, the reasoning behind each branch, and why the primary-source cost makes **Continue** the one to rule out first. Make the decision **at** a boundary; mid-phase, continue or split the rest into subagents.
+
+## Standalone
+
+Off the main flow entirely.
+
+- **`/grill-me`** — the same relentless interview as `/grill-with-docs`, but **stateless**: it saves nothing locally and builds no `CONTEXT.md`. Reach for it when you are **not working in a working directory** — sharpening a plan, a design, a piece of writing, anything with no repo under it. If you are in a working directory, use `/grill-with-docs` instead: it runs the same interview and leaves a paper trail, so it is strictly the better one.
+- **`/grilling`** — the interview primitive itself: rounds, the frontier, facts are the agent's job and decisions are yours. `/grill-me` and `/grill-with-docs` are the two named ways in, and `/triage`, `/wayfinder` and `/improve-codebase-architecture` all run it internally. Reach for it directly only when you want the interview with no wrapper around it.
+- **`/resolving-merge-conflicts`** — work an in-progress merge or rebase conflict hunk by hunk, resolving by **intent** traced to each side's primary source rather than by picking lines, then finish the operation. It never runs `--abort`. Standalone and off every flow: reach for it when you are already mid-conflict.
+- **`/prototype`** — a small, throwaway program that answers one design question: does this state model feel right, or what should this UI look like. Throwaway is a constraint on how the code is written, not a promise to destroy it: the answer folds into the real code, and the prototype itself is kept as a **primary source** on a `prototype/<name>` branch out of main, pointed at from the implementation issue. It's the detour in step 2 of the main flow, but reach for it any time a design question is hard to settle on paper.
+- **`/research`** — delegate reading legwork to a **background agent**: it investigates a question against **primary sources**, then leaves a cited Markdown file in the repo. Keep working while it reads. The file it produces is something to take *into* the main flow at `/grill-with-docs` — research feeds the thinking, it doesn't replace it.
+- **`/to-questionnaire`** — when the thing blocking you isn't in your head or the codebase but in **someone else's**, this writes them a questionnaire to fill in. It's the inverse of `/grill-me`: instead of interviewing you about the subject, it interviews you about the **send** — who it's going to, what you need back — and aims the questions at the gap. What comes back is material for `/grill-with-docs` or `/to-spec`.
+- **`/wizard`** — for the steps only a **human** can take: provisioning infrastructure, setting up credentials or CI secrets, clicking through an unfamiliar third-party dashboard, running a one-off migration or cutover. It generates an interactive bash script that opens each URL, captures each value, and writes it into `.env` and GitHub secrets — so the procedure stops being something you re-explain to an agent every time. Model-invoked, so the agent reaches for it the moment it hits a wall only you can pass. If the agent could just do it itself, it should; this is for where a human is genuinely in the loop.
+- **`/wait-what`** — the corrective for a message that didn't land. Use it mid-conversation, inside any other skill, and the agent re-pitches what it just said with the context you were missing, in plain English, using the `CONTEXT.md` vocabulary. It works after the fact; `/grill-with-docs` is the upfront cure, because a shared language agreed early is what stops the jargon arriving at all.
+- **`/teach`** — learn a concept over multiple sessions, using the current directory as a stateful workspace.
+- **`/writing-for-agents`** — reference for writing documents agents consume: skills, AGENTS.md, pointed-at docs.
+
+## Precondition
+
+**`/setup-matt-pocock-skills`** — run before your first engineering flow to configure the issue tracker, triage labels, and doc layout the other skills assume. Custom issue trackers also work.
+
+
+**ARGUMENTS:** when shoujld I use wayfinder?
+</skill>
+</skill_information>
+
+---
+
+<system-reminder>
+Background subagent "01a018f1-c567-70c0-97cd-4a18e1ce77aa" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 126.0s | Tool calls: 19 | Turns: 1
+Use get_task_output("01a018f1-c567-70c0-97cd-4a18e1ce77aa") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a018ff-811e-73e1-acba-ee4b1be68295" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 28.2s | Tool calls: 26 | Turns: 3
+Use get_task_output("01a018ff-811e-73e1-acba-ee4b1be68295") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a0190d-3cbe-72d2-beaa-e048ab558ee8" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 48.7s | Tool calls: 32 | Turns: 5
+Use get_task_output("01a0190d-3cbe-72d2-beaa-e048ab558ee8") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a0191a-f860-7563-af0a-cde72038e16d" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 68.7s | Tool calls: 37 | Turns: 6
+Use get_task_output("01a0191a-f860-7563-af0a-cde72038e16d") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a01928-b41e-7eb1-b773-74c70a6b3b45" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 15.4s | Tool calls: 42 | Turns: 8
+Use get_task_output("01a01928-b41e-7eb1-b773-74c70a6b3b45") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a01936-6fc1-7953-9407-fa462e83aac9" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 20.5s | Tool calls: 47 | Turns: 10
+Use get_task_output("01a01936-6fc1-7953-9407-fa462e83aac9") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a01944-2b78-78c0-b73a-dcb26b709492" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 18.7s | Tool calls: 52 | Turns: 12
+Use get_task_output("01a01944-2b78-78c0-b73a-dcb26b709492") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friction log: while I was curious about search command, and trying to find if I can use pllain english to find the context, I did not yet find the answe rbut I foudn this guide https://docs.entire.io/learn/investigate-why-code-exists#trace-the-attribution and found this seciton is doesn't render the screenshot 
+</user_query>
+
+---
+
+<user_query>
+friction log: I like the `entire why src/main.js:279` command because, instead of giving me a ai answer (no matter how powerful and useful it is) I appreciate it's simply mechanical showing the prompt. I am in control.
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a0194f-2340-7d52-a1e6-e77c01f170a8" (general-purpose: "Log search docs screenshot") completed successfully.
+Duration: 17.0s | Tool calls: 52 | Turns: 28
+Use get_task_output("01a0194f-2340-7d52-a1e6-e77c01f170a8") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a0194f-85e5-7c22-a9eb-da05fc575e46" (general-purpose: "Log entire why praise") completed successfully.
+Duration: 18.7s | Tool calls: 55 | Turns: 30
+Use get_task_output("01a0194f-85e5-7c22-a9eb-da05fc575e46") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friction log: The dispatch command is unexpected. I am not sure if it's the term "dispatch". Fro claude users, it's giving input else where from mobile and dispatching an agent to do something. How is it different share or sharing transcript (or doing a quick summerization) is what I assumed. But there's realy use to it. It can be extended to give both context + maybe a deployed state of (web app or any app) to others for a prototype or their agents of other teams!
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a01951-e719-7403-a108-8f1f7803b4e8" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 228.9s | Tool calls: 59 | Turns: 14
+Use get_task_output("01a01951-e719-7403-a108-8f1f7803b4e8") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+friciton log: I felt very happy when I saw https://docs.entire.io/guides/configuration/review-profiles, I had a similarl problem and shippted https://doraval.dev/get-started/quickstart/#4-review-quality 
+
+just for context doraval is my sideproject  (doraval.dev), I did not market it enough but mostly just couple of friends for feedback.
+
+I'm solving it through rules, a set of rules that can be toggled on or off. Each set is profile in entire's vocabulary. I"m just happy because the need for this feature is a validation of my own instict to put time and effort to build it out.
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a01959-7120-70c3-be67-809fb8e01cba" (general-purpose: "Log review-profiles validation") completed successfully.
+Duration: 12.9s | Tool calls: 61 | Turns: 34
+Use get_task_output("01a01959-7120-70c3-be67-809fb8e01cba") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+/improve-codebase-architecture of this repo
+</user_query>
+<skill_information>
+<skills_referenced>
+<skill name="improve-codebase-architecture" path="/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/improve-codebase-architecture/SKILL.md"/>
+</skills_referenced>
+<skill name="improve-codebase-architecture" args="of this repo">
+# Improve Codebase Architecture
+
+Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
+
+This command is _informed_ by the project's domain model and built on a shared design vocabulary:
+
+- Run the `/codebase-design` skill for the architecture vocabulary (**module**, **interface**, **depth**, **seam**, **adapter**, **leverage**, **locality**) and its principles (the deletion test, "the interface is the test surface", "one adapter = hypothetical seam, two = real"). Use these terms exactly in every suggestion — don't drift into "component," "service," "API," or "boundary."
+- The domain language in `CONTEXT.md` gives names to good seams; ADRs in `docs/adr/` record decisions this command should not re-litigate.
+
+## Process
+
+### 1. Explore
+
+**Scope before you scan — YAGNI.** Deepening a module pays off by making future changes to it easier, so put extra weight on the parts of the codebase that have recently changed. Decide *where* to look before you look:
+
+- If the user named a direction — a module, a subsystem, a pain point — take it, and skip the inference below.
+- Otherwise, walk back a good stretch of the commit history (`git log --oneline`) to find the codebase's hot spots — the files and areas that keep coming up — and let those paths pull your attention first. If the changes are scattered with no clear hot spot, widen the net.
+
+Read the project's domain glossary (`CONTEXT.md`) and any ADRs in the area you're touching first.
+
+Then spawn a sub-agent to walk the codebase. Don't follow rigid heuristics — explore organically and note where you experience friction:
+
+- Where does understanding one concept require bouncing between many small modules?
+- Where are modules **shallow** — interface nearly as complex as the implementation?
+- Where have pure functions been extracted just for testability, but the real bugs hide in how they're called (no **locality**)?
+- Where do tightly-coupled modules leak across their seams?
+- Which parts of the codebase are untested, or hard to test through their current interface?
+
+Apply the **deletion test** to anything you suspect is shallow: would deleting it concentrate complexity, or just move it? A "yes, concentrates" is the signal you want.
+
+### 2. Present candidates as an HTML report
+
+Write a self-contained HTML file to the OS temp directory so nothing lands in the repo. Resolve the temp dir from `$TMPDIR`, falling back to `/tmp` (or `%TEMP%` on Windows), and write to `<tmpdir>/architecture-review-<timestamp>.html` so each run gets a fresh file. Open it for the user — `xdg-open <path>` on Linux, `open <path>` on macOS, `start <path>` on Windows — and tell them the absolute path.
+
+The report uses **Tailwind via CDN** for layout and styling, and **Mermaid via CDN** for diagrams where a graph/flow/sequence reliably communicates the structure. Mix Mermaid with hand-crafted CSS/SVG visuals — use Mermaid when relationships are graph-shaped (call graphs, dependencies, sequences), and hand-built divs/SVG when you want something more editorial (mass diagrams, cross-sections, collapse animations). Each candidate gets a **before/after visualisation**. Be visual.
+
+For each candidate, render a card with:
+
+- **Files** — which files/modules are involved
+- **Problem** — why the current architecture is causing friction
+- **Solution** — plain English description of what would change
+- **Benefits** — explained in terms of locality and leverage, and how tests would improve
+- **Before / After diagram** — side-by-side, custom-drawn, illustrating the shallowness and the deepening
+- **Recommendation strength** — one of `Strong`, `Worth exploring`, `Speculative`, rendered as a badge
+
+End the report with a **Top recommendation** section: which candidate you'd tackle first and why.
+
+**Use CONTEXT.md vocabulary for the domain, and the `/codebase-design` vocabulary for the architecture.** If `CONTEXT.md` defines "Order," talk about "the Order intake module" — not "the FooBarHandler," and not "the Order service."
+
+**ADR conflicts**: if a candidate contradicts an existing ADR, only surface it when the friction is real enough to warrant revisiting the ADR. Mark it clearly in the card (e.g. a warning callout: _"contradicts ADR-0007 — but worth reopening because…"_). Don't list every theoretical refactor an ADR forbids.
+
+See [HTML-REPORT.md](/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/improve-codebase-architecture/HTML-REPORT.md) for the full HTML scaffold, diagram patterns, and styling guidance.
+
+Do NOT propose interfaces yet. After the file is written, ask the user: "Which of these would you like to explore?"
+
+### 3. Grilling loop
+
+Once the user picks a candidate, run the `/grilling` skill to walk the decision tree with them — constraints, dependencies, the shape of the deepened module, what sits behind the seam, what tests survive.
+
+Side effects happen inline as decisions crystallize — run the `/domain-modeling` skill to keep the domain model current as you go:
+
+- **Naming a deepened module after a concept not in `CONTEXT.md`?** Add the term to `CONTEXT.md`. Create the file lazily if it doesn't exist.
+- **Sharpening a fuzzy term during the conversation?** Update `CONTEXT.md` right there.
+- **User rejects the candidate with a load-bearing reason?** Offer an ADR, framed as: _"Want me to record this as an ADR so future architecture reviews don't re-suggest it?"_ Only offer when the reason would actually be needed by a future explorer to avoid re-suggesting the same thing — skip ephemeral reasons ("not worth it right now") and self-evident ones.
+- **Want to explore alternative interfaces for the deepened module?** Run the `/codebase-design` skill and use its design-it-twice parallel sub-agent pattern.
+
+
+**ARGUMENTS:** of this repo
+</skill>
+</skill_information>
+
+---
+
+<user_query>
+continue
+</user_query>
+
+---
+
+<user_query>
+I want to pick all 5 and work on them. (you can use subagents thought) /ask-matt do I start implemetning, or what do you suggest? 
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a0195f-a2ba-7eb3-a78f-5dc48091fc94" (general-purpose: "loop: You are the Doraval friction-log note-taker. Run one quiet p… (every 15 minutes)") completed successfully.
+Duration: 88.5s | Tool calls: 17 | Turns: 1
+Use get_task_output("01a0195f-a2ba-7eb3-a78f-5dc48091fc94") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+we can kill the friction logger loop, it's distracting now. whenever I want to log I will start with friction log: like how I've been doign till now. Ask questions on by one
+</user_query>
+
+---
+
+<user_query>
+C (what do you mean by break?)
+</user_query>
+
+---
+
+<user_query>
+I swill switch to B
+</user_query>
+
+---
+
+<user_query>
+I did not unserstand, what do you mean no product command? 
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+what are pros and cons for each? 
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+It shoudl work, it's a valid one
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+C
+</user_query>
+
+---
+
+<user_query>
+C
+</user_query>
+
+---
+
+<user_query>
+Fro Q13 I want information to be fexibly available in all ways possible
+</user_query>
+
+---
+
+<user_query>
+ B
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+yes, where are you tracking these tickets though?
+</user_query>
+
+---
+
+<user_query>
+You can use github issues of this repo if you want to. WIP.md is also good. Linear is not for this project. 
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+what's the concern behind this quesiton?
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+what are pros and cons 
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+The user sent a message while you were working:
+<user_query>
+/tdd
+</user_query>
+Make sure to complete any unfinished tasks from previous turns.
+<skill_information>
+<skills_referenced>
+<skill name="tdd" path="/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/tdd/SKILL.md"/>
+</skills_referenced>
+<skill name="tdd">
+# Test-Driven Development
+
+TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Every section applies on every cycle — consult them before and during the loop, not after.
+
+When exploring the codebase, read `CONTEXT.md` (if it exists) so test names and interface vocabulary match the project's domain language, and respect ADRs in the area you're touching.
+
+## What a good test is
+
+Tests verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't. A good test reads like a specification — "user can checkout with valid cart" tells you exactly what capability exists — and survives refactors because it doesn't care about internal structure.
+
+See [tests.md](/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/tdd/tests.md) for examples and [mocking.md](/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/tdd/mocking.md) for mocking guidelines.
+
+## Seams — where tests go
+
+A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
+
+**Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. No test is written at an unconfirmed seam. You can't test everything — agreeing the seams up front is how testing effort lands on the critical paths and complex logic instead of every edge case.
+
+Ask: "What's the public interface, and which seams should we test?"
+
+When the shape of that interface is itself in question — how deep the module is, where the seam belongs, what the interface should expose — use the `/codebase-design` skill for the vocabulary. It is the shared source of the module, interface, depth, seam, adapter, leverage and locality terms, and it is a reference to consult, not a session to run.
+
+## Anti-patterns
+
+- **Implementation-coupled** — mocks internal collaborators, tests private methods, or verifies through a side channel (querying the database instead of using the interface). The tell: the test breaks when you refactor but behavior hasn't changed.
+- **Tautological** — the assertion recomputes the expected value the way the code does (`expect(add(a, b)).toBe(a + b)`, a snapshot derived by hand the same way, a constant asserted equal to itself), so it passes by construction and can never disagree with the code. Expected values must come from an independent source of truth — a known-good literal, a worked example, the spec.
+- **Horizontal slicing** — writing all tests first, then all implementation. Bulk tests verify _imagined_ behavior: you test the _shape_ of things rather than user-facing behavior, the tests go insensitive to real changes, and you commit to test structure before understanding the implementation. Work in **vertical slices** instead — one test → one implementation → repeat, each test a **tracer bullet** that responds to what the last cycle taught you.
+
+## Rules of the loop
+
+- **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
+- **One slice at a time.** One seam, one test, one minimal implementation per cycle.
+- **Refactoring is not part of the loop.** It belongs to the review stage (see the `code-review` skill), not the red → green implementation cycle.
+
+</skill>
+</skill_information>
+
+---
+
+<user_query>
+I think doraval is also symlinekd so can we bump a patch version? I want try it locally. Tell me instrucitons on how to test locally and what's expected
+</user_query>
+
+---
+
+<user_query>
+when I went into a directoy and there are 100 fiels in there it started triggering everything! so I saw a response like thi sone  saif@MacBook-Pro-2  ~/Experiments/aiboomi-demo   main ● ?  dora review
+  Reviewing artifacts — tiers: structure + heuristics; LLM if a judge is available; no writes.
+│
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◐  LLM judge (api) ·
+◓  LLM judge (api) ·
+◑  LLM judge (api) ·
+◒  LLM judge (api) ·
+◇  Canceled can we limit them to 10 or ask user a question? instead
+</user_query>
+
+---
+
+<user_query>
+cool let's to to the next issue and /mattpocock-skills:implement it
+</user_query>
+
+---
+
+<user_query>
+give me instructions to test it
+</user_query>
+
+---
+
+<user_query>
+let's /mattpocock-skills:implement next issue
+</user_query>
+
+---
+
+<user_query>
+Also bump up the patch versions
+</user_query>
+
+---
+
+<user_query>
+once you have worked int he issues close them?
+</user_query>
+
+---
+
+<user_query>
+let's continue with /mattpocock-skills:implement 
+</user_query>
+
+---
+
+<user_query>
+push patch and move to /mattpocock-skills:implement next issue
+</user_query>
+
+---
+
+<user_query>
+perfect bump the patch verssions and publish and relese?
+</user_query>
+
+---
+
+<user_query>
+Can you spwan an sub agent to fix those ci tests also pass; I wan to work on something more important on the main thread
+</user_query>
+
+---
+
+<user_query>
+/ask-matt I have vague idea of what I want. It's about the docs. Which skill to use if I were to simply try to make the docs on current repo must be as good as https://github.com/vercel-labs/agent-browser both in terms of content (first and fore most). It's just that I want doraval the cli I'm buliding that for agents and less for human.
+</user_query>
+<skill_information>
+<skills_referenced>
+<skill name="ask-matt" path="/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/ask-matt/SKILL.md"/>
+</skills_referenced>
+<skill name="ask-matt" args="I have vague idea of what I want. It's about the docs. Which skill to use if I were to simply try to make the docs on current repo must be as good as https://github.com/vercel-labs/agent-browser both in terms of content (first and fore most). It's just that I want doraval the cli I'm buliding that for agents and less for human.">
+# Ask Matt
+
+You don't remember every skill, so ask.
+
+A **flow** is a path through the skills. Most paths run along one **main flow**, and two **on-ramps** merge onto it. Everything else is standalone, or a vocabulary layer that runs underneath.
+
+## The main flow: idea → ship
+
+The route most work travels. You have an idea and want it built.
+
+1. **`/grill-with-docs`** — sharpen the idea by interview. Start here whenever you are **working in a working directory**: it's stateful, retaining what it learns in `CONTEXT.md` and ADRs. (No working directory? Use `/grill-me` — see Standalone. Both run the same `/grilling` primitive; `grill-with-docs` is the one that leaves a paper trail, which makes it the better of the two whenever a repo is there to leave it in.)
+2. **Branch — can you settle every question in conversation?** If a question needs a runnable answer (state, business logic, a UI you have to see), detour through a prototype, bridged by **`/handoff`** in both directions (a prototype lives in its own directory, which is exactly what `/handoff` is for — see Phase boundaries):
+   - **`/handoff`** out, then open a fresh session against that file,
+   - **`/prototype`** to answer the question with throwaway code,
+   - **`/handoff`** back what you learned, and reference it from the original idea thread.
+3. **Branch — is this a multi-session build?**
+   - **Yes** → **`/to-spec`** (turn the thread into a spec), then **`/to-tickets`** to split it into tracer-bullet tickets, each declaring its **blocking edges**. On a local tracker that's one file per ticket under `.scratch/<feature>/issues/`, worked blockers-first by hand; on a real tracker the edges become native blocking links, so any ticket whose blockers are done can be grabbed — kick off **`/implement`** per ticket, **`/clear`ing context between each one**. Each ticket is self-contained, so the last one's context is disposable.
+   - **No** → **`/implement`** right here, in the same context window.
+
+   Either way, **`/implement`** builds each issue by driving **`/tdd`** internally — one red-green slice at a time — then closes out by running **`/code-review`**, a two-axis review (Standards + Spec) of the diff, before committing. Reach for **`/tdd`** on its own when you just want to build a concrete behaviour test-first without a full spec, and **`/code-review`** on its own whenever you want to review a branch or PR against a fixed point.
+
+### Context hygiene
+
+Keep steps 1–3 in **one unbroken context window** — don't compact or clear until after `/to-tickets` — so the grilling, spec, and tickets all build on the same thinking. Each `/implement` then starts fresh, working from the ticket.
+
+The limit on this is the **[smart zone](https://www.aihero.dev/ai-coding-dictionary/smart-zone)**: the window (~150k tokens on state-of-the-art models) within which the model still reasons sharply. If a session approaches it before `/to-tickets`, don't push on degraded — `/compact` at the nearest phase boundary and carry on (see Phase boundaries).
+
+## On-ramps
+
+A starting situation that generates work, then merges onto the main flow.
+
+- **Bugs and requests piling up** → **`/triage`**. It moves issues through triage roles and produces agent-ready issues, which **`/implement`** later picks up.
+
+  Triage is only for issues **you didn't create** — bug reports, incoming feature requests, anything that arrives raw. Tickets that `/to-tickets` produced are already agent-ready, so **don't triage them**.
+
+- **Something's broken** → **`/diagnosing-bugs`**. For the hard ones: the bug that resists a first glance, the intermittent flake, the regression that crept in between two known-good states. It refuses to theorise until it has a **tight feedback loop** — one command that already goes red on *this* bug — then fixes with a regression test. Its post-mortem hands off to **`/improve-codebase-architecture`** when the real finding is that there's no good seam to lock the bug down.
+
+- **A huge, foggy effort — a greenfield project or a huge feature build, too big for one session** → **`/wayfinder`**, the most cognitively demanding flow here. When the way from here to the destination isn't visible yet, it charts a **shared map** of **decision tickets** on the issue tracker and resolves them one at a time — producing **decisions, not deliverables** — until the fog is pushed back and the way is clear. Where **`/grill-with-docs`** sharpens an idea you can hold in one session, wayfinder is for the idea you can't — and it's slower and denser, so save it for exactly that, never a well-scoped feature.
+
+  When the map clears, **it hands off, it doesn't build**: merge onto the main flow at **`/to-spec`**, which collapses the map's linked decisions into a buildable plan, then `/to-tickets` and `/implement` as usual. Looping the map straight into `/implement` skips that collapse and throws the linked detail away — go straight to `/implement` only when the effort turned out genuinely small.
+
+## Codebase health
+
+Not feature work — upkeep.
+
+- **`/improve-codebase-architecture`** — run whenever you have a spare moment to keep the codebase good for agents to operate in. It surfaces **deepening opportunities**; picking one _generates an idea_ you can take into the main flow at `/grill-with-docs`. It's the survey that finds the candidates; **`/codebase-design`** (below) is the bench you design the chosen one on.
+
+## Vocabulary underneath
+
+Two model-invoked references that run *beneath* the other skills — each the single source of truth for its vocabulary. Reach for them directly when the **words**, not the process, are the problem; or let the skills above pull them in.
+
+- **`/domain-modeling`** — sharpen the project's *domain* language: challenge a fuzzy term, resolve an overloaded word ("account" doing three jobs), record a hard-to-reverse decision as an ADR. It's the active discipline `/grill-with-docs` drives to keep `CONTEXT.md` a clean glossary.
+- **`/codebase-design`** — the deep-module vocabulary (module, interface, depth, seam, adapter, leverage, locality) for designing a module's *shape*: a lot of behaviour behind a small interface at a clean seam. `/tdd` and `/improve-codebase-architecture` both speak it.
+
+## Phase boundaries
+
+A **phase** is a chunk of work inside a session — the grilling, the implementation, the QA. At the **boundary** between two of them you have five options, and picking between them is the fuzziest decision in this whole map:
+
+- **Continue** — stay put. Costs nothing, loses nothing.
+- **`/clear`** — empty the window, when nothing here matters to what's next.
+- **`/handoff`** — write a portable markdown file. Narrow: only for a **new harness**, a **new directory**, a **colleague**, or forking a side task **mid-phase**. What it buys is portability.
+- **Subagent** — send a tightly-scoped task to its own window and get a report back.
+- **`/compact`** — compress this context and seed a fresh session with it. The **default**, at the bottom of the tree rather than the first reach.
+
+Read [PHASE-BOUNDARIES.md](/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/ask-matt/PHASE-BOUNDARIES.md) for the ordered tree — the five questions, the reasoning behind each branch, and why the primary-source cost makes **Continue** the one to rule out first. Make the decision **at** a boundary; mid-phase, continue or split the rest into subagents.
+
+## Standalone
+
+Off the main flow entirely.
+
+- **`/grill-me`** — the same relentless interview as `/grill-with-docs`, but **stateless**: it saves nothing locally and builds no `CONTEXT.md`. Reach for it when you are **not working in a working directory** — sharpening a plan, a design, a piece of writing, anything with no repo under it. If you are in a working directory, use `/grill-with-docs` instead: it runs the same interview and leaves a paper trail, so it is strictly the better one.
+- **`/grilling`** — the interview primitive itself: rounds, the frontier, facts are the agent's job and decisions are yours. `/grill-me` and `/grill-with-docs` are the two named ways in, and `/triage`, `/wayfinder` and `/improve-codebase-architecture` all run it internally. Reach for it directly only when you want the interview with no wrapper around it.
+- **`/resolving-merge-conflicts`** — work an in-progress merge or rebase conflict hunk by hunk, resolving by **intent** traced to each side's primary source rather than by picking lines, then finish the operation. It never runs `--abort`. Standalone and off every flow: reach for it when you are already mid-conflict.
+- **`/prototype`** — a small, throwaway program that answers one design question: does this state model feel right, or what should this UI look like. Throwaway is a constraint on how the code is written, not a promise to destroy it: the answer folds into the real code, and the prototype itself is kept as a **primary source** on a `prototype/<name>` branch out of main, pointed at from the implementation issue. It's the detour in step 2 of the main flow, but reach for it any time a design question is hard to settle on paper.
+- **`/research`** — delegate reading legwork to a **background agent**: it investigates a question against **primary sources**, then leaves a cited Markdown file in the repo. Keep working while it reads. The file it produces is something to take *into* the main flow at `/grill-with-docs` — research feeds the thinking, it doesn't replace it.
+- **`/to-questionnaire`** — when the thing blocking you isn't in your head or the codebase but in **someone else's**, this writes them a questionnaire to fill in. It's the inverse of `/grill-me`: instead of interviewing you about the subject, it interviews you about the **send** — who it's going to, what you need back — and aims the questions at the gap. What comes back is material for `/grill-with-docs` or `/to-spec`.
+- **`/wizard`** — for the steps only a **human** can take: provisioning infrastructure, setting up credentials or CI secrets, clicking through an unfamiliar third-party dashboard, running a one-off migration or cutover. It generates an interactive bash script that opens each URL, captures each value, and writes it into `.env` and GitHub secrets — so the procedure stops being something you re-explain to an agent every time. Model-invoked, so the agent reaches for it the moment it hits a wall only you can pass. If the agent could just do it itself, it should; this is for where a human is genuinely in the loop.
+- **`/wait-what`** — the corrective for a message that didn't land. Use it mid-conversation, inside any other skill, and the agent re-pitches what it just said with the context you were missing, in plain English, using the `CONTEXT.md` vocabulary. It works after the fact; `/grill-with-docs` is the upfront cure, because a shared language agreed early is what stops the jargon arriving at all.
+- **`/teach`** — learn a concept over multiple sessions, using the current directory as a stateful workspace.
+- **`/writing-for-agents`** — reference for writing documents agents consume: skills, AGENTS.md, pointed-at docs.
+
+## Precondition
+
+**`/setup-matt-pocock-skills`** — run before your first engineering flow to configure the issue tracker, triage labels, and doc layout the other skills assume. Custom issue trackers also work.
+
+
+**ARGUMENTS:** I have vague idea of what I want. It's about the docs. Which skill to use if I were to simply try to make the docs on current repo must be as good as https://github.com/vercel-labs/agent-browser both in terms of content (first and fore most). It's just that I want doraval the cli I'm buliding that for agents and less for human.
+</skill>
+</skill_information>
+
+---
+
+<system-reminder>
+Background subagent "01a01a29-8fbb-7462-a6b3-a530849a8b41" (general-purpose: "Fix failing CI sessions test") completed successfully.
+Duration: 196.4s | Tool calls: 44 | Turns: 1
+Use get_task_output("01a01a29-8fbb-7462-a6b3-a530849a8b41") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+/grill-with-docs I want to revise and revamp the docs and make them as good as agent-browser docs. One thing I see my docs on this are lacking it the phrasing and eveyrhitng still assume or look like humans are using it. But then agent-browser as a product is for agnets to use and humans to read, I think it's better reference and that way I want to revise all teh docs. But I want to make sure any links mention in friction logs are preserved with redirects.
+</user_query>
+<skill_information>
+<skills_referenced>
+<skill name="grill-with-docs" path="/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/grill-with-docs/SKILL.md"/>
+</skills_referenced>
+<skill name="grill-with-docs" args="I want to revise and revamp the docs and make them as good as agent-browser docs. One thing I see my docs on this are lacking it the phrasing and eveyrhitng still assume or look like humans are using it. But then agent-browser as a product is for agnets to use and humans to read, I think it's better reference and that way I want to revise all teh docs. But I want to make sure any links mention in friction logs are preserved with redirects.">
+Run a `/grilling` session, using the `/domain-modeling` skill.
+
+
+**ARGUMENTS:** I want to revise and revamp the docs and make them as good as agent-browser docs. One thing I see my docs on this are lacking it the phrasing and eveyrhitng still assume or look like humans are using it. But then agent-browser as a product is for agnets to use and humans to read, I think it's better reference and that way I want to revise all teh docs. But I want to make sure any links mention in friction logs are preserved with redirects.
+</skill>
+</skill_information>
+
+---
+
+<system-reminder>
+Background subagent "01a01a2d-b52c-7803-a7ad-2e0739a8e259" (explore: "Find friction-log URLs") completed successfully.
+Duration: 53.1s | Tool calls: 24 | Turns: 1
+Use get_task_output("01a01a2d-b52c-7803-a7ad-2e0739a8e259") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a01a2d-b52c-7803-a7ad-2e10691b2742" (explore: "Study agent-browser docs bar") completed successfully.
+Duration: 101.2s | Tool calls: 39 | Turns: 1
+Use get_task_output("01a01a2d-b52c-7803-a7ad-2e10691b2742") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+Ask these questions one by one, in the same session I mentioned multiple times!!
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a01a2d-b52c-7803-a7ad-2df07b43ece8" (explore: "Inventory Doraval docs surfaces") completed successfully.
+Duration: 163.7s | Tool calls: 103 | Turns: 1
+Use get_task_output("01a01a2d-b52c-7803-a7ad-2df07b43ece8") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+C
+</user_query>
+
+---
+
+<user_query>
+B. and C in next pass.
+</user_query>
+
+---
+
+<user_query>
+C
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+We'd like to do how agent-browser solves it
+</user_query>
+
+---
+
+<user_query>
+what do you mean by runner?
+</user_query>
+
+---
+
+<user_query>
+A would like to have C later as well
+</user_query>
+
+---
+
+<user_query>
+no specific place usually --help command lists mcuh, evenrything is close in cli command itslef or we need to look at the code.
+</user_query>
+
+---
+
+<user_query>
+where did you find it? are you refereing page page on docs?
+</user_query>
+
+---
+
+<user_query>
+If yes, then it's basically documentaiton when I wrote when buliding the features. 
+</user_query>
+
+---
+
+<user_query>
+Rewwrite everything whwere releavent what is needful
+</user_query>
+
+---
+
+<user_query>
+can you use a subagent to run docs locally I want to see 
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a01a42-b303-7463-8d94-c42c1e778b8a" (general-purpose: "Start local Doraval docs site") completed successfully.
+Duration: 125.7s | Tool calls: 16 | Turns: 1
+Use get_task_output("01a01a42-b303-7463-8d94-c42c1e778b8a") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+cool, is you grill complete with q & a
+</user_query>
+
+---
+
+<user_query>
+B sure, but then I want to run hte ones with --quick commands so tha tuser sees more information first then anything else
+</user_query>
+
+---
+
+<user_query>
+Both A and B
+</user_query>
+
+---
+
+The user sent a message while you were working:
+<user_query>
+In othe rway for most common ones A and all the commands I'd say B
+</user_query>
+Make sure to complete any unfinished tasks from previous turns.
+
+---
+
+<user_query>
+I would like to borrow what agent-browser does here. C prefer
+</user_query>
+
+---
+
+<user_query>
+more closer to agent-browser repo
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A - but path doesn't have to /commands follow what agnet-browser does
+</user_query>
+
+---
+
+<user_query>
+try again?
+</user_query>
+
+---
+
+<user_query>
+try again
+</user_query>
+
+---
+
+<user_query>
+B
+</user_query>
+
+---
+
+<user_query>
+try again
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+A
+</user_query>
+
+---
+
+<user_query>
+Use subagent to push friction logs to my github gists, werite well, and simplway and put it on gist. and let me know when done give me the link to it.
+</user_query>
+
+---
+
+<user_query>
+Let's proceed to /to-tickets ? I mentioned agent-browser many times maybe you'd wnat to /research their docs, and then you get better understanding on the to tickets?
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a01d41-770d-7ae1-93bc-027f41893623" (general-purpose: "Research agent-browser docs IA") completed successfully.
+Duration: 773.0s | Tool calls: 57 | Turns: 1
+Use get_task_output("01a01d41-770d-7ae1-93bc-027f41893623") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+Now next logical step is to /mattpocock-skills:implement ?
+</user_query>
+
+---
+
+<user_query>
+okay let's do /to-tickets 
+</user_query>
+
+---
+
+<user_query>
+Instead of new session, can we use subagents appropriately?
+</user_query>
+
+---
+
+<user_query>
+Meanwhile we can run the docs and review the changes on going; can you start the docs server locally?
+</user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a01d52-2184-7782-9f5a-c2b6e893072c" (general-purpose: "Implement docs ticket #27") completed successfully.
+Duration: 197.5s | Tool calls: 29 | Turns: 1
+Use get_task_output("01a01d52-2184-7782-9f5a-c2b6e893072c") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a01d55-f71d-71c2-884a-33c24664fccf" (general-purpose: "Implement docs ticket #28") completed successfully.
+Duration: 362.1s | Tool calls: 59 | Turns: 1
+Use get_task_output("01a01d55-f71d-71c2-884a-33c24664fccf") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a01d55-f71d-71c2-884a-33d331bf59e7" (general-purpose: "Implement docs ticket #29") completed successfully.
+Duration: 522.6s | Tool calls: 60 | Turns: 1
+Use get_task_output("01a01d55-f71d-71c2-884a-33d331bf59e7") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a01d5b-eaba-7903-b4f6-ea2a987a6c78" (general-purpose: "Implement docs ticket #31") completed successfully.
+Duration: 290.4s | Tool calls: 70 | Turns: 1
+Use get_task_output("01a01d5b-eaba-7903-b4f6-ea2a987a6c78") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+The home page I am still having to scroll to see the footer, since there is enough space around we don't need to have the user scroll
+</user_query>
+
+---
+
+The user sent a message while you were working:
+<user_query>
+there is agent-browser install use that instead?
+</user_query>
+Make sure to complete any unfinished tasks from previous turns.
+
+---
+
+<image_files>
+The following images were provided by the user and saved to the workspace for future use:
+1. /Users/saif/.grok/sessions/%2FUsers%2Fsaif%2FExperiments%2Fdoraval/01a0188d-5218-7323-a951-d8bd62636c1c/assets/image-a0fb50a6-8822-47b0-ba12-094df3ad704e.jpg
+
+These images can be copied for use in other locations.
+</image_files>
+
+<user_query>
+[Image #1]  the footer is too much, see for yourself /userinterface-wiki 
+</user_query>
+
+
+
+<system-reminder>
+<image_compression_notice>
+Image 1 was over the max input resolution and was re-encoded from 2934x1818 (266.5 KB) to 1971x1221 (157.2 KB). Fine details may have been lost.
+</image_compression_notice>
+</system-reminder>
+
+---
+
+<user_query>
+Even after your /research and after your implemented I do not really see any changes to the content itself in the docs. Is n't that our first target to learn from agent-browser docs? and then apply same sidebar and writing practices? 
+</user_query>
+
+---
+
+<user_query>
+yes, everything should take their shape
+</user_query>
+
+---
+
+<user_query>
+I don't see leftsidebar in their shape
+</user_query>
