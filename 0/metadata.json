@@ -1,0 +1,17 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0ER03TP9BVQEVVRXHM5BXF7",
+  "session_id": "01a0188d-5218-7323-a951-d8bd62636c1c",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-20T04:48:50.750458Z",
+  "branch": "main",
+  "checkpoints_count": 55,
+  "save_step_count": 1,
+  "files_touched": [],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "d54e97921d3c",
+  "session_metrics": {
+    "turn_count": 154
+  }
+}
