@@ -1,0 +1,20 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0FKP1P75PE9CGGT42NX12G4",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "CHANGELOG.md",
+    "README.md",
+    "apps/website/content/commands/index.mdx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
