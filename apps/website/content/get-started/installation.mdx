@@ -1,35 +1,16 @@
 ---
 title: Installation
-description: Step 1 — npx skills add saif-shines/doraval. Then install the dora CLI if you want it on PATH.
+description: Install the dora CLI, then add the doraval skill with npx skills add.
 sidebar:
   label: Installation
   order: 4
 ---
 
-## 1. Install the doraval skill (first step)
+Install the `dora` CLI so you can scan and review agent context on this machine. Then add the doraval skill so Claude, Cursor, Codex, Copilot, or Grok can run the same checks.
 
-```bash
-npx skills add saif-shines/doraval
-```
+After a permanent install, `dora` and `doraval` are the same binary.
 
-This uses the **skills** CLI to install the doraval skill into your agent’s skill directory. After this, Claude, Cursor, Codex, Copilot, or Grok can load the checklist and run `dora` when you edit skills, plugins, rules, or agent config.
-
-How the skill drives checks: [Use with your agent](/for-agents/).
-
-## 2. Review context on your project
-
-```bash
-npx @hacksmith/doraval
-# same engine the skill uses; after permanent install: dora
-```
-
-**[Review my context](/get-started/quickstart/)** walks through the output.
-
-## 3. Optional — put `dora` on PATH
-
-After a permanent install, `dora` and `doraval` are the same binary. Not required if you are fine with `npx @hacksmith/doraval` (the skill falls back to that when `dora` is missing).
-
-### Homebrew (recommended, macOS)
+## Homebrew (recommended, macOS)
 
 ```bash
 brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
@@ -37,7 +18,7 @@ brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
 
 Upgrade later with `brew upgrade doraval` or `dora update`.
 
-### npm (cross-platform)
+## npm (cross-platform)
 
 ```bash
 npm install -g @hacksmith/doraval
@@ -45,7 +26,7 @@ npm install -g @hacksmith/doraval
 
 Ships a prebuilt binary per platform (macOS arm64/x64, Linux x64/arm64, Windows x64). Node ≥ 14.18.
 
-### Bun
+## Bun
 
 ```bash
 bun add -g @hacksmith/doraval
@@ -53,7 +34,15 @@ bun add -g @hacksmith/doraval
 bunx @hacksmith/doraval
 ```
 
-### Alpine / musl
+## One-shot (no install)
+
+```bash
+npx @hacksmith/doraval
+```
+
+Use this when you do not want `dora` on `PATH`. The skill falls back to the same command when `dora` is missing.
+
+## Alpine / musl
 
 Platform binaries target glibc. On Alpine/musl, run from source with Bun:
 
@@ -61,26 +50,54 @@ Platform binaries target glibc. On Alpine/musl, run from source with Bun:
 bunx @hacksmith/doraval
 ```
 
+## AI agent setup
+
+Install the skill so Claude Code, Cursor, Codex, Copilot, or Grok can load the Doraval checklist.
+
+### Coding assistants
+
+```bash
+npx skills add saif-shines/doraval
+```
+
+This fetches the skill from the repository. List or remove it with `npx skills list` and `npx skills remove`.
+
+### AGENTS.md / CLAUDE.md
+
+Add this block to `AGENTS.md` (or `CLAUDE.md`) if you want the same workflow without the skill:
+
+```markdown
+## Context review
+
+Use `dora` to review agent context. Run `dora --help` for all commands.
+
+Core workflow:
+1. `dora review --quick` - structure and heuristics, no Judge
+2. `dora fix <path> --yes` - apply mechanical fixes
+3. Re-run `dora review --quick` until exit `0`
+```
+
+If `dora` is not on `PATH`, use `npx @hacksmith/doraval` in place of `dora`.
+
 ## Verify
 
 ```bash
-# skill (skills CLI)
-npx skills list
-
 # CLI (after permanent install)
 doraval --version
 dora --version
+
+# skill (skills CLI)
+npx skills list
 ```
 
 ## Common mistakes
 
-- Skipped step 1: agents will not auto-load the doraval checklist until `npx skills add saif-shines/doraval`.
-- `npx skills add` fails: need network + a recent Node; retry the same command.
 - Global install succeeds but `dora` is missing: ensure your npm/Bun global bin directory is on `PATH`.
 - Alpine or musl hosts: use Bun (`bunx` / `bun add -g`), not the glibc platform binary.
+- `npx skills add` fails: need network and a recent Node; retry the same command.
+- Skipped skill add: coding assistants will not auto-load the Doraval checklist until `npx skills add saif-shines/doraval`.
 
 ## Next
 
-**[Audit my agent context](/get-started/audit/)** — skill + review only.  
-**[Quickstart](/get-started/quickstart/)** — full tutorial.  
-**[Use with your agent](/for-agents/)** — JSON, exit codes, CI.  
+**[Audit my agent context](/get-started/audit/)**: skill + review only.  
+**[Quickstart](/get-started/quickstart/)**: full tutorial.
