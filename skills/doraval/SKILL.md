@@ -5,95 +5,114 @@ description: "Verify agent-context quality with the `dora` CLI. Whenever you aut
 
 # doraval
 
-`dora` reads a repo and reports what's broken in agent context — dead skills,
-frontmatter errors, cross-agent contradictions, lost decisions. It is a
-**verification gate**: the tool checks your work, so you don't ship context that
-fails on every try.
+You run `dora`. It is the verification gate on agent context: Skills, Rules, plugins, and Memory files.
 
-Every result is verifiable — `dora` exits `0` clean, `1` issues found, `2`
-could not run. Treat the exit code as ground truth, not your own judgement.
+Treat the exit code as truth. Do not report done while the code is `1` or `2`.
 
-## When to reach for dora
+If `dora` is not on `PATH`, run `npx @hacksmith/doraval` in its place.
+
+## Exit codes
+
+| Code | Meaning | Action |
+| --- | --- | --- |
+| `0` | clean | Only then report done |
+| `1` | issues found | Fix or surface to the user. Do not report done |
+| `2` | could not run | Report the failure and why. Do not claim a pass |
+
+`--deep` Review exits `2` when no Judge is available. That is "could not run the tier you required," not clean.
+
+## First Review
+
+Surface Findings before JSON, LLM, or CI flags:
+
+```bash
+dora review --quick
+```
+
+`--quick` is structure + heuristics. No Judge. No LLM wait.
+
+After you edit one artifact, pass its path:
+
+```bash
+dora review --quick <path>
+```
+
+`<path>` is the Skill directory (the folder that holds `SKILL.md`), a plugin root, or `.` for the workspace.
+
+If Review finds more than 10 artifacts, it may ask how many to grade. Pass a path or `--all` so it does not prompt.
+
+## Then JSON
+
+Add `--format json` when you will branch on fields, not on a table:
+
+```bash
+dora review --quick --format json
+```
+
+In CI or a non-interactive subagent, add `--ci` (implies `--format json`).
+
+Require the Judge only after a `--quick` pass is clean:
+
+```bash
+dora review --deep <path>
+```
+
+`--deep` exits `2` if no Judge is available. JSON keys and how to branch: [`references/output.md`](references/output.md).
+
+## The loop
+
+The gate is Review. Do not skip it.
+
+1. **Review.** Run `dora review --quick` (or `dora review --quick <path>` after an edit). Read Findings. Read the exit code. Do not report done on `1` or `2`.
+2. **Author** the Skill, Rule, or plugin if the user asked you to write one.
+3. **Fix mechanical issues.** Preview, then apply without a TTY prompt:
+
+   ```bash
+   dora fix <path> --dry-run
+   dora fix <path> --yes
+   ```
+
+   `--yes` applies only mechanical fixes (frontmatter, formatting, missing fields). Never run bare `dora fix`. It prompts and hangs.
+4. **Judgement fixes.** Anything `--yes` cannot apply comes from `dora fix <path> --brief`. Hand-edit those. Do not wait for `--yes` to do judgement work.
+5. **Re-verify.** After every fix or hand-edit, run `dora review --quick <path>` again. The gate is passed only when the exit code is `0`.
+6. **Delegated Judge.** If a later Review (without `--quick`) shows LLM as `via delegated` (JSON `method: "delegated"`), dora handed you the rubric. Read the `JUDGE THIS` prompt. Evaluate the Skill against it. Fix findings before you report done. Done means mechanical tiers are clean and delegated judgment is complete.
+7. **Memory — only with user intent.** When the user states a durable rule to enforce:
+
+   ```bash
+   dora memory add "<rule>" --weight <1-10>
+   ```
+
+   Weight is priority (1–10, default 5). `≥ 7` is a hard rule (enforced in Review). Do not invent memories from your own inferences.
+
+   To write hard rules into `AGENTS.md`, run `dora memory promote --dry-run`, then `dora memory promote --yes` only when the user wants that. Never run bare `promote`. It prompts.
+8. **Contradictions.** If Review or Scan reports a cross-agent conflict, run `dora reconcile --dry-run` and ask the user. Never run bare `reconcile`. Use `--apply` only after the user confirms.
+
+## When to reach for each verb
 
 | Moment | Command |
 | --- | --- |
-| Entering a repo with agent context you didn't write | `dora --format json` (bare = scan) |
-| Just wrote or edited any `SKILL.md`, rule, or plugin | `dora review <path> --format json` |
-| Review reported mechanical errors | `dora fix <path> --dry-run`, then `dora fix <path> --yes` |
-| User states a durable rule they want enforced | `dora memory add "<rule>" --weight <1-10>` |
-| Two agents disagree on a convention | `dora reconcile --dry-run` (then surface to user) |
-| CI or subagent (non-interactive) | add `--ci` (implies `--format json`) |
+| Entering a repo with agent context you did not write | `dora review --quick` |
+| Just wrote or edited a Skill, Rule, or plugin | `dora review --quick <path>` |
+| Branch on fields | add `--format json` |
+| CI / non-interactive subagent | add `--ci` |
+| Mechanical errors in Findings | `dora fix <path> --dry-run`, then `--yes` |
+| User states a durable rule | `dora memory add "<rule>" --weight <1-10>` |
+| Two agents disagree | `dora reconcile --dry-run`, then ask the user |
+| Fast workspace check (no Review) | `dora --yes` (bare Scan; `--yes` skips the TTY confirm) |
 
-## The loop — the review gate is mandatory
+## Constraints
 
-Always pass `--format json` when you will act on the result, so you branch on
-data, not on a human-formatted table. `<path>` throughout is the skill
-directory (the folder holding `SKILL.md`), a plugin root, or `.` for the whole
-repo.
+You run in a loop that cannot answer TTY prompts.
 
-**The gate is the review (step 3) — never skip it.** The initial scan (steps
-1–2) is optional: if the user asked you to *author* something new, start at
-step 1. If you were invoked *after already editing* an artifact, start at step 3
-and review the path you touched — you don't need a full repo scan to verify one
-file, but you always run the review.
+- MUST treat the exit code as truth: `0` clean, `1` issues, `2` could not run. MUST NOT report done on `1` or `2`.
+- MUST run `dora review --quick` first so Findings show before `--format json`.
+- MUST apply `fix` and `memory promote` with `--yes` or `--dry-run`. MUST NOT run bare `dora fix`, `dora reconcile`, or `dora memory promote`.
+- MUST NOT write to `dora memory` from your own inference. Add a memory only when the user states a durable rule.
+- MUST add `--ci` in CI or a non-interactive subagent.
+- MUST look up flags with `dora <command> --help`. MUST NOT copy a flag catalog into this skill.
 
-1. **Scan first.** Run `dora --format json` and read `.summary` /
-   `.contradictions`. State what you found before authoring anything.
-2. **Author** the skill / rule / plugin.
-3. **Review.** `dora review <path> --format json`. Read the exit code.
-   **Do not tell the user the work is done while the exit code is `1` or `2`.**
-4. **Fix.** Preview first, then apply non-interactively:
-
-   ```bash
-   dora fix <path> --dry-run          # show the diff, write nothing
-   dora fix <path> --yes              # apply the mechanical fixes
-   ```
-
-   You run inside an agent loop that cannot answer TTY prompts — **always use
-   `--yes` to apply**, never the bare interactive form (it hangs). `--yes`
-   applies **only mechanical fixes** (frontmatter, formatting, missing fields).
-5. **Judgement fixes** — anything `fix` can't do mechanically comes back from
-   `dora fix <path> --brief` as a prompt. You hand-edit those. **Mechanical =
-   what `--yes` applies; judgement = what `--brief` describes.** Don't hand-edit
-   the mechanical set, don't wait for `--yes` to do the judgement set.
-6. **Re-verify.** After any fix or hand-edit, re-run
-   `dora review <path> --format json` and confirm exit `0` before reporting
-   done. The gate is only passed when the tool says so.
-7. **Remember — only with user intent.** When the user states a durable rule
-   they want enforced, record it: `dora memory add "<rule>" --weight <1-10>`.
-   Weight is priority (1-10, default 5): `≥ 7` = hard rule (enforced in review),
-   `5` = default, `≤ 3` = soft preference. To
-   write those into AGENTS.md, run `dora memory promote --dry-run` to show the
-   diff, then `dora memory promote --yes` — only when the user wants hard rules
-   enforced repo-wide (never run bare `promote`; it prompts). Do not invent
-   memories from your own inferences.
-
-If `dora review` output shows the LLM tier as `via delegated` (JSON `method: "delegated"`),
-dora did not run the judge — it handed you the rubric. Read the emitted `JUDGE THIS`
-prompt, evaluate the skill against it yourself, and fix any findings before reporting
-done. "Done" = mechanical tiers clean AND delegated judgment completed. Never report
-done while exit code is 1 or 2.
-
-## Rules of engagement
-
-- **MUST** treat the exit code as truth: `0` clean, `1` issues, `2` could not
-  run. **MUST NOT** report a pass you didn't get; on `2`, say the tool could not
-  run and why.
-- **MUST** apply fixes with `--yes` (non-interactive); **MUST NOT** use the
-  bare interactive `dora fix` inside an agent loop — it blocks on a prompt.
-  Same for `dora reconcile`: use `--dry-run` to read the plan, then surface
-  conflicts to the user — never run bare `reconcile` (it prompts and hangs).
-- **MUST NOT** write to `dora memory` from your own inference — only on an
-  explicit user rule.
-- **MUST** add `--ci` in CI / subagent contexts (implies `--format json`,
-  strict exit codes).
-- **`dora` not found?** Run it with no install: `npx @hacksmith/doraval`.
-  (macOS: `brew install doraval`.)
-- Full command + flag reference: [`references/commands.md`](references/commands.md).
-  Output shape + JSON keys: [`references/output.md`](references/output.md).
+Bare Scan (`dora`) also prompts on a TTY. Use `dora --yes` or `dora --format json`. Machine manifest: `dora --capabilities`. Short verb list: [`references/commands.md`](references/commands.md).
 
 ## What dora does not do
 
-It does not write your skill for you or invent passing results. It diagnoses,
-applies mechanical fixes (`--yes`), and records user-stated decisions. Judgement
-fixes come back as a brief (`dora fix --brief`) for you to act on.
+dora does not write the Skill for you. It does not invent a pass. It diagnoses, applies mechanical fixes (`--yes`), and records user-stated decisions. Judgement fixes come back as a brief (`dora fix --brief`).

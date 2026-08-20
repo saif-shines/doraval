@@ -1,16 +1,45 @@
-# dora — exit codes & JSON output
+# dora — exit codes and JSON
 
 ## Exit codes (global contract)
+
 | Code | Meaning | Agent action |
 | --- | --- | --- |
 | `0` | clean — no issues | proceed / report done |
-| `1` | issues found | fix, or surface to user; do NOT report done |
+| `1` | issues found | fix, or surface to the user; do not report done |
 | `2` | could not run (internal error / unmet prerequisite) | report the failure and why; never claim a pass |
 
-`--deep` reviews exit `2` when no LLM judge is available — that's "could not
-run the tier you required," not "clean."
+`--deep` Review exits `2` when no Judge is available. That is "could not run," not clean.
 
-## `dora --format json` — scan shape
+## `dora review --quick --format json`
+
+Top-level value is always an array, even for one artifact.
+
+```jsonc
+[
+  {
+    "path": ".claude/skills/deploy",
+    "origin": "claude",
+    "tiers": {
+      "structure": { "passed": 3, "warnings": 0, "errors": 1, "findings": [/* Finding */] },
+      "heuristics": { "passed": 2, "warnings": 1, "errors": 0, "findings": [] },
+      "llm": { "available": false },
+      "sessions": { "available": false }
+    },
+    "summary": { "passed": 5, "warnings": 1, "errors": 1 }
+  }
+]
+```
+
+A Finding has `tier`, `severity` (`error` | `warning` | `info` | `pass`), `message`, `fixable`, and optional `code` / `docUrl`.
+
+### How to branch (Review)
+
+- Any `.summary.errors > 0` → hard failures. Fix before done.
+- `tiers.llm.method === "delegated"` → evaluate the emitted `JUDGE THIS` block. `--quick` does not run this tier.
+- A clean `--quick` result is structure + heuristics only.
+
+## `dora --format json` — Scan shape
+
 ```jsonc
 {
   "version": "0.6.x",
@@ -30,16 +59,13 @@ run the tier you required," not "clean."
 }
 ```
 
-## How to branch
-- `.summary.failed > 0` → there are hard failures. Fix before done.
-- `.contradictions[].severity === "conflict"` → cross-agent conflict; run
-  `dora reconcile`.
+### How to branch (Scan)
+
+- `.summary.failed > 0` → hard failures. Review / Fix before done.
+- `.contradictions[].severity === "conflict"` → run `dora reconcile --dry-run`, then ask the user.
 - `.health[].status` is `"pass" | "warn" | "fail"` per artifact.
-- `.intelligence.judge` is `"api" | "delegate"`. `"api"` means dora can call the
-  configured judge directly. `"delegate"` means the calling agent should evaluate
-  the emitted `JUDGE THIS` block inline; `--ci` still requires API credentials.
-  A clean `--quick` result is structural only.
+- `.intelligence.judge` is `"api" | "delegate"`. `"delegate"` means evaluate the `JUDGE THIS` block on a later Review (not `--quick`). `--ci` still requires API credentials.
 
 ## For hooks
-`dora memory context --json` emits the active memory set for injection into an
-agent's context at session start.
+
+`dora memory context --json` emits the active memory set for injection at session start.
