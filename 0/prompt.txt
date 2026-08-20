@@ -1515,3 +1515,9 @@ yes, everything should take their shape
 <user_query>
 I don't see leftsidebar in their shape
 </user_query>
+
+---
+
+<user_query>
+this is amazing, commit push to main, bump patch and release
+</user_query>
