@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0ENV4REJG5E1C7NXEZP26ZX",
+  "session_id": "01a01d55-f71d-71c2-884a-33d331bf59e7",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-20T04:11:07.505953Z",
+  "branch": "docs/first-loop-home-readme",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "apps/website/pages/index.astro"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "ed412b7040cd",
+  "initial_attribution": {
+    "calculated_at": "2026-08-20T04:11:07.473205Z",
+    "agent_lines": 55,
+    "agent_removed": 183,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 55,
+    "total_lines_changed": 238,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 25,
+      "user_lines_removed": 20,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "CONTEXT.md": 25
+      },
+      "user_removed_per_file": {
+        "test/fixtures/examples/my-codex-plugin/.agents/plugins/marketplace.json": 20
+      }
+    }
+  ]
+}

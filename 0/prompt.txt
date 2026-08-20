@@ -1,0 +1,40 @@
+Implement GitHub issue #29 on Doraval. Isolated worktree. Commit there. Do not push. Do not bump versions. Do not close the issue.
+
+## Issue
+https://github.com/saif-shines/doraval/issues/29
+Parent: https://github.com/saif-shines/doraval/issues/26
+Blocked by #27 (done on main: 0d0f728).
+
+## What to build
+Home and README open like agent-browser: short pitch, then the first loop. A Reader can finish one real `--quick` Review from the README alone.
+
+First loop (this order):
+1. `npx skills add saif-shines/doraval`
+2. `dora review --quick`
+
+## Acceptance
+- README is **Reader** voice: one-line what it is, install, then the first loop.
+- Home keeps a short pitch. CTAs / example block are that same first loop. No feature grid.
+- `dora review --quick` from those instructions produces a real Review (not help-text failure). Run it against this repo or a fixture to prove it.
+- JSON, `--ci`, `--deep` are not the first commands shown.
+
+## Voice
+Reader = human. Do not mix Runner “you” on README/home.
+
+## Scope
+- README.md
+- Home page (apps/website/pages/index.astro and/or _home components)
+- Do NOT delete /for-agents/ or rewrite installation.mdx (ticket #28)
+- Do NOT add the long command catalog (ticket #30). README may keep a short “see docs” after the first loop.
+- Do NOT rewrite the shipped skill.
+
+Borrow shape from https://github.com/vercel-labs/agent-browser README top + https://agent-browser.dev/ home Example. Do not copy marketing (“native Rust”, feature grid).
+
+## Verify
+- README contains both first-loop strings
+- Run `dora review --quick` (or `bun run ./src/cli/index.ts review --quick .`) and confirm it is a Review, not --help
+
+Commit: `docs: first loop on home and README`
+
+## Report
+Files, commit hash, worktree needs merge?, output snippet of the --quick review you ran.
