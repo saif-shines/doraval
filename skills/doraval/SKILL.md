@@ -99,6 +99,8 @@ The gate is Review. Do not skip it.
 | User states a durable rule | `dora memory add "<rule>" --weight <1-10>` |
 | Two agents disagree | `dora reconcile --dry-run`, then ask the user |
 | Fast workspace check (no Review) | `dora --yes` (bare Scan; `--yes` skips the TTY confirm) |
+| Scan or Review reports R034 Remove candidate | `dora skill remove <name> --dry-run`, then `--yes` |
+| Need a Quarantined Global Skill back | `dora skill restore <name> --yes` |
 
 ## Constraints
 

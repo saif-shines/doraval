@@ -19,11 +19,11 @@ sidebar:
 | | |
 | --- | --- |
 | **What** | Session-tier: the skill was **never** invoked in recent project sessions (when sessions exist). |
-| **Why** | Unused skills are candidates to **retire**, retarget, or fix. Capability skills often fade as models improve; preference skills go stale when process changes. |
+| **Why** | Never invoked is a fact. It is not a Remove candidate. A Recent install or a Global Skill stays here. See [R034](/reference/rules/R034) for Authored Skills that are old enough to recommend remove. |
 
 ## How to fix
 
 1. Confirm session adapters see this project ([R030](/reference/rules/R030) if none found).
 2. If it should fire: tighten the description ([R005](/reference/rules/R005), [R014](/reference/rules/R014), [R025](/reference/rules/R025)).
-3. If work succeeds without it: remove or archive the skill.
+3. If it is Authored, old enough, and still never invoked: [R034](/reference/rules/R034) and `dora skill remove`.
 4. If it is intentional manual-only tooling, document that and expect low auto-invocation.

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Features
+
+- **`dora skill remove` / `dora skill restore`.** Review and Scan recommend
+  Authored Skills that were never invoked in the Review window and are not
+  Recent installs (**R034**). Unique Authored names delete. Global Skills
+  Quarantine and Restore. Agents need `--yes` or `--dry-run`. A name clash
+  needs `--for`, `--global`, or a path.
+
 ## 0.6.19
 
 ### Features

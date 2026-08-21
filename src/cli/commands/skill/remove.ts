@@ -15,7 +15,7 @@ export default defineCommand({
   meta: {
     name: "remove",
     description: [
-      "Delete an Authored Skill by name",
+      "Delete an Authored Skill, or Quarantine a Global Skill",
       "",
       "Examples:",
       "  dora skill remove ghost --dry-run",
