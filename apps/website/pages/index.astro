@@ -65,10 +65,10 @@ dora review --quick                   # Findings, no LLM`;
     --home-space-xl: 2rem;
     --home-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-    max-width: 40rem;
+    max-width: 46rem;
     margin-inline: auto;
     padding-inline: var(--home-space-md);
-    padding-block: var(--home-space-lg);
+    padding-block: var(--home-space-xl);
   }
 
   /* Pin the thin footer to the window edge so it is not a mid-page band. */
@@ -83,9 +83,9 @@ dora review --quick                   # Findings, no LLM`;
   }
 
   .home-eyebrow {
-    margin: 0 0 0.65rem;
+    margin: 0 0 0.75rem;
     font-family: var(--blume-font-mono);
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 500;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -101,35 +101,40 @@ dora review --quick                   # Findings, no LLM`;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.05;
-    font-size: clamp(1.75rem, 3.2vw + 0.75rem, 2.75rem);
+    font-size: clamp(2.25rem, 4.4vw + 0.9rem, 3.5rem);
     overflow-wrap: anywhere;
     min-width: 0;
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.65rem;
   }
 
   .hero__subtitle {
     font-family: var(--blume-font-display);
     font-weight: 500;
     letter-spacing: -0.015em;
-    line-height: 1.3;
-    font-size: clamp(0.95rem, 1.2vw + 0.55rem, 1.15rem);
-    margin: 0 0 0.75rem;
+    line-height: 1.35;
+    font-size: clamp(1.2rem, 1.6vw + 0.7rem, 1.5rem);
+    margin: 0 0 0.9rem;
     color: var(--blume-muted-foreground);
-    max-width: 32ch;
+    max-width: 40ch;
   }
 
   .hero__lede {
-    font-size: 0.95rem;
-    line-height: 1.5;
+    font-size: 1.125rem;
+    line-height: 1.55;
     color: var(--blume-muted-foreground);
-    margin: 0 0 1.1rem;
-    max-width: 42ch;
+    margin: 0 0 1.25rem;
+    max-width: 46ch;
+  }
+
+  .hero :global(pre),
+  .hero :global(code) {
+    font-size: 0.95rem;
   }
 
   .hero__note {
-    margin: 0.85rem 0 0;
+    margin: 1rem 0 0;
     font-family: var(--blume-font-mono);
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     letter-spacing: 0.02em;
     color: var(--blume-muted-foreground);
   }
