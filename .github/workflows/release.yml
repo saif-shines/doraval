@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - 'v*'
+  # Re-run publish from main (new script) without a version bump.
+  # create-release / homebrew stay tag-only so we do not open a second release.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -92,6 +95,7 @@ jobs:
           ../${{ matrix.binary }} --format json | grep -q '"empty"'
 
   create-release:
+    if: github.event_name == 'push'
     needs: [build-binaries, smoke-binaries]
     runs-on: ubuntu-latest
     permissions:
