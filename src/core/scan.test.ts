@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync } from "fs";
+import { mkdtempSync, mkdirSync, utimesSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { runScan } from "./scan.js";
@@ -42,6 +42,40 @@ describe("runScan", () => {
     expect(bad.errors.length).toBeGreaterThan(0);
     expect(result.summary.failed).toBe(1);
     expect(result.suggestions.some((s) => s.kind === "fix" && s.command.includes("bad"))).toBe(true);
+  });
+
+  test("Remove candidates appear in health and Next is dora skill remove", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".claude/skills/ghost", 'name: ghost\ndescription: "Use when testing remove candidates"');
+    const old = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    utimesSync(join(root, ".claude/skills/ghost/SKILL.md"), old, old);
+    const loadedSessions = {
+      sessions: [{
+        agent: "claude-code",
+        path: "/tmp/s.jsonl",
+        mtime: Date.now(),
+        primitives: {
+          sessionId: "s1", model: "m", agent: "claude-code", cwd: root,
+          toolCalls: [], toolCallCounts: {}, skillsInvoked: [],
+          userMessages: [], userTurnCount: 0, assistantText: [],
+        },
+      }],
+      adaptersDetected: ["claude-code"],
+      skipped: {},
+    };
+    const result = await runScan(root, noneInstalled, { loadedSessions });
+    const ghost = result.health.find((h) => h.path.includes("ghost"))!;
+    expect(ghost.warnings.some((w) => w.code === "R034")).toBe(true);
+    expect(result.suggestions.some((s) => s.command === "dora skill remove")).toBe(true);
+  });
+
+  test("no remove Next when there are zero Remove candidates", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".claude/skills/fresh", 'name: fresh\ndescription: "Use when testing a new skill"');
+    const result = await runScan(root, noneInstalled, {
+      loadedSessions: { sessions: [], adaptersDetected: ["claude-code"], skipped: {} },
+    });
+    expect(result.suggestions.some((s) => s.command === "dora skill remove")).toBe(false);
   });
 
   test("skills are labeled with origin", async () => {

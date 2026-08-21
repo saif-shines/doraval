@@ -3,7 +3,8 @@
  * detection (agent-detect), discovery (skill-discovery), validation
  * (skill-check), intelligence (capability-detect).
  */
-import { relative } from "path";
+import { statSync } from "fs";
+import { relative, resolve as resolvePath } from "path";
 import pkg from "../../package.json" with { type: "json" };
 import {
   detectAllAgents,
@@ -18,6 +19,7 @@ import { resolveScanScope, type ScanScope } from "./scan-scope.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { detectSkillShadows, shadowWarningText, type SkillShadow } from "./skill-shadow.js";
 import { checkSkill } from "./skill-check.js";
+import { loadRecentSessions, collectSessionEvidence, type LoadResult } from "./session-evidence.js";
 import type { Finding } from "./finding.js";
 import { detectCapabilities } from "./capability-detect.js";
 import { readConfig, getEvalConfig } from "./journal-config.js";
@@ -107,7 +109,7 @@ export interface ScanResult {
 export async function runScan(
   cwd: string,
   deps: DetectDeps = defaultDeps,
-  opts?: { installDeps?: Partial<PlatformInstallDeps> },
+  opts?: { installDeps?: Partial<PlatformInstallDeps>; loadedSessions?: LoadResult },
 ): Promise<ScanResult> {
   const scope = resolveScanScope(cwd);
   const agents = detectAllAgents(scope.scanRoot, deps);
@@ -185,6 +187,26 @@ export async function runScan(
   }
 
   const mcpCollisions = detectMcpNameCollisions(listMcpServerNames(scope.scanRoot));
+
+  const loadedSess = opts?.loadedSessions ?? loadRecentSessions(scope.scanRoot);
+  if (loadedSess.adaptersDetected.length > 0 && effective.get("R034")?.enabled) {
+    for (const dir of skillDirs) {
+      const rel = (relative(scope.scanRoot, dir) || ".").replace(/\\/g, "/");
+      const entry = health.find((h) => h.path === rel);
+      if (!entry) continue;
+      const name = overlapInputs.find((o) => o.path === rel)?.name ?? rel.split("/").pop() ?? rel;
+      let mtimeMs: number | undefined;
+      try { mtimeMs = statSync(resolvePath(dir, "SKILL.md")).mtimeMs; } catch { /* no SKILL.md */ }
+      const r034 = collectSessionEvidence(name, dir, loadedSess, {
+        required: false,
+        origin: entry.origin,
+        mtimeMs,
+      }).find((f) => f.code === "R034");
+      if (!r034) continue;
+      entry.warnings.push(findingToHealth(r034));
+      if (entry.status === "pass") entry.status = "warn";
+    }
+  }
 
   const summary = {
     passed: health.filter((h) => h.status === "pass").length,
@@ -292,6 +314,15 @@ export async function runScan(
     }
   } catch {
     // intentional: memory store optional; scan must not fail without it
+  }
+
+  const removeCount = health.filter((h) => h.warnings.some((w) => w.code === "R034")).length;
+  if (removeCount > 0) {
+    suggestions.push({
+      kind: "improve",
+      title: `${removeCount} Remove candidate${removeCount === 1 ? "" : "s"}`,
+      command: "dora skill remove",
+    });
   }
 
   return {

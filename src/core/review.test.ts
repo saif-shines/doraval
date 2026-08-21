@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { llmTierPlan, review, type ReviewOptions, type ReviewResult } from "./review.js";
 import { resolveEffectiveRules } from "./rules/resolve.js";
 import { join, resolve } from "path";
-import { mkdirSync, mkdtempSync, writeFileSync } from "fs";
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 
 const FIXTURES = resolve(import.meta.dir, "../../test/fixtures");
@@ -178,6 +178,71 @@ describe("review", () => {
     });
     expect(calls.length).toBe(1);
     expect(calls[0]).toContain(skillDir);
+  });
+
+  test("Authored never-invoked old Skill emits R034 not R029", async () => {
+    const dir = join(SANDBOX, ".claude", "skills", "ghost");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "SKILL.md"), `---\nname: ghost\ndescription: "Use when testing remove candidates"\n---\n\n1. Do the thing\n`);
+    const old = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    utimesSync(join(dir, "SKILL.md"), old, old);
+    utimesSync(dir, old, old);
+    const loadedSessions = {
+      sessions: [{
+        agent: "claude-code",
+        path: "/tmp/s.jsonl",
+        mtime: Date.now(),
+        primitives: {
+          sessionId: "s1", model: "m", agent: "claude-code", cwd: SANDBOX,
+          toolCalls: [], toolCallCounts: {}, skillsInvoked: [],
+          userMessages: [], userTurnCount: 0, assistantText: [],
+        },
+      }],
+      adaptersDetected: ["claude-code"],
+      skipped: {},
+    };
+    const result = await reviewOne(dir, { loadedSessions, judge: passJudge });
+    const codes = (result.tiers.sessions?.findings ?? []).map((f) => f.code);
+    expect(codes).toContain("R034");
+    expect(codes).not.toContain("R029");
+  });
+
+  test("R034 off still emits Never invoked as R029", async () => {
+    const dir = join(SANDBOX, ".claude", "skills", "ghost-off");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "SKILL.md"), `---\nname: ghost-off\ndescription: "Use when testing R034 off"\n---\n\n1. Do the thing\n`);
+    const old = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    utimesSync(join(dir, "SKILL.md"), old, old);
+    const home = mkdtempSync(join(tmpdir(), "dora-r034-off-"));
+    const previous = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = home;
+    writeFileSync(join(home, "config.yml"), [
+      "journal:", "  repo: ''", "  projects: {}", "rules:", "  package: recommended", "  overrides:",
+      "    R034: off", "",
+    ].join("\n"));
+    try {
+      const result = await reviewOne(dir, {
+        judge: passJudge,
+        loadedSessions: {
+          sessions: [{
+            agent: "claude-code", path: "/tmp/s.jsonl", mtime: Date.now(),
+            primitives: {
+              sessionId: "s1", model: "m", agent: "claude-code", cwd: SANDBOX,
+              toolCalls: [], toolCallCounts: {}, skillsInvoked: [],
+              userMessages: [], userTurnCount: 0, assistantText: [],
+            },
+          }],
+          adaptersDetected: ["claude-code"],
+          skipped: {},
+        },
+      });
+      const codes = (result.tiers.sessions?.findings ?? []).map((f) => f.code);
+      expect(codes).toContain("R029");
+      expect(codes).not.toContain("R034");
+    } finally {
+      if (previous === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = previous;
+    }
   });
 
   test("onProgress does NOT fire in quick mode", async () => {

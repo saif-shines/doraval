@@ -305,9 +305,18 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
       tiers.sessions = { available: false, findings: [] };
     } else {
       const skillName = String(model.data.name ?? basename(dir));
-      const sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required: opts.sessions === true })
+      let mtimeMs: number | undefined;
+      try { mtimeMs = statSync(resolvePath(dir, "SKILL.md")).mtimeMs; } catch { /* keep undefined */ }
+      const required = opts.sessions === true;
+      const rawSess = collectSessionEvidence(skillName, dir, loadedSess, { required, origin, mtimeMs });
+      let sessFindings = rawSess
         .map((finding) => stampRule(finding, finding.code!, effective))
         .filter((finding): finding is ReviewFinding => finding !== null);
+      if (sessFindings.length === 0 && rawSess[0]?.id === "sess-007") {
+        sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required })
+          .map((finding) => stampRule(finding, finding.code!, effective))
+          .filter((finding): finding is ReviewFinding => finding !== null);
+      }
       tiers.sessions = { available: true, count: loadedSess.sessions.length, findings: sessFindings };
     }
   }

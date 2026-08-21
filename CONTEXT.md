@@ -11,6 +11,9 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | Term | Meaning |
 |------|---------|
 | **Skill** | A directory with `SKILL.md` (frontmatter + body) that agents load as specialized instructions. |
+| **Authored** | Skill origin: a Skill under the current project. |
+| **Global** | Skill origin: a Skill under the user home (for example `~/.claude/skills`). |
+| **Imported** | Skill origin: a Skill from plugin cache or `node_modules`. Read-only. Not a remove target. |
 | **Review** | One `review(path)`. Tiered quality pass over a Skill and/or Memory file: structure → heuristics → optional LLM judge → optional sessions. Workspace and Skill reviews also include cwd Memory files (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `copilot-instructions.md`). |
 | **Scan** | Fast workspace health check (`dora` bare): agents present, skill validation, shadows/overlaps, install/intelligence. |
 | **Rule** | One module (`src/core/rules`). Registry, packages, resolve, stamp, and mutation. CLI only renders and writes config. |
@@ -20,6 +23,14 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Config** | Global product config at `~/.doraval/config.yml`. Code type is still `JournalConfig` (legacy name — not a “journal product”). Holds projects, `eval.*` judge settings, rules, agent command. |
 | **Session** | Past agent conversation transcript, normalized via **session adapters** into primitives for evidence and adherence eval. |
 | **Finding** | One Skill-check outcome (tier + severity + message + optional rule code / docUrl). The Skill-check module sets `structure` or `heuristics`. Review adds `llm` and `sessions`. Scan presents Skill Findings as health; shadows, overlaps, MCP, budget, and install stay Scan-only. |
+| **Review window** | Session evidence span Review already uses: last 10 Sessions, and only Session files newer than 30 days. |
+| **Never invoked** | A Skill with no invoke evidence in Sessions inside the Review window. Not the same as a remove candidate. |
+| **Recent install** | A Skill added inside the current Review window (`dora new`, `skills add`, copy, or clone). Never invoked is expected. Not a remove candidate. |
+| **Remove candidate** | An Authored Skill that is Never invoked and not a Recent install. Its own Finding (new rule). Not R029. Review and Scan may recommend remove. A Global Skill is never a Remove candidate from one project’s Sessions. |
+| **Quarantine** | Move a Global Skill aside so it can be restored. Not a delete. _Avoid_: stash. |
+| **Remove** | Write action (`dora skill remove`). Deletes an Authored Skill. Quarantines a Global Skill. A name is enough. `--for` selects the agent. `--global` selects origin when Authored and Global share a name. One match: just Remove. Several matches (including same agent, two origins): TTY picker; a Runner must pass `--for` / `--global` / a path or it exits `2` with Next. |
+| **Restore** | Write action (`dora skill restore`). Puts a Quarantined Global Skill back at its original path (`~/.doraval/quarantine/` plus a record). Does not undo an Authored delete. Git does that. If the original path is occupied, stop. |
+| **Explicit remove** | A named Remove. Works on any Authored or Global Skill. Does not require Remove-candidate status. Refuses Imported. |
 
 ## Docs voice
 

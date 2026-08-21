@@ -47,6 +47,7 @@ describe("registry integrity", () => {
       ["R031", "memory-session-presence", "session", "info", "session", false],
       ["R032", "binding-rule-inventory", "session", "info", "session", false],
       ["R033", "memory-rule-adherence", "session", "warning", "session", false],
+      ["R034", "remove-candidate", "session", "warning", "session", false],
     ]);
   });
   test("every rule has a docUrl under the rules base", () => {

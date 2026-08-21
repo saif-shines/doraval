@@ -61,6 +61,7 @@ export const RULES: readonly Rule[] = [
   rule("R031", "memory-session-presence", "Memory file present in recent sessions", "session", "info", "session"),
   rule("R032", "binding-rule-inventory", "Binding MUST/NEVER rules inventoried", "session", "info", "session"),
   rule("R033", "memory-rule-adherence", "Sessions adhere to memory rules", "session", "warning", "session"),
+  rule("R034", "remove-candidate", "Authored Skill is a Remove candidate", "session", "warning", "session"),
 ];
 
 const BY_CODE = new Map(RULES.map((r) => [r.code, r]));

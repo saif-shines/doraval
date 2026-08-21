@@ -1,0 +1,28 @@
+---
+title: R034 · remove-candidate
+description: "Authored Skill is a Remove candidate"
+sidebar:
+  label: R034 remove-candidate
+  hidden: true
+---
+
+{/* <!-- DORA:GENERATED:START --> */}
+- **Code:** R034
+- **Slug:** `remove-candidate`
+- **Tier:** session
+- **Default severity:** warning
+- **Packages:** recommended, strict
+- **Locked:** No
+- **Doc:** https://doraval.dev/reference/rules/R034
+{/* <!-- DORA:GENERATED:END --> */}
+
+| | |
+| --- | --- |
+| **What** | An Authored Skill was never invoked in the Review window and is not a Recent install. That is a Remove candidate. |
+| **Why** | Dead Authored Skills still load into agent context. Recommend remove. A Global Skill or a Recent install is never this Finding — see [R029](/reference/rules/R029). |
+
+## How to fix
+
+1. Confirm the Skill is Authored and older than the Review window.
+2. Delete the Skill directory. Git can bring an Authored Skill back.
+3. Next: `dora skill remove` once that verb exists. A Global Skill that this repo never invoked stays on [R029](/reference/rules/R029). It is not a Remove candidate.

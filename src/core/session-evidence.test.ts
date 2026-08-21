@@ -56,6 +56,56 @@ describe("collectSessionEvidence", () => {
     expect(collectSessionEvidence("ghost", "/x/ghost", lr, { required: true })[0]!.severity).toBe("warning");
   });
 
+  const oldMtime = Date.now() - 40 * 24 * 60 * 60 * 1000;
+  const youngMtime = Date.now() - 24 * 60 * 60 * 1000;
+
+  test("Authored + never invoked + old install emits R034 only", () => {
+    const lr = loadResult([sess("claude-code", {})]);
+    const f = collectSessionEvidence("ghost", "/repo/.claude/skills/ghost", lr, {
+      required: false,
+      origin: "authored",
+      mtimeMs: oldMtime,
+    });
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({ id: "sess-007", code: "R034", slug: "remove-candidate" });
+    expect(f[0]!.message).toMatch(/Remove candidate/i);
+    expect(f[0]!.message).not.toMatch(/unused|stash/i);
+    expect(f[0]!.docUrl).toContain("/reference/rules/R034");
+  });
+
+  test("Recent install + never invoked emits R029 only", () => {
+    const lr = loadResult([sess("claude-code", {})]);
+    const f = collectSessionEvidence("ghost", "/repo/.claude/skills/ghost", lr, {
+      required: false,
+      origin: "authored",
+      mtimeMs: youngMtime,
+    });
+    expect(f[0]).toMatchObject({ id: "sess-002", code: "R029" });
+    expect(f[0]!.code).not.toBe("R034");
+  });
+
+  test("Global + never invoked emits R029 only", () => {
+    const lr = loadResult([sess("claude-code", {})]);
+    const f = collectSessionEvidence("ghost", "/Users/me/.claude/skills/ghost", lr, {
+      required: false,
+      origin: "global",
+      mtimeMs: oldMtime,
+    });
+    expect(f[0]).toMatchObject({ id: "sess-002", code: "R029" });
+    expect(f[0]!.code).not.toBe("R034");
+  });
+
+  test("Invoked Authored Skill emits R028, not R034", () => {
+    const lr = loadResult([sess("claude-code", { skillsInvoked: ["ghost"] })]);
+    const f = collectSessionEvidence("ghost", "/repo/.claude/skills/ghost", lr, {
+      required: false,
+      origin: "authored",
+      mtimeMs: oldMtime,
+    });
+    expect(f[0]).toMatchObject({ id: "sess-001", code: "R028" });
+    expect(f[0]!.code).not.toBe("R034");
+  });
+
   test("zero sessions with adapters detected → info guidance", () => {
     const lr = loadResult([], ["claude-code"]);
     const f = collectSessionEvidence("any", "/x/any", lr, { required: false });

@@ -30,15 +30,15 @@ describe("bindings", () => {
   test("all structure/heuristic/llm/session rules are covered exactly once", () => {
     const counts = new Map<string, number>();
     for (const code of allCodes) counts.set(code, (counts.get(code) ?? 0) + 1);
-    for (let i = 1; i <= 33; i++) {
+    for (let i = 1; i <= 34; i++) {
       const code = `R${String(i).padStart(3, "0")}`;
       expect(counts.get(code), `code ${code} bound ${counts.get(code) ?? 0}x`).toBe(1);
     }
   });
 
-  test("session map covers sess-001..006", () => {
+  test("session map covers sess-001..007", () => {
     expect(Object.keys(SESSION_CODES).sort()).toEqual([
-      "sess-001", "sess-002", "sess-003", "sess-004", "sess-005", "sess-006",
+      "sess-001", "sess-002", "sess-003", "sess-004", "sess-005", "sess-006", "sess-007",
     ]);
   });
 });

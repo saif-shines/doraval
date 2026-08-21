@@ -39,6 +39,7 @@ export const SESSION_CODES: Record<string, string> = {
   "sess-004": "R031",
   "sess-005": "R032",
   "sess-006": "R033",
+  "sess-007": "R034",
 };
 
 export const PARSE_FAILURE_CODE = "R002";

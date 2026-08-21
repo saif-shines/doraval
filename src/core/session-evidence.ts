@@ -5,6 +5,8 @@ import type { SessionPrimitives } from "./session-parse.js";
 import type { ReviewFinding } from "./review.js";
 import { SESSION_CODES } from "./rules/bindings.js";
 import { ruleByCode } from "./rules/registry.js";
+import { isRecentInstall, isRemoveCandidate } from "./skill-remove.js";
+import type { SkillOrigin } from "./skill-classify.js";
 
 function finding(partial: ReviewFinding): ReviewFinding {
   const code = SESSION_CODES[partial.id];
@@ -79,7 +81,7 @@ export function collectSessionEvidence(
   skillName: string,
   skillDir: string,
   loaded: LoadResult,
-  opts: { required: boolean }
+  opts: { required: boolean; origin?: SkillOrigin; mtimeMs?: number; nowMs?: number }
 ): ReviewFinding[] {
   const total = loaded.sessions.length;
 
@@ -115,6 +117,19 @@ export function collectSessionEvidence(
   }
 
   const agents = [...new Set(loaded.sessions.map((s) => s.agent))].join(", ");
+  const removeCandidate = opts.origin !== undefined && opts.mtimeMs !== undefined && isRemoveCandidate({
+    origin: opts.origin,
+    invoked: false,
+    recentInstall: isRecentInstall(opts.mtimeMs, opts.nowMs),
+  });
+  if (removeCandidate) {
+    return [finding({
+      id: "sess-007", tier: "sessions",
+      severity: "warning",
+      message: `Remove candidate: never invoked in ${total} recent sessions (${agents})`,
+      fixable: false,
+    })];
+  }
   return [finding({
     id: "sess-002", tier: "sessions",
     severity: opts.required ? "warning" : "info",

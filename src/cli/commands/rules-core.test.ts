@@ -133,7 +133,7 @@ describe("validatePackagePreview", () => {
 describe("buildListRows", () => {
   test("returns each rule with its effective package state", () => {
     const rows = buildListRows(cfg({}, { package: "recommended" }), "/x");
-    expect(rows).toHaveLength(33);
+    expect(rows).toHaveLength(34);
     expect(rows.find((row) => row.slug === "body-size")?.enabled).toBe(true);
     expect(rows.find((row) => row.slug === "advanced-fields")?.enabled).toBe(false);
   });
