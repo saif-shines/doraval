@@ -2,9 +2,7 @@
 
 ## Unreleased
 
-### Docs
-
-- Product line is **context effectiveness**, not context engineering.
+## 0.6.20
 
 ### Features
 
@@ -13,6 +11,10 @@
   Recent installs (**R034**). Unique Authored names delete. Global Skills
   Quarantine and Restore. Agents need `--yes` or `--dry-run`. A name clash
   needs `--for`, `--global`, or a path.
+
+### Docs
+
+- Product line is **context effectiveness**, not context engineering.
 
 ## 0.6.19
 
