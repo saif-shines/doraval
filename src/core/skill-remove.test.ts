@@ -8,10 +8,13 @@ import {
   isRecentInstall,
   isRemoveCandidate,
   listQuarantine,
+  listRemoveCandidates,
   planRemove,
   planRestore,
   resolveSkillName,
 } from "./skill-remove.js";
+import { utimesSync } from "fs";
+import type { LoadResult } from "./session-evidence.js";
 import { existsSync } from "fs";
 import { SESSION_MAX_AGE_DAYS } from "./session-adapters/types.js";
 
@@ -244,6 +247,34 @@ describe("planRemove + applyRemove", () => {
       rmSync(cwd, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });
       rmSync(doraHome, { recursive: true, force: true });
+    }
+  });
+
+  test("listRemoveCandidates is Authored, Never invoked, not Recent install", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const old = writeSkill(cwd, ".claude/skills/ghost", "ghost");
+    const young = writeSkill(cwd, ".claude/skills/fresh", "fresh");
+    writeSkill(cwd, ".grok/skills/other", "other");
+    const age = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    utimesSync(join(old, "SKILL.md"), age, age);
+    utimesSync(young, Date.now() / 1000, Date.now() / 1000);
+    const loaded: LoadResult = {
+      sessions: [{
+        agent: "claude-code", path: "/tmp/s.jsonl", mtime: Date.now(),
+        primitives: {
+          sessionId: "s1", model: "m", agent: "claude-code", cwd,
+          toolCalls: [], toolCallCounts: {}, skillsInvoked: ["other"],
+          userMessages: [], userTurnCount: 0, assistantText: [],
+        },
+      }],
+      adaptersDetected: ["claude-code"],
+      skipped: {},
+    };
+    try {
+      const cands = listRemoveCandidates({ cwd, loaded });
+      expect(cands.map((c) => c.name)).toEqual(["ghost"]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 

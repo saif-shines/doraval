@@ -1,9 +1,10 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { basename, isAbsolute, join, relative, resolve } from "path";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery.js";
 import { withinWindow } from "./session-adapters/types.js";
 import { getDoravalDir } from "./journal-config.js";
+import { skillWasInvoked, type LoadResult } from "./session-evidence.js";
 
 export interface SkillMatch {
   name: string;
@@ -194,4 +195,24 @@ export function isRemoveCandidate(input: {
   recentInstall: boolean;
 }): boolean {
   return input.origin === "authored" && !input.invoked && !input.recentInstall;
+}
+
+export function listRemoveCandidates(opts: {
+  cwd: string;
+  home?: string;
+  loaded: LoadResult;
+  nowMs?: number;
+}): SkillMatch[] {
+  if (opts.loaded.sessions.length === 0) return [];
+  const nowMs = opts.nowMs ?? Date.now();
+  return listProjectSkills(opts.cwd, opts.home).filter((s) => {
+    if (s.origin !== "authored") return false;
+    let mtimeMs: number;
+    try { mtimeMs = statSync(join(s.dir, "SKILL.md")).mtimeMs; } catch { return false; }
+    return isRemoveCandidate({
+      origin: s.origin,
+      invoked: skillWasInvoked(s.name, s.dir, opts.loaded),
+      recentInstall: isRecentInstall(mtimeMs, nowMs),
+    });
+  });
 }

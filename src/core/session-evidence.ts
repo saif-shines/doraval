@@ -77,6 +77,10 @@ function matchSession(skillName: string, skillDir: string, s: LoadedSession): Ev
   return null;
 }
 
+export function skillWasInvoked(skillName: string, skillDir: string, loaded: LoadResult): boolean {
+  return loaded.sessions.some((s) => matchSession(skillName, skillDir, s) !== null);
+}
+
 export function collectSessionEvidence(
   skillName: string,
   skillDir: string,

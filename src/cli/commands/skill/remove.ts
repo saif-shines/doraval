@@ -1,8 +1,9 @@
 import { defineCommand } from "citty";
 import { homedir } from "os";
 import { resolve } from "path";
-import { confirm, isCancel, select } from "@clack/prompts";
-import { applyRemove, planRemove, resolveSkillName, type SkillMatch } from "../../../core/skill-remove.js";
+import { confirm, isCancel, select, multiselect } from "@clack/prompts";
+import { applyRemove, listRemoveCandidates, planRemove, resolveSkillName, type SkillMatch } from "../../../core/skill-remove.js";
+import { loadRecentSessions } from "../../../core/session-evidence.js";
 import { canPromptInteractively } from "../fix.js";
 import { isAgentCaller, refuseAgentWrite, shouldBlockAgentWrite } from "../../agent-detect.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../../out.js";
@@ -48,9 +49,58 @@ export default defineCommand({
     }
 
     if (!name) {
-      ui.fail("Pass a Skill name.");
-      nextAction("dora skill remove <name>");
-      await exit(2);
+      const canPick = canPromptInteractively(false, false, mode.format) && !isAgentCaller();
+      if (!canPick) {
+        ui.fail("Pass a Skill name.");
+        nextAction("dora skill remove <name>");
+        await exit(2);
+        return;
+      }
+      const candidates = listRemoveCandidates({ cwd, home: homedir(), loaded: loadRecentSessions(cwd) });
+      if (candidates.length === 0) {
+        summaryLine("No Remove candidates.");
+        await exit(0);
+        return;
+      }
+      const picked = await multiselect({
+        message: "Remove candidates",
+        options: candidates.map((m) => ({ value: m.dir, label: `${m.name}  ${m.dir}` })),
+        required: false,
+        output: process.stderr,
+      });
+      if (isCancel(picked) || (picked as string[]).length === 0) {
+        summaryLine("Nothing removed.");
+        await exit(0);
+        return;
+      }
+      const interactive = canPromptInteractively(yes, dryRun, mode.format);
+      if (interactive) {
+        const ok = await confirm({
+          message: `Remove ${(picked as string[]).length} Authored Skill(s)?`,
+          initialValue: false,
+          output: process.stderr,
+        });
+        if (isCancel(ok) || !ok) {
+          summaryLine("Nothing removed.");
+          await exit(0);
+          return;
+        }
+      } else if (!yes && !dryRun) {
+        ui.fail("Pass --yes to remove, or --dry-run to preview.");
+        nextAction("dora skill remove --dry-run");
+        await exit(2);
+        return;
+      }
+      let n = 0;
+      for (const dir of picked as string[]) {
+        const resolved = resolveSkillName({ name: dir, cwd, home: homedir() });
+        const plan = planRemove(resolved);
+        if (!plan.ok) continue;
+        if (!dryRun) applyRemove(plan);
+        n++;
+      }
+      summaryLine(dryRun ? `Would remove ${n} Skill(s)` : `Removed ${n} Skill(s)`);
+      await exit(0);
       return;
     }
 

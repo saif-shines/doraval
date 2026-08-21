@@ -372,6 +372,18 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
+    test("Runner bare remove with --dry-run exits 2 and asks for a name", () => {
+      const dir = authoredRepo();
+      const { exitCode, stderr } = runDoraval(
+        ["skill", "remove", "--dry-run", "--cwd", dir],
+        { env: { CI: "1", HOME: dir } },
+      );
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("dora skill remove <name>");
+      expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
     test("detected agent without --yes or --dry-run exits 2 and writes nothing", () => {
       const dir = authoredRepo();
       const skill = join(dir, ".claude", "skills", "ghost");
