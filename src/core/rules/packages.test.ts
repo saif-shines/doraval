@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, test, expect } from "bun:test";
 import { BUILTIN_PACKAGES, getPackage, DEFAULT_PACKAGE } from "./packages.js";
 import { RULES } from "./registry.js";
+import { YAML } from "bun";
 
 describe("built-in packages", () => {
   test("recommended, strict, minimal exist", () => {
@@ -21,5 +24,19 @@ describe("built-in packages", () => {
   test("DEFAULT_PACKAGE is recommended", () => {
     expect(DEFAULT_PACKAGE).toBe("recommended");
     expect(getPackage(DEFAULT_PACKAGE)).toBeDefined();
+  });
+  test("inlined YAML matches packages/*.yaml", () => {
+    for (const name of ["recommended", "strict", "minimal"] as const) {
+      const fromFile = YAML.parse(readFileSync(join(import.meta.dir, "packages", `${name}.yaml`), "utf8")) as {
+        name: string;
+        description: string;
+        rules: string[];
+      };
+      expect(BUILTIN_PACKAGES[name]).toEqual({
+        name: fromFile.name,
+        description: fromFile.description,
+        rules: fromFile.rules,
+      });
+    }
   });
 });

@@ -1,7 +1,94 @@
 import { YAML } from "bun";
-import recommendedRaw from "./packages/recommended.yaml" with { type: "text" };
-import strictRaw from "./packages/strict.yaml" with { type: "text" };
-import minimalRaw from "./packages/minimal.yaml" with { type: "text" };
+
+// Inline the YAML. `import … with { type: "text" }` embeds for `bun --compile`
+// but JSR/Deno reject it (unstable-raw-import). Keep the .yaml files as the
+// edit surface; packages.test.ts checks they still match.
+
+const recommendedRaw = `name: recommended
+description: Sensible defaults for most agent-context files
+rules:
+  - R001
+  - R002
+  - R003
+  - R004
+  - R005
+  - R006
+  - R007
+  - R008
+  - R010
+  - R012
+  - R013
+  - R014
+  - R015
+  - R016
+  - R017
+  - R018
+  - R019
+  - R020
+  - R021
+  - R022
+  - R023
+  - R024
+  - R025
+  - R026
+  - R027
+  - R028
+  - R029
+  - R030
+  - R031
+  - R032
+  - R033
+  - R034
+`;
+
+const strictRaw = `name: strict
+description: Every rule enabled at its default severity
+rules:
+  - R001
+  - R002
+  - R003
+  - R004
+  - R005
+  - R006
+  - R007
+  - R008
+  - R009
+  - R010
+  - R011
+  - R012
+  - R013
+  - R014
+  - R015
+  - R016
+  - R017
+  - R018
+  - R019
+  - R020
+  - R021
+  - R022
+  - R023
+  - R024
+  - R025
+  - R026
+  - R027
+  - R028
+  - R029
+  - R030
+  - R031
+  - R032
+  - R033
+  - R034
+`;
+
+const minimalRaw = `name: minimal
+description: Just don't let me ship broken context
+rules:
+  - R001
+  - R002
+  - R003
+  - R006
+  - R020
+`;
 
 export interface Package {
   name: string;

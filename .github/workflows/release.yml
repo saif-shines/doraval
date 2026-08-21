@@ -170,7 +170,7 @@ jobs:
       - name: Publish platform packages (all five, then main)
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 15
+          timeout_minutes: 25
           max_attempts: 3
           retry_wait_seconds: 45
           # Auth is npm trusted publishing (OIDC): no tokens. Requires the
@@ -180,28 +180,9 @@ jobs:
           # Fail-fast: never publish main if any platform package fails — a main
           # package whose optionalDeps point at missing platform versions is a
           # broken install (v0.6.0 shipped main only; platforms stuck at 0.5.2).
+          # Publish is idempotent: skip if visible; treat E409 staged as ok.
           command: |
-            set -euo pipefail
-            VERSION=$(node -pe "require('./package.json').version")
-            for dir in platform-packages/*/; do
-              name=$(node -pe "require('./${dir}package.json').name")
-              echo "Publishing $name@$VERSION from $dir"
-              (cd "$dir" && npm publish --access public)
-              # Confirm the version is on the registry before continuing
-              for i in 1 2 3 4 5 6; do
-                if npm view "$name@$VERSION" version 2>/dev/null | grep -qx "$VERSION"; then
-                  echo "OK $name@$VERSION on registry"
-                  break
-                fi
-                if [ "$i" -eq 6 ]; then
-                  echo "ERROR: $name@$VERSION not visible on registry after publish"
-                  exit 1
-                fi
-                sleep 10
-              done
-            done
-            bun run scripts/prepare-npm-publish.ts
-            npm publish --access public
+            bun run scripts/publish-npm-packages.ts
 
       - name: Post-publish install verification (the real user path)
         run: |
