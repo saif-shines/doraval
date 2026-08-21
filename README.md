@@ -1,6 +1,6 @@
 # doraval
 
-Context-engineering CLI for coding agents. It reviews skills, rules, and memory so Claude, Cursor, Codex, Copilot, and Grok work from context you can trust.
+Context-effectiveness CLI for coding agents. It reviews skills, rules, and memory so Claude, Cursor, Codex, Copilot, and Grok work from context you can trust.
 
 `dora` and `doraval` are the same binary. Pronunciation: *dor-uh-val* (Doraemon + eval).
 

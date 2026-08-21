@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Docs
+
+- Product line is **context effectiveness**, not context engineering.
+
 ### Features
 
 - **`dora skill remove` / `dora skill restore`.** Review and Scan recommend

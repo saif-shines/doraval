@@ -4,7 +4,7 @@ Agent-readable glossary for architecture and code. Product language wins over le
 
 ## Product
 
-**Doraval** (`dora` / `doraval`) is a context-engineering CLI: scan, review, and manage agent skills, memory files, and rules across Claude, Cursor, Codex, Copilot, and Grok.
+**Doraval** (`dora` / `doraval`) is a context-effectiveness CLI: scan, review, and manage agent skills, memory files, and rules across Claude, Cursor, Codex, Copilot, and Grok.
 
 ## Core terms
 
