@@ -13,6 +13,7 @@ describe("doraval CLI", () => {
       expect(stdout).toContain("scan");
       expect(stdout).toContain("review");
       expect(stdout).toContain("fix");
+      expect(stdout).toContain("skill");
       expect(stdout).toContain("npx skills add saif-shines/doraval");
       expect(stdout).toContain("dora review --quick");
       expect(stdout).toContain("https://doraval.dev");
@@ -217,9 +218,10 @@ describe("doraval CLI", () => {
   });
 
   describe("B13 command cleanup — removed commands", () => {
-    test("skill group is gone", () => {
-      const { exitCode, stderr } = runDoraval(["skill", "validate", "."]);
+    test("old skill validate is gone", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["skill", "validate", "."]);
       expect(exitCode).not.toBe(0);
+      expect(stdout + stderr).toContain("Unknown command validate");
     });
 
     test("top-level validate is gone", () => {
@@ -291,6 +293,13 @@ describe("doraval CLI", () => {
       expect(out).toContain("dora review --quick");
     });
 
+    test("lists skill as writes", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["agent-help"]);
+      const out = stdout + stderr;
+      expect(exitCode).toBe(0);
+      expect(out).toMatch(/skill\s+writes/);
+    });
+
     test("--json is the same tree", () => {
       const { exitCode, stdout } = runDoraval(["agent-help", "--json"]);
       expect(exitCode).toBe(0);
@@ -313,6 +322,135 @@ describe("doraval CLI", () => {
       const { exitCode, stderr } = runDoraval(["agent-help", "nosuch"]);
       expect(exitCode).toBe(1);
       expect(stderr).toContain("Next: dora agent-help");
+    });
+  });
+
+  describe("dora skill remove", () => {
+    function authoredRepo(name = "ghost"): string {
+      const dir = mkdtempSync(join(tmpdir(), "dora-skill-rm-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, ".claude", "skills", name);
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(
+        join(skill, "SKILL.md"),
+        `---\nname: ${name}\ndescription: "Use when testing remove"\n---\n\n1. Do the thing\n`,
+      );
+      return dir;
+    }
+
+    test("skill --help and skill remove --help exist", () => {
+      const group = runDoraval(["skill", "--help"]);
+      expect(group.exitCode).toBe(0);
+      expect(group.stdout + group.stderr).toContain("remove");
+      const help = runDoraval(["skill", "remove", "--help"]);
+      expect(help.exitCode).toBe(0);
+      expect(help.stdout).toContain("--dry-run");
+      expect(help.stdout).toContain("--yes");
+    });
+
+    test("--yes deletes a unique Authored Skill", () => {
+      const dir = authoredRepo();
+      const skill = join(dir, ".claude", "skills", "ghost");
+      const { exitCode } = runDoraval(["skill", "remove", "ghost", "--yes", "--cwd", dir], { env: { CI: "1" } });
+      expect(exitCode).toBe(0);
+      expect(existsSync(skill)).toBe(false);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--dry-run writes nothing", () => {
+      const dir = authoredRepo();
+      const skill = join(dir, ".claude", "skills", "ghost");
+      const { exitCode, stdout, stderr } = runDoraval(
+        ["skill", "remove", "ghost", "--dry-run", "--cwd", dir],
+        { env: { CI: "1" } },
+      );
+      expect(exitCode).toBe(0);
+      expect(existsSync(skill)).toBe(true);
+      expect(stdout + stderr).toMatch(/Would delete|dry-run|ghost/i);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("detected agent without --yes or --dry-run exits 2 and writes nothing", () => {
+      const dir = authoredRepo();
+      const skill = join(dir, ".claude", "skills", "ghost");
+      const { exitCode, stderr } = runDoraval(["skill", "remove", "ghost", "--cwd", dir], { env: { CI: "1" } });
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("Next:");
+      expect(stderr).toContain("--dry-run");
+      expect(existsSync(skill)).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("unknown name exits 1 with Next", () => {
+      const dir = authoredRepo();
+      const { exitCode, stderr } = runDoraval(
+        ["skill", "remove", "nosuch", "--yes", "--cwd", dir],
+        { env: { CI: "1" } },
+      );
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain("Next: dora skill remove");
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--for claude deletes only the Claude copy", () => {
+      const dir = authoredRepo();
+      const grok = join(dir, ".grok", "skills", "ghost");
+      mkdirSync(grok, { recursive: true });
+      writeFileSync(join(grok, "SKILL.md"), `---\nname: ghost\ndescription: "Use when grok"\n---\n\n1. Go\n`);
+      const { exitCode } = runDoraval(
+        ["skill", "remove", "ghost", "--for", "claude", "--yes", "--cwd", dir],
+        { env: { CI: "1" } },
+      );
+      expect(exitCode).toBe(0);
+      expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(false);
+      expect(existsSync(grok)).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("ambiguous name does not delete", () => {
+      const dir = authoredRepo();
+      const grok = join(dir, ".grok", "skills", "ghost");
+      mkdirSync(grok, { recursive: true });
+      writeFileSync(join(grok, "SKILL.md"), `---\nname: ghost\ndescription: "Use when grok"\n---\n\n1. Go\n`);
+      const { exitCode, stderr } = runDoraval(
+        ["skill", "remove", "ghost", "--yes", "--cwd", dir],
+        { env: { CI: "1" } },
+      );
+      expect(exitCode).toBe(1);
+      expect(stderr).toMatch(/more than one|ambiguous|--for/i);
+      expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
+      expect(existsSync(grok)).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--json dry-run emits a plan and writes nothing", () => {
+      const dir = authoredRepo();
+      const { exitCode, stdout } = runDoraval(
+        ["skill", "remove", "ghost", "--dry-run", "--json", "--cwd", dir],
+        { env: { CI: "1" } },
+      );
+      expect(exitCode).toBe(0);
+      const body = JSON.parse(stdout);
+      expect(body.applied).toBe(false);
+      expect(body.plan.action).toBe("delete");
+      expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("imported Skill is refused", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-skill-imp-"));
+      mkdirSync(join(dir, ".git"));
+      const imp = join(dir, ".claude", "plugins", "cache", "pkg", "ghost");
+      mkdirSync(imp, { recursive: true });
+      writeFileSync(join(imp, "SKILL.md"), `---\nname: ghost\ndescription: "Use when imported"\n---\n\n1. Go\n`);
+      const { exitCode, stderr } = runDoraval(
+        ["skill", "remove", "ghost", "--yes", "--cwd", dir],
+        { env: { CI: "1" } },
+      );
+      expect(exitCode).toBe(1);
+      expect(stderr).toMatch(/Imported|refusing/i);
+      expect(existsSync(imp)).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
     });
   });
 

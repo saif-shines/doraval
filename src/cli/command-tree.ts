@@ -31,6 +31,14 @@ export function defineGroup(
   return group;
 }
 
+export const skill = defineGroup(
+  "skill",
+  "Remove (and later restore) project Skills",
+  {
+    remove: () => import("./commands/skill/remove.js").then((m) => m.default),
+  }
+);
+
 export const memory = defineGroup(
   "memory",
   "Capture principles; enforce in review; promote to AGENTS.md",
@@ -56,6 +64,7 @@ export const topLevelSubCommands = {
   review: () => import("./commands/review.js").then((m) => m.default),
   fix: () => import("./commands/fix.js").then((m) => m.default),
   new: () => import("./commands/new.js").then((m) => m.default),
+  skill: () => Promise.resolve(skill),
   memory: () => Promise.resolve(memory),
   reconcile: () => import("./commands/reconcile.js").then((m) => m.default),
   config,

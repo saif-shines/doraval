@@ -106,7 +106,7 @@ You run in a loop that cannot answer TTY prompts.
 
 - MUST treat the exit code as truth: `0` clean, `1` issues, `2` could not run. MUST NOT report done on `1` or `2`.
 - MUST run `dora review --quick` first so Findings show before `--format json`.
-- MUST apply `fix` and `memory promote` with `--yes` or `--dry-run`. MUST NOT run bare `dora fix`, `dora reconcile`, or `dora memory promote`.
+- MUST apply `fix`, `memory promote`, and `skill remove` with `--yes` or `--dry-run`. MUST NOT run bare `dora fix`, `dora reconcile`, `dora memory promote`, or `dora skill remove`.
 - MUST NOT write to `dora memory` from your own inference. Add a memory only when the user states a durable rule.
 - MUST add `--ci` in CI or a non-interactive subagent.
 - MUST look up flags with `dora <command> --help`. MUST NOT copy a flag catalog into this skill.

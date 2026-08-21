@@ -83,6 +83,15 @@ export function buildCapabilities(): CapabilitiesManifest {
       cmd("new", "writes", "Scaffold a skill, rule, agent, or plugin.", [
         "dora new skill --for claude --name review-pr --yes",
       ], COMMON_FLAGS),
+      cmd("skill", "writes", "Remove an Authored Skill (restore later).", [
+        "dora skill remove ghost --dry-run",
+        "dora skill remove ghost --yes",
+      ], {
+        ...COMMON_FLAGS,
+        "--yes": { description: "Delete without prompting" },
+        "--dry-run": { description: "Show the plan, write nothing" },
+        "--for": { description: "Target agent", values: ["claude", "cursor", "codex", "copilot", "grok"] },
+      }, [{ name: "name", required: false, type: "string" }]),
       cmd("memory", "writes", "Capture principles; promote to AGENTS.md.", [
         "dora memory add \"Never use default exports\" --weight 8",
         "dora memory promote --dry-run",

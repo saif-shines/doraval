@@ -3,12 +3,13 @@
  * Invoked via root flag: `dora --completion bash|zsh|fish`
  * Command names come from command-tree so scripts stay in sync with the CLI.
  */
-import { topLevelSubCommands, memory } from "./command-tree.js";
+import { topLevelSubCommands, memory, skill } from "./command-tree.js";
 
 const commands = Object.keys(topLevelSubCommands);
 
 async function subCommandNames(name: string): Promise<string[]> {
   if (name === "memory") return Object.keys(memory.subCommands ?? {});
+  if (name === "skill") return Object.keys(skill.subCommands ?? {});
   if (name === "config" || name === "rules") {
     const mod = await topLevelSubCommands[name]();
     return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
@@ -30,7 +31,7 @@ export async function buildCompletionScript(
   }
 
   const subCommands: Record<string, string[]> = {};
-  for (const name of ["memory", "config", "rules", "sessions"]) {
+  for (const name of ["memory", "config", "rules", "sessions", "skill"]) {
     subCommands[name] = await subCommandNames(name);
   }
 
@@ -49,6 +50,7 @@ _doraval_completions() {
   elif [ $COMP_CWORD -eq 2 ]; then
     case "$prev" in
       memory) COMPREPLY=( $(compgen -W "${(subCommands.memory ?? []).join(" ")}" -- "$cur") ) ;;
+      skill) COMPREPLY=( $(compgen -W "${(subCommands.skill ?? []).join(" ")}" -- "$cur") ) ;;
       config) COMPREPLY=( $(compgen -W "${(subCommands.config ?? []).join(" ")}" -- "$cur") ) ;;
       rules) COMPREPLY=( $(compgen -W "${(subCommands.rules ?? []).join(" ")}" -- "$cur") ) ;;
       sessions) COMPREPLY=( $(compgen -W "${(subCommands.sessions ?? []).join(" ")}" -- "$cur") ) ;;
@@ -82,6 +84,9 @@ _doraval() {
         memory)
           _describe 'subcommand' (${(subCommands.memory ?? []).join(" ")})
           ;;
+        skill)
+          _describe 'subcommand' (${(subCommands.skill ?? []).join(" ")})
+          ;;
         config)
           _describe 'subcommand' (${(subCommands.config ?? []).join(" ")})
           ;;
@@ -109,6 +114,7 @@ complete -c doraval -f
 complete -c doraval -n '__fish_use_subcommand' -a '${commands.join(" ")}'
 
 complete -c doraval -n '__fish_seen_subcommand_from memory' -a '${(subCommands.memory ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from skill' -a '${(subCommands.skill ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from config' -a '${(subCommands.config ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from rules' -a '${(subCommands.rules ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from sessions' -a '${(subCommands.sessions ?? []).join(" ")}'
