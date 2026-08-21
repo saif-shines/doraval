@@ -91,6 +91,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--yes": { description: "Delete without prompting" },
         "--dry-run": { description: "Show the plan, write nothing" },
         "--for": { description: "Target agent", values: ["claude", "cursor", "codex", "copilot", "grok"] },
+        "--global": { description: "Select a Global Skill when the name clashes" },
       }, [{ name: "name", required: false, type: "string" }]),
       cmd("memory", "writes", "Capture principles; promote to AGENTS.md.", [
         "dora memory add \"Never use default exports\" --weight 8",

@@ -1,7 +1,8 @@
 import { defineCommand } from "citty";
+import { homedir } from "os";
 import { resolve } from "path";
-import { confirm, isCancel } from "@clack/prompts";
-import { applyRemove, planRemove, resolveSkillName } from "../../../core/skill-remove.js";
+import { confirm, isCancel, select } from "@clack/prompts";
+import { applyRemove, planRemove, resolveSkillName, type SkillMatch } from "../../../core/skill-remove.js";
 import { canPromptInteractively } from "../fix.js";
 import { isAgentCaller, refuseAgentWrite, shouldBlockAgentWrite } from "../../agent-detect.js";
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../../out.js";
@@ -25,6 +26,7 @@ export default defineCommand({
   args: {
     name: { type: "positional", description: "Skill name or path", required: false },
     for: { type: "string", description: "Target agent: claude | cursor | codex | copilot | grok", alias: "f" },
+    global: { type: "boolean", description: "Select a Global Skill when the name clashes", default: false },
     yes: { type: "boolean", description: "Delete without prompting", default: false, alias: "y" },
     "dry-run": { type: "boolean", description: "Show the plan, write nothing", default: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
@@ -61,7 +63,35 @@ export default defineCommand({
     }
 
     try {
-      const resolved = resolveSkillName({ name, cwd, forAgent: forRaw });
+      let resolved = resolveSkillName({
+        name, cwd, home: homedir(), forAgent: forRaw, globalOnly: Boolean(args.global),
+      });
+      if (resolved.status === "ambiguous") {
+        const hits = resolved.matches;
+        const canPick = canPromptInteractively(false, false, mode.format) && !isAgentCaller();
+        if (canPick) {
+          const picked = await select({
+            message: `Name "${name}" matches more than one Skill`,
+            options: hits.map((m: SkillMatch) => ({
+              value: m.dir,
+              label: `${m.origin}${m.agent ? ` · ${m.agent}` : ""}  ${m.dir}`,
+            })),
+            output: process.stderr,
+          });
+          if (isCancel(picked) || !picked) {
+            summaryLine("Nothing deleted.");
+            await exit(0);
+            return;
+          }
+          resolved = resolveSkillName({ name: String(picked), cwd, home: homedir() });
+        } else {
+          const list = hits.map((m) => `${m.origin}${m.agent ? `/${m.agent}` : ""} ${m.dir}`).join("; ");
+          ui.fail(`Name "${name}" matches more than one Skill (${list}).`);
+          nextAction(`dora skill remove ${name} --for <agent>`);
+          await exit(2);
+          return;
+        }
+      }
       const plan = planRemove(resolved);
 
       if (!plan.ok) {
@@ -75,8 +105,8 @@ export default defineCommand({
           const hits = resolved.status === "ambiguous" ? resolved.matches : [];
           const list = hits.map((m) => `${m.agent ?? m.origin} ${m.dir}`).join(", ");
           ui.fail(`Name "${name}" matches more than one Skill (${list}).`);
-          nextAction("dora skill remove <name> --for <agent>");
-          await exit(1);
+          nextAction(`dora skill remove ${name} --for <agent>`);
+          await exit(2);
           return;
         }
         if (plan.reason === "imported") {

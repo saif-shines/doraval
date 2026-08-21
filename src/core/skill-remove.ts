@@ -27,21 +27,40 @@ const AGENT_ROOTS: [string, string][] = [
   ["cursor", ".cursor/rules"],
 ];
 
-function agentForDir(skillDir: string, cwd: string): string | undefined {
-  const rel = relative(resolve(cwd), resolve(skillDir)).replace(/\\/g, "/");
-  for (const [agent, root] of AGENT_ROOTS) {
-    if (rel === root || rel.startsWith(`${root}/`)) return agent;
+function agentForDir(skillDir: string, roots: string[]): string | undefined {
+  const abs = resolve(skillDir);
+  for (const base of roots) {
+    const rel = relative(resolve(base), abs).replace(/\\/g, "/");
+    if (rel.startsWith("..")) continue;
+    for (const [agent, root] of AGENT_ROOTS) {
+      if (rel === root || rel.startsWith(`${root}/`)) return agent;
+    }
   }
   return undefined;
 }
 
-export function listProjectSkills(cwd: string, home?: string): SkillMatch[] {
-  return findSkillDirs(cwd).map((dir) => ({
+function toMatch(dir: string, cwd: string, home?: string): SkillMatch {
+  const bases = home ? [cwd, home] : [cwd];
+  return {
     name: basename(dir),
     dir,
     origin: classifySkillDir(dir, { cwd, home }),
-    agent: agentForDir(dir, cwd),
-  }));
+    agent: agentForDir(dir, bases),
+  };
+}
+
+export function listProjectSkills(cwd: string, home?: string): SkillMatch[] {
+  const seen = new Set<string>();
+  const out: SkillMatch[] = [];
+  const search = [cwd, ...(home ? AGENT_ROOTS.map(([, r]) => resolve(home, r)) : [])];
+  for (const root of search) {
+    for (const dir of findSkillDirs(root)) {
+      if (seen.has(dir)) continue;
+      seen.add(dir);
+      out.push(toMatch(dir, cwd, home));
+    }
+  }
+  return out;
 }
 
 export function resolveSkillName(opts: {
@@ -49,23 +68,20 @@ export function resolveSkillName(opts: {
   cwd: string;
   home?: string;
   forAgent?: string;
+  globalOnly?: boolean;
 }): ResolveSkillResult {
   const cwd = resolve(opts.cwd);
   const raw = opts.name.trim();
   const asPath = normalizeSkillPath(isAbsolute(raw) ? raw : resolve(cwd, raw));
   if (isSkillDir(asPath) && (raw.includes("/") || isAbsolute(raw) || raw.endsWith("SKILL.md"))) {
-    const match: SkillMatch = {
-      name: basename(asPath),
-      dir: asPath,
-      origin: classifySkillDir(asPath, { cwd, home: opts.home }),
-      agent: agentForDir(asPath, cwd),
-    };
+    const match = toMatch(asPath, cwd, opts.home);
     if (match.origin === "imported") return { status: "imported", match };
     return { status: "unique", match };
   }
 
   let hits = listProjectSkills(cwd, opts.home).filter((s) => s.name === raw);
   if (opts.forAgent) hits = hits.filter((s) => s.agent === opts.forAgent);
+  if (opts.globalOnly) hits = hits.filter((s) => s.origin === "global");
   if (hits.length === 0) return { status: "none" };
   if (hits.length > 1) return { status: "ambiguous", matches: hits };
   const match = hits[0]!;

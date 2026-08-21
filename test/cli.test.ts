@@ -346,12 +346,13 @@ describe("doraval CLI", () => {
       expect(help.exitCode).toBe(0);
       expect(help.stdout).toContain("--dry-run");
       expect(help.stdout).toContain("--yes");
+      expect(help.stdout).toContain("--global");
     });
 
     test("--yes deletes a unique Authored Skill", () => {
       const dir = authoredRepo();
       const skill = join(dir, ".claude", "skills", "ghost");
-      const { exitCode } = runDoraval(["skill", "remove", "ghost", "--yes", "--cwd", dir], { env: { CI: "1" } });
+      const { exitCode } = runDoraval(["skill", "remove", "ghost", "--yes", "--cwd", dir], { env: { CI: "1", HOME: dir } });
       expect(exitCode).toBe(0);
       expect(existsSync(skill)).toBe(false);
       rmSync(dir, { recursive: true, force: true });
@@ -362,7 +363,7 @@ describe("doraval CLI", () => {
       const skill = join(dir, ".claude", "skills", "ghost");
       const { exitCode, stdout, stderr } = runDoraval(
         ["skill", "remove", "ghost", "--dry-run", "--cwd", dir],
-        { env: { CI: "1" } },
+        { env: { CI: "1", HOME: dir } },
       );
       expect(exitCode).toBe(0);
       expect(existsSync(skill)).toBe(true);
@@ -373,7 +374,7 @@ describe("doraval CLI", () => {
     test("detected agent without --yes or --dry-run exits 2 and writes nothing", () => {
       const dir = authoredRepo();
       const skill = join(dir, ".claude", "skills", "ghost");
-      const { exitCode, stderr } = runDoraval(["skill", "remove", "ghost", "--cwd", dir], { env: { CI: "1" } });
+      const { exitCode, stderr } = runDoraval(["skill", "remove", "ghost", "--cwd", dir], { env: { CI: "1", HOME: dir } });
       expect(exitCode).toBe(2);
       expect(stderr).toContain("Next:");
       expect(stderr).toContain("--dry-run");
@@ -385,7 +386,7 @@ describe("doraval CLI", () => {
       const dir = authoredRepo();
       const { exitCode, stderr } = runDoraval(
         ["skill", "remove", "nosuch", "--yes", "--cwd", dir],
-        { env: { CI: "1" } },
+        { env: { CI: "1", HOME: dir } },
       );
       expect(exitCode).toBe(1);
       expect(stderr).toContain("Next: dora skill remove");
@@ -399,7 +400,7 @@ describe("doraval CLI", () => {
       writeFileSync(join(grok, "SKILL.md"), `---\nname: ghost\ndescription: "Use when grok"\n---\n\n1. Go\n`);
       const { exitCode } = runDoraval(
         ["skill", "remove", "ghost", "--for", "claude", "--yes", "--cwd", dir],
-        { env: { CI: "1" } },
+        { env: { CI: "1", HOME: dir } },
       );
       expect(exitCode).toBe(0);
       expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(false);
@@ -414,9 +415,9 @@ describe("doraval CLI", () => {
       writeFileSync(join(grok, "SKILL.md"), `---\nname: ghost\ndescription: "Use when grok"\n---\n\n1. Go\n`);
       const { exitCode, stderr } = runDoraval(
         ["skill", "remove", "ghost", "--yes", "--cwd", dir],
-        { env: { CI: "1" } },
+        { env: { CI: "1", HOME: dir } },
       );
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(stderr).toMatch(/more than one|ambiguous|--for/i);
       expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
       expect(existsSync(grok)).toBe(true);
@@ -427,7 +428,7 @@ describe("doraval CLI", () => {
       const dir = authoredRepo();
       const { exitCode, stdout } = runDoraval(
         ["skill", "remove", "ghost", "--dry-run", "--json", "--cwd", dir],
-        { env: { CI: "1" } },
+        { env: { CI: "1", HOME: dir } },
       );
       expect(exitCode).toBe(0);
       const body = JSON.parse(stdout);
@@ -435,6 +436,46 @@ describe("doraval CLI", () => {
       expect(body.plan.action).toBe("delete");
       expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
       rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("path argument selects that directory", () => {
+      const dir = authoredRepo();
+      const grok = join(dir, ".grok", "skills", "ghost");
+      mkdirSync(grok, { recursive: true });
+      writeFileSync(join(grok, "SKILL.md"), `---\nname: ghost\ndescription: "Use when grok"\n---\n\n1. Go\n`);
+      const target = join(dir, ".claude", "skills", "ghost");
+      const { exitCode } = runDoraval(
+        ["skill", "remove", target, "--yes", "--cwd", dir],
+        { env: { CI: "1", HOME: dir } },
+      );
+      expect(exitCode).toBe(0);
+      expect(existsSync(target)).toBe(false);
+      expect(existsSync(grok)).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("Authored + Global clash: Runner exits 2; --global picks home", () => {
+      const dir = authoredRepo();
+      const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+      const globalDir = join(home, ".claude", "skills", "ghost");
+      mkdirSync(globalDir, { recursive: true });
+      writeFileSync(join(globalDir, "SKILL.md"), `---\nname: ghost\ndescription: "Use when global"\n---\n\n1. Go\n`);
+      const clash = runDoraval(
+        ["skill", "remove", "ghost", "--yes", "--cwd", dir],
+        { env: { CI: "1", HOME: home } },
+      );
+      expect(clash.exitCode).toBe(2);
+      expect(clash.stderr).toMatch(/more than one|--for|--global/i);
+      expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
+      expect(existsSync(globalDir)).toBe(true);
+      const picked = runDoraval(
+        ["skill", "remove", "ghost", "--global", "--yes", "--cwd", dir],
+        { env: { CI: "1", HOME: home } },
+      );
+      expect(picked.exitCode).toBe(1);
+      expect(existsSync(globalDir)).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
     });
 
     test("imported Skill is refused", () => {
@@ -445,7 +486,7 @@ describe("doraval CLI", () => {
       writeFileSync(join(imp, "SKILL.md"), `---\nname: ghost\ndescription: "Use when imported"\n---\n\n1. Go\n`);
       const { exitCode, stderr } = runDoraval(
         ["skill", "remove", "ghost", "--yes", "--cwd", dir],
-        { env: { CI: "1" } },
+        { env: { CI: "1", HOME: dir } },
       );
       expect(exitCode).toBe(1);
       expect(stderr).toMatch(/Imported|refusing/i);

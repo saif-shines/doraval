@@ -116,6 +116,54 @@ describe("resolveSkillName", () => {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
+
+  test("Authored + Global same name is ambiguous", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    writeSkill(cwd, ".claude/skills/ghost", "ghost");
+    const globalDir = writeSkill(home, ".claude/skills/ghost", "ghost");
+    try {
+      const r = resolveSkillName({ name: "ghost", cwd, home });
+      expect(r.status).toBe("ambiguous");
+      if (r.status !== "ambiguous") return;
+      expect(r.matches.some((m) => m.origin === "authored")).toBe(true);
+      expect(r.matches.some((m) => m.origin === "global" && m.dir === globalDir)).toBe(true);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("--global selects the Global copy", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    writeSkill(cwd, ".claude/skills/ghost", "ghost");
+    const globalDir = writeSkill(home, ".claude/skills/ghost", "ghost");
+    try {
+      const r = resolveSkillName({ name: "ghost", cwd, home, globalOnly: true });
+      expect(r.status).toBe("unique");
+      if (r.status !== "unique") return;
+      expect(r.match.origin).toBe("global");
+      expect(r.match.dir).toBe(globalDir);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test("path wins over a name clash", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const a = writeSkill(cwd, ".claude/skills/ghost", "ghost");
+    writeSkill(cwd, ".grok/skills/ghost", "ghost");
+    try {
+      const r = resolveSkillName({ name: a, cwd });
+      expect(r.status).toBe("unique");
+      if (r.status !== "unique") return;
+      expect(r.match.dir).toBe(a);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("planRemove + applyRemove", () => {
