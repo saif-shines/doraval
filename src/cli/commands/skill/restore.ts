@@ -20,6 +20,7 @@ export default defineCommand({
   },
   args: {
     name: { type: "positional", description: "Quarantined Skill name", required: false },
+    for: { type: "string", description: "Target agent when the name matches more than one record", alias: "f" },
     yes: { type: "boolean", description: "Restore without prompting", default: false, alias: "y" },
     "dry-run": { type: "boolean", description: "Show the plan, write nothing", default: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
@@ -39,6 +40,7 @@ export default defineCommand({
     }
 
     try {
+      let pickedPlan: ReturnType<typeof planRestore> | undefined;
       if (!name) {
         const known = listQuarantine();
         const canPick = canPromptInteractively(false, false, mode.format) && !isAgentCaller();
@@ -55,7 +57,10 @@ export default defineCommand({
         }
         const picked = await select({
           message: "Restore which Quarantined Skill?",
-          options: known.map((r) => ({ value: r.name, label: `${r.name}  ${r.originalPath}` })),
+          options: known.map((r) => ({
+            value: r.storedAt,
+            label: `${r.name}${r.agent ? ` · ${r.agent}` : ""}  ${r.originalPath}`,
+          })),
           output: process.stderr,
         });
         if (isCancel(picked) || !picked) {
@@ -63,15 +68,29 @@ export default defineCommand({
           await exit(0);
           return;
         }
-        name = String(picked);
+        const byStore = planRestore({ storedAt: String(picked) });
+        if (!byStore.ok) {
+          ui.fail(`Cannot restore that record (${byStore.reason}).`);
+          nextAction("dora skill restore");
+          await exit(1);
+          return;
+        }
+        name = byStore.record.name;
+        pickedPlan = byStore;
       }
 
-      const plan = planRestore(name);
+      const plan = pickedPlan ?? planRestore({ name, forAgent: args.for as string | undefined });
       if (!plan.ok) {
         if (plan.reason === "occupied") {
           ui.fail(`Original path is occupied. Not restoring "${name}".`);
-          nextAction(`dora skill restore ${name}`);
+          nextAction("Free the original path, then retry dora skill restore");
           await exit(1);
+          return;
+        }
+        if (plan.reason === "ambiguous") {
+          ui.fail(`More than one Quarantined Skill named "${name}".`);
+          nextAction(`dora skill restore ${name} --for <agent>`);
+          await exit(2);
           return;
         }
         ui.fail(`No Quarantined Skill named "${name}".`);

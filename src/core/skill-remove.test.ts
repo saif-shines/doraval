@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
@@ -275,6 +275,57 @@ describe("planRemove + applyRemove", () => {
       expect(cands.map((c) => c.name)).toEqual(["ghost"]);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test("corrupt records.json does not wipe older entries", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+    writeSkill(home, ".claude/skills/ghost", "ghost");
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = doraHome;
+    try {
+      mkdirSync(join(doraHome, "quarantine"), { recursive: true });
+      writeFileSync(join(doraHome, "quarantine", "records.json"), "{not-json");
+      const dir = join(home, ".claude/skills/ghost");
+      expect(() => {
+        applyRemove(planRemove(resolveSkillName({ name: "ghost", cwd, home })) as Extract<ReturnType<typeof planRemove>, { ok: true }>);
+      }).toThrow();
+      expect(existsSync(join(dir, "SKILL.md"))).toBe(true);
+      expect(readFileSync(join(doraHome, "quarantine", "records.json"), "utf8")).toBe("{not-json");
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(doraHome, { recursive: true, force: true });
+    }
+  });
+
+  test("two Quarantined Skills with the same name are ambiguous", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+    writeSkill(home, ".claude/skills/ghost", "ghost");
+    writeSkill(home, ".grok/skills/ghost", "ghost");
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = doraHome;
+    try {
+      applyRemove(planRemove(resolveSkillName({ name: "ghost", cwd, home, forAgent: "claude" })) as Extract<ReturnType<typeof planRemove>, { ok: true }>);
+      applyRemove(planRemove(resolveSkillName({ name: "ghost", cwd, home, forAgent: "grok" })) as Extract<ReturnType<typeof planRemove>, { ok: true }>);
+      const clash = planRestore("ghost");
+      expect(clash.ok).toBe(false);
+      if (clash.ok) return;
+      expect(clash.reason).toBe("ambiguous");
+      const one = planRestore({ name: "ghost", forAgent: "claude" });
+      expect(one.ok).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(doraHome, { recursive: true, force: true });
     }
   });
 

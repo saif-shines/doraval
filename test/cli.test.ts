@@ -432,6 +432,7 @@ describe("doraval CLI", () => {
       );
       expect(exitCode).toBe(2);
       expect(stderr).toMatch(/more than one|ambiguous|--for/i);
+      expect(stderr).toContain("--global");
       expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
       expect(existsSync(grok)).toBe(true);
       rmSync(dir, { recursive: true, force: true });

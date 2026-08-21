@@ -124,16 +124,26 @@ function recordsPath(): string {
 }
 
 export function listQuarantine(): QuarantineRecord[] {
-  try {
-    return JSON.parse(readFileSync(recordsPath(), "utf8")) as QuarantineRecord[];
-  } catch {
-    return [];
-  }
+  if (!existsSync(recordsPath())) return [];
+  const data = JSON.parse(readFileSync(recordsPath(), "utf8"));
+  if (!Array.isArray(data)) throw new Error("Quarantine records.json is not an array");
+  return data as QuarantineRecord[];
 }
 
 function writeRecords(records: QuarantineRecord[]): void {
   mkdirSync(quarantineRoot(), { recursive: true });
-  writeFileSync(recordsPath(), JSON.stringify(records, null, 2));
+  const tmp = `${recordsPath()}.tmp`;
+  writeFileSync(tmp, JSON.stringify(records, null, 2));
+  renameSync(tmp, recordsPath());
+}
+
+function moveDir(from: string, to: string): void {
+  try {
+    renameSync(from, to);
+  } catch {
+    cpSync(from, to, { recursive: true });
+    rmSync(from, { recursive: true, force: true });
+  }
 }
 
 export function applyRemove(plan: Extract<RemovePlan, { ok: true }>): void {
@@ -141,34 +151,44 @@ export function applyRemove(plan: Extract<RemovePlan, { ok: true }>): void {
     rmSync(plan.dir, { recursive: true, force: true });
     return;
   }
+  const previous = listQuarantine();
   mkdirSync(join(quarantineRoot(), "store"), { recursive: true });
   let storedAt = join(quarantineRoot(), "store", `${plan.agent ?? "global"}--${plan.name}`);
   if (existsSync(storedAt)) storedAt = `${storedAt}-${Date.now()}`;
+  moveDir(plan.dir, storedAt);
   try {
-    renameSync(plan.dir, storedAt);
-  } catch {
-    cpSync(plan.dir, storedAt, { recursive: true });
-    rmSync(plan.dir, { recursive: true, force: true });
+    writeRecords([
+      ...previous,
+      {
+        name: plan.name,
+        originalPath: plan.dir,
+        storedAt,
+        agent: plan.agent,
+        quarantinedAt: new Date().toISOString(),
+      },
+    ]);
+  } catch (err) {
+    if (existsSync(storedAt) && !existsSync(plan.dir)) moveDir(storedAt, plan.dir);
+    throw err;
   }
-  writeRecords([
-    ...listQuarantine(),
-    {
-      name: plan.name,
-      originalPath: plan.dir,
-      storedAt,
-      agent: plan.agent,
-      quarantinedAt: new Date().toISOString(),
-    },
-  ]);
 }
 
 export type RestorePlan =
   | { ok: true; record: QuarantineRecord }
-  | { ok: false; reason: "missing" | "occupied" };
+  | { ok: false; reason: "missing" | "occupied" | "ambiguous" };
 
-export function planRestore(name: string): RestorePlan {
-  const record = listQuarantine().find((r) => r.name === name);
-  if (!record) return { ok: false, reason: "missing" };
+export function planRestore(
+  query: string | { name?: string; storedAt?: string; forAgent?: string },
+): RestorePlan {
+  const q = typeof query === "string" ? { name: query } : query;
+  let hits = listQuarantine();
+  if (q.storedAt) hits = hits.filter((r) => r.storedAt === q.storedAt);
+  else if (q.name) hits = hits.filter((r) => r.name === q.name);
+  else return { ok: false, reason: "missing" };
+  if (q.forAgent) hits = hits.filter((r) => r.agent === q.forAgent);
+  if (hits.length === 0) return { ok: false, reason: "missing" };
+  if (hits.length > 1) return { ok: false, reason: "ambiguous" };
+  const record = hits[0]!;
   if (existsSync(record.originalPath)) return { ok: false, reason: "occupied" };
   return { ok: true, record };
 }
