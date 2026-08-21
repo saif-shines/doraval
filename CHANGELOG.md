@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.6.21
+
+### Docs
+
+- Home and Introduction subtitle: **context-effectiveness CLI**.
+- Home hero type is larger.
+
 ## 0.6.20
 
 ### Features
