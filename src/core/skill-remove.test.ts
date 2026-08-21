@@ -4,9 +4,12 @@ import { tmpdir } from "os";
 import { join } from "path";
 import {
   applyRemove,
+  applyRestore,
   isRecentInstall,
   isRemoveCandidate,
+  listQuarantine,
   planRemove,
+  planRestore,
   resolveSkillName,
 } from "./skill-remove.js";
 import { existsSync } from "fs";
@@ -173,7 +176,7 @@ describe("planRemove + applyRemove", () => {
     try {
       const resolved = resolveSkillName({ name: "ghost", cwd });
       const plan = planRemove(resolved);
-      expect(plan).toEqual({ ok: true, action: "delete", dir, origin: "authored" });
+      expect(plan).toMatchObject({ ok: true, action: "delete", dir, origin: "authored" });
       applyRemove(plan as Extract<typeof plan, { ok: true }>);
       expect(existsSync(dir)).toBe(false);
     } finally {
@@ -188,5 +191,73 @@ describe("planRemove + applyRemove", () => {
       status: "imported",
       match: { name: "x", dir: "/x", origin: "imported" },
     }).ok).toBe(false);
+  });
+
+  test("unique Global plan Quarantines and Restore puts it back", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+    const dir = writeSkill(home, ".claude/skills/ghost", "ghost");
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = doraHome;
+    try {
+      const resolved = resolveSkillName({ name: "ghost", cwd, home });
+      const plan = planRemove(resolved);
+      expect(plan.ok).toBe(true);
+      if (!plan.ok) return;
+      expect(plan.action).toBe("quarantine");
+      applyRemove(plan);
+      expect(existsSync(dir)).toBe(false);
+      expect(listQuarantine().some((r) => r.name === "ghost")).toBe(true);
+      const back = planRestore("ghost");
+      expect(back.ok).toBe(true);
+      if (!back.ok) return;
+      applyRestore(back);
+      expect(existsSync(join(dir, "SKILL.md"))).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(doraHome, { recursive: true, force: true });
+    }
+  });
+
+  test("Restore refuses an occupied original path", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+    const dir = writeSkill(home, ".claude/skills/ghost", "ghost");
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = doraHome;
+    try {
+      applyRemove(planRemove(resolveSkillName({ name: "ghost", cwd, home })) as Extract<ReturnType<typeof planRemove>, { ok: true }>);
+      writeSkill(home, ".claude/skills/ghost", "ghost");
+      const back = planRestore("ghost");
+      expect(back.ok).toBe(false);
+      if (back.ok) return;
+      expect(back.reason).toBe("occupied");
+      expect(existsSync(dir)).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(doraHome, { recursive: true, force: true });
+    }
+  });
+
+  test("missing Quarantine name is not ok", () => {
+    const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = doraHome;
+    try {
+      const back = planRestore("nosuch");
+      expect(back.ok).toBe(false);
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+      rmSync(doraHome, { recursive: true, force: true });
+    }
   });
 });

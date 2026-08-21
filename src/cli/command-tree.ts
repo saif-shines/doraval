@@ -33,9 +33,10 @@ export function defineGroup(
 
 export const skill = defineGroup(
   "skill",
-  "Remove (and later restore) project Skills",
+  "Remove or Restore Skills",
   {
     remove: () => import("./commands/skill/remove.js").then((m) => m.default),
+    restore: () => import("./commands/skill/restore.js").then((m) => m.default),
   }
 );
 

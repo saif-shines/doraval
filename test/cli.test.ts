@@ -342,6 +342,7 @@ describe("doraval CLI", () => {
       const group = runDoraval(["skill", "--help"]);
       expect(group.exitCode).toBe(0);
       expect(group.stdout + group.stderr).toContain("remove");
+      expect(group.stdout + group.stderr).toContain("restore");
       const help = runDoraval(["skill", "remove", "--help"]);
       expect(help.exitCode).toBe(0);
       expect(help.stdout).toContain("--dry-run");
@@ -468,14 +469,78 @@ describe("doraval CLI", () => {
       expect(clash.stderr).toMatch(/more than one|--for|--global/i);
       expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
       expect(existsSync(globalDir)).toBe(true);
+      const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
       const picked = runDoraval(
         ["skill", "remove", "ghost", "--global", "--yes", "--cwd", dir],
-        { env: { CI: "1", HOME: home } },
+        { env: { CI: "1", HOME: home, DORAVAL_HOME: doraHome } },
       );
-      expect(picked.exitCode).toBe(1);
-      expect(existsSync(globalDir)).toBe(true);
+      expect(picked.exitCode).toBe(0);
+      expect(existsSync(globalDir)).toBe(false);
+      expect(existsSync(join(dir, ".claude", "skills", "ghost"))).toBe(true);
+      rmSync(doraHome, { recursive: true, force: true });
       rmSync(dir, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });
+    });
+
+    test("Global Remove Quarantines; restore puts it back", () => {
+      const dir = authoredRepo("other");
+      const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+      const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+      const globalDir = join(home, ".claude", "skills", "ghost");
+      mkdirSync(globalDir, { recursive: true });
+      writeFileSync(join(globalDir, "SKILL.md"), `---\nname: ghost\ndescription: "Use when global"\n---\n\n1. Go\n`);
+      const env = { CI: "1", HOME: home, DORAVAL_HOME: doraHome };
+      const rm = runDoraval(["skill", "remove", "ghost", "--yes", "--cwd", dir], { env });
+      expect(rm.exitCode).toBe(0);
+      expect(existsSync(globalDir)).toBe(false);
+      expect(rm.stdout + rm.stderr).not.toMatch(/stash/i);
+      const back = runDoraval(["skill", "restore", "ghost", "--yes"], { env });
+      expect(back.exitCode).toBe(0);
+      expect(existsSync(join(globalDir, "SKILL.md"))).toBe(true);
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(doraHome, { recursive: true, force: true });
+    });
+
+    test("restore occupied path exits 1 and writes nothing extra", () => {
+      const dir = authoredRepo("other");
+      const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+      const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+      const globalDir = join(home, ".claude", "skills", "ghost");
+      mkdirSync(globalDir, { recursive: true });
+      writeFileSync(join(globalDir, "SKILL.md"), `---\nname: ghost\ndescription: "Use when global"\n---\n\n1. Go\n`);
+      const env = { CI: "1", HOME: home, DORAVAL_HOME: doraHome };
+      runDoraval(["skill", "remove", "ghost", "--yes", "--cwd", dir], { env });
+      mkdirSync(globalDir, { recursive: true });
+      writeFileSync(join(globalDir, "SKILL.md"), `---\nname: ghost\ndescription: "reinstalled"\n---\n\n1. Go\n`);
+      const back = runDoraval(["skill", "restore", "ghost", "--yes"], { env });
+      expect(back.exitCode).toBe(1);
+      expect(back.stderr).toMatch(/occupied/i);
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(doraHome, { recursive: true, force: true });
+    });
+
+    test("restore missing name does not claim success", () => {
+      const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+      const { exitCode, stdout, stderr } = runDoraval(["skill", "restore", "nosuch", "--yes"], {
+        env: { CI: "1", DORAVAL_HOME: doraHome },
+      });
+      expect(exitCode).toBe(1);
+      expect(stdout + stderr).not.toMatch(/Restored/i);
+      rmSync(doraHome, { recursive: true, force: true });
+    });
+
+    test("bare restore as Runner exits 2", () => {
+      const { exitCode, stderr } = runDoraval(["skill", "restore"], { env: { CI: "1" } });
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("Next:");
+    });
+
+    test("restore without --yes or --dry-run as Runner exits 2", () => {
+      const { exitCode, stderr } = runDoraval(["skill", "restore", "ghost"], { env: { CI: "1" } });
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("--dry-run");
     });
 
     test("imported Skill is refused", () => {

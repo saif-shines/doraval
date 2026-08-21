@@ -83,9 +83,9 @@ export function buildCapabilities(): CapabilitiesManifest {
       cmd("new", "writes", "Scaffold a skill, rule, agent, or plugin.", [
         "dora new skill --for claude --name review-pr --yes",
       ], COMMON_FLAGS),
-      cmd("skill", "writes", "Remove an Authored Skill (restore later).", [
+      cmd("skill", "writes", "Remove or Restore a Skill.", [
         "dora skill remove ghost --dry-run",
-        "dora skill remove ghost --yes",
+        "dora skill restore ghost --yes",
       ], {
         ...COMMON_FLAGS,
         "--yes": { description: "Delete without prompting" },

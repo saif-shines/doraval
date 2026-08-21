@@ -115,12 +115,13 @@ export default defineCommand({
           await exit(1);
           return;
         }
-        ui.fail("Only Authored Skills can be deleted. Global Quarantine is a later command.");
+        ui.fail(`Cannot remove "${name}".`);
         nextAction("dora skill remove");
         await exit(1);
         return;
       }
 
+      const verb = plan.action === "quarantine" ? "Quarantine" : "Delete";
       if (mode.format === "json") {
         const applied = !dryRun && yes;
         if (applied) applyRemove(plan);
@@ -130,7 +131,7 @@ export default defineCommand({
       }
 
       ui.blank();
-      summaryLine(`${dryRun ? "Would delete" : "Delete"} Authored Skill ${name} (${plan.dir})`);
+      summaryLine(`${dryRun ? "Would " + verb.toLowerCase() : verb} ${plan.origin} Skill ${name} (${plan.dir})`);
       if (dryRun) {
         nextAction(`dora skill remove ${name} --yes`);
         await exit(0);
@@ -140,24 +141,25 @@ export default defineCommand({
       const interactive = canPromptInteractively(yes, dryRun, mode.format);
       if (interactive) {
         const ok = await confirm({
-          message: `Delete Authored Skill ${name}?`,
+          message: `${verb} ${plan.origin} Skill ${name}?`,
           initialValue: false,
           output: process.stderr,
         });
         if (isCancel(ok) || !ok) {
-          summaryLine("Nothing deleted.");
+          summaryLine("Nothing removed.");
           await exit(0);
           return;
         }
       } else if (!yes) {
-        ui.fail("Pass --yes to delete, or --dry-run to preview.");
+        ui.fail("Pass --yes to remove, or --dry-run to preview.");
         nextAction(`dora skill remove ${name} --dry-run`);
         await exit(2);
         return;
       }
 
       applyRemove(plan);
-      summaryLine(`Deleted ${plan.dir}`);
+      summaryLine(`${verb === "Delete" ? "Deleted" : "Quarantined"} ${plan.dir}`);
+      if (plan.action === "quarantine") nextAction(`dora skill restore ${name}`);
       await exit(0);
     } catch (e) {
       emitError(e, mode);

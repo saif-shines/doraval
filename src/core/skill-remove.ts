@@ -1,8 +1,9 @@
-import { rmSync } from "fs";
-import { basename, isAbsolute, relative, resolve } from "path";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";
+import { basename, isAbsolute, join, relative, resolve } from "path";
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery.js";
 import { withinWindow } from "./session-adapters/types.js";
+import { getDoravalDir } from "./journal-config.js";
 
 export interface SkillMatch {
   name: string;
@@ -90,19 +91,97 @@ export function resolveSkillName(opts: {
 }
 
 export type RemovePlan =
-  | { ok: true; action: "delete"; dir: string; origin: "authored" }
-  | { ok: false; reason: "none" | "ambiguous" | "imported" | "not-authored" };
+  | { ok: true; action: "delete"; dir: string; origin: "authored"; name: string }
+  | { ok: true; action: "quarantine"; dir: string; origin: "global"; name: string; agent?: string }
+  | { ok: false; reason: "none" | "ambiguous" | "imported" };
 
 export function planRemove(resolved: ResolveSkillResult): RemovePlan {
   if (resolved.status === "none") return { ok: false, reason: "none" };
   if (resolved.status === "ambiguous") return { ok: false, reason: "ambiguous" };
   if (resolved.status === "imported") return { ok: false, reason: "imported" };
-  if (resolved.match.origin !== "authored") return { ok: false, reason: "not-authored" };
-  return { ok: true, action: "delete", dir: resolved.match.dir, origin: "authored" };
+  const { match } = resolved;
+  if (match.origin === "authored") {
+    return { ok: true, action: "delete", dir: match.dir, origin: "authored", name: match.name };
+  }
+  return { ok: true, action: "quarantine", dir: match.dir, origin: "global", name: match.name, agent: match.agent };
+}
+
+export interface QuarantineRecord {
+  name: string;
+  originalPath: string;
+  storedAt: string;
+  agent?: string;
+  quarantinedAt: string;
+}
+
+function quarantineRoot(): string {
+  return join(getDoravalDir(), "quarantine");
+}
+
+function recordsPath(): string {
+  return join(quarantineRoot(), "records.json");
+}
+
+export function listQuarantine(): QuarantineRecord[] {
+  try {
+    return JSON.parse(readFileSync(recordsPath(), "utf8")) as QuarantineRecord[];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecords(records: QuarantineRecord[]): void {
+  mkdirSync(quarantineRoot(), { recursive: true });
+  writeFileSync(recordsPath(), JSON.stringify(records, null, 2));
 }
 
 export function applyRemove(plan: Extract<RemovePlan, { ok: true }>): void {
-  rmSync(plan.dir, { recursive: true, force: true });
+  if (plan.action === "delete") {
+    rmSync(plan.dir, { recursive: true, force: true });
+    return;
+  }
+  mkdirSync(join(quarantineRoot(), "store"), { recursive: true });
+  let storedAt = join(quarantineRoot(), "store", `${plan.agent ?? "global"}--${plan.name}`);
+  if (existsSync(storedAt)) storedAt = `${storedAt}-${Date.now()}`;
+  try {
+    renameSync(plan.dir, storedAt);
+  } catch {
+    cpSync(plan.dir, storedAt, { recursive: true });
+    rmSync(plan.dir, { recursive: true, force: true });
+  }
+  writeRecords([
+    ...listQuarantine(),
+    {
+      name: plan.name,
+      originalPath: plan.dir,
+      storedAt,
+      agent: plan.agent,
+      quarantinedAt: new Date().toISOString(),
+    },
+  ]);
+}
+
+export type RestorePlan =
+  | { ok: true; record: QuarantineRecord }
+  | { ok: false; reason: "missing" | "occupied" };
+
+export function planRestore(name: string): RestorePlan {
+  const record = listQuarantine().find((r) => r.name === name);
+  if (!record) return { ok: false, reason: "missing" };
+  if (existsSync(record.originalPath)) return { ok: false, reason: "occupied" };
+  return { ok: true, record };
+}
+
+export function applyRestore(plan: Extract<RestorePlan, { ok: true }>): void {
+  const { record } = plan;
+  mkdirSync(resolve(record.originalPath, ".."), { recursive: true });
+  try {
+    renameSync(record.storedAt, record.originalPath);
+  } catch {
+    cpSync(record.storedAt, record.originalPath, { recursive: true });
+    rmSync(record.storedAt, { recursive: true, force: true });
+  }
+  writeRecords(listQuarantine().filter((r) => r.storedAt !== record.storedAt));
 }
 
 export function isRecentInstall(mtimeMs: number, nowMs: number = Date.now()): boolean {
