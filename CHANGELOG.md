@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.6.22
+
+### Chore
+
+- Git ignores `.scratch/` so local notes stay off the index.
+
 ## 0.6.21
 
 ### Docs
