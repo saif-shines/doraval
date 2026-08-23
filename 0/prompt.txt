@@ -1,0 +1,9 @@
+<user_query>
+I sense there are many temporar files in this codebase. Can you explore and find it out?
+</user_query>
+
+---
+
+<user_query>
+Let's delete if they are no longer needed. But if needed for future then add to .gitignore
+</user_query>
