@@ -1,0 +1,20 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0QQVVX8F1WPDNNF1DH1E3VB",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "apps/website/package.json",
+    "jsr.json",
+    "package.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ]
+}
