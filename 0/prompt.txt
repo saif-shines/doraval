@@ -1,0 +1,21 @@
+<user_query>
+Can you audit the scripts directory over how many they are, if they are already needed?
+</user_query>
+
+---
+
+<user_query>
+delete them
+</user_query>
+
+---
+
+<user_query>
+the optional local only ones; do these need to be deleted? 
+</user_query>
+
+---
+
+<user_query>
+okay let's keep them
+</user_query>

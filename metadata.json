@@ -1,0 +1,20 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0QRJ67EK8MYJQQW37V0Y2HW",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 5,
+  "files_touched": [
+    "package.json",
+    "scripts/doraemon-face.js",
+    "scripts/test-judge-api.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
