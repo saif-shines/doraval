@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## 0.6.23
+
+### Features
+
+- **`dora skill unused`.** Lists Remove candidates. Writes nothing. Scan Next
+  points here when R034 exists.
+- **Plugin-owned Skills** are omitted from unused. Named `remove` / `restore`
+  of a Plugin-owned Skill exits `1`. Next is `dora review --quick <plugin-root>`.
+- **`dora agent-help`** labels `skill unused` **read-only**. `skill remove` and
+  `restore` stay **writes**.
+
+### Docs
+
+- Unused is listed before remove on README, `/commands`, the shipped skill,
+  and R034.
+
+### Chore
+
+- Drop unused `doraemon-face.js` and the raw `test-judge-api` script.
+
 ## 0.6.22
 
 ### Chore
