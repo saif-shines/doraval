@@ -50,6 +50,7 @@ package-lock.json
 plans/
 .agents/
 .claude/
+.scratch/
 WIP.md
 
 # worktrees for isolated feature development (using-git-worktrees skill)
