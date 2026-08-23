@@ -39,6 +39,7 @@ dora review --quick .        # Findings first, no LLM
 dora review --quick --json
 dora fix . --yes             # mechanical; no TTY
 dora new skill --for claude --name review-pr --yes
+dora skill unused            # list Remove candidates
 dora skill remove ghost --yes
 dora skill restore ghost --yes
 dora memory add "Never use default exports" --weight 8

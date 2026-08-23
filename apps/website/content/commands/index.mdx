@@ -69,11 +69,14 @@ Always pass `--for`. Then `dora review --quick` the new path.
 ## Skill
 
 ```bash
+dora skill unused
 dora skill remove ghost --dry-run
 dora skill remove ghost --yes
 dora skill remove ghost --for claude --yes
 dora skill restore ghost --yes
 ```
+
+`dora skill unused` lists Remove candidates. It writes nothing.
 
 Deletes an Authored Skill. Quarantines a Global Skill (home copy). Restore puts that copy back.
 
