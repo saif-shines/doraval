@@ -1,0 +1,22 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0QV8C2AE8V4RZGE3WTN4M12",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 13,
+  "files_touched": [
+    "src/cli/command-tree.ts",
+    "src/cli/commands/skill/unused.ts",
+    "src/core/scan.test.ts",
+    "src/core/scan.ts",
+    "test/cli.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
