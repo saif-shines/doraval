@@ -20,4 +20,20 @@ describe("buildCapabilities", () => {
     expect(m.intelligence.heuristic).toBe(true);
     expect(["api", "delegate"]).toContain(m.intelligence.llm.via);
   });
+
+  test("skill unused is read-only; skill remove/restore stay writes", () => {
+    const m = buildCapabilities();
+    const unused = m.commands.find((c) => c.name === "skill unused")!;
+    const skill = m.commands.find((c) => c.name === "skill")!;
+    expect(unused).toBeDefined();
+    expect(unused.label).toBe("read-only");
+    expect(unused.examples).toContain("dora skill unused");
+    expect(unused.flags["--yes"]).toBeUndefined();
+    expect(unused.flags["--dry-run"]).toBeUndefined();
+    expect(skill).toBeDefined();
+    expect(skill.label).toBe("writes");
+    expect(skill.examples.some((e) => e.includes("remove"))).toBe(true);
+    expect(skill.examples.some((e) => e.includes("restore"))).toBe(true);
+    expect(skill.examples.some((e) => e.includes("unused"))).toBe(false);
+  });
 });

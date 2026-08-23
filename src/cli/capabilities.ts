@@ -83,6 +83,13 @@ export function buildCapabilities(): CapabilitiesManifest {
       cmd("new", "writes", "Scaffold a skill, rule, agent, or plugin.", [
         "dora new skill --for claude --name review-pr --yes",
       ], COMMON_FLAGS),
+      cmd("skill unused", "read-only", "List Authored Skills that are Remove candidates.", [
+        "dora skill unused",
+        "dora skill unused --json",
+      ], {
+        ...COMMON_FLAGS,
+        "--cwd": { description: "Working directory override" },
+      }),
       cmd("skill", "writes", "Remove or Restore a Skill.", [
         "dora skill remove ghost --dry-run",
         "dora skill restore ghost --yes",

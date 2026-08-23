@@ -293,11 +293,13 @@ describe("doraval CLI", () => {
       expect(out).toContain("dora review --quick");
     });
 
-    test("lists skill as writes", () => {
+    test("lists skill unused as read-only and skill as writes", () => {
       const { exitCode, stdout, stderr } = runDoraval(["agent-help"]);
       const out = stdout + stderr;
       expect(exitCode).toBe(0);
+      expect(out).toMatch(/skill unused\s+read-only/);
       expect(out).toMatch(/skill\s+writes/);
+      expect(out).toContain("dora skill unused");
     });
 
     test("--json is the same tree", () => {
@@ -306,6 +308,12 @@ describe("doraval CLI", () => {
       const m = JSON.parse(stdout);
       expect(m.commands.some((c: { name: string; label: string }) => c.name === "review" && c.label === "read-only")).toBe(true);
       expect(m.commands.some((c: { name: string; label: string }) => c.name === "fix" && c.label === "writes")).toBe(true);
+      expect(m.commands.some((c: { name: string; label: string }) => c.name === "skill unused" && c.label === "read-only")).toBe(true);
+      expect(m.commands.some((c: { name: string; label: string }) => c.name === "skill" && c.label === "writes")).toBe(true);
+      const unused = m.commands.find((c: { name: string }) => c.name === "skill unused");
+      expect(unused.examples).toContain("dora skill unused");
+      expect(unused.flags["--yes"]).toBeUndefined();
+      expect(unused.flags["--dry-run"]).toBeUndefined();
       expect(m.commands.find((c: { name: string }) => c.name === "scan").examples.length).toBeGreaterThan(0);
     });
 
@@ -316,6 +324,14 @@ describe("doraval CLI", () => {
       expect(out).toContain("review");
       expect(out).toContain("read-only");
       expect(out).toContain("--quick");
+    });
+
+    test("agent-help skill drills into writes row", () => {
+      const { exitCode, stdout, stderr } = runDoraval(["agent-help", "skill"]);
+      const out = stdout + stderr;
+      expect(exitCode).toBe(0);
+      expect(out).toContain("writes");
+      expect(out).toContain("dora skill remove");
     });
 
     test("unknown name exits 1 with Next", () => {
