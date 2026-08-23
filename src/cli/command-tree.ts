@@ -33,8 +33,9 @@ export function defineGroup(
 
 export const skill = defineGroup(
   "skill",
-  "Remove or Restore Skills",
+  "List unused Skills; Remove or Restore",
   {
+    unused: () => import("./commands/skill/unused.js").then((m) => m.default),
     remove: () => import("./commands/skill/remove.js").then((m) => m.default),
     restore: () => import("./commands/skill/restore.js").then((m) => m.default),
   }

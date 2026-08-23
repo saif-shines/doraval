@@ -44,7 +44,7 @@ describe("runScan", () => {
     expect(result.suggestions.some((s) => s.kind === "fix" && s.command.includes("bad"))).toBe(true);
   });
 
-  test("Remove candidates appear in health and Next is dora skill remove", async () => {
+  test("Remove candidates appear in health and Next is dora skill unused", async () => {
     const root = makeRepo();
     writeSkill(root, ".claude/skills/ghost", 'name: ghost\ndescription: "Use when testing remove candidates"');
     const old = Date.now() / 1000 - 40 * 24 * 60 * 60;
@@ -66,7 +66,7 @@ describe("runScan", () => {
     const result = await runScan(root, noneInstalled, { loadedSessions });
     const ghost = result.health.find((h) => h.path.includes("ghost"))!;
     expect(ghost.warnings.some((w) => w.code === "R034")).toBe(true);
-    expect(result.suggestions.some((s) => s.command === "dora skill remove")).toBe(true);
+    expect(result.suggestions.some((s) => s.command === "dora skill unused")).toBe(true);
   });
 
   test("no remove Next when there are zero Remove candidates", async () => {
@@ -75,7 +75,7 @@ describe("runScan", () => {
     const result = await runScan(root, noneInstalled, {
       loadedSessions: { sessions: [], adaptersDetected: ["claude-code"], skipped: {} },
     });
-    expect(result.suggestions.some((s) => s.command === "dora skill remove")).toBe(false);
+    expect(result.suggestions.some((s) => s.command === "dora skill unused")).toBe(false);
   });
 
   test("skills are labeled with origin", async () => {

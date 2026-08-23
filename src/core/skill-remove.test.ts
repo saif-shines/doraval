@@ -187,6 +187,24 @@ describe("planRemove + applyRemove", () => {
     }
   });
 
+  test("Plugin-owned Authored Skill is not a delete plan", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const dir = writeSkill(cwd, "my-plug/skills/inner", "inner");
+    mkdirSync(join(cwd, "my-plug", ".claude-plugin"), { recursive: true });
+    writeFileSync(join(cwd, "my-plug", ".claude-plugin", "plugin.json"), "{}");
+    try {
+      const resolved = resolveSkillName({ name: "inner", cwd });
+      const plan = planRemove(resolved, cwd);
+      expect(plan).toMatchObject({ ok: false, reason: "plugin-owned" });
+      if (!plan.ok && plan.reason === "plugin-owned") {
+        expect(plan.pluginRoot).toBe(join(cwd, "my-plug"));
+      }
+      expect(existsSync(dir)).toBe(true);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   test("imported and ambiguous plans do not delete", () => {
     expect(planRemove({ status: "none" }).ok).toBe(false);
     expect(planRemove({ status: "ambiguous", matches: [] }).ok).toBe(false);
@@ -250,6 +268,35 @@ describe("planRemove + applyRemove", () => {
     }
   });
 
+  test("Restore of a Plugin-owned original path is refused", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const doraHome = mkdtempSync(join(tmpdir(), "dora-qh-"));
+    const plug = join(cwd, "my-plug");
+    const originalPath = join(plug, "skills", "inner");
+    mkdirSync(join(plug, ".claude-plugin"), { recursive: true });
+    writeFileSync(join(plug, ".claude-plugin", "plugin.json"), "{}");
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = doraHome;
+    try {
+      mkdirSync(join(doraHome, "quarantine", "store"), { recursive: true });
+      writeFileSync(join(doraHome, "quarantine", "records.json"), JSON.stringify([{
+        name: "inner",
+        originalPath,
+        storedAt: join(doraHome, "quarantine", "store", "inner"),
+        quarantinedAt: new Date().toISOString(),
+      }]));
+      const back = planRestore({ name: "inner", cwd });
+      expect(back.ok).toBe(false);
+      if (back.ok) return;
+      expect(back.reason).toBe("plugin-owned");
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(doraHome, { recursive: true, force: true });
+    }
+  });
+
   test("listRemoveCandidates is Authored, Never invoked, not Recent install", () => {
     const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
     const old = writeSkill(cwd, ".claude/skills/ghost", "ghost");
@@ -264,6 +311,35 @@ describe("planRemove + applyRemove", () => {
         primitives: {
           sessionId: "s1", model: "m", agent: "claude-code", cwd,
           toolCalls: [], toolCallCounts: {}, skillsInvoked: ["other"],
+          userMessages: [], userTurnCount: 0, assistantText: [],
+        },
+      }],
+      adaptersDetected: ["claude-code"],
+      skipped: {},
+    };
+    try {
+      const cands = listRemoveCandidates({ cwd, loaded });
+      expect(cands.map((c) => c.name)).toEqual(["ghost"]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test("Plugin-owned Authored Skill is not a Remove candidate", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const old = writeSkill(cwd, ".claude/skills/ghost", "ghost");
+    const plugSkill = writeSkill(cwd, "my-plug/skills/inner", "inner");
+    mkdirSync(join(cwd, "my-plug", ".claude-plugin"), { recursive: true });
+    writeFileSync(join(cwd, "my-plug", ".claude-plugin", "plugin.json"), "{}");
+    const age = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    utimesSync(join(old, "SKILL.md"), age, age);
+    utimesSync(join(plugSkill, "SKILL.md"), age, age);
+    const loaded: LoadResult = {
+      sessions: [{
+        agent: "claude-code", path: "/tmp/s.jsonl", mtime: Date.now(),
+        primitives: {
+          sessionId: "s1", model: "m", agent: "claude-code", cwd,
+          toolCalls: [], toolCallCounts: {}, skillsInvoked: [],
           userMessages: [], userTurnCount: 0, assistantText: [],
         },
       }],

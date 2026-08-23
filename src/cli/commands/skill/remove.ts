@@ -95,7 +95,7 @@ export default defineCommand({
         let n = 0;
         for (const dir of picked as string[]) {
           const resolved = resolveSkillName({ name: dir, cwd, home: homedir() });
-          const plan = planRemove(resolved);
+          const plan = planRemove(resolved, cwd);
           if (!plan.ok) continue;
           if (!dryRun) applyRemove(plan);
           n++;
@@ -147,7 +147,7 @@ export default defineCommand({
           return;
         }
       }
-      const plan = planRemove(resolved);
+      const plan = planRemove(resolved, cwd);
 
       if (!plan.ok) {
         if (plan.reason === "none") {
@@ -167,6 +167,12 @@ export default defineCommand({
         if (plan.reason === "imported") {
           ui.fail(`Refusing to remove an Imported Skill (${resolved.status === "imported" ? resolved.match.dir : name}).`);
           nextAction("dora skill remove");
+          await exit(1);
+          return;
+        }
+        if (plan.reason === "plugin-owned") {
+          ui.fail(`"${name}" is a Plugin-owned Skill.`);
+          nextAction(`dora review --quick ${plan.pluginRoot}`);
           await exit(1);
           return;
         }

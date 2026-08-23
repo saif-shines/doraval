@@ -321,7 +321,7 @@ export async function runScan(
     suggestions.push({
       kind: "improve",
       title: `${removeCount} Remove candidate${removeCount === 1 ? "" : "s"}`,
-      command: "dora skill remove",
+      command: "dora skill unused",
     });
   }
 

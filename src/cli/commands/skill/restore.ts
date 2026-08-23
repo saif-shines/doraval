@@ -68,7 +68,7 @@ export default defineCommand({
           await exit(0);
           return;
         }
-        const byStore = planRestore({ storedAt: String(picked) });
+        const byStore = planRestore({ storedAt: String(picked), cwd: process.cwd() });
         if (!byStore.ok) {
           ui.fail(`Cannot restore that record (${byStore.reason}).`);
           nextAction("dora skill restore");
@@ -79,11 +79,17 @@ export default defineCommand({
         pickedPlan = byStore;
       }
 
-      const plan = pickedPlan ?? planRestore({ name, forAgent: args.for as string | undefined });
+      const plan = pickedPlan ?? planRestore({ name, forAgent: args.for as string | undefined, cwd: process.cwd() });
       if (!plan.ok) {
         if (plan.reason === "occupied") {
           ui.fail(`Original path is occupied. Not restoring "${name}".`);
           nextAction("Free the original path, then retry dora skill restore");
+          await exit(1);
+          return;
+        }
+        if (plan.reason === "plugin-owned") {
+          ui.fail(`"${name}" is a Plugin-owned Skill.`);
+          nextAction(`dora review --quick ${plan.pluginRoot}`);
           await exit(1);
           return;
         }

@@ -341,6 +341,7 @@ describe("doraval CLI", () => {
     test("skill --help and skill remove --help exist", () => {
       const group = runDoraval(["skill", "--help"]);
       expect(group.exitCode).toBe(0);
+      expect(group.stdout + group.stderr).toContain("unused");
       expect(group.stdout + group.stderr).toContain("remove");
       expect(group.stdout + group.stderr).toContain("restore");
       const help = runDoraval(["skill", "remove", "--help"]);
@@ -348,6 +349,39 @@ describe("doraval CLI", () => {
       expect(help.stdout).toContain("--dry-run");
       expect(help.stdout).toContain("--yes");
       expect(help.stdout).toContain("--global");
+    });
+
+    test("skill unused lists nothing when there are no sessions", () => {
+      const dir = authoredRepo();
+      const { exitCode, stdout } = runDoraval(
+        ["skill", "unused", "--json", "--cwd", dir],
+        { env: { CI: "1", HOME: dir } },
+      );
+      expect(exitCode).toBe(0);
+      const body = JSON.parse(stdout);
+      expect(body.sessions).toBe(0);
+      expect(body.candidates).toEqual([]);
+      expect(body.reason).toBe("no-sessions");
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("named remove of a Plugin-owned Skill exits 1 and writes nothing", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-skill-rm-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, "my-plug", "skills", "inner");
+      mkdirSync(join(dir, "my-plug", ".claude-plugin"), { recursive: true });
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(join(dir, "my-plug", ".claude-plugin", "plugin.json"), "{}");
+      writeFileSync(join(skill, "SKILL.md"), `---\nname: inner\ndescription: "Use when testing plugin-owned"\n---\n\n1. Do the thing\n`);
+      const { exitCode, stderr } = runDoraval(
+        ["skill", "remove", "inner", "--yes", "--cwd", dir],
+        { env: { CI: "1", HOME: dir } },
+      );
+      expect(exitCode).toBe(1);
+      expect(existsSync(skill)).toBe(true);
+      expect(stderr).toContain("dora review --quick");
+      expect(stderr).toContain(join(dir, "my-plug"));
+      rmSync(dir, { recursive: true, force: true });
     });
 
     test("--yes deletes a unique Authored Skill", () => {

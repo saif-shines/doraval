@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { basename, isAbsolute, join, relative, resolve } from "path";
-import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
+import { classifySkillDir, isPluginOwned, pluginRoot, type SkillOrigin } from "./skill-classify.js";
 import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery.js";
 import { withinWindow } from "./session-adapters/types.js";
 import { getDoravalDir } from "./journal-config.js";
@@ -94,13 +94,16 @@ export function resolveSkillName(opts: {
 export type RemovePlan =
   | { ok: true; action: "delete"; dir: string; origin: "authored"; name: string }
   | { ok: true; action: "quarantine"; dir: string; origin: "global"; name: string; agent?: string }
-  | { ok: false; reason: "none" | "ambiguous" | "imported" };
+  | { ok: false; reason: "none" | "ambiguous" | "imported" }
+  | { ok: false; reason: "plugin-owned"; pluginRoot: string };
 
-export function planRemove(resolved: ResolveSkillResult): RemovePlan {
+export function planRemove(resolved: ResolveSkillResult, cwd?: string): RemovePlan {
   if (resolved.status === "none") return { ok: false, reason: "none" };
   if (resolved.status === "ambiguous") return { ok: false, reason: "ambiguous" };
   if (resolved.status === "imported") return { ok: false, reason: "imported" };
   const { match } = resolved;
+  const root = pluginRoot(match.dir, cwd);
+  if (root) return { ok: false, reason: "plugin-owned", pluginRoot: root };
   if (match.origin === "authored") {
     return { ok: true, action: "delete", dir: match.dir, origin: "authored", name: match.name };
   }
@@ -175,10 +178,11 @@ export function applyRemove(plan: Extract<RemovePlan, { ok: true }>): void {
 
 export type RestorePlan =
   | { ok: true; record: QuarantineRecord }
-  | { ok: false; reason: "missing" | "occupied" | "ambiguous" };
+  | { ok: false; reason: "missing" | "occupied" | "ambiguous" }
+  | { ok: false; reason: "plugin-owned"; pluginRoot: string };
 
 export function planRestore(
-  query: string | { name?: string; storedAt?: string; forAgent?: string },
+  query: string | { name?: string; storedAt?: string; forAgent?: string; cwd?: string },
 ): RestorePlan {
   const q = typeof query === "string" ? { name: query } : query;
   let hits = listQuarantine();
@@ -189,6 +193,8 @@ export function planRestore(
   if (hits.length === 0) return { ok: false, reason: "missing" };
   if (hits.length > 1) return { ok: false, reason: "ambiguous" };
   const record = hits[0]!;
+  const root = pluginRoot(record.originalPath, q.cwd);
+  if (root) return { ok: false, reason: "plugin-owned", pluginRoot: root };
   if (existsSync(record.originalPath)) return { ok: false, reason: "occupied" };
   return { ok: true, record };
 }
@@ -227,6 +233,7 @@ export function listRemoveCandidates(opts: {
   const nowMs = opts.nowMs ?? Date.now();
   return listProjectSkills(opts.cwd, opts.home).filter((s) => {
     if (s.origin !== "authored") return false;
+    if (isPluginOwned(s.dir, opts.cwd)) return false;
     let mtimeMs: number;
     try { mtimeMs = statSync(join(s.dir, "SKILL.md")).mtimeMs; } catch { return false; }
     return isRemoveCandidate({
