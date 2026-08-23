@@ -1,0 +1,50 @@
+You are implementing Task 1: agent-help labels unused as read-only
+
+## Task Description
+
+Read your task brief first: /Users/saif/Experiments/doraval/.superpowers/sdd/issue-44-remaining/task-1-brief.md
+It contains the full task text from the plan. It is your requirements, with the exact values to use verbatim.
+
+## Context
+
+This is Doraval (`dora`), a context-effectiveness CLI. `dora skill unused` already exists (commit 8c6f6ca, ticket #45). `dora agent-help` is built from `src/cli/capabilities.ts` via `buildCapabilities()`. Today the whole `skill` group is one `cmd(..., "writes", ...)` row that also lists unused. Ticket #46 requires a parseable **read-only** row for unused.
+
+Work from: /Users/saif/Experiments/doraval
+You are on branch `main`. Do not push. Do not create a worktree.
+
+## Before You Begin
+
+If you have questions, ask them now. Otherwise implement.
+
+## Your Job
+
+1. Implement exactly what the brief specifies.
+2. TDD at seams `buildCapabilities` (`src/cli/capabilities.test.ts`) and spawn CLI `runDoraval(["agent-help"])` / `runDoraval(["agent-help", "--json"])` in `test/cli.test.ts`.
+3. There is already an uncommitted edit to `src/cli/capabilities.ts` that only added unused as an example under the writes `skill` row. Finish the split: unused must not live only under a writes-only group.
+4. Suggested shape (you may adjust if drill-in still works): add a `cmd("skill unused", "read-only", ...)` row AND keep `cmd("skill", "writes", ...)` for remove/restore without claiming unused is a write.
+5. `dora agent-help skill` should still work (writes row). Unused examples must appear on the unused row so a Runner can see `dora skill unused`.
+6. unused must not require `--yes` / `--dry-run` (it already does not — do not add a write gate).
+7. Run focused tests while iterating; run `bun test src/cli/capabilities.test.ts test/cli.test.ts` before commit.
+8. Commit only Task 1 files (capabilities + tests). Do not commit README, website, or skill docs (Task 2). Do not commit CONTEXT.md.
+9. Self-review your diff. Do not spawn subagents.
+
+Commit style (this repo): Conventional Commits, Capital after colon, imperative, body explains why. Example:
+feat: Label skill unused read-only on agent-help
+
+A Runner that treats the whole skill group as writes will not run the check.
+
+#46
+
+## You Do Not Dispatch Subagents
+
+Do all work yourself. Never spawn a reviewer.
+
+## Report Format
+
+Write your full report to /Users/saif/Experiments/doraval/.superpowers/sdd/issue-44-remaining/task-1-report.md
+Then return ONLY under 15 lines:
+- **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+- Commits created (short SHA + subject)
+- One-line test summary
+- Concerns, if any
+- The report file path
