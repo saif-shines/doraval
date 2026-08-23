@@ -478,3 +478,9 @@ Done! Using superpowers:finishing-a-development-branch.
 [Full request offloaded to file] The text above was truncated (33596 bytes total). The user's FULL request — which may include their actual question and any skill instructions not shown above — is in this file:
 /Users/saif/.grok/sessions/%2FUsers%2Fsaif%2FExperiments%2Fdoraval/01a02f77-2a6e-7441-967a-0253630afdf1/prompts/prompt_21.txt
 Read this file with read_file before responding; the question you must answer may only be there.
+
+---
+
+<user_query>
+1 then push patch
+</user_query>
