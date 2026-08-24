@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, join } from "path";
-import { safeJsonParse, type SessionPrimitives, type ToolCall } from "../session-parse.js";
+import { asSession, safeJsonParse, type Event, type Session, type SessionPrimitives, type ToolCall } from "../session-parse.js";
 import type { SessionAdapter, SessionListItem } from "./types.js";
 
 export interface GrokAdapterOptions {
@@ -138,11 +138,13 @@ function parseUpdatesJsonl(
     sessionTitle?: string;
     gitBranch?: string;
   },
-): SessionPrimitives {
+  fallbackTokens?: number,
+): Session {
   const lines = text.split("\n").filter((l) => l.trim());
   const toolCalls: ToolCall[] = [];
   const userMessages: string[] = [];
   const assistantText: string[] = [];
+  const events: Event[] = [];
   const skills = new Set<string>();
   let idx = 0;
 
@@ -152,14 +154,21 @@ function parseUpdatesJsonl(
     const params = (j.params ?? {}) as Record<string, unknown>;
     const u = (params.update ?? {}) as Record<string, unknown>;
     const su = u.sessionUpdate;
+    const ts = typeof j.timestamp === "number" ? new Date(j.timestamp * 1000).toISOString() : undefined;
 
     if (su === "user_message_chunk") {
       const content = u.content as { text?: string } | undefined;
-      if (content?.text) userMessages.push(content.text);
+      if (content?.text) {
+        userMessages.push(content.text);
+        events.push({ sessionId: meta.sessionId, seq: events.length, type: "user", ...(ts ? { timestamp: ts } : {}), text: content.text });
+      }
     }
     if (su === "agent_message_chunk") {
       const content = u.content as { text?: string } | undefined;
-      if (content?.text?.trim()) assistantText.push(content.text.trim());
+      if (content?.text?.trim()) {
+        assistantText.push(content.text.trim());
+        events.push({ sessionId: meta.sessionId, seq: events.length, type: "assistant", ...(ts ? { timestamp: ts } : {}), text: content.text.trim(), model: meta.model });
+      }
     }
     if (su === "tool_call" || su === "tool_call_update") {
       for (const s of extractSkillsFromUpdate(u)) skills.add(s);
@@ -170,8 +179,18 @@ function parseUpdatesJsonl(
           (u.input as Record<string, unknown>) ||
           (u.args as Record<string, unknown>) ||
           {};
-        const ts = typeof j.timestamp === "number" ? new Date(j.timestamp * 1000).toISOString() : "";
-        toolCalls.push({ name, input, timestamp: ts, index: idx++ });
+        const tsStr = ts ?? "";
+        toolCalls.push({ name, input, timestamp: tsStr, index: idx++ });
+        const toolCallId = typeof u.toolCallId === "string" ? u.toolCallId : undefined;
+        events.push({
+          sessionId: meta.sessionId,
+          seq: events.length,
+          type: "tool_call",
+          ...(ts ? { timestamp: ts } : {}),
+          toolName: name,
+          ...(toolCallId ? { toolCallId, id: toolCallId } : {}),
+          input,
+        });
       }
     }
   }
@@ -179,20 +198,24 @@ function parseUpdatesJsonl(
   const counts: Record<string, number> = {};
   for (const t of toolCalls) counts[t.name] = (counts[t.name] || 0) + 1;
 
-  return {
-    sessionId: meta.sessionId,
-    sessionTitle: meta.sessionTitle,
-    model: meta.model,
-    agent: "grok",
-    cwd: meta.cwd,
-    gitBranch: meta.gitBranch,
-    toolCalls,
-    toolCallCounts: counts,
-    skillsInvoked: [...skills],
-    userMessages: userMessages.slice(0, 5),
-    userTurnCount: userMessages.length,
-    assistantText,
-  };
+  return asSession(
+    {
+      sessionId: meta.sessionId,
+      sessionTitle: meta.sessionTitle,
+      model: meta.model,
+      agent: "grok",
+      cwd: meta.cwd,
+      gitBranch: meta.gitBranch,
+      toolCalls,
+      toolCallCounts: counts,
+      skillsInvoked: [...skills],
+      userMessages: userMessages.slice(0, 5),
+      userTurnCount: userMessages.length,
+      assistantText,
+    },
+    events,
+    fallbackTokens != null ? { inputTokens: fallbackTokens } : undefined,
+  );
 }
 
 function listSessionDirs(group: string): string[] {
@@ -302,7 +325,7 @@ export function createGrokAdapter(
       return res;
     },
 
-    parse(path: string): SessionPrimitives {
+    parse(path: string): Session {
       const sessionId = sessionIdFromPath(path);
       const sessDir = path.endsWith("updates.jsonl") || path.endsWith("updates.jsonl".replace(/\//g, "\\"))
         ? dirname(path)
@@ -323,9 +346,10 @@ export function createGrokAdapter(
       const cwd = summary?.info?.cwd || process.cwd();
       const sessionTitle = summary?.session_summary || undefined;
       const gitBranch = summary?.head_branch || undefined;
+      const listTokens = typeof signals?.contextTokensUsed === "number" ? signals.contextTokensUsed : undefined;
 
       if (!existsSync(path)) {
-        return {
+        return asSession({
           sessionId,
           sessionTitle,
           model,
@@ -338,16 +362,16 @@ export function createGrokAdapter(
           userMessages: [],
           userTurnCount: 0,
           assistantText: [],
-        };
+        }, [], listTokens != null ? { inputTokens: listTokens } : undefined);
       }
 
       const text = readFileSync(path, "utf8");
       if (path.endsWith("updates.jsonl")) {
-        return parseUpdatesJsonl(text, { sessionId, cwd, model, sessionTitle, gitBranch });
+        return parseUpdatesJsonl(text, { sessionId, cwd, model, sessionTitle, gitBranch }, listTokens);
       }
 
       // fallback for terminal logs under the session directory
-      return {
+      return asSession({
         sessionId,
         sessionTitle,
         model,
@@ -367,7 +391,7 @@ export function createGrokAdapter(
         userMessages: [text.slice(0, 200)],
         userTurnCount: 1,
         assistantText: [],
-      };
+      }, [], listTokens != null ? { inputTokens: listTokens } : undefined);
     },
   };
 }

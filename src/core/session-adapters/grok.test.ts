@@ -148,6 +148,9 @@ describe("grokAdapter (B-ix multi-file)", () => {
     expect(p.skillsInvoked).toContain("using-superpowers");
     expect(p.skillsInvoked).toContain("deploy");
     expect(p.assistantText.some((t) => t.includes("Done"))).toBe(true);
+    expect(p.events.some((e) => e.type === "tool_call")).toBe(true);
+    expect(p.events.every((e) => e.parentId === undefined)).toBe(true);
+    expect(p.inputTokens).toBe(1200);
   });
 
   test("resolves long-cwd group via .cwd file", () => {

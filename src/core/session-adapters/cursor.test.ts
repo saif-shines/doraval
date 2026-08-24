@@ -53,6 +53,9 @@ describe("cursorAdapter", () => {
     expect(p.toolCalls).toHaveLength(1);
     expect(p.toolCalls[0]!.name).toBe("Read");
     expect(p.model).toBe("unknown");
+    expect(p.events.some((e) => e.type === "tool_call" && e.toolName === "Read")).toBe(true);
+    expect(p.events.every((e) => !("parentId" in e))).toBe(true);
+    expect(p.inputTokens).toBeUndefined();
   });
 
   test("unmapped cwd → empty list", () => {

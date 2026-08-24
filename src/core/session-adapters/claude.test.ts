@@ -25,4 +25,17 @@ describe("claudeCodeAdapter", () => {
     const result = claudeCodeAdapter.parse(fixturePath);
     expect(result.skillsInvoked).toEqual([]);
   });
+
+  test("parse() yields Events with sessionId, seq, type", () => {
+    const fixturePath = resolve(
+      import.meta.dir,
+      "../../../test/fixtures/sessions/mini-session.jsonl"
+    );
+    const result = claudeCodeAdapter.parse(fixturePath);
+    expect(result.events.length).toBeGreaterThan(0);
+    result.events.forEach((e, i) => {
+      expect(e.sessionId).toBe("test-session-001");
+      expect(e.seq).toBe(i);
+    });
+  });
 });

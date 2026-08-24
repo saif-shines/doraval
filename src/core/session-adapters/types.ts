@@ -1,4 +1,4 @@
-import type { SessionPrimitives } from "../session-parse.js";
+import type { Session } from "../session-parse.js";
 
 export interface SessionListItem {
   path: string;
@@ -13,7 +13,7 @@ export interface SessionAdapter {
   detect(): boolean;
   findLatestSession(cwd: string): string | null;
   listRecentSessions(cwd: string, limit?: number): SessionListItem[];
-  parse(path: string): SessionPrimitives;
+  parse(path: string): Session;
 }
 
 export const SESSION_WINDOW = 10;

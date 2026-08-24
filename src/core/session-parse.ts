@@ -21,6 +21,61 @@ export interface SessionPrimitives {
   assistantText: string[];
 }
 
+export type EventType = "user" | "assistant" | "tool_call" | "tool_result" | "system" | "error";
+
+export interface Event {
+  sessionId: string;
+  seq: number;
+  type: EventType;
+  timestamp?: string;
+  id?: string;
+  parentId?: string;
+  toolName?: string;
+  toolCallId?: string;
+  input?: Record<string, unknown>;
+  output?: string;
+  isError?: boolean;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  stopReason?: string;
+  text?: string;
+}
+
+/** Session IR: Event list plus the derived blob (expand — callers can still read blob fields). */
+export interface Session extends SessionPrimitives {
+  events: Event[];
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadTokens?: number;
+  costUsd?: number;
+}
+
+/** Build a Session from a blob + Events. Token totals sum Events, then optional fallback. Never writes 0 for a missing field. */
+export function asSession(
+  primitives: SessionPrimitives,
+  events: Event[],
+  fallback?: { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; costUsd?: number },
+): Session {
+  let input: number | undefined;
+  let output: number | undefined;
+  let cache: number | undefined;
+  for (const e of events) {
+    if (e.inputTokens != null) input = (input ?? 0) + e.inputTokens;
+    if (e.outputTokens != null) output = (output ?? 0) + e.outputTokens;
+    if (e.cacheReadTokens != null) cache = (cache ?? 0) + e.cacheReadTokens;
+  }
+  return {
+    ...primitives,
+    events,
+    ...(input != null ? { inputTokens: input } : fallback?.inputTokens != null ? { inputTokens: fallback.inputTokens } : {}),
+    ...(output != null ? { outputTokens: output } : fallback?.outputTokens != null ? { outputTokens: fallback.outputTokens } : {}),
+    ...(cache != null ? { cacheReadTokens: cache } : fallback?.cacheReadTokens != null ? { cacheReadTokens: fallback.cacheReadTokens } : {}),
+    ...(fallback?.costUsd != null ? { costUsd: fallback.costUsd } : {}),
+  };
+}
+
 interface RawMessage {
   type: string;
   [key: string]: unknown;
@@ -52,7 +107,26 @@ export function safeJsonParse<T = any>(text: string): T | null {
   }
 }
 
-export function parseSession(jsonlText: string): SessionPrimitives {
+function pushEvent(events: Event[], partial: Omit<Event, "seq">): void {
+  const e: Event = { ...partial, seq: events.length };
+  for (const key of Object.keys(e) as (keyof Event)[]) {
+    if (e[key] === undefined) delete e[key];
+  }
+  events.push(e);
+}
+
+function toolResultText(content: unknown): string | undefined {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    const bits = content
+      .map((b) => (b && typeof b === "object" && typeof (b as { text?: unknown }).text === "string" ? (b as { text: string }).text : ""))
+      .filter(Boolean);
+    return bits.length ? bits.join("\n") : undefined;
+  }
+  return undefined;
+}
+
+export function parseSession(jsonlText: string): Session {
   const lines = jsonlText.split("\n").filter((l) => l.trim());
   const messages: RawMessage[] = [];
 
@@ -68,7 +142,9 @@ export function parseSession(jsonlText: string): SessionPrimitives {
   let cwd = "";
   let gitBranch: string | undefined;
   let durationMs: number | undefined;
+  let costUsd: number | undefined;
 
+  const events: Event[] = [];
   const toolCalls: ToolCall[] = [];
   const userMessages: string[] = [];
   const assistantText: string[] = [];
@@ -118,6 +194,18 @@ export function parseSession(jsonlText: string): SessionPrimitives {
 
     if (msg.type === "system") {
       if (typeof msg.durationMs === "number") durationMs = msg.durationMs;
+      pushEvent(events, {
+        sessionId: sessionId || (typeof msg.sessionId === "string" ? msg.sessionId : ""),
+        type: "system",
+        ...(typeof msg.uuid === "string" ? { id: msg.uuid } : {}),
+        ...(typeof msg.parentUuid === "string" ? { parentId: msg.parentUuid } : {}),
+        ...(typeof msg.timestamp === "string" ? { timestamp: msg.timestamp } : {}),
+      });
+    }
+
+    if (msg.type === "result") {
+      if (typeof msg.total_cost_usd === "number") costUsd = msg.total_cost_usd;
+      if (typeof msg.duration_ms === "number" && durationMs === undefined) durationMs = msg.duration_ms;
     }
 
     if (msg.type === "assistant") {
@@ -134,6 +222,18 @@ export function parseSession(jsonlText: string): SessionPrimitives {
             : "claude-code";
       }
 
+      const usage = message.usage as Record<string, unknown> | undefined;
+      const usageFields = {
+        ...(typeof usage?.input_tokens === "number" ? { inputTokens: usage.input_tokens as number } : {}),
+        ...(typeof usage?.output_tokens === "number" ? { outputTokens: usage.output_tokens as number } : {}),
+        ...(typeof usage?.cache_read_input_tokens === "number" ? { cacheReadTokens: usage.cache_read_input_tokens as number } : {}),
+      };
+      const stopReason = typeof message.stop_reason === "string" ? message.stop_reason : undefined;
+      const parentId = typeof msg.parentUuid === "string" ? msg.parentUuid : undefined;
+      const ts = typeof msg.timestamp === "string" ? msg.timestamp : undefined;
+      const lineId = typeof msg.uuid === "string" ? msg.uuid : undefined;
+      let usagePlaced = false;
+
       const content = Array.isArray(message.content) ? message.content : [];
       for (const block of content) {
         if (!block || typeof block !== "object") continue;
@@ -146,10 +246,37 @@ export function parseSession(jsonlText: string): SessionPrimitives {
             timestamp: typeof msg.timestamp === "string" ? msg.timestamp : "",
             index: toolIndex++,
           });
+          const toolId = typeof b.id === "string" ? b.id : undefined;
+          pushEvent(events, {
+            sessionId,
+            type: "tool_call",
+            ...(lineId ? { id: toolId ?? lineId } : toolId ? { id: toolId } : {}),
+            ...(parentId ? { parentId } : {}),
+            ...(ts ? { timestamp: ts } : {}),
+            toolName: b.name,
+            ...(toolId ? { toolCallId: toolId } : {}),
+            input,
+            ...(typeof message.model === "string" ? { model: message.model } : {}),
+            ...(stopReason ? { stopReason } : {}),
+            ...(!usagePlaced ? usageFields : {}),
+          });
+          usagePlaced = true;
         } else if (b.type === "text" && typeof b.text === "string") {
           const text = b.text.trim();
           if (text) {
             assistantText.push(text);
+            pushEvent(events, {
+              sessionId,
+              type: "assistant",
+              ...(lineId ? { id: lineId } : {}),
+              ...(parentId ? { parentId } : {}),
+              ...(ts ? { timestamp: ts } : {}),
+              text,
+              ...(typeof message.model === "string" ? { model: message.model } : {}),
+              ...(stopReason ? { stopReason } : {}),
+              ...(!usagePlaced ? usageFields : {}),
+            });
+            usagePlaced = true;
           }
         }
       }
@@ -164,6 +291,49 @@ export function parseSession(jsonlText: string): SessionPrimitives {
       if (!message) continue;
       const text = extractUserText(message.content);
       if (text) userMessages.push(text);
+      const parentId = typeof msg.parentUuid === "string" ? msg.parentUuid : undefined;
+      const ts = typeof msg.timestamp === "string" ? msg.timestamp : undefined;
+      const lineId = typeof msg.uuid === "string" ? msg.uuid : undefined;
+
+      const blocks = Array.isArray(message.content) ? message.content : [];
+      let emittedResult = false;
+      for (const block of blocks) {
+        if (!block || typeof block !== "object") continue;
+        const b = block as Record<string, unknown>;
+        if (b.type !== "tool_result") continue;
+        emittedResult = true;
+        const toolCallId = typeof b.tool_use_id === "string" ? b.tool_use_id : undefined;
+        const out = toolResultText(b.content);
+        pushEvent(events, {
+          sessionId,
+          type: "tool_result",
+          ...(lineId ? { id: lineId } : {}),
+          ...(parentId ? { parentId } : {}),
+          ...(ts ? { timestamp: ts } : {}),
+          ...(toolCallId ? { toolCallId } : {}),
+          ...(out != null ? { output: out } : {}),
+          ...(b.is_error === true ? { isError: true } : {}),
+        });
+      }
+      if (text && !emittedResult) {
+        pushEvent(events, {
+          sessionId,
+          type: "user",
+          ...(lineId ? { id: lineId } : {}),
+          ...(parentId ? { parentId } : {}),
+          ...(ts ? { timestamp: ts } : {}),
+          text,
+        });
+      } else if (text && emittedResult) {
+        pushEvent(events, {
+          sessionId,
+          type: "user",
+          ...(lineId ? { id: `${lineId}-text` } : {}),
+          ...(parentId ? { parentId } : {}),
+          ...(ts ? { timestamp: ts } : {}),
+          text,
+        });
+      }
     }
   }
 
@@ -182,7 +352,7 @@ export function parseSession(jsonlText: string): SessionPrimitives {
     toolCallCounts[t.name] = (toolCallCounts[t.name] ?? 0) + 1;
   }
 
-  return {
+  const primitives: SessionPrimitives = {
     sessionId,
     sessionTitle,
     model,
@@ -197,6 +367,12 @@ export function parseSession(jsonlText: string): SessionPrimitives {
     durationMs,
     assistantText,
   };
+  if (sessionId) {
+    for (const e of events) {
+      if (!e.sessionId) e.sessionId = sessionId;
+    }
+  }
+  return asSession(primitives, events, costUsd != null ? { costUsd } : undefined);
 }
 
 /**

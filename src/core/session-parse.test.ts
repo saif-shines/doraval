@@ -146,6 +146,69 @@ describe("parseSession", () => {
     expect(result.assistantText).toBeDefined();
     expect(Array.isArray(result.assistantText)).toBe(true);
   });
+
+  test("emits Events with sessionId, seq, and type", () => {
+    const result = parseSession(miniFixture);
+    expect(result.events.length).toBeGreaterThan(0);
+    result.events.forEach((e, i) => {
+      expect(e.sessionId).toBe("test-session-001");
+      expect(e.seq).toBe(i);
+      expect(["user", "assistant", "tool_call", "tool_result", "system", "error"]).toContain(e.type);
+    });
+  });
+
+  test("pairs Claude tool_use and tool_result by toolCallId", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"run it"},"uuid":"u1","sessionId":"s1","timestamp":"2026-01-01T00:00:00.000Z"}',
+      '{"type":"assistant","uuid":"a1","parentUuid":"u1","timestamp":"2026-01-01T00:00:01.000Z","sessionId":"s1","message":{"model":"claude-sonnet-4-6","stop_reason":"tool_use","usage":{"input_tokens":10,"output_tokens":4,"cache_read_input_tokens":2},"content":[{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"ls"}}]}}',
+      '{"type":"user","uuid":"u2","parentUuid":"a1","sessionId":"s1","timestamp":"2026-01-01T00:00:02.000Z","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","is_error":true,"content":"boom"}]}}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    const call = result.events.find((e) => e.type === "tool_call");
+    const res = result.events.find((e) => e.type === "tool_result");
+    expect(call?.toolCallId).toBe("toolu_1");
+    expect(call?.id).toBe("toolu_1");
+    expect(call?.toolName).toBe("Bash");
+    expect(res?.toolCallId).toBe("toolu_1");
+    expect(res?.isError).toBe(true);
+    expect(res?.output).toBe("boom");
+    expect(call?.inputTokens).toBe(10);
+    expect(call?.outputTokens).toBe(4);
+    expect(call?.cacheReadTokens).toBe(2);
+    expect(result.inputTokens).toBe(10);
+    expect(result.outputTokens).toBe(4);
+    expect(result.cacheReadTokens).toBe(2);
+  });
+
+  test("stores parentUuid as parentId and omits it when absent", () => {
+    const result = parseSession(miniFixture);
+    const skill = result.events.find((e) => e.type === "tool_call" && e.toolName === "Skill");
+    expect(skill?.parentId).toBe("u1");
+    expect(skill?.id).toBe("t1");
+    const noParent = result.events.find((e) => !("parentId" in e));
+    expect(noParent).toBeDefined();
+  });
+
+  test("omits token fields when usage is absent", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"hi"},"sessionId":"s2","uuid":"u1"}',
+      '{"type":"assistant","sessionId":"s2","uuid":"a1","message":{"model":"claude-sonnet-4-6","content":[{"type":"text","text":"yo"}]}}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.inputTokens).toBeUndefined();
+    expect(result.outputTokens).toBeUndefined();
+    expect(result.events.some((e) => e.inputTokens === 0)).toBe(false);
+    expect(result.events.some((e) => "inputTokens" in e && e.inputTokens === 0)).toBe(false);
+  });
+
+  test("reads Claude result cost onto the Session summary", () => {
+    const transcript = [
+      '{"type":"user","message":{"content":"hi"},"sessionId":"s3"}',
+      '{"type":"result","sessionId":"s3","total_cost_usd":1.25,"duration_ms":3000}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.costUsd).toBe(1.25);
+  });
 });
 
 describe("truncateToolCalls", () => {

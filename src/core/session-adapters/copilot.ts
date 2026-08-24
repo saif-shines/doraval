@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { Database } from "bun:sqlite";
-import { safeJsonParse, type SessionPrimitives, type ToolCall } from "../session-parse.js";
+import { asSession, safeJsonParse, type Event, type Session, type ToolCall } from "../session-parse.js";
 import type { SessionAdapter, SessionListItem } from "./types.js";
 
 interface SessionRow { id: string; summary: string | null; updated_at: string }
@@ -17,42 +17,61 @@ interface CopilotEvent {
   };
 }
 
-function parseEvents(text: string): SessionPrimitives {
+function parseEvents(text: string): Session {
   const toolCalls: ToolCall[] = [];
   const userMessages: string[] = [];
   const assistantText: string[] = [];
+  const events: Event[] = [];
   let sessionId = "", cwd = "", gitBranch: string | undefined;
   let idx = 0;
   for (const line of text.split("\n")) {
     if (!line.trim()) continue;
     const e = safeJsonParse<CopilotEvent>(line);
     if (!e?.type || !e.data) continue;
+    const ts = e.timestamp;
     if (e.type === "session.start") {
       sessionId = e.data.sessionId ?? "";
       cwd = e.data.context?.cwd ?? "";
       gitBranch = e.data.context?.branch;
     } else if (e.type === "tool.execution_start" && e.data.toolName) {
       toolCalls.push({ name: e.data.toolName, input: e.data.arguments ?? {}, timestamp: e.timestamp ?? "", index: idx++ });
+      events.push({
+        sessionId, seq: events.length, type: "tool_call",
+        ...(ts ? { timestamp: ts } : {}),
+        toolName: e.data.toolName,
+        input: e.data.arguments ?? {},
+      });
     } else if (e.type === "user.message" && typeof e.data.content === "string") {
       // NOT transformedContent — that field embeds <system_reminder> / <current_datetime> noise
       const text = e.data.content.trim();
-      if (text) userMessages.push(text);
+      if (text) {
+        userMessages.push(text);
+        events.push({ sessionId, seq: events.length, type: "user", ...(ts ? { timestamp: ts } : {}), text });
+      }
     } else if (e.type === "assistant.message" && typeof e.data.content === "string") {
       // Real events.jsonl (sampled ~/.copilot/session-state/*/events.jsonl) shows most
       // assistant.message events on tool-call-only turns carry content: "" — filter empties
       // so assistantText doesn't fill up with blank entries (matches the trim+filter
       // convention already used for Claude Code's own text blocks in session-parse.ts).
       const text = e.data.content.trim();
-      if (text) assistantText.push(text);
+      if (text) {
+        assistantText.push(text);
+        events.push({ sessionId, seq: events.length, type: "assistant", ...(ts ? { timestamp: ts } : {}), text });
+      }
     }
   }
   const counts: Record<string, number> = {};
   for (const t of toolCalls) counts[t.name] = (counts[t.name] ?? 0) + 1;
-  return {
+  if (sessionId) {
+    for (const ev of events) {
+      if (!ev.sessionId) ev.sessionId = sessionId;
+    }
+  }
+  return asSession({
     sessionId, model: "unknown", agent: "copilot", cwd, gitBranch,
     toolCalls, toolCallCounts: counts, skillsInvoked: [],
     userMessages, userTurnCount: userMessages.length, assistantText,
-  };
+  }, events);
 }
 
 export function createCopilotAdapter(homeDir: string = homedir()): SessionAdapter {
@@ -94,7 +113,7 @@ export function createCopilotAdapter(homeDir: string = homedir()): SessionAdapte
     listRecentSessions(cwd: string, limit = 10): SessionListItem[] {
       return list(cwd, limit);
     },
-    parse(path: string): SessionPrimitives {
+    parse(path: string): Session {
       return parseEvents(readFileSync(path, "utf8"));
     },
   };
