@@ -41,7 +41,7 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 - A clean `--quick` result is structure + heuristics only. No `sessionHealth`.
 - On a full Review, read `sessionHealth.signals`. Do not treat those codes as Skill Findings.
 
-## `dora --format json` — Scan shape
+## `dora scan --json`
 
 ```jsonc
 {
