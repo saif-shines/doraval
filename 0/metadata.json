@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.10.1",
+  "checkpoint_id": "01M0SE6M4VG0FGA2TP65GR7DTZ",
+  "session_id": "01a02f77-2a6e-7441-967a-0253630afdf1",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-24T08:29:16.47493Z",
+  "branch": "main",
+  "checkpoints_count": 6,
+  "files_touched": [
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/concepts/review-tiers.mdx",
+    "skills/doraval/references/commands.md",
+    "skills/doraval/references/output.md"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "88cca74359b4",
+  "checkpoint_transcript_start": 1790,
+  "transcript_lines_at_start": 1790,
+  "session_metrics": {
+    "turn_count": 74
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-24T08:29:16.141971Z",
+    "agent_lines": 20,
+    "agent_removed": 4,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 20,
+    "total_lines_changed": 24,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
