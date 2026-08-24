@@ -1,0 +1,27 @@
+<user_query>
+why is 51 still open
+</user_query>
+
+---
+
+<user_query>
+My understanding is all tickets are complete, is there anything pending taht blocking this?
+</user_query>
+
+---
+
+<user_query>
+I want to test it. Tell me how to.
+</user_query>
+
+---
+
+<user_query>
+I'm not able to find the ide because dora sessions has ID truncated
+</user_query>
+
+---
+
+<user_query>
+works great; show me the test cases agaain
+</user_query>
