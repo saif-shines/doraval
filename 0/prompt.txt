@@ -1,0 +1,3 @@
+<user_query>
+Make sure the skill on this repo following /writing-for-agents aand update that as well
+</user_query>
