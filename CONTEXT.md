@@ -25,7 +25,8 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Judge** | One module (`judge()`). Owns mode (**api** / **delegate** / **fail**) and transport. Review passes prompt, schema, and `ci`. |
 | **Memory** | Product term for principles, artifacts, and always-on files (`AGENTS.md`, `CLAUDE.md`, …) under `~/.doraval/memory/` and project roots. |
 | **Config** | Global product config at `~/.doraval/config.yml`. Code type is still `JournalConfig` (legacy name — not a “journal product”). Holds projects, `eval.*` judge settings, rules, agent command. |
-| **Session** | Past agent conversation transcript, normalized via **session adapters** into primitives for evidence and adherence eval. |
+| **Session** | Past agent conversation transcript, normalized via **session adapters** into a list of **Events**, plus a derived summary for evidence and adherence eval. |
+| **Event** | One step inside a Session: a message, tool call, tool result, or error. The Session IR is a list of Events. _Avoid_: turn (not every Event is a user turn); entry (parser word); SessionPrimitives as the foundation. |
 | **Finding** | One Skill-check outcome (tier + severity + message + optional rule code / docUrl). The Skill-check module sets `structure` or `heuristics`. Review adds `llm` and `sessions`. Scan presents Skill Findings as health; shadows, overlaps, MCP, budget, and install stay Scan-only. |
 | **Review window** | Session evidence span Review already uses: last 10 Sessions, and only Session files newer than 30 days. |
 | **Never invoked** | A Skill with no invoke evidence in Sessions inside the Review window. Not the same as a remove candidate. |
@@ -99,6 +100,34 @@ _Avoid_: refusing all Skill paths inside a Plugin; a new `dora plugin` command; 
 **Later product direction (not this pass):** the binary is for the Runner. Humans read README and the site. No new TTY pickers. Existing human confirms stay until a later grill. Not C (do not drop tables/confirms in this pass).
 
 Grill for this pass is **closed**. Shipped in v0.6.24. Spec: https://github.com/saif-shines/doraval/issues/48. Tickets: [#49](https://github.com/saif-shines/doraval/issues/49), [#50](https://github.com/saif-shines/doraval/issues/50).
+
+## Session-analysis pass (this grill)
+
+| Term | Meaning |
+|------|---------|
+| **This pass** | Sharper Session **evidence**. Same Review / unused / `dora sessions` jobs. A corpus job comes later. |
+| **Later analyse** | A Runner uses Doraval to read many Sessions, find gaps, and proceed. Not this pass’s user-facing verb. “Gaps” is not defined yet. |
+| **Adopt-aggressively** | Take what we need from `agent-traces` (facts and grain). Breaking Review / unused / `dora sessions` is allowed if the new IR unlocks Later analyse. |
+| **Event grain** | The Session IR is a list of Events. A Session summary is derived. Review and unused may break. |
+| **Two grains** | Event list + derived Session summary. A Content table is a later view, not a grain. |
+| **Capture-wide** | The Event list stores facts Later analyse will need. CLI output this pass stays evidence-only. _Avoid_: dumping the warehouse into `dora review`. |
+| **Approach research** | Cited in `docs/research-notes/48-agent-traces.md` and `docs/research-notes/49-agent-trace-approaches.md`. |
+| **Parent optional** | An Event may have `parentId` when the log has it. Missing means unknown, not root. The IR stays a list. A tree is a later view. Do not invent parents. |
+| **Fill when present** | An Event field is set only from the log. Unset means the file did not have it. Do not invent zeros. |
+| **Skill invoke record** | A derived record that a Skill ran. Not an Event type. It has the Skill name, the detect signal, and a pointer at the source Event(s). Same job as Entire `SkillEvent`. Unused and Review read this list. _Avoid_: synthetic `type=skill` Event; Entire collapse/UI flags. |
+| **Skill signals (this pass)** | Only proven signals: Claude Skill tool, slash command, Grok titles/paths. Cursor, Codex, Copilot stay empty. No Pi adapter. Named like Entire (`skill_tool_use`, `prompt_slash_command`). |
+| **Window (this pass)** | Review, unused, and `dora sessions` still use the Review window (last 10, 30 days). No full-corpus walk. |
+| **Tool pair** | A tool is two Events: `tool_call` and `tool_result`, joined by `toolCallId`. Inline join is a later view. |
+| **ATIF (this pass)** | Map only. Event fields stay ATIF-shaped. No emit. No ingest. No atifact dependency. |
+| **Token pressure (this pass)** | Review reports token-pressure from Sessions (Entire-style advice: cache-read, call volume, long session). Not unused. Not remove-candidate. |
+| **Session health** | A separate block on Review about the Session (token pressure). Not a Finding. Finding stays a Skill-check outcome. |
+| **Token-pressure signals (this pass)** | Only what we can fill: cache-read share (when present), tool/assistant call count, user turn count. No context-window %. No checkpoints. |
+| **This pass ships** | Adapters emit Events. Session summary and Skill invoke records are derived. Unused reads those records. Review adds a Session health block. Same verbs. No new `analyse` command. |
+| **Token-pressure thresholds** | Entire’s numbers: cache-read ≥ 80% of tokens, call count ≥ 20, user turns ≥ 10. |
+
+_Avoid_: shipping a warehouse (Polars / Parquet / Hub) this pass; calling this pass “session analysis”; keeping a thin IR that cannot support Later analyse; treating SessionPrimitives as the foundation; putting Content in the glossary.
+
+This grill is **closed**. Spec: https://github.com/saif-shines/doraval/issues/51. Tickets: [#52](https://github.com/saif-shines/doraval/issues/52), [#53](https://github.com/saif-shines/doraval/issues/53), [#54](https://github.com/saif-shines/doraval/issues/54), [#55](https://github.com/saif-shines/doraval/issues/55). ADR: `docs/adr/0007-event-list-is-session-ir.md`.
 
 **`llms.txt`:** generated from the site. Fix the pages. Do not hand-write a second index.
 
