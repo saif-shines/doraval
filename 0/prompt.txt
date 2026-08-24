@@ -1,0 +1,23 @@
+<system-reminder>
+Background task "call-f3738b25-21c3-4965-a35d-ceb3d7b37e65-345" completed (exit code: 1).
+Command: bun test | Duration: 21.7s
+Use get_command_or_subagent_output("call-f3738b25-21c3-4965-a35d-ceb3d7b37e65-345") to see the full output.
+</system-reminder>
+
+---
+
+<user_query>
+id you already relase? why 56 open?
+</user_query>
+
+---
+
+<user_query>
+give me some manual test caes to try this
+</user_query>
+
+---
+
+<user_query>
+this is working you should update the documentaiton as well adherint ot the /docs-engineering:docs-writing-style 
+</user_query>
