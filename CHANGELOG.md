@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.27
+
 ### Breaking
 
 - Empty `dora` prints short `--help`. Scan is `dora scan` only.
