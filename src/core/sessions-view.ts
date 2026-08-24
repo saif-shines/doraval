@@ -84,6 +84,16 @@ export function listSessions(
   return withMtime.sort((a, b) => b.mtime - a.mtime).map((x) => x.entry);
 }
 
+function needle(id: string): string {
+  return id.replace(/…$/, "").replace(/\.\.\.$/, "");
+}
+
+function idHits(want: string, sessionId: string, fileId: string): "exact" | "prefix" | null {
+  if (sessionId === want || fileId === want) return "exact";
+  if (want.length > 0 && (sessionId.startsWith(want) || fileId.startsWith(want))) return "prefix";
+  return null;
+}
+
 export function findSession(
   cwd: string,
   id: string,
@@ -92,21 +102,25 @@ export function findSession(
   const pool = opts.adapters ?? getAllAdapters();
   const targetAgent = opts.agent ? resolveAgentAlias(opts.agent) : undefined;
   const adapters = targetAgent ? pool.filter((a) => a.agent === targetAgent) : pool;
+  const want = needle(id);
 
+  const hits: { entry: SessionListEntry; primitives: SessionPrimitives; kind: "exact" | "prefix" }[] = [];
   for (const adapter of adapters) {
     const sessions = adapter.listRecentSessions(cwd, 50);
     for (const s of sessions) {
       try {
         const primitives = adapter.parse(s.path);
         const fileId = basename(s.path).replace(extname(s.path), "");
-        if (primitives.sessionId === id || fileId === id) {
-          return { entry: toEntry(adapter, s, primitives), primitives };
-        }
+        const kind = idHits(want, primitives.sessionId, fileId);
+        if (kind) hits.push({ entry: toEntry(adapter, s, primitives), primitives, kind });
       } catch {
         // Skip unparseable sessions.
       }
     }
   }
 
+  const exact = hits.filter((h) => h.kind === "exact");
+  if (exact.length === 1) return exact[0]!;
+  if (hits.length === 1) return hits[0]!;
   return null;
 }

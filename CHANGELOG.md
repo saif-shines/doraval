@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.6.25
+
+### Features
+
+- Session parse is an **Event list** plus a derived summary. Tool call and
+  result are paired. Tokens, errors, and `parentId` are set only when the
+  log has them.
+- Unused and Review read **Skill invoke records** (Claude Skill tool, slash
+  command, Grok titles).
+- Review (not `--quick`) prints a **Session health** block for token
+  pressure: cache-read ≥ 80%, calls ≥ 20, turns ≥ 10. Not a Finding.
+- `dora sessions show` prints token totals when known. A short table id
+  is enough when it is unique.
+
 ## 0.6.24
 
 ### Features

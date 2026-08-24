@@ -130,6 +130,18 @@ describe("findSession", () => {
     expect(found).not.toBeNull();
   });
 
+  test("matches a unique prefix (table-truncated id)", () => {
+    const adapters = [fakeAdapter("claude-code", "mini-session.jsonl", 1000)];
+    const found = findSession("/any/cwd", "test-sessio", { adapters });
+    expect(found?.entry.sessionId).toBe("test-session-001");
+  });
+
+  test("matches a truncated display id with an ellipsis", () => {
+    const adapters = [fakeAdapter("claude-code", "mini-session.jsonl", 1000)];
+    const found = findSession("/any/cwd", "test-sessio…", { adapters });
+    expect(found?.entry.sessionId).toBe("test-session-001");
+  });
+
   test("returns null when nothing matches", () => {
     const adapters = [fakeAdapter("claude-code", "mini-session.jsonl", 1000)];
     expect(findSession("/any/cwd", "no-such-id", { adapters })).toBeNull();
