@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.6.26
+
+### Docs
+
+- Feature release requires docs lockstep (`AGENTS.md`): website, README, and
+  the shipped skill must match the binary before tag.
+
 ## 0.6.25
 
 ### Features
