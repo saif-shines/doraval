@@ -40,6 +40,21 @@ describe("parseSession", () => {
   test("extracts skill invocations", () => {
     const result = parseSession(miniFixture);
     expect(result.skillsInvoked).toEqual(["superpowers:systematic-debugging"]);
+    expect(result.skillInvokes).toEqual([
+      { name: "superpowers:systematic-debugging", signal: "skill_tool_use", eventIds: ["t1"] },
+    ]);
+  });
+
+  test("records slash command as prompt_slash_command", () => {
+    const transcript = [
+      '{"type":"user","uuid":"u1","sessionId":"s","message":{"content":"<command-name>/review</command-name>"}}',
+    ].join("\n");
+    const result = parseSession(transcript);
+    expect(result.skillInvokes).toContainEqual({
+      name: "review",
+      signal: "prompt_slash_command",
+      eventIds: ["u1"],
+    });
   });
 
   test("counts tool calls", () => {

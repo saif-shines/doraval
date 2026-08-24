@@ -43,9 +43,18 @@ export interface Event {
   text?: string;
 }
 
+export type SkillSignal = "skill_tool_use" | "prompt_slash_command" | "grok_title";
+
+export interface SkillInvokeRecord {
+  name: string;
+  signal: SkillSignal;
+  eventIds: string[];
+}
+
 /** Session IR: Event list plus the derived blob (expand — callers can still read blob fields). */
 export interface Session extends SessionPrimitives {
   events: Event[];
+  skillInvokes: SkillInvokeRecord[];
   inputTokens?: number;
   outputTokens?: number;
   cacheReadTokens?: number;
@@ -56,7 +65,13 @@ export interface Session extends SessionPrimitives {
 export function asSession(
   primitives: SessionPrimitives,
   events: Event[],
-  fallback?: { inputTokens?: number; outputTokens?: number; cacheReadTokens?: number; costUsd?: number },
+  fallback?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    cacheReadTokens?: number;
+    costUsd?: number;
+    skillInvokes?: SkillInvokeRecord[];
+  },
 ): Session {
   let input: number | undefined;
   let output: number | undefined;
@@ -69,6 +84,7 @@ export function asSession(
   return {
     ...primitives,
     events,
+    skillInvokes: fallback?.skillInvokes ?? [],
     ...(input != null ? { inputTokens: input } : fallback?.inputTokens != null ? { inputTokens: fallback.inputTokens } : {}),
     ...(output != null ? { outputTokens: output } : fallback?.outputTokens != null ? { outputTokens: fallback.outputTokens } : {}),
     ...(cache != null ? { cacheReadTokens: cache } : fallback?.cacheReadTokens != null ? { cacheReadTokens: fallback.cacheReadTokens } : {}),
@@ -145,6 +161,7 @@ export function parseSession(jsonlText: string): Session {
   let costUsd: number | undefined;
 
   const events: Event[] = [];
+  const skillInvokes: SkillInvokeRecord[] = [];
   const toolCalls: ToolCall[] = [];
   const userMessages: string[] = [];
   const assistantText: string[] = [];
@@ -161,7 +178,10 @@ export function parseSession(jsonlText: string): Session {
 
     // attributionSkill field (modern Claude Code client)
     if (typeof msg.attributionSkill === "string" && msg.attributionSkill.trim()) {
-      skillsFromTranscript.add(msg.attributionSkill.trim());
+      const n = msg.attributionSkill.trim();
+      skillsFromTranscript.add(n);
+      const evId = typeof msg.uuid === "string" ? msg.uuid : "";
+      skillInvokes.push({ name: n, signal: "skill_tool_use", eventIds: evId ? [evId] : [] });
     }
 
     // <command-name>/foo</command-name> wrappers in message content
@@ -170,7 +190,11 @@ export function parseSession(jsonlText: string): Session {
     if (cmdMatch) {
       let name = cmdMatch[1].trim();
       if (name.startsWith("/")) name = name.slice(1);
-      if (name) skillsFromTranscript.add(name);
+      if (name) {
+        skillsFromTranscript.add(name);
+        const evId = typeof msg.uuid === "string" ? msg.uuid : "";
+        skillInvokes.push({ name, signal: "prompt_slash_command", eventIds: evId ? [evId] : [] });
+      }
     }
 
     // Hook-injected skills: hook_additional_context attachments
@@ -260,6 +284,13 @@ export function parseSession(jsonlText: string): Session {
             ...(stopReason ? { stopReason } : {}),
             ...(!usagePlaced ? usageFields : {}),
           });
+          if (b.name === "Skill" && typeof input.skill === "string" && input.skill) {
+            skillInvokes.push({
+              name: input.skill,
+              signal: "skill_tool_use",
+              eventIds: toolId ? [toolId] : lineId ? [lineId] : [],
+            });
+          }
           usagePlaced = true;
         } else if (b.type === "text" && typeof b.text === "string") {
           const text = b.text.trim();
@@ -372,7 +403,10 @@ export function parseSession(jsonlText: string): Session {
       if (!e.sessionId) e.sessionId = sessionId;
     }
   }
-  return asSession(primitives, events, costUsd != null ? { costUsd } : undefined);
+  return asSession(primitives, events, {
+    ...(costUsd != null ? { costUsd } : {}),
+    skillInvokes,
+  });
 }
 
 /**

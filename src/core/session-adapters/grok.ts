@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, join } from "path";
-import { asSession, safeJsonParse, type Event, type Session, type SessionPrimitives, type ToolCall } from "../session-parse.js";
+import { asSession, safeJsonParse, type Event, type Session, type SkillInvokeRecord, type ToolCall } from "../session-parse.js";
 import type { SessionAdapter, SessionListItem } from "./types.js";
 
 export interface GrokAdapterOptions {
@@ -146,6 +146,7 @@ function parseUpdatesJsonl(
   const assistantText: string[] = [];
   const events: Event[] = [];
   const skills = new Set<string>();
+  const skillInvokes: SkillInvokeRecord[] = [];
   let idx = 0;
 
   for (const line of lines) {
@@ -171,7 +172,12 @@ function parseUpdatesJsonl(
       }
     }
     if (su === "tool_call" || su === "tool_call_update") {
-      for (const s of extractSkillsFromUpdate(u)) skills.add(s);
+      const found = extractSkillsFromUpdate(u);
+      const toolCallId = typeof u.toolCallId === "string" ? u.toolCallId : "";
+      for (const s of found) {
+        skills.add(s);
+        skillInvokes.push({ name: s, signal: "grok_title", eventIds: toolCallId ? [toolCallId] : [] });
+      }
       if (su === "tool_call") {
         const name = toolNameFromUpdate(u) || "tool";
         const input =
@@ -214,7 +220,10 @@ function parseUpdatesJsonl(
       assistantText,
     },
     events,
-    fallbackTokens != null ? { inputTokens: fallbackTokens } : undefined,
+    {
+      ...(fallbackTokens != null ? { inputTokens: fallbackTokens } : {}),
+      skillInvokes,
+    },
   );
 }
 

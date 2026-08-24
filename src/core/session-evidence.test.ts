@@ -1,16 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { collectSessionEvidence, type LoadResult, type LoadedSession } from "./session-evidence.js";
-import type { SessionPrimitives } from "./session-parse.js";
+import type { Session } from "./session-parse.js";
 
-function prim(over: Partial<SessionPrimitives>): SessionPrimitives {
+function prim(over: Partial<Session>): Session {
   return {
     sessionId: "s1", model: "m", agent: "claude-code", cwd: "/p",
     toolCalls: [], toolCallCounts: {}, skillsInvoked: [],
     userMessages: [], userTurnCount: 0, assistantText: [],
+    events: [], skillInvokes: [],
     ...over,
   };
 }
-function sess(agent: string, over: Partial<SessionPrimitives>): LoadedSession {
+function sess(agent: string, over: Partial<Session>): LoadedSession {
   return { agent, path: `/tmp/${agent}.jsonl`, mtime: Date.now(), primitives: prim(over) };
 }
 function loadResult(sessions: LoadedSession[], agents = ["claude-code"]): LoadResult {
@@ -18,6 +19,15 @@ function loadResult(sessions: LoadedSession[], agents = ["claude-code"]): LoadRe
 }
 
 describe("collectSessionEvidence", () => {
+  test("Skill invoke record counts as invoked", () => {
+    const lr = loadResult([sess("claude-code", {
+      skillInvokes: [{ name: "my-skill", signal: "skill_tool_use", eventIds: ["t1"] }],
+    })]);
+    const f = collectSessionEvidence("my-skill", "/repo/.claude/skills/my-skill", lr, { required: false });
+    expect(f[0]!.severity).toBe("pass");
+    expect(f[0]!.message).toContain("native");
+  });
+
   test("native attribution counts as invoked (pass)", () => {
     const lr = loadResult([sess("claude-code", { skillsInvoked: ["my-skill"] })]);
     const f = collectSessionEvidence("my-skill", "/repo/.claude/skills/my-skill", lr, { required: false });

@@ -1,7 +1,7 @@
 import { statSync } from "fs";
 import { getAllAdapters } from "./session-adapters/index.js";
 import { SESSION_WINDOW, SESSION_MAX_FILE_BYTES, withinWindow, type SessionAdapter } from "./session-adapters/types.js";
-import type { SessionPrimitives } from "./session-parse.js";
+import type { Session } from "./session-parse.js";
 import type { ReviewFinding } from "./review.js";
 import { SESSION_CODES } from "./rules/bindings.js";
 import { ruleByCode } from "./rules/registry.js";
@@ -18,7 +18,7 @@ export interface LoadedSession {
   agent: string;
   path: string;
   mtime: number;
-  primitives: SessionPrimitives;
+  primitives: Session;
 }
 
 export interface LoadResult {
@@ -61,8 +61,13 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function nameMatches(record: string, skillName: string): boolean {
+  return record === skillName || record.endsWith(`:${skillName}`) || record.endsWith(`/${skillName}`);
+}
+
 function matchSession(skillName: string, skillDir: string, s: LoadedSession): EvidenceKind | null {
-  if (s.primitives.skillsInvoked.includes(skillName)) return "native";
+  if ((s.primitives.skillInvokes ?? []).some((r) => nameMatches(r.name, skillName))) return "native";
+  if (s.primitives.skillsInvoked.some((n) => nameMatches(n, skillName))) return "native";
   const needleDir = skillDir;
   const needleFile = `${skillName}/SKILL.md`;
   for (const tc of s.primitives.toolCalls) {
