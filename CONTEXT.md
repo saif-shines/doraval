@@ -19,18 +19,18 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Subagent** | A specialized agent file (for example `.claude/agents/*.md`). Own role and tools. Not a Memory file. Not a Skill. |
 | **Catalog (this pass)** | The artifact types this pass must treat: Skill, Plugin, Memory file, Subagent. Out of scope: hooks, channels, MCP, scheduled tasks, and the rest of `docs/research-notes`. |
 | **Review** | One `review(path)`. Tiered quality pass over a Skill and/or Memory file: structure → heuristics → optional LLM judge → optional sessions. Workspace and Skill reviews also include cwd Memory files (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `copilot-instructions.md`). |
-| **Scan** | Fast workspace health check (`dora` bare): agents present, skill validation, shadows/overlaps, install/intelligence. |
+| **Scan** | Fast workspace map (`dora scan`): agents present, skill validation, shadows/overlaps, install/intelligence. Not the empty-argv default. |
 | **Rule** | One module (`src/core/rules`). Registry, packages, resolve, stamp, and mutation. CLI only renders and writes config. |
 | **Package** | Named enable-set of rules: `recommended` (default), `strict`, `minimal`. |
 | **Judge** | One module (`judge()`). Owns mode (**api** / **delegate** / **fail**) and transport. Review passes prompt, schema, and `ci`. |
 | **Memory** | Product term for principles, artifacts, and always-on files (`AGENTS.md`, `CLAUDE.md`, …) under `~/.doraval/memory/` and project roots. |
-| **Config** | Global product config at `~/.doraval/config.yml`. Code type is still `JournalConfig` (legacy name — not a “journal product”). Holds projects, `eval.*` judge settings, rules, agent command. |
+| **Config** | Global product config at `~/.doraval/config.yml`. Code type is still `JournalConfig` (legacy name — not a “journal product”). Holds projects, `eval.*` judge settings (vendor, model, API key), rules, agent command. CLI: `dora config` (list / get / set / setup). Not `dora providers`. _Avoid_: a second key command; `dora judge` as a verb. |
 | **Session** | Past agent conversation transcript, normalized via **session adapters** into a list of **Events**, plus a derived summary for evidence and adherence eval. |
 | **Event** | One step inside a Session: a message, tool call, tool result, or error. The Session IR is a list of Events. _Avoid_: turn (not every Event is a user turn); entry (parser word); SessionPrimitives as the foundation. |
 | **Finding** | One Skill-check outcome (tier + severity + message + optional rule code / docUrl). The Skill-check module sets `structure` or `heuristics`. Review adds `llm` and `sessions`. Scan presents Skill Findings as health; shadows, overlaps, MCP, budget, and install stay Scan-only. |
 | **Review window** | Session evidence span Review already uses: last 10 Sessions, and only Session files newer than 30 days. |
 | **Never invoked** | A Skill with no invoke evidence in Sessions inside the Review window. Not the same as a remove candidate. |
-| **Recent install** | A Skill added inside the current Review window (`dora new`, `skills add`, copy, or clone). Never invoked is expected. Not a remove candidate. |
+| **Recent install** | A Skill added inside the current Review window (`dora skill new`, `skills add`, copy, or clone). Never invoked is expected. Not a remove candidate. |
 | **Remove candidate** | An Authored Skill that is Never invoked and not a Recent install. Its own Finding (new rule). Not R029. Review and Scan may recommend remove. A Global Skill is never a Remove candidate from one project’s Sessions. |
 | **Quarantine** | Move a Global Skill aside so it can be restored. Not a delete. _Avoid_: stash. |
 | **Remove** | Write action (`dora skill remove`). Deletes an Authored Skill. Quarantines a Global Skill. A name is enough. `--for` selects the agent. `--global` selects origin when Authored and Global share a name. One match: just Remove. Several matches (including same agent, two origins): TTY picker; a Runner must pass `--for` / `--global` / a path or it exits `2` with Next. |
@@ -52,13 +52,15 @@ The website is mixed. Do not mix the two voices on one page.
 
 **First loop:** `npx skills add saif-shines/doraval`, then `dora review --quick` so findings show before JSON, LLM, or CI flags. The same two lines open README Quick start **and** `dora --help`.
 
+**Empty argv:** Bare `dora` prints `--help`. It does not run Scan or Review. Scan is `dora scan` only. Same shape as agent-browser (empty argv is help, not `open`) and Entire-in-a-repo. Not Entire’s unset-repo setup flow — Doraval has no `enable`. _Avoid_: treating bare `dora` as the product job.
+
 **README:** Reader surface. Follows the agent-browser README shape (install → quick start → long pasteable command catalog).
 
 **Site catalog:** Same long catalog as the README. Path follows agent-browser (they use `/commands` for this page). The skill still does not copy a flag encyclopedia.
 
 **This pass** is lockstep, not a docs rewrite. The binary (`dora --help`, per-command `--help`, unknown-command, `dora agent-help`) is the work. README and `/commands` change only when a new help line would disagree with them.
 
-**agent-help:** The live command map for agents. Bare prints text. `dora agent-help --json` is the same tree. `dora agent-help review` drills into one verb. Each verb is labeled **read-only** or **writes**. `--capabilities` is removed. See `docs/adr/0004-agent-help.md` and `docs/adr/0005-drop-capabilities.md`.
+**agent-help:** Legacy verb. This pass **deletes** it. One text door: `dora --help` and `<cmd> --help`. Text `--help` is short: Start here + one-line verb list. Catalog and flags live on `<cmd> --help` and on `dora --help --json` (same tree, `read-only` / `writes`). `_Avoid_`: a second catalog (`agent-help`, `--capabilities`); a 400-line `--help`. See ADR 0004 (to be superseded).
 
 **`--json`:** Alias for `--format json`. Both work. `--ci` still implies JSON. Errors stay on stderr.
 
@@ -74,7 +76,7 @@ That grill is settled. Do not implement from this glossary alone.
 | **First loop (this pass)** | `dora review --quick`, then `dora fix --yes` when Findings are mechanical. Unused is a Next, not the start. Scan is a map. |
 | **Pass test** | This pass is done when both are true: (1) a cold Runner with only the shipped skill finishes the first loop and does not ask the human a question; (2) every verb that Runner needs is on `dora agent-help --json`, with a stable JSON shape and a Next line. |
 | **Harden first** | This pass changes existing verbs (JSON, Next, exit codes, read-only vs writes). It does not add new jobs first. |
-| **Subagent this pass** | Discover only. `dora new agent` and `dora agent-help` stay. Review does not grade Subagent files. |
+| **Subagent this pass** | Discover only. `dora new agent` and `dora agent-help` stay (that pass). Review does not grade Subagent files. This CLI-structure pass moves create to `dora agent new` and deletes `agent-help`. |
 | **Skill on agent-help** | `dora skill unused` is **read-only**. `dora skill remove` and `restore` are **writes**. Do not label the whole group as writes only. |
 | **Runner verbs (this pass)** | `agent-help`, `review`, `fix`, `scan`, `sessions`, `skill unused`, `new`. `skill remove` / `restore` stay on the map as writes the human owns. |
 
@@ -87,7 +89,7 @@ Grill for this pass is **closed**. Shipped in v0.6.23. Spec: https://github.com/
 | Term | Meaning |
 |------|---------|
 | **Separate units** | A Plugin and a Skill are two things. A Plugin is not “a bag you must use instead of a Skill.” A Skill is not “the Plugin.” |
-| **Plugin Review** | `dora review <plugin-root>`. Same Review as today. Owned Skills are listed under that report. No new `dora plugin` verb. |
+| **Plugin Review** | `dora review <plugin-root>`. Same Review as today. Owned Skills are listed under that report. Not a `dora plugin review` verb. |
 | **This pass** | Health read/report for Plugin + owned Skills. Not Subagent Review. `dora skill unused` / `remove` / `restore` still skip Plugin-owned Skills. |
 | **Skill-path Review** | `dora review` of a Plugin-owned Skill is allowed. Health of that Skill only. Say it is Plugin-owned. |
 | **Skill-path fix** | `dora fix` of a Plugin-owned Skill still applies mechanical fixes to that Skill. Unchanged. |
@@ -95,7 +97,7 @@ Grill for this pass is **closed**. Shipped in v0.6.23. Spec: https://github.com/
 | **JSON (this pass)** | Review / Scan / fix JSON marks a Plugin-owned Skill with `pluginOwned: true` and `pluginRoot`. No new top-level `next` array. |
 | **Runner-first (this pass)** | Design output for the Runner. The table may stay. Do not add human-only chrome. |
 
-_Avoid_: refusing all Skill paths inside a Plugin; a new `dora plugin` command; treating Plugin Review as a new report format; applying Plugin-wide `--yes` without the human.
+_Avoid_: refusing all Skill paths inside a Plugin; `dora plugin review`; treating Plugin Review as a new report format; applying Plugin-wide `--yes` without the human.
 
 **Later product direction (not this pass):** the binary is for the Runner. Humans read README and the site. No new TTY pickers. Existing human confirms stay until a later grill. Not C (do not drop tables/confirms in this pass).
 
@@ -129,13 +131,36 @@ _Avoid_: shipping a warehouse (Polars / Parquet / Hub) this pass; calling this p
 
 This grill is **closed**. Spec: https://github.com/saif-shines/doraval/issues/51. Tickets: [#52](https://github.com/saif-shines/doraval/issues/52), [#53](https://github.com/saif-shines/doraval/issues/53), [#54](https://github.com/saif-shines/doraval/issues/54), [#55](https://github.com/saif-shines/doraval/issues/55). ADR: `docs/adr/0007-event-list-is-session-ir.md`.
 
+## CLI-structure pass (this grill)
+
+| Term | Meaning |
+|------|---------|
+| **This pass** | Empty argv prints `--help`. Delete `agent-help`. JSON map is `dora --help --json`. Text `--help` is a **short first page**. Help polish. `reconcile` becomes **Conflicts**. Delete `providers` (the spec dump). Keep version bump as `dora plugin bump`. Delete top-level `new`. The word stays `new` on the noun (`dora skill new`). Nouns are **singular**. Bare noun groups **list**. **Grow** = tidy existing verbs and flags. Old names are a **hard break** (exit `2` + Next). No aliases. Keep `dora config`. |
+| **Conflicts** | The later write that settles cross-agent contradictions in shared `AGENTS.md`. Old verb `reconcile`. _Avoid_: reconcile (legacy name). |
+| **Grow (this pass)** | Same commands, same jobs, clearer names and flag patterns. Full flag audit. Rule is **C**: dialect + escape test. _Avoid_: adding verbs to look like agent-browser; splitting Review. |
+| **Dialect flags** | Same on every product command: `--json` (machine output) and `--cwd` (which repo). `--ci` still implies JSON. `--format json` may stay as the old spelling. _Avoid_: a third output mode; `--json` on only some verbs. |
+| **Write flags** | `--yes` or `--dry-run`. `conflicts` drops `--apply`. |
+| **Escape test** | If a human sees a prompt or picker, a Runner must have `--yes`, `--dry-run`, `--json`, or an id. Entire’s fallback rule. |
+| **Job flags** | Belong on one verb (`--quick`, `--fail-on`, `skill --for`). |
+| **Dead flags** | `review --for` and `review --agent` go away. They do not filter. |
+| **Create-on-noun** | You create a Skill with `dora skill new` (same for rule, agent, plugin). Not a top-level grab-bag. _Avoid_: `dora new`. |
+| **Agent group** | `dora agent` lists Subagents. `dora agent new` scaffolds one. |
+| **Plugin group** | `dora plugin` lists Plugins in the repo. `dora plugin new` scaffolds one. `dora plugin bump` raises plugin and marketplace semver. Review of a Plugin is still `dora review <plugin-root>`. _Avoid_: `dora plugin review`; top-level `dora bump`; `dora providers`. |
+| **Bare group lists** | `dora skill`, `dora memory`, `dora session`, `dora rule`, `dora config`, `dora agent`, `dora plugin` list. They do not dump usage. They do not open a hub. |
+| **Singular nouns** | CLI groups are singular: `skill`, `rule`, `session`, `memory`, `config`, `agent`, `plugin`. Old `rules` and `sessions` are a hard break. _Avoid_: `dora rules`; `dora sessions`. |
+| **Skill list** | Bare `dora skill` lists every Authored and Global Skill (name, origin, unused mark). `dora skill unused` is the Remove-candidate filter. _Avoid_: bare skill = unused only. |
+
+Grill for this pass is **closed**. Spec: https://github.com/saif-shines/doraval/issues/56. Tickets: [#57](https://github.com/saif-shines/doraval/issues/57), [#58](https://github.com/saif-shines/doraval/issues/58), [#59](https://github.com/saif-shines/doraval/issues/59), [#60](https://github.com/saif-shines/doraval/issues/60). ADRs: `docs/adr/0008-empty-argv-prints-help.md`, `docs/adr/0009-help-json-is-the-map.md` (supersedes 0004).
+
 **`llms.txt`:** generated from the site. Fix the pages. Do not hand-write a second index.
 
 _Avoid_: one “you” for both on a **Reader** page; an agent page that still talks to a human (“use with your agent”); leading with `--format json` before a `--quick` review. Top-level `--help` is allowed to say “for agents.”
 
 **Interactive gate:** A TTY confirm before work. A human on a real terminal still sees it. A caller we treat as an agent does not. Detection is an env/TTY rule, not a new flag. See `docs/adr/0002-agent-skips-scan-prompt.md`.
 
-**Write gate:** `fix`, `reconcile`, and `memory promote` write files. A detected agent that omits `--yes` / `--dry-run` gets exit `2` and a Next line. No prompt. No write. See `docs/adr/0003-agent-write-needs-flag.md`.
+**Write gate:** `fix`, `conflicts`, and `memory promote` write files. A detected agent that omits `--yes` / `--dry-run` gets exit `2` and a Next line. No prompt. No write. See `docs/adr/0003-agent-write-needs-flag.md`.
+
+**Hard break (this pass):** `dora new`, `dora reconcile`, `dora agent-help`, `dora rules`, `dora sessions`, `dora bump`, and `dora providers` exit `2` with one Next line. They do not run. No hidden alias. _Avoid_: deprecation aliases.
 
 ## Naming debt (intentional)
 

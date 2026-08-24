@@ -65,7 +65,7 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 ### How to branch (Scan)
 
 - `.summary.failed > 0` → hard failures. Review / Fix before done.
-- `.contradictions[].severity === "conflict"` → run `dora reconcile --dry-run`, then ask the user.
+- `.contradictions[].severity === "conflict"` → run `dora conflicts --dry-run`, then ask the user.
 - `.health[].status` is `"pass" | "warn" | "fail"` per artifact.
 - `.intelligence.judge` is `"api" | "delegate"`. `"delegate"` means evaluate the `JUDGE THIS` block on a later Review (not `--quick`). `--ci` still requires API credentials.
 

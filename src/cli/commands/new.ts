@@ -90,7 +90,16 @@ export default defineCommand({
 
     try {
       // ── type ──────────────────────────────────────────────────
-      let type = parseScaffoldType(args.type as string | undefined);
+      const parent = process.argv.slice(2)[0];
+      const fromNoun =
+        parent === "skill" || parent === "rule" || parent === "agent" || parent === "plugin"
+          ? parent
+          : undefined;
+      if (fromNoun && args.type && !args.name) {
+        args.name = args.type;
+        args.type = undefined;
+      }
+      let type = parseScaffoldType(fromNoun ?? (args.type as string | undefined));
       if (!type && !yes) {
         type = await promptSelect<ScaffoldType>(
           "What do you want to create?",

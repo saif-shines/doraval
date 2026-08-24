@@ -11,7 +11,7 @@ sidebar:
 ```bash
 dora --help                  # first loop + command list
 dora review --help           # this command
-dora agent-help              # live map (add --json to parse)
+dora --help --json           # live map
 ```
 
 Exit `0` clean · `1` issues · `2` could not run.
@@ -19,10 +19,11 @@ Exit `0` clean · `1` issues · `2` could not run.
 ## Scan
 
 ```bash
-dora                         # workspace health (alias: dora scan)
-dora --json                  # same as --format json
-dora --ci                    # implies JSON
-dora --cwd "$GITHUB_WORKSPACE"
+dora                         # short --help
+dora scan                    # workspace map
+dora scan --json
+dora scan --ci
+dora scan --cwd "$GITHUB_WORKSPACE"
 ```
 
 Read-only. No LLM. No API key.
@@ -62,9 +63,10 @@ Re-run `dora review --quick` until exit `0`.
 ## New
 
 ```bash
-dora new skill --for claude --name review-pr --description "Reviews PRs" --yes
-dora new rule --for cursor --name no-default-exports --yes
-dora new plugin --for claude --name my-plugin --yes
+dora skill new --for claude --name review-pr --description "Reviews PRs" --yes
+dora rule new --for cursor --name no-default-exports --yes
+dora plugin new --for claude --name my-plugin --yes
+dora agent new --for claude --name explorer --yes
 ```
 
 Always pass `--for`. Then `dora review --quick` the new path.
@@ -103,22 +105,22 @@ dora memory sync
 
 Weights: **8+** hard · **5** default · **1–3** soft. [Memory](/concepts/memory/).
 
-## Reconcile
+## Conflicts
 
 ```bash
-dora reconcile --dry-run
-dora reconcile --apply --yes
+dora conflicts --dry-run
+dora conflicts --yes
 ```
 
 Settles Claude-vs-Cursor contradictions into `AGENTS.md`.
 
-## Sessions
+## Session
 
 ```bash
-dora sessions
-dora sessions --agent claude --limit 20
-dora sessions show <sessionId>
-dora sessions --json
+dora session
+dora session --agent claude --limit 20
+dora session show <sessionId>
+dora session --json
 ```
 
 Read-only. Adapters: Claude, Grok, Cursor, Codex, Copilot.
@@ -128,7 +130,7 @@ The table shortens the id. `show` accepts that short id when it is unique. `--js
 ## Config
 
 ```bash
-dora config                  # TTY hub
+dora config                  # list keys
 dora config setup            # Judge wizard
 dora config get eval.model
 dora config set eval.model gpt-4.1
@@ -137,22 +139,15 @@ dora config set eval.judge auto
 
 `--deep` needs a Judge. Do not paste API keys into chat.
 
-## Bump
+## Plugin bump
 
 ```bash
-dora bump patch
-dora bump minor ./plugins
-dora bump 1.2.3 --yes
+dora plugin bump patch
+dora plugin bump minor ./plugins
+dora plugin bump 1.2.3 --yes
 ```
 
-## Providers
-
-```bash
-dora providers               # packaging matrix, not “who is installed”
-dora providers --json
-```
-
-Who is installed is `dora` (scan).
+Also bumps marketplace manifests. Who is installed is `dora scan`. Judge keys are `dora config setup`.
 
 ## Update
 
@@ -162,15 +157,13 @@ dora update --check
 dora update --via npm
 ```
 
-## Agent-help
+## Help map
 
 ```bash
-dora agent-help              # every verb, read-only vs writes
-dora agent-help --json       # same tree
-dora agent-help review       # one verb
+dora --help                  # short first page
+dora --help --json           # live map (read-only vs writes)
+dora review --help           # one verb
 ```
-
-Replaces `--capabilities`.
 
 ## Completions
 

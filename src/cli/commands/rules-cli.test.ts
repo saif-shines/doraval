@@ -9,7 +9,7 @@ function runRules(args: string[], config?: string) {
   const home = mkdtempSync(join(tmpdir(), "dora-rules-cli-"));
   homes.push(home);
   if (config !== undefined) writeFileSync(join(home, "config.yml"), config);
-  const result = Bun.spawnSync(["bun", "run", "src/cli/index.ts", "rules", ...args], {
+  const result = Bun.spawnSync(["bun", "run", "src/cli/index.ts", "rule", ...args], {
     cwd: process.cwd(),
     env: { ...process.env, DORAVAL_HOME: home, NO_COLOR: "1" },
     stdout: "pipe",

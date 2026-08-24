@@ -137,7 +137,7 @@ function onOff(name: "on" | "off", value: RuleOverride) {
     async run({ args }) {
       const mode = modeFor(args);
       const rule = args.rule as string | undefined;
-      if (!rule) return await failRules(`Missing rule. Usage: dora rules ${name} <rule>.`, mode);
+      if (!rule) return await failRules(`Missing rule. Usage: dora rule ${name} <rule>.`, mode);
       await withScope(args, mode, async (config, scope) => {
         const result = applyOverride(config, scope, rule, value);
         if (!result.ok) return await failRules(result.error, mode);
@@ -165,7 +165,7 @@ const rulesSet = defineCommand({
   async run({ args }) {
     const mode = modeFor(args);
     const rule = args.rule as string | undefined;
-    if (!rule) return await failRules("Missing rule. Usage: dora rules set <rule> severity=<level>.", mode);
+    if (!rule) return await failRules("Missing rule. Usage: dora rule set <rule> severity=<level>.", mode);
     const assignment = args.assignment as string | undefined;
     if (!assignment) {
       return await failRules("Missing severity assignment. Expected severity=error|warning|fyi.", mode);
@@ -198,7 +198,7 @@ const rulesPackage = defineCommand({
   async run({ args }) {
     const mode = modeFor(args);
     const packageName = args.name as string | undefined;
-    if (!packageName) return await failRules("Missing package. Usage: dora rules package <name>.", mode);
+    if (!packageName) return await failRules("Missing package. Usage: dora rule package <name>.", mode);
     await withScope(args, mode, async (config, scope) => {
       const result = applyPackage(config, scope, packageName);
       if (!result.ok) return await failRules(result.error, mode);
@@ -220,7 +220,7 @@ const rulesExplain = defineCommand({
   async run({ args }) {
     const mode = modeFor(args);
     const rule = args.rule as string | undefined;
-    if (!rule) return await failRules("Missing rule. Usage: dora rules explain <rule>.", mode);
+    if (!rule) return await failRules("Missing rule. Usage: dora rule explain <rule>.", mode);
     await withScope(args, mode, async (config, scope, cwd) => {
       const result = explainRule(config, scope.kind === "global" ? "" : cwd, rule);
       if (!result.ok) return await failRules(result.error, mode);
@@ -240,7 +240,7 @@ async function runInteractive(): Promise<void> {
   const scopeResult = resolveScope(config, { cwd });
   const scope: Scope = scopeResult.ok ? scopeResult.scope : { kind: "global" };
 
-  ui.heading("dora rules");
+  ui.heading("dora rule");
   ui.dim(scope.kind === "project" ? `Scope: project (${scope.name})` : "Scope: global");
 
   for (;;) {
@@ -289,7 +289,12 @@ async function runInteractive(): Promise<void> {
 }
 
 export default defineCommand({
-  meta: { name: "rules", description: "View and configure dora review rules" },
+  meta: { name: "rule", description: "List and configure review rules; new" },
+  args: {
+    format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
+    ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
+  },
   subCommands: {
     list: rulesList,
     on: onOff("on", "on"),
@@ -297,12 +302,11 @@ export default defineCommand({
     set: rulesSet,
     package: rulesPackage,
     explain: rulesExplain,
+    new: () => import("./new.js").then((m) => m.default),
   },
-  async run() {
-    if (!isInteractive()) {
-      ui.info("Usage: dora rules <list|on|off|set|package|explain> [--global|--project]");
-      return await exit(0);
-    }
-    await runInteractive();
+  async run({ args }) {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "rule" && cliArgs[1] && !cliArgs[1].startsWith("-")) return;
+    await rulesList.run!({ args } as never);
   },
 });

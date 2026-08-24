@@ -34,21 +34,21 @@ You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not ru
 ## Commands
 
 ```sh
-dora                         # scan
-dora review --quick .        # Findings first, no LLM
+dora                         # short --help
+dora review --quick .        # first job; Findings; no LLM
 dora review --quick --json
+dora scan                    # workspace map
 dora fix . --yes             # mechanical; no TTY
-dora new skill --for claude --name review-pr --yes
+dora skill new --for claude --name review-pr --yes
 dora skill unused            # list Remove candidates
 dora skill remove ghost --yes
-dora skill restore ghost --yes
 dora memory add "Never use default exports" --weight 8
-dora reconcile --dry-run
-dora sessions
-dora sessions show <id>      # short table id is enough if unique
+dora conflicts --dry-run
+dora session
+dora session show <id>       # short table id is enough if unique
 dora config setup
 dora --help                  # first loop
-dora agent-help              # live map
+dora --help --json           # live map
 ```
 
 More: [doraval.dev/commands](https://doraval.dev/commands/).
@@ -72,7 +72,7 @@ bun run build                  # emit bin/doraval.js
 |------|----------|
 | `src/cli/` | citty CLI surface (`dora` / `doraval`) |
 | `src/core/` | Scan, review, fix, memory, sessions, scaffold |
-| `src/providers/` | Packaging / provider specs (`dora new`, `dora providers`) |
+| `src/providers/` | Packaging / provider specs (`dora skill new`, `dora plugin bump`) |
 | `skills/doraval/` | Agent skill shipped via `npx skills add saif-shines/doraval` |
 | `apps/website/` | Docs site ([Blume](https://github.com/saif-shines/blume)) |
 | `scripts/` | Release, platform packages, publish helpers |

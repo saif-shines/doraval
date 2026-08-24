@@ -33,7 +33,7 @@ describe("buildCapabilities", () => {
     expect(skill).toBeDefined();
     expect(skill.label).toBe("writes");
     expect(skill.examples.some((e) => e.includes("remove"))).toBe(true);
-    expect(skill.examples.some((e) => e.includes("restore"))).toBe(true);
+    expect(skill.examples.some((e) => e.includes("new"))).toBe(true);
     expect(skill.examples.some((e) => e.includes("unused"))).toBe(false);
   });
 

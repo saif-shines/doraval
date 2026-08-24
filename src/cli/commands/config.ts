@@ -599,19 +599,17 @@ const configSetup = defineCommand({
 export default defineCommand({
   meta: {
     name: "config",
-    description: "Get, set, or interactively edit config",
+    description: "List, get, or set config (Judge keys)",
+  },
+  args: {
+    format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
+    ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
   },
   subCommands: { set: configSet, get: configGet, setup: configSetup },
-  async run() {
-    if (!isInteractive()) {
-      ui.info(
-        "Usage: doraval config set <key> <value>  |  get [key]  |  setup  |  (TTY: interactive hub)",
-      );
-      ui.dim(`  ${KEY_HELP}`);
-      await exit(0);
-      return;
-    }
-    await runInteractiveHub();
-    await exit(0);
+  async run({ args }) {
+    const cliArgs = process.argv.slice(2);
+    if (cliArgs[0] === "config" && cliArgs[1] && !cliArgs[1].startsWith("-")) return;
+    await configGet.run!({ args: { key: undefined, format: args.format, json: args.json, ci: args.ci } } as never);
   },
 });

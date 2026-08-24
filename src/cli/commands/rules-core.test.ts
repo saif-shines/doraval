@@ -29,6 +29,7 @@ test("rules command exports a citty command", () => {
     "set",
     "package",
     "explain",
+    "new",
   ]);
 });
 

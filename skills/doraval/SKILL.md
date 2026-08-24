@@ -85,7 +85,7 @@ The gate is Review. Do not skip it.
    Weight is priority (1–10, default 5). `≥ 7` is a hard rule (enforced in Review). Do not invent memories from your own inferences.
 
    To write hard rules into `AGENTS.md`, run `dora memory promote --dry-run`, then `dora memory promote --yes` only when the user wants that. Never run bare `promote`. It prompts.
-8. **Contradictions.** If Review or Scan reports a cross-agent conflict, run `dora reconcile --dry-run` and ask the user. Never run bare `reconcile`. Use `--apply` only after the user confirms.
+8. **Contradictions.** If Review or Scan reports a cross-agent conflict, run `dora conflicts --dry-run` and ask the user. Never run bare `conflicts`. Use `--yes` only after the user confirms.
 
 ## When to reach for each verb
 
@@ -97,8 +97,8 @@ The gate is Review. Do not skip it.
 | CI / non-interactive subagent | add `--ci` |
 | Mechanical errors in Findings | `dora fix <path> --dry-run`, then `--yes` |
 | User states a durable rule | `dora memory add "<rule>" --weight <1-10>` |
-| Two agents disagree | `dora reconcile --dry-run`, then ask the user |
-| Fast workspace check (no Review) | `dora --yes` (bare Scan; `--yes` skips the TTY confirm) |
+| Two agents disagree | `dora conflicts --dry-run`, then ask the user |
+| Fast workspace check (no Review) | `dora scan --yes` |
 | Find unused Authored Skills | `dora skill unused` |
 | Scan or Review reports R034 Remove candidate | `dora skill unused`, then `dora skill remove <name> --dry-run`, then `--yes` |
 | Need a Quarantined Global Skill back | `dora skill restore <name> --yes` |
@@ -109,12 +109,12 @@ You run in a loop that cannot answer TTY prompts.
 
 - MUST treat the exit code as truth: `0` clean, `1` issues, `2` could not run. MUST NOT report done on `1` or `2`.
 - MUST run `dora review --quick` first so Findings show before `--format json`.
-- MUST apply `fix`, `memory promote`, `skill remove`, and `skill restore` with `--yes` or `--dry-run`. MUST NOT run bare `dora fix`, `dora reconcile`, `dora memory promote`, `dora skill remove`, or `dora skill restore`.
+- MUST apply `fix`, `memory promote`, `skill remove`, and `skill restore` with `--yes` or `--dry-run`. MUST NOT run bare `dora fix`, `dora conflicts`, `dora memory promote`, `dora skill remove`, or `dora skill restore`.
 - MUST NOT write to `dora memory` from your own inference. Add a memory only when the user states a durable rule.
 - MUST add `--ci` in CI or a non-interactive subagent.
 - MUST look up flags with `dora <command> --help`. MUST NOT copy a flag catalog into this skill.
 
-Bare Scan (`dora`) asks a human on a TTY. A detected agent skips that gate. Use `dora --yes` or `dora --json` if you want no prompt. Live command map: `dora agent-help` (add `--json` to parse). Short verb list: [`references/commands.md`](references/commands.md).
+Empty `dora` prints `--help`. Scan is `dora scan`. A human TTY may see a Scan proceed prompt; a detected agent skips it. Use `dora scan --yes` or `dora scan --json`. Live command map: `dora --help --json`. Short verb list: [`references/commands.md`](references/commands.md).
 
 ## What dora does not do
 

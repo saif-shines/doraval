@@ -54,7 +54,7 @@ export default defineCommand({
 
     if (loaded.sessions.length === 0) {
       summaryLine("No recent sessions. Cannot mark Remove candidates.");
-      nextAction("dora sessions");
+      nextAction("dora session");
       ui.blank();
       await exit(0);
       return;

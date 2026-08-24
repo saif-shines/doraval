@@ -40,12 +40,47 @@ describe("doraval CLI", () => {
       expect(yes).toBeGreaterThan(dry);
     });
 
-    test("scan --help shows bare dora and json/yes", () => {
+    test("scan --help shows dora scan and json/yes", () => {
       const { exitCode, stdout } = runDoraval(["scan", "--help"]);
       expect(exitCode).toBe(0);
-      expect(stdout).toMatch(/\bdora\b/);
+      expect(stdout).toContain("dora scan");
       expect(stdout).toContain("--json");
       expect(stdout).toContain("--yes");
+    });
+
+    test("empty argv prints short --help, not Scan", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-bare-"));
+      mkdirSync(join(dir, ".git"));
+      const { exitCode, stdout, stderr } = runDoraval([], { cwd: dir });
+      const out = stdout + stderr;
+      expect(exitCode).toBe(0);
+      expect(out).toContain("dora review --quick");
+      expect(out).toContain("npx skills add saif-shines/doraval");
+      expect(out).not.toContain("No agent context found");
+      const reviewAt = out.indexOf("review");
+      const scanAt = out.indexOf("scan");
+      expect(reviewAt).toBeGreaterThan(-1);
+      expect(scanAt).toBeGreaterThan(reviewAt);
+      expect(out).not.toContain("skill = reusable SKILL.md");
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--help --json is the live map", () => {
+      const { exitCode, stdout } = runDoraval(["--help", "--json"]);
+      expect(exitCode).toBe(0);
+      const m = JSON.parse(stdout);
+      expect(Array.isArray(m.commands)).toBe(true);
+      expect(m.commands[0].name).toBe("review");
+      expect(m.commands.some((c: { name: string }) => c.name === "agent-help")).toBe(false);
+      expect(m.commands.some((c: { name: string; label: string }) => c.name === "review" && c.label === "read-only")).toBe(true);
+      expect(m.commands.some((c: { name: string; label: string }) => c.name === "fix" && c.label === "writes")).toBe(true);
+    });
+
+    test("empty --json is the same map", () => {
+      const { exitCode, stdout } = runDoraval(["--json"]);
+      expect(exitCode).toBe(0);
+      const m = JSON.parse(stdout);
+      expect(m.commands[0].name).toBe("review");
     });
 
     test("--version prints package version", () => {
@@ -58,13 +93,13 @@ describe("doraval CLI", () => {
 
   });
 
-  test("dora new skill --for claude --yes scaffolds standalone", () => {
+  test("dora skill new --for claude --yes scaffolds standalone", () => {
     const tmp = join(import.meta.dir, "../../tmp-dora-new-skill-test");
     rmSync(tmp, { recursive: true, force: true });
     mkdirSync(tmp, { recursive: true });
 
     const { exitCode, stdout, stderr } = runDoraval(
-      ["new", "skill", "review-pr", "--for", "claude", "--intent", "self", "--yes", "--description", "Reviews PRs"],
+      ["skill", "new", "review-pr", "--for", "claude", "--intent", "self", "--yes", "--description", "Reviews PRs"],
       { cwd: tmp },
     );
 
@@ -75,13 +110,13 @@ describe("doraval CLI", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  test("dora new rule --for cursor --yes writes .cursor/rules", () => {
+  test("dora rule new --for cursor --yes writes .cursor/rules", () => {
     const tmp = join(import.meta.dir, "../../tmp-dora-new-rule-test");
     rmSync(tmp, { recursive: true, force: true });
     mkdirSync(tmp, { recursive: true });
 
     const { exitCode } = runDoraval(
-      ["new", "rule", "no-defaults", "--for", "cursor", "--yes", "--description", "Never use default exports"],
+      ["rule", "new", "no-defaults", "--for", "cursor", "--yes", "--description", "Never use default exports"],
       { cwd: tmp },
     );
 
@@ -91,13 +126,13 @@ describe("doraval CLI", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  test("dora new agent --for claude --yes writes subagent file", () => {
+  test("dora agent new --for claude --yes writes subagent file", () => {
     const tmp = join(import.meta.dir, "../../tmp-dora-new-agent-test");
     rmSync(tmp, { recursive: true, force: true });
     mkdirSync(tmp, { recursive: true });
 
     const { exitCode } = runDoraval(
-      ["new", "agent", "explorer", "--for", "claude", "--yes", "--description", "Explores code"],
+      ["agent", "new", "explorer", "--for", "claude", "--yes", "--description", "Explores code"],
       { cwd: tmp },
     );
 
@@ -107,13 +142,13 @@ describe("doraval CLI", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  test("dora new plugin --for codex --yes scaffolds plugin packaging", () => {
+  test("dora plugin new --for codex --yes scaffolds plugin packaging", () => {
     const tmp = join(import.meta.dir, "../../tmp-dora-new-plugin-test");
     rmSync(tmp, { recursive: true, force: true });
     mkdirSync(tmp, { recursive: true });
 
     const { exitCode } = runDoraval(
-      ["new", "plugin", "ship-it", "--for", "codex", "--yes", "--description", "Ship it"],
+      ["plugin", "new", "ship-it", "--for", "codex", "--yes", "--description", "Ship it"],
       { cwd: tmp },
     );
 
@@ -124,13 +159,10 @@ describe("doraval CLI", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  test("dora providers is packaging/spec reference (not repo support)", () => {
-    const { exitCode, stdout, stderr } = runDoraval(["providers"]);
-    const out = stdout + stderr;
-    expect(exitCode).toBe(0);
-    expect(out).toMatch(/packaging\/spec/i);
-    expect(out).toContain("dora");
-    expect(out).toMatch(/claude/i);
+  test("dora providers hard-breaks to config setup", () => {
+    const { exitCode, stderr } = runDoraval(["providers"]);
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain("dora config setup");
   });
 
   test("unknown provider group is rejected (Q2: wrappers removed)", () => {
@@ -171,7 +203,7 @@ describe("doraval CLI", () => {
       const parsed = JSON.parse(stdout);
       expect(parsed.empty).toBe(true);
       expect(Array.isArray(parsed.agents)).toBe(true);
-      expect(parsed.suggestions[0].command).toContain("dora new");
+      expect(parsed.suggestions[0].command).toContain("dora skill new");
       rmSync(dir, { recursive: true, force: true });
     });
 
@@ -195,13 +227,13 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
-    test("bare invocation accepts --format json in both space and equals form", () => {
+    test("scan accepts --format json in both space and equals form", () => {
       const dir = emptyRepo();
-      const spaceForm = runDoraval(["--format", "json", "--cwd", dir]);
+      const spaceForm = runDoraval(["scan", "--format", "json", "--cwd", dir]);
       expect(spaceForm.exitCode).toBe(0);
       expect(JSON.parse(spaceForm.stdout).empty).toBe(true);
 
-      const equalsForm = runDoraval(["--format=json", "--cwd", dir]);
+      const equalsForm = runDoraval(["scan", "--format=json", "--cwd", dir]);
       expect(equalsForm.exitCode).toBe(0);
       expect(JSON.parse(equalsForm.stdout).empty).toBe(true);
       rmSync(dir, { recursive: true, force: true });
@@ -212,7 +244,7 @@ describe("doraval CLI", () => {
       const { stdout, stderr } = runDoraval(["scan", "--cwd", dir]);
       expect(stdout).toBe(""); // table mode: diagnostics on stderr, stdout stays JSON-only
       expect(stderr).toContain("No agent context found");
-      expect(stderr).toContain("dora new");
+      expect(stderr).toContain("dora skill new");
       rmSync(dir, { recursive: true, force: true });
     });
   });
@@ -269,76 +301,44 @@ describe("doraval CLI", () => {
     });
   });
 
-  describe("bare dora", () => {
-    test("no args runs the scan, not the banner", () => {
-      const dir = mkdtempSync(join(tmpdir(), "dora-bare-"));
-      mkdirSync(join(dir, ".git"));
-      const { stdout, stderr, exitCode } = runDoraval([], { cwd: dir });
-      expect(exitCode).toBe(0);
-      expect(stderr).toContain("No agent context found");
-      expect(stdout + stderr).not.toContain("⣿"); // Doraemon ASCII art is gone
-      rmSync(dir, { recursive: true, force: true });
+  describe("retired verbs", () => {
+    test("agent-help exits 2 with Next to --help --json", () => {
+      const { exitCode, stderr } = runDoraval(["agent-help"]);
+      expect(exitCode).toBe(2);
+      expect(stderr).toContain("Next:");
+      expect(stderr).toMatch(/dora --help/);
+    });
+
+    test("new / sessions / rules / bump / reconcile exit 2", () => {
+      for (const [cmd, next] of [
+        ["new", "dora skill new"],
+        ["sessions", "dora session"],
+        ["rules", "dora rule"],
+        ["bump", "dora plugin bump"],
+        ["reconcile", "dora conflicts"],
+      ] as const) {
+        const { exitCode, stderr } = runDoraval([cmd]);
+        expect(exitCode).toBe(2);
+        expect(stderr).toContain(next);
+      }
     });
   });
 
-  describe("dora agent-help", () => {
-    test("lists every verb with a read-only or writes label", () => {
-      const { exitCode, stdout, stderr } = runDoraval(["agent-help"]);
-      const out = stdout + stderr;
-      expect(exitCode).toBe(0);
-      expect(out).toContain("review");
-      expect(out).toContain("fix");
-      expect(out).toContain("read-only");
-      expect(out).toContain("writes");
-      expect(out).toContain("dora review --quick");
-    });
+  test("dora skill lists Authored skills", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dora-skill-list-"));
+    mkdirSync(join(dir, ".git"));
+    mkdirSync(join(dir, ".claude", "skills", "listed"), { recursive: true });
+    writeFileSync(join(dir, ".claude", "skills", "listed", "SKILL.md"), "---\nname: listed\ndescription: x\n---\n# listed\n");
+    const { exitCode, stdout, stderr } = runDoraval(["skill", "--cwd", dir]);
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("listed");
+    rmSync(dir, { recursive: true, force: true });
+  });
 
-    test("lists skill unused as read-only and skill as writes", () => {
-      const { exitCode, stdout, stderr } = runDoraval(["agent-help"]);
-      const out = stdout + stderr;
-      expect(exitCode).toBe(0);
-      expect(out).toMatch(/skill unused\s+read-only/);
-      expect(out).toMatch(/skill\s+writes/);
-      expect(out).toContain("dora skill unused");
-    });
-
-    test("--json is the same tree", () => {
-      const { exitCode, stdout } = runDoraval(["agent-help", "--json"]);
-      expect(exitCode).toBe(0);
-      const m = JSON.parse(stdout);
-      expect(m.commands.some((c: { name: string; label: string }) => c.name === "review" && c.label === "read-only")).toBe(true);
-      expect(m.commands.some((c: { name: string; label: string }) => c.name === "fix" && c.label === "writes")).toBe(true);
-      expect(m.commands.some((c: { name: string; label: string }) => c.name === "skill unused" && c.label === "read-only")).toBe(true);
-      expect(m.commands.some((c: { name: string; label: string }) => c.name === "skill" && c.label === "writes")).toBe(true);
-      const unused = m.commands.find((c: { name: string }) => c.name === "skill unused");
-      expect(unused.examples).toContain("dora skill unused");
-      expect(unused.flags["--yes"]).toBeUndefined();
-      expect(unused.flags["--dry-run"]).toBeUndefined();
-      expect(m.commands.find((c: { name: string }) => c.name === "scan").examples.length).toBeGreaterThan(0);
-    });
-
-    test("agent-help review drills into one verb", () => {
-      const { exitCode, stdout, stderr } = runDoraval(["agent-help", "review"]);
-      const out = stdout + stderr;
-      expect(exitCode).toBe(0);
-      expect(out).toContain("review");
-      expect(out).toContain("read-only");
-      expect(out).toContain("--quick");
-    });
-
-    test("agent-help skill drills into writes row", () => {
-      const { exitCode, stdout, stderr } = runDoraval(["agent-help", "skill"]);
-      const out = stdout + stderr;
-      expect(exitCode).toBe(0);
-      expect(out).toContain("writes");
-      expect(out).toContain("dora skill remove");
-    });
-
-    test("unknown name exits 1 with Next", () => {
-      const { exitCode, stderr } = runDoraval(["agent-help", "nosuch"]);
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain("Next: dora agent-help");
-    });
+  test("review --help has no planned --for / --agent", () => {
+    const { stdout } = runDoraval(["review", "--help"]);
+    expect(stdout).not.toMatch(/--for.*planned/);
+    expect(stdout).not.toMatch(/--agent.*planned/);
   });
 
   describe("dora skill remove", () => {
@@ -655,11 +655,11 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
-    test("detected agent reconcile and promote also exit 2", () => {
+    test("detected agent conflicts and promote also exit 2", () => {
       const dir = fixableSkillRepo();
-      const rec = runDoraval(["reconcile", "--cwd", dir], { env: { CI: "1" } });
+      const rec = runDoraval(["conflicts", "--cwd", dir], { env: { CI: "1" } });
       expect(rec.exitCode).toBe(2);
-      expect(rec.stderr).toContain("reconcile --dry-run");
+      expect(rec.stderr).toContain("conflicts --dry-run");
       const pro = runDoraval(["memory", "promote", "--cwd", dir], { env: { CI: "1" } });
       expect(pro.exitCode).toBe(2);
       expect(pro.stderr).toContain("promote --dry-run");
@@ -868,10 +868,10 @@ describe("doraval CLI", () => {
     });
   });
 
-  describe("dora sessions", () => {
+  describe("dora session", () => {
     test("lists sessions from an injected-free real run (no adapters detected in a scratch dir is fine — just must not crash)", () => {
       const dir = mkdtempSync(join(tmpdir(), "dora-sessions-"));
-      const { stdout, exitCode } = runDoraval(["sessions", "--format", "json"], { cwd: dir });
+      const { stdout, exitCode } = runDoraval(["session", "--format", "json"], { cwd: dir });
       const parsed = JSON.parse(stdout);
       expect(Array.isArray(parsed)).toBe(true);
       expect(exitCode).toBe(0);
@@ -880,7 +880,7 @@ describe("doraval CLI", () => {
 
     test("unknown --agent name gets an empty list, not a crash", () => {
       const dir = mkdtempSync(join(tmpdir(), "dora-sessions-"));
-      const { stdout, exitCode } = runDoraval(["sessions", "--agent", "codex", "--format", "json"], { cwd: dir });
+      const { stdout, exitCode } = runDoraval(["session", "--agent", "codex", "--format", "json"], { cwd: dir });
       const parsed = JSON.parse(stdout);
       expect(parsed).toEqual([]);
       expect(exitCode).toBe(0);
@@ -889,13 +889,13 @@ describe("doraval CLI", () => {
 
     test("show with an id that doesn't exist exits 1", () => {
       const dir = mkdtempSync(join(tmpdir(), "dora-sessions-"));
-      const { exitCode } = runDoraval(["sessions", "show", "no-such-session-id"], { cwd: dir });
+      const { exitCode } = runDoraval(["session", "show", "no-such-session-id"], { cwd: dir });
       expect(exitCode).toBe(1);
       rmSync(dir, { recursive: true, force: true });
     });
 
     test("sessions --help does not accidentally run show", () => {
-      const { stdout, stderr, exitCode } = runDoraval(["sessions", "--help"]);
+      const { stdout, stderr, exitCode } = runDoraval(["session", "--help"]);
       expect(exitCode).toBe(0);
       expect((stdout + stderr)).toContain("show");
     });

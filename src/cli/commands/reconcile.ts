@@ -61,15 +61,10 @@ function printJudgmentNext(items: ReconcilePlan["items"]): void {
 
 export default defineCommand({
   meta: {
-    name: "reconcile",
+    name: "conflicts",
     description: "Settle cross-agent contradictions (shared AGENTS.md)",
   },
   args: {
-    apply: {
-      type: "boolean",
-      description: "Non-interactive: take each recommended resolution",
-      default: false,
-    },
     "dry-run": {
       type: "boolean",
       description: "List contradictions and planned edits, write nothing",
@@ -88,12 +83,12 @@ export default defineCommand({
     const mode = resolveOutputMode({ format: args.format as string, json: args.json as boolean });
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
     const dryRun = Boolean(args["dry-run"]);
-    const applyFlag = Boolean(args.apply);
-    const yes = Boolean(args.yes) || applyFlag;
+    const applyFlag = Boolean(args.yes);
+    const yes = applyFlag;
     preflight(mode, reconcilePreflightMessage({ dryRun, apply: applyFlag }));
     const interactive = canPromptInteractively(yes, dryRun, mode.format);
     if (shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun, apply: applyFlag })) {
-      refuseAgentWrite("dora reconcile --dry-run");
+      refuseAgentWrite("dora conflicts --dry-run");
       await exit(2);
       return;
     }
@@ -118,7 +113,7 @@ export default defineCommand({
 
         const picks = new Map<string, ResolutionOption>();
         ui.blank();
-        ui.heading("dora reconcile");
+        ui.heading("dora conflicts");
         ui.dim("  Detect contradictions → you pick → dora applies file edits (no LLM unless noted).");
         ui.blank();
         ui.dim(`  ${preview.contradictions.length} contradiction(s)`);
@@ -186,7 +181,7 @@ export default defineCommand({
 
       // human table
       ui.blank();
-      ui.heading("dora reconcile");
+      ui.heading("dora conflicts");
       ui.dim("  Detect contradictions → you pick → dora applies file edits (no LLM unless noted).");
       ui.blank();
 
@@ -256,7 +251,7 @@ export default defineCommand({
       }
 
       if (!doApply) {
-        ui.write(`  ${pc.dim("skipped")} — re-run with ${pc.bold("--apply")} or ${pc.bold("--yes")} to write`);
+        ui.write(`  ${pc.dim("skipped")} — re-run with ${pc.bold("--yes")} to write`);
         summaryLine("nothing written");
         await exit(0);
         return;

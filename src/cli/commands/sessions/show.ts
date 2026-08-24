@@ -13,7 +13,7 @@ function truncate(value: unknown, max: number): string {
 export default defineCommand({
   meta: { name: "show", description: "Show a session's timeline: turns, tool calls, skills invoked" },
   args: {
-    id: { type: "positional", description: "Session ID (from `dora sessions`)", required: true },
+    id: { type: "positional", description: "Session ID (from `dora session`)", required: true },
     agent: { type: "string", description: "Restrict lookup to this agent" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     json: { type: "boolean", description: "Alias for --format json", default: false },
@@ -30,7 +30,7 @@ export default defineCommand({
           emitError(new Error(`No session found matching "${id}"`), mode);
         } else {
           ui.blank();
-          ui.write(`  ${pc.red("✗")} No session found matching "${id}". Run ${pc.dim("dora sessions")} to list available ids.`);
+          ui.write(`  ${pc.red("✗")} No session found matching "${id}". Run ${pc.dim("dora session")} to list available ids.`);
           ui.blank();
         }
         await exit(1);

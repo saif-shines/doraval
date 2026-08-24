@@ -69,7 +69,7 @@ function renderHuman(r: ScanResult): void {
     ui.blank();
     ui.info("  No agent context found.");
     ui.info("  This project has no skills, plugins, rules, or agent config yet.");
-    nextAction("dora new    Create your first skill or rule");
+    nextAction("dora skill new    Create your first skill or rule");
     return;
   }
 
@@ -194,9 +194,9 @@ export default defineCommand({
       "Scan the repo: agent surfaces, skill health, next actions",
       "",
       "Examples:",
-      "  dora",
-      "  dora --json",
-      "  dora --yes",
+      "  dora scan",
+      "  dora scan --json",
+      "  dora scan --yes",
       "Exit: 0 clean · 1 issues · 2 could not run",
     ].join("\n"),
   },

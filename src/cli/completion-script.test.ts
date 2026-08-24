@@ -21,7 +21,7 @@ describe("buildCompletionScript", () => {
     expect(r.script).toContain("scan");
     expect(r.script).toContain("memory)");
     expect(r.script).toMatch(/compgen -W ".*add/);
-    expect(r.script).toContain("rules) COMPREPLY=");
+    expect(r.script).toContain("rule) COMPREPLY=");
     expect(r.script).toContain("list on off set package explain");
   });
 
@@ -31,8 +31,8 @@ describe("buildCompletionScript", () => {
     if (!r.ok) return;
     expect(r.script).toContain("#compdef doraval");
     expect(r.script).toContain("_arguments");
-    expect(r.script).toContain("sessions)");
-    expect(r.script).toContain("rules)");
+    expect(r.script).toContain("session)");
+    expect(r.script).toContain("rule)");
     expect(r.script).toContain("list on off set package explain");
   });
 
@@ -42,7 +42,7 @@ describe("buildCompletionScript", () => {
     if (!r.ok) return;
     expect(r.script).toContain("complete -c doraval");
     expect(r.script).toContain("config");
-    expect(r.script).toContain("__fish_seen_subcommand_from rules");
+    expect(r.script).toContain("__fish_seen_subcommand_from rule");
     expect(r.script).toContain("list on off set package explain");
   });
 

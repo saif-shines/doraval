@@ -3,19 +3,21 @@
  * Invoked via root flag: `dora --completion bash|zsh|fish`
  * Command names come from command-tree so scripts stay in sync with the CLI.
  */
-import { topLevelSubCommands, memory, skill } from "./command-tree.js";
+import { topLevelSubCommands, memory, skill, agent, plugin } from "./command-tree.js";
 
 const commands = Object.keys(topLevelSubCommands);
 
 async function subCommandNames(name: string): Promise<string[]> {
   if (name === "memory") return Object.keys(memory.subCommands ?? {});
   if (name === "skill") return Object.keys(skill.subCommands ?? {});
-  if (name === "config" || name === "rules") {
+  if (name === "agent") return Object.keys(agent.subCommands ?? {});
+  if (name === "plugin") return Object.keys(plugin.subCommands ?? {});
+  if (name === "config" || name === "rule") {
     const mod = await topLevelSubCommands[name]();
     return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
   }
-  if (name === "sessions") {
-    const mod = await topLevelSubCommands.sessions();
+  if (name === "session") {
+    const mod = await topLevelSubCommands.session();
     return Object.keys((mod as { subCommands?: Record<string, unknown> }).subCommands ?? {});
   }
   return [];
@@ -31,7 +33,7 @@ export async function buildCompletionScript(
   }
 
   const subCommands: Record<string, string[]> = {};
-  for (const name of ["memory", "config", "rules", "sessions", "skill"]) {
+  for (const name of ["memory", "config", "rule", "session", "skill", "agent", "plugin"]) {
     subCommands[name] = await subCommandNames(name);
   }
 
@@ -52,8 +54,10 @@ _doraval_completions() {
       memory) COMPREPLY=( $(compgen -W "${(subCommands.memory ?? []).join(" ")}" -- "$cur") ) ;;
       skill) COMPREPLY=( $(compgen -W "${(subCommands.skill ?? []).join(" ")}" -- "$cur") ) ;;
       config) COMPREPLY=( $(compgen -W "${(subCommands.config ?? []).join(" ")}" -- "$cur") ) ;;
-      rules) COMPREPLY=( $(compgen -W "${(subCommands.rules ?? []).join(" ")}" -- "$cur") ) ;;
-      sessions) COMPREPLY=( $(compgen -W "${(subCommands.sessions ?? []).join(" ")}" -- "$cur") ) ;;
+      rule) COMPREPLY=( $(compgen -W "${(subCommands.rule ?? []).join(" ")}" -- "$cur") ) ;;
+      session) COMPREPLY=( $(compgen -W "${(subCommands.session ?? []).join(" ")}" -- "$cur") ) ;;
+      agent) COMPREPLY=( $(compgen -W "${(subCommands.agent ?? []).join(" ")}" -- "$cur") ) ;;
+      plugin) COMPREPLY=( $(compgen -W "${(subCommands.plugin ?? []).join(" ")}" -- "$cur") ) ;;
     esac
   fi
 }
@@ -90,11 +94,17 @@ _doraval() {
         config)
           _describe 'subcommand' (${(subCommands.config ?? []).join(" ")})
           ;;
-        rules)
-          _describe 'subcommand' (${(subCommands.rules ?? []).join(" ")})
+        rule)
+          _describe 'subcommand' (${(subCommands.rule ?? []).join(" ")})
           ;;
-        sessions)
-          _describe 'subcommand' (${(subCommands.sessions ?? []).join(" ")})
+        session)
+          _describe 'subcommand' (${(subCommands.session ?? []).join(" ")})
+          ;;
+        agent)
+          _describe 'subcommand' (${(subCommands.agent ?? []).join(" ")})
+          ;;
+        plugin)
+          _describe 'subcommand' (${(subCommands.plugin ?? []).join(" ")})
           ;;
       esac
       ;;
@@ -116,8 +126,10 @@ complete -c doraval -n '__fish_use_subcommand' -a '${commands.join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from memory' -a '${(subCommands.memory ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from skill' -a '${(subCommands.skill ?? []).join(" ")}'
 complete -c doraval -n '__fish_seen_subcommand_from config' -a '${(subCommands.config ?? []).join(" ")}'
-complete -c doraval -n '__fish_seen_subcommand_from rules' -a '${(subCommands.rules ?? []).join(" ")}'
-complete -c doraval -n '__fish_seen_subcommand_from sessions' -a '${(subCommands.sessions ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from rule' -a '${(subCommands.rule ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from session' -a '${(subCommands.session ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from agent' -a '${(subCommands.agent ?? []).join(" ")}'
+complete -c doraval -n '__fish_seen_subcommand_from plugin' -a '${(subCommands.plugin ?? []).join(" ")}'
 `,
     };
   }

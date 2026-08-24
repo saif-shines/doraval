@@ -10,21 +10,31 @@
 import { defineCommand, showUsage } from "citty";
 
 /**
- * Define a command group that shows its own usage when invoked bare
- * (e.g. `dora skill`) but defers to the matched subcommand otherwise.
- * Collapses the repeated `run()` guard that used to be hand-written per group.
+ * Command group: bare invocation lists (or usage), otherwise the subcommand runs.
  */
 export function defineGroup(
   name: string,
   description: string,
-  subCommands: Parameters<typeof defineCommand>[0]["subCommands"]
+  subCommands: Parameters<typeof defineCommand>[0]["subCommands"],
+  list?: () => Promise<{ default: { run?: (ctx: unknown) => unknown } }>,
 ) {
   const group = defineCommand({
     meta: { name, description },
+    args: {
+      format: { type: "string", description: "Output format: table | json", default: "table" },
+      json: { type: "boolean", description: "Alias for --format json", default: false },
+      ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
+      cwd: { type: "string", description: "Working directory override" },
+    },
     subCommands,
-    run() {
+    async run(ctx) {
       const cliArgs = process.argv.slice(2);
-      if (cliArgs[0] === name && cliArgs.length > 1) return;
+      if (cliArgs[0] === name && cliArgs[1] && !cliArgs[1].startsWith("-")) return;
+      if (list) {
+        const m = await list();
+        await m.default.run?.(ctx);
+        return;
+      }
       showUsage(group);
     },
   });
@@ -33,12 +43,14 @@ export function defineGroup(
 
 export const skill = defineGroup(
   "skill",
-  "List unused Skills; Remove or Restore",
+  "List Skills; unused, remove, restore, new",
   {
     unused: () => import("./commands/skill/unused.js").then((m) => m.default),
     remove: () => import("./commands/skill/remove.js").then((m) => m.default),
     restore: () => import("./commands/skill/restore.js").then((m) => m.default),
-  }
+    new: () => import("./commands/new.js").then((m) => m.default),
+  },
+  () => import("./commands/skill/list.js"),
 );
 
 export const memory = defineGroup(
@@ -52,29 +64,44 @@ export const memory = defineGroup(
     stash: () => import("./commands/memory/stash.js").then((m) => m.default),
     restore: () => import("./commands/memory/restore.js").then((m) => m.default),
     sync: () => import("./commands/memory/sync.js").then((m) => m.default),
-  }
+  },
+  () => import("./commands/memory/list.js"),
 );
 
-// config command module already defines its own subCommands (set/get)
+export const agent = defineGroup(
+  "agent",
+  "List Subagents; new",
+  {
+    new: () => import("./commands/new.js").then((m) => m.default),
+  },
+  () => import("./commands/agent/list.js"),
+);
+
+export const plugin = defineGroup(
+  "plugin",
+  "List Plugins; new; bump semver",
+  {
+    new: () => import("./commands/new.js").then((m) => m.default),
+    bump: () => import("./commands/bump.js").then((m) => m.default),
+  },
+  () => import("./commands/plugin/list.js"),
+);
+
 export const config = () => import("./commands/config.js").then((m) => m.default);
-export const rules = () => import("./commands/rules.js").then((m) => m.default);
+export const rule = () => import("./commands/rules.js").then((m) => m.default);
 
 /** The exact subCommands map used to build the root `doraval` command. */
 export const topLevelSubCommands = {
-  // ── primary ────────────────────────────────────────────────────
-  scan: () => import("./commands/scan.js").then((m) => m.default),
   review: () => import("./commands/review.js").then((m) => m.default),
   fix: () => import("./commands/fix.js").then((m) => m.default),
-  new: () => import("./commands/new.js").then((m) => m.default),
+  scan: () => import("./commands/scan.js").then((m) => m.default),
   skill: () => Promise.resolve(skill),
+  rule,
+  session: () => import("./commands/sessions.js").then((m) => m.default),
   memory: () => Promise.resolve(memory),
-  reconcile: () => import("./commands/reconcile.js").then((m) => m.default),
+  conflicts: () => import("./commands/reconcile.js").then((m) => m.default),
   config,
-  rules,
-  sessions: () => import("./commands/sessions.js").then((m) => m.default),
-  // ── tooling ────────────────────────────────────────────────────
-  bump: () => import("./commands/bump.js").then((m) => m.default),
+  agent: () => Promise.resolve(agent),
+  plugin: () => Promise.resolve(plugin),
   update: () => import("./commands/update.js").then((m) => m.default),
-  providers: () => import("./commands/providers.js").then((m) => m.default),
-  "agent-help": () => import("./commands/agent-help.js").then((m) => m.default),
 };

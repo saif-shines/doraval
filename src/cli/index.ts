@@ -23,12 +23,33 @@ registerLifecycleHandlers();
 
 {
   const argv = process.argv.slice(2);
-  const first = argv[0];
-  if (first && !first.startsWith("-") && !(first in topLevelSubCommands)) {
+  const { firstCommand, wantsJson, printRootHelp, printRootHelpJson } = await import("./root-help.js");
+  const { retiredNext } = await import("./retired.js");
+  const first = firstCommand(argv);
+
+  if (first) {
+    const next = retiredNext(first);
+    if (next) {
+      const { ui, nextAction } = await import("./out.js");
+      ui.fail(`Unknown command: ${first}`);
+      for (const n of Array.isArray(next) ? next : [next]) nextAction(n);
+      process.exit(2);
+    }
+    if (!(first in topLevelSubCommands)) {
+      const { ui, nextAction } = await import("./out.js");
+      ui.fail(`Unknown command: ${first}`);
+      nextAction("dora --help");
+      process.exit(1);
+    }
+  } else if (argv.includes("--capabilities")) {
     const { ui, nextAction } = await import("./out.js");
-    ui.fail(`Unknown command: ${first}`);
-    nextAction("dora --help");
+    ui.fail("Unknown flag: --capabilities");
+    nextAction("dora --help --json");
     process.exit(1);
+  } else if (!argv.includes("--version") && !argv.includes("-v") && !argv.includes("-V")) {
+    if (wantsJson(argv)) printRootHelpJson();
+    else printRootHelp();
+    process.exit(0);
   }
 }
 
@@ -44,7 +65,7 @@ const main = defineCommand({
       "  npx skills add saif-shines/doraval",
       "  dora review --quick",
       "",
-      "Scan (default): dora    Map: dora agent-help    Docs: https://doraval.dev",
+      "Map: dora --help --json    Docs: https://doraval.dev",
     ].join("\n"),
   },
   subCommands: topLevelSubCommands,
@@ -71,9 +92,9 @@ const main = defineCommand({
     const cliArgs = process.argv.slice(2);
     if (cliArgs.length > 0 && !cliArgs[0]!.startsWith("-")) return; // subcommand provided
 
-    // Bare `dora` (possibly with flags like --format json) → the scan IS the product.
-    const scan = await import("./commands/scan.js").then((m) => m.default);
-    await scan.run!({ args } as never);
+    const { printRootHelp, printRootHelpJson, wantsJson } = await import("./root-help.js");
+    if (wantsJson(process.argv.slice(2))) printRootHelpJson();
+    else printRootHelp();
   },
 });
 

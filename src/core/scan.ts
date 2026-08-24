@@ -239,7 +239,7 @@ export async function runScan(
     suggestions.push({
       kind: "start",
       title: "No agent context found — create your first skill or rule",
-      command: "dora new",
+      command: "dora skill new",
     });
   }
   if (install.status === "fail") {
@@ -296,13 +296,13 @@ export async function runScan(
     suggestions.push({
       kind: "fix",
       title: `${contradictions.filter((c) => c.severity === "conflict").length} cross-agent contradiction(s)`,
-      command: "dora reconcile",
+      command: "dora conflicts",
     });
   } else if (contradictions.length > 0) {
     suggestions.push({
       kind: "improve",
       title: `${contradictions.length} cross-agent gap(s) — review coverage`,
-      command: "dora reconcile --dry-run",
+      command: "dora conflicts --dry-run",
     });
   }
 

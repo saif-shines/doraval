@@ -1,5 +1,5 @@
 /**
- * Live command map for `dora agent-help`.
+ * Live command map for `dora --help --json`.
  * Exit-code meanings are the global contract: 0 clean, 1 issues, 2 could-not-run.
  */
 import pkg from "../../package.json" with { type: "json" };
@@ -37,6 +37,7 @@ const COMMON_FLAGS = {
   "--format": { description: "Output format", values: ["table", "json"], default: "table" },
   "--json": { description: "Alias for --format json" },
   "--ci": { description: "Machine mode: implies --format json, strict exit codes" },
+  "--cwd": { description: "Working directory override" },
 };
 
 function cmd(
@@ -55,11 +56,6 @@ export function buildCapabilities(): CapabilitiesManifest {
   return {
     version: pkg.version,
     commands: [
-      cmd("scan", "read-only", "Scan the repo: agent surfaces, skill health, suggestions. Also bare `dora`.", [
-        "dora",
-        "dora --json",
-        "dora --yes",
-      ], { ...COMMON_FLAGS, "--cwd": { description: "Directory to scan" }, "--yes": { description: "Skip the proceed prompt" } }),
       cmd("review", "read-only", "Multi-tier skill review (structure → heuristics → LLM → sessions). Includes Session health (token pressure).", [
         "dora review --quick",
         "dora review --quick --json",
@@ -71,6 +67,11 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--all": { description: "Review every artifact" },
         "--fail-on": { description: "Exit 1 trigger: error | warning", values: ["error", "warning"], default: "error" },
       }, [{ name: "path", required: false, type: "string" }]),
+      cmd("scan", "read-only", "Scan the repo: agent surfaces, skill health, suggestions.", [
+        "dora scan",
+        "dora scan --json",
+        "dora scan --yes",
+      ], { ...COMMON_FLAGS, "--cwd": { description: "Directory to scan" }, "--yes": { description: "Skip the proceed prompt" } }),
       cmd("fix", "writes", "Apply mechanical review fixes; surface judgment items.", [
         "dora fix . --dry-run",
         "dora fix . --yes",
@@ -80,9 +81,6 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--dry-run": { description: "Show diffs, write nothing" },
         "--brief": { description: "Agent-ready prompt for judgment fixes" },
       }, [{ name: "path", required: false, type: "string" }]),
-      cmd("new", "writes", "Scaffold a skill, rule, agent, or plugin.", [
-        "dora new skill --for claude --name review-pr --yes",
-      ], COMMON_FLAGS),
       cmd("skill unused", "read-only", "List Authored Skills that are Remove candidates.", [
         "dora skill unused",
         "dora skill unused --json",
@@ -90,9 +88,10 @@ export function buildCapabilities(): CapabilitiesManifest {
         ...COMMON_FLAGS,
         "--cwd": { description: "Working directory override" },
       }),
-      cmd("skill", "writes", "Remove or Restore a Skill.", [
+      cmd("skill", "writes", "List, new, remove, or restore a Skill.", [
+        "dora skill",
+        "dora skill new --for claude --name review-pr --yes",
         "dora skill remove ghost --dry-run",
-        "dora skill restore ghost --yes",
       ], {
         ...COMMON_FLAGS,
         "--yes": { description: "Delete without prompting" },
@@ -100,30 +99,36 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--for": { description: "Target agent", values: ["claude", "cursor", "codex", "copilot", "grok"] },
         "--global": { description: "Select a Global Skill when the name clashes" },
       }, [{ name: "name", required: false, type: "string" }]),
+      cmd("rule", "read-only", "List review rules. Mutating subcommands write.", [
+        "dora rule",
+        "dora rule new --for cursor --yes",
+      ], COMMON_FLAGS),
+      cmd("session", "read-only", "List coding-agent sessions for this project.", [
+        "dora session",
+        "dora session show <id>",
+      ], COMMON_FLAGS),
       cmd("memory", "writes", "Capture principles; promote to AGENTS.md.", [
         "dora memory add \"Never use default exports\" --weight 8",
         "dora memory promote --dry-run",
       ], COMMON_FLAGS),
-      cmd("reconcile", "writes", "Settle cross-agent contradictions.", [
-        "dora reconcile --dry-run",
-      ], { ...COMMON_FLAGS, "--dry-run": { description: "Plan only" }, "--apply": { description: "Write recommended resolutions" }, "--yes": { description: "Skip confirm when applying" } }),
-      cmd("config", "read-only", "Get or set config. Mutating subcommands write.", [
-        "dora config get",
+      cmd("conflicts", "writes", "Settle cross-agent contradictions.", [
+        "dora conflicts --dry-run",
+        "dora conflicts --yes",
+      ], { ...COMMON_FLAGS, "--dry-run": { description: "Plan only" }, "--yes": { description: "Apply recommended resolutions" } }),
+      cmd("config", "read-only", "List, get, or set config. Mutating subcommands write.", [
+        "dora config",
+        "dora config setup",
       ], COMMON_FLAGS),
-      cmd("rules", "read-only", "View review rules. Mutating subcommands write.", [
-        "dora rules",
+      cmd("agent", "writes", "List Subagents; new.", [
+        "dora agent",
+        "dora agent new --for claude --yes",
       ], COMMON_FLAGS),
-      cmd("sessions", "read-only", "List coding-agent sessions for this project.", [
-        "dora sessions",
+      cmd("plugin", "writes", "List Plugins; new; bump semver (also marketplaces).", [
+        "dora plugin",
+        "dora plugin new --for claude --yes",
+        "dora plugin bump",
       ], COMMON_FLAGS),
-      cmd("bump", "writes", "Bump plugin/marketplace semver.", ["dora bump"]),
       cmd("update", "writes", "Update doraval to the latest version.", ["dora update"]),
-      cmd("providers", "read-only", "Packaging/spec reference for supported agents.", ["dora providers"]),
-      cmd("agent-help", "read-only", "Live command map for agents.", [
-        "dora agent-help",
-        "dora agent-help --json",
-        "dora agent-help review",
-      ], COMMON_FLAGS),
     ],
     intelligence: {
       mechanical: true,

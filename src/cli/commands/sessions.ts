@@ -6,7 +6,7 @@ import { exit } from "../render/exit.js";
 
 function renderTable(entries: ReturnType<typeof listSessions>): void {
   ui.blank();
-  ui.heading("dora sessions");
+  ui.heading("dora session");
   ui.blank();
   ui.write(
     `  ${"AGENT".padEnd(12)} ${"WHEN".padEnd(17)} ${"TITLE".padEnd(24)} ${"TURNS".padEnd(6)} ${"TOOLS".padEnd(6)} ID`,
@@ -23,19 +23,20 @@ function renderTable(entries: ReturnType<typeof listSessions>): void {
   // B40: real sessionId from the list for drill-down
   const first = entries[0];
   if (first) {
-    nextAction(`dora sessions show ${first.sessionId}`);
+    nextAction(`dora session show ${first.sessionId}`);
   }
   ui.blank();
 }
 
 export default defineCommand({
-  meta: { name: "sessions", description: "List coding-agent sessions for this project" },
+  meta: { name: "session", description: "List coding-agent sessions for this project" },
   args: {
     agent: { type: "string", description: "Filter by agent (claude, grok, cursor, codex, copilot)" },
     limit: { type: "string", description: "Max sessions per agent", default: "10" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
+    cwd: { type: "string", description: "Working directory override" },
   },
   subCommands: {
     show: () => import("./sessions/show.js").then((m) => m.default),
@@ -46,7 +47,7 @@ export default defineCommand({
     // out if "show" was the subcommand actually invoked, matching the
     // guard style already used by defineGroup() in command-tree.ts.
     const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "sessions" && cliArgs[1] === "show") return;
+    if (cliArgs[0] === "session" && cliArgs[1] === "show") return;
 
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     const agent = args.agent as string | undefined;
@@ -64,7 +65,7 @@ export default defineCommand({
         return;
       }
 
-      const entries = listSessions(process.cwd(), {
+      const entries = listSessions(args.cwd ? String(args.cwd) : process.cwd(), {
         agent: agent ? resolveAgentAlias(agent) : undefined,
         limit: parseInt(args.limit as string, 10) || 10,
       });

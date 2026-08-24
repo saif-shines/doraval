@@ -246,7 +246,7 @@ function isInteractiveBare(typeArg: string | undefined, pathArg: string | undefi
 export default defineCommand({
   meta: {
     name: "bump",
-    description: "Bump plugin/marketplace semver (Claude, Codex, Cursor, Copilot)",
+    description: "Bump plugin and marketplace semver (Claude, Codex, Cursor, Copilot)",
   },
   args: {
     type: {
@@ -269,6 +269,10 @@ export default defineCommand({
       description: "Skip confirmation in interactive mode",
       default: false,
     },
+    "dry-run": { type: "boolean", description: "Show the plan, write nothing", default: false },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
+    format: { type: "string", description: "Output format: table | json", default: "table" },
+    cwd: { type: "string", description: "Working directory override" },
   },
   async run({ args }) {
     const typeArg = args.type as string | undefined;
@@ -288,7 +292,7 @@ export default defineCommand({
     }
 
     let rawType = typeArg || "patch";
-    let targetPath = pathArg || ".";
+    let targetPath = pathArg || (args.cwd as string | undefined) || ".";
 
     // Forgiving UX: `dora bump ./my-plugin-dir` should mean "patch on that dir"
     const isKnownType = ["patch", "minor", "major"].includes(rawType) || /^\d+\.\d+\.\d+$/.test(rawType);

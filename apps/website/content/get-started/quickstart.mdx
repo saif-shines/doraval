@@ -31,12 +31,13 @@ If `dora` is not on `PATH`, use `npx @hacksmith/doraval` in place of `dora`.
 ## Common commands
 
 ```bash
-dora                         # scan the workspace
+dora                         # short --help
 dora review --quick          # Findings first, no LLM
 dora review --quick --format json
+dora scan                    # workspace map
 dora fix . --yes             # mechanical only; no TTY
 dora memory add "Never use default exports" --weight 8
-dora reconcile --dry-run
+dora conflicts --dry-run
 ```
 
 ## 4. Review quality

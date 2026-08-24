@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Breaking
+
+- Empty `dora` prints short `--help`. Scan is `dora scan` only.
+- `dora agent-help` is gone. The map is `dora --help --json`.
+- Create is on the noun: `dora skill new`, `dora rule new`, `dora agent new`, `dora plugin new`.
+- Nouns are singular: `dora session`, `dora rule`.
+- `dora reconcile` is `dora conflicts` (`--yes`, no `--apply`).
+- `dora bump` is `dora plugin bump`. `dora providers` is gone (use `dora config setup` / `dora scan`).
+- Old names exit `2` with a Next line. No aliases.
+
 ## 0.6.26
 
 ### Docs

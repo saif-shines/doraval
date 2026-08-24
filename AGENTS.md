@@ -32,7 +32,7 @@ A user-visible feature is not released until the docs match the binary. CHANGELO
 - README command catalog
 - `skills/doraval/` (Runner: `SKILL.md` + `references/`)
 
-Help text (`dora --help`, `dora agent-help`) is part of the product. If a new help line would disagree with README or `/commands`, update those pages in the same change.
+Help text (`dora --help`, `dora --help --json`) is part of the product. If a new help line would disagree with README or `/commands`, update those pages in the same change.
 
 ## Release / npm platform packages (learned the hard way)
 

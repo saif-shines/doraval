@@ -24,7 +24,7 @@ describe("runScan", () => {
     const result = await runScan(root, noneInstalled);
     expect(result.empty).toBe(true);
     expect(result.health).toEqual([]);
-    expect(result.suggestions.some((s) => s.kind === "start" && s.command.includes("dora new"))).toBe(true);
+    expect(result.suggestions.some((s) => s.kind === "start" && s.command.includes("dora skill new"))).toBe(true);
   });
 
   test("valid skill passes; invalid skill fails with a fix suggestion", async () => {
@@ -119,7 +119,7 @@ describe("runScan", () => {
     const result = await runScan(root, noneInstalled);
     expect(result.contradictions.length).toBeGreaterThan(0);
     expect(result.contradictions.some((c) => c.kind === "conflicting_convention")).toBe(true);
-    expect(result.suggestions.some((s) => s.command.includes("reconcile"))).toBe(true);
+    expect(result.suggestions.some((s) => s.command.includes("conflicts"))).toBe(true);
   });
 
   test("scan of a 10-skill repo completes under 500ms", async () => {
