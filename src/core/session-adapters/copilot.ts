@@ -13,7 +13,7 @@ interface CopilotEvent {
   data?: {
     sessionId?: string; copilotVersion?: string;
     context?: { cwd?: string; branch?: string };
-    content?: string; toolName?: string; arguments?: Record<string, unknown>;
+    content?: string; toolName?: string; toolCallId?: string; arguments?: Record<string, unknown>;
   };
 }
 
@@ -35,10 +35,12 @@ function parseEvents(text: string): Session {
       gitBranch = e.data.context?.branch;
     } else if (e.type === "tool.execution_start" && e.data.toolName) {
       toolCalls.push({ name: e.data.toolName, input: e.data.arguments ?? {}, timestamp: e.timestamp ?? "", index: idx++ });
+      const toolCallId = e.data.toolCallId;
       events.push({
         sessionId, seq: events.length, type: "tool_call",
         ...(ts ? { timestamp: ts } : {}),
         toolName: e.data.toolName,
+        ...(toolCallId ? { toolCallId, id: toolCallId } : {}),
         input: e.data.arguments ?? {},
       });
     } else if (e.type === "user.message" && typeof e.data.content === "string") {

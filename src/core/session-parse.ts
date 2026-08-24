@@ -346,20 +346,11 @@ export function parseSession(jsonlText: string): Session {
           ...(b.is_error === true ? { isError: true } : {}),
         });
       }
-      if (text && !emittedResult) {
+      if (text) {
         pushEvent(events, {
           sessionId,
           type: "user",
-          ...(lineId ? { id: lineId } : {}),
-          ...(parentId ? { parentId } : {}),
-          ...(ts ? { timestamp: ts } : {}),
-          text,
-        });
-      } else if (text && emittedResult) {
-        pushEvent(events, {
-          sessionId,
-          type: "user",
-          ...(lineId ? { id: `${lineId}-text` } : {}),
+          ...(lineId && !emittedResult ? { id: lineId } : {}),
           ...(parentId ? { parentId } : {}),
           ...(ts ? { timestamp: ts } : {}),
           text,

@@ -26,17 +26,19 @@ export function collectSessionHealth(loaded: LoadResult): SessionHealth {
   for (const s of loaded.sessions) {
     const p = s.primitives;
     const cache = p.cacheReadTokens;
-    const input = p.inputTokens ?? 0;
-    const output = p.outputTokens ?? 0;
-    const denom = input + output + (cache ?? 0);
-    if (cache != null && denom > 0 && cache / denom >= CACHE_READ_THRESHOLD) {
-      const pct = Math.round((cache / denom) * 100);
-      signals.push({
-        code: "cache-read",
-        sessionId: p.sessionId,
-        agent: s.agent,
-        detail: `${pct}% cache-read`,
-      });
+    const input = p.inputTokens;
+    const output = p.outputTokens;
+    if (cache != null && input != null && output != null) {
+      const denom = input + output + cache;
+      if (denom > 0 && cache / denom >= CACHE_READ_THRESHOLD) {
+        const pct = Math.round((cache / denom) * 100);
+        signals.push({
+          code: "cache-read",
+          sessionId: p.sessionId,
+          agent: s.agent,
+          detail: `${pct}% cache-read`,
+        });
+      }
     }
     const calls = (p.events ?? []).filter((e) => e.type === "assistant" || e.type === "tool_call").length;
     if (calls >= CALL_COUNT_THRESHOLD) {

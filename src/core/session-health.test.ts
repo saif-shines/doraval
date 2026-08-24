@@ -70,6 +70,11 @@ describe("collectSessionHealth", () => {
     expect(h.signals.filter((s) => s.code === "cache-read")).toEqual([]);
   });
 
+  test("omits cache-read when only cache is set (does not invent zeros)", () => {
+    const h = collectSessionHealth(load([session({ sessionId: "c2", cacheReadTokens: 80 })]));
+    expect(h.signals.filter((s) => s.code === "cache-read")).toEqual([]);
+  });
+
   test("call count ≥ 20 fires", () => {
     const h = collectSessionHealth(load([session({ sessionId: "busy", events: calls(20) })]));
     expect(h.signals.some((s) => s.code === "call-count" && s.detail === "20 calls")).toBe(true);
