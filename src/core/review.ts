@@ -10,6 +10,7 @@ import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
 import { loadRecentSessions, collectSessionEvidence, type LoadResult } from "./session-evidence.js";
+import { collectSessionHealth, type SessionHealth } from "./session-health.js";
 import type { EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
 import {
@@ -47,6 +48,7 @@ export interface ReviewResult {
   scenarioCount?: number;
   summary: { passed: number; warnings: number; errors: number };
   ruleWarnings?: string[];
+  sessionHealth?: SessionHealth;
 }
 
 export interface ReviewOptions {
@@ -376,8 +378,12 @@ export async function review(path: string, opts: ReviewOptions = {}): Promise<Re
     return root ? { ...r, pluginOwned: true, pluginRoot: root } : r;
   };
 
+  const health = loadedSessions ? collectSessionHealth(loadedSessions) : undefined;
+  const withHealth = (r: ReviewResult): ReviewResult =>
+    health ? { ...r, sessionHealth: health } : r;
+
   if (opts.quick) return Promise.all(targets.map(one)).then((rows) => rows.map(stamp));
   const results: ReviewResult[] = [];
-  for (const target of targets) results.push(stamp(await one(target)));
+  for (const target of targets) results.push(withHealth(stamp(await one(target))));
   return results;
 }

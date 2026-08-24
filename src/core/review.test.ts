@@ -205,6 +205,17 @@ describe("review", () => {
     const codes = (result.tiers.sessions?.findings ?? []).map((f) => f.code);
     expect(codes).toContain("R034");
     expect(codes).not.toContain("R029");
+    expect(result.sessionHealth?.sessionCount).toBe(1);
+    expect(result.sessionHealth?.signals).toEqual([]);
+    expect(result.tiers.sessions?.findings.some((f) => (f as { code?: string }).code === "cache-read")).toBe(false);
+  });
+
+  test("quick mode omits Session health", async () => {
+    const dir = join(SANDBOX, ".claude", "skills", "health-quick");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "SKILL.md"), `---\nname: health-quick\ndescription: "Use when testing Session health skip"\n---\n\n1. Do the thing\n`);
+    const result = await reviewOne(dir, { quick: true });
+    expect(result.sessionHealth).toBeUndefined();
   });
 
   test("R034 off still emits Never invoked as R029", async () => {

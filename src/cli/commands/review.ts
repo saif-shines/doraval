@@ -81,6 +81,24 @@ function renderOptionalTier(
   for (const f of tier.findings ?? []) renderOneFinding(f);
 }
 
+function renderSessionHealth(r: ReviewResult): void {
+  const h = r.sessionHealth;
+  if (!h) return;
+  ui.blank();
+  ui.write("  Session health");
+  if (h.sessionCount === 0) {
+    ui.dim("    No Sessions in the Review window.");
+    return;
+  }
+  if (h.signals.length === 0) {
+    ui.dim(`    ${h.sessionCount} Session${h.sessionCount === 1 ? "" : "s"} · no token pressure`);
+    return;
+  }
+  for (const s of h.signals) {
+    ui.write(`    ${s.code}  ${s.sessionId} (${s.agent})  ${s.detail}`);
+  }
+}
+
 function renderSingle(r: ReviewResult): void {
   ui.blank();
   ui.heading(`Reviewing ${r.path}`);
@@ -104,6 +122,7 @@ function renderSingle(r: ReviewResult): void {
     ui.write("  " + "─".repeat(60));
   }
   renderOptionalTier("Sessions", r.tiers.sessions);
+  renderSessionHealth(r);
 
   ui.blank();
   summaryLine(`${r.summary.passed} passed · ${r.summary.warnings} warnings · ${r.summary.errors} errors`);
@@ -173,6 +192,8 @@ function renderAggregate(results: ReviewResult[]): void {
     (acc, r) => ({ p: acc.p + r.summary.passed, w: acc.w + r.summary.warnings, e: acc.e + r.summary.errors }),
     { p: 0, w: 0, e: 0 },
   );
+  if (shown[0]) renderSessionHealth(shown[0]);
+
   ui.blank();
   summaryLine(
     `${results.length} skill${results.length === 1 ? "" : "s"} · ${totals.p} passed · ${totals.w} warnings · ${totals.e} errors`,
