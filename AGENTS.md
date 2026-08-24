@@ -24,6 +24,16 @@ Look up project/system skills when deciding. Mention 1–2 options to the user w
 - Audits: `improve` (plans only — does not implement)
 - Website docs: `docs-writing-style` + `apps/website/.devex-kit/style-prompt-block.md` (canonical user docs are `apps/website/content/`, not local journey notes)
 
+## Feature release = docs lockstep
+
+A user-visible feature is not released until the docs match the binary. CHANGELOG is not enough. Do not tag until these agree with the new behavior:
+
+- `apps/website/content/` (canonical Reader docs)
+- README command catalog
+- `skills/doraval/` (Runner: `SKILL.md` + `references/`)
+
+Help text (`dora --help`, `dora agent-help`) is part of the product. If a new help line would disagree with README or `/commands`, update those pages in the same change.
+
 ## Release / npm platform packages (learned the hard way)
 
 **Incident source:** Claude session `bdd5e085` (2026-07-08/09, B1 first ship) + commits `9389365`, recovery for v0.5.0–0.5.2. Same failure pattern on **v0.6.0**.
