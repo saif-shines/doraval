@@ -36,4 +36,12 @@ describe("buildCapabilities", () => {
     expect(skill.examples.some((e) => e.includes("restore"))).toBe(true);
     expect(skill.examples.some((e) => e.includes("unused"))).toBe(false);
   });
+
+  test("review mentions Session health; no analyse verb", () => {
+    const m = buildCapabilities();
+    const review = m.commands.find((c) => c.name === "review")!;
+    expect(review.label).toBe("read-only");
+    expect(review.description).toMatch(/Session health/i);
+    expect(m.commands.some((c) => c.name === "analyse" || c.name === "analyze")).toBe(false);
+  });
 });

@@ -60,7 +60,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora --json",
         "dora --yes",
       ], { ...COMMON_FLAGS, "--cwd": { description: "Directory to scan" }, "--yes": { description: "Skip the proceed prompt" } }),
-      cmd("review", "read-only", "Multi-tier skill review (structure → heuristics → LLM → sessions).", [
+      cmd("review", "read-only", "Multi-tier skill review (structure → heuristics → LLM → sessions). Includes Session health (token pressure).", [
         "dora review --quick",
         "dora review --quick --json",
         "dora review --deep .",

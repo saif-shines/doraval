@@ -1,6 +1,7 @@
 import { defineCommand } from "citty";
 import pc from "picocolors";
-import { findSession } from "../../../core/sessions-view.js";
+import { findSession, formatTokenLabel } from "../../../core/sessions-view.js";
+import type { Session } from "../../../core/session-parse.js";
 import { ui, resolveOutputMode, outJson, summaryLine, emitError } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
@@ -38,8 +39,10 @@ export default defineCommand({
 
       const { entry, primitives } = found;
 
+      const tokens = formatTokenLabel(primitives, entry.tokens);
       if (mode.format === "json") {
-        outJson({ entry, primitives });
+        const { events: _events, ...blob } = primitives as Session;
+        outJson({ entry, primitives: blob, tokens });
         await exit(0);
         return;
       }
@@ -106,7 +109,7 @@ export default defineCommand({
           ui.write(`    ${pc.dim("·")} ${name}${n > 1 ? pc.dim(` ×${n}`) : ""}`);
         }
       }
-      ui.write(`  Tokens: ${pc.dim("unavailable")}`);
+      ui.write(`  Tokens: ${tokens === "unavailable" ? pc.dim("unavailable") : tokens}`);
       ui.blank();
 
       summaryLine(

@@ -1,6 +1,18 @@
 import { basename, extname } from "path";
 import { getAllAdapters, ALL_ADAPTERS, type SessionAdapter } from "./session-adapters/index.js";
-import type { SessionPrimitives } from "./session-parse.js";
+import type { Session, SessionPrimitives } from "./session-parse.js";
+
+/** Human token line. Unset stays "unavailable" — never invent 0. */
+export function formatTokenLabel(primitives: SessionPrimitives, listTokens?: number | null): string {
+  const s = primitives as Session;
+  const parts: string[] = [];
+  if (s.inputTokens != null) parts.push(`${s.inputTokens} in`);
+  if (s.outputTokens != null) parts.push(`${s.outputTokens} out`);
+  if (s.cacheReadTokens != null) parts.push(`${s.cacheReadTokens} cache`);
+  if (parts.length) return parts.join(" · ");
+  if (listTokens != null) return String(listTokens);
+  return "unavailable";
+}
 
 export interface SessionListEntry {
   agent: string;

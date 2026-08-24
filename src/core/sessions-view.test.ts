@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "path";
 import { readFileSync } from "fs";
-import { resolveAgentAlias, isKnownAgent, listSessions, findSession, type SessionListEntry } from "./sessions-view.js";
+import { resolveAgentAlias, isKnownAgent, listSessions, findSession, formatTokenLabel, type SessionListEntry } from "./sessions-view.js";
 import type { SessionAdapter } from "./session-adapters/index.js";
 import { parseSession } from "./session-parse.js";
 
@@ -17,6 +17,26 @@ function fakeAdapter(agent: string, fixtureFile: string, mtime: number): Session
     parse: (p: string) => parseSession(readFileSync(p, "utf-8")),
   };
 }
+
+describe("formatTokenLabel", () => {
+  const bare = {
+    sessionId: "s", model: "m", agent: "cursor", cwd: "/p",
+    toolCalls: [], toolCallCounts: {}, skillsInvoked: [],
+    userMessages: [], userTurnCount: 0, assistantText: [],
+  };
+
+  test("prints in/out/cache when known", () => {
+    expect(formatTokenLabel({ ...bare, inputTokens: 10, outputTokens: 4, cacheReadTokens: 2 } as typeof bare & { inputTokens: number; outputTokens: number; cacheReadTokens: number })).toBe("10 in · 4 out · 2 cache");
+  });
+
+  test("falls back to list tokens", () => {
+    expect(formatTokenLabel(bare, 1200)).toBe("1200");
+  });
+
+  test("unavailable when unset — not 0", () => {
+    expect(formatTokenLabel(bare)).toBe("unavailable");
+  });
+});
 
 describe("resolveAgentAlias", () => {
   test("maps 'claude' to the adapter's real name 'claude-code'", () => {

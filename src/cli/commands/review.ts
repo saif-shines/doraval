@@ -213,7 +213,7 @@ export default defineCommand({
   meta: {
     name: "review",
     description: [
-      "Multi-tier skill review (structure → heuristics → LLM → sessions)",
+      "Multi-tier skill review (structure → heuristics → LLM → sessions). Includes Session health.",
       "",
       "Start here: dora review --quick",
       "Examples:",
