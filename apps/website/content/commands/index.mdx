@@ -36,9 +36,12 @@ dora review --all --quick --ci
 dora review --deep .         # require Judge; exit 2 if none
 dora review --sessions .     # require session evidence
 dora review CLAUDE.md
+dora review --json           # includes sessionHealth (not --quick)
 ```
 
-`--quick` is the first Review. JSON comes after:
+`--quick` is the first Review. It does not include Session health. A full Review adds a Session health block (token pressure). That block is not a Finding.
+
+JSON comes after:
 
 ```bash
 dora review --quick --json
@@ -115,9 +118,12 @@ Settles Claude-vs-Cursor contradictions into `AGENTS.md`.
 dora sessions
 dora sessions --agent claude --limit 20
 dora sessions show <sessionId>
+dora sessions --json
 ```
 
 Read-only. Adapters: Claude, Grok, Cursor, Codex, Copilot.
+
+The table shortens the id. `show` accepts that short id when it is unique. `--json` has the full `sessionId`. `show` prints token totals when the log has them. It says `unavailable` when it does not.
 
 ## Config
 

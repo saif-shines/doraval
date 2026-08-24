@@ -45,6 +45,7 @@ dora skill restore ghost --yes
 dora memory add "Never use default exports" --weight 8
 dora reconcile --dry-run
 dora sessions
+dora sessions show <id>      # short table id is enough if unique
 dora config setup
 dora --help                  # first loop
 dora agent-help              # live map
