@@ -14,6 +14,10 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Authored** | Skill origin: a Skill under the current project. |
 | **Global** | Skill origin: a Skill under the user home (for example `~/.claude/skills`). |
 | **Imported** | Skill origin: a Skill from plugin cache or `node_modules`. Read-only. Not a remove target. |
+| **Plugin** | A package that ships one or more Skills (and related files) for an agent. First-class. Not “a Skill folder”. |
+| **Plugin-owned Skill** | A Skill that lives inside a Plugin. Detected when an ancestor has a Plugin manifest (`plugin.json` or the provider marketplace file). Not the same as **Imported**. This pass: `unused` skips it with no error; named `remove` / `restore` exit `1` and Next is `dora review --quick <plugin-root>`. Review and `fix` on that Skill path are a later pass. |
+| **Subagent** | A specialized agent file (for example `.claude/agents/*.md`). Own role and tools. Not a Memory file. Not a Skill. |
+| **Catalog (this pass)** | The artifact types this pass must treat: Skill, Plugin, Memory file, Subagent. Out of scope: hooks, channels, MCP, scheduled tasks, and the rest of `docs/research-notes`. |
 | **Review** | One `review(path)`. Tiered quality pass over a Skill and/or Memory file: structure → heuristics → optional LLM judge → optional sessions. Workspace and Skill reviews also include cwd Memory files (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `copilot-instructions.md`). |
 | **Scan** | Fast workspace health check (`dora` bare): agents present, skill validation, shadows/overlaps, install/intelligence. |
 | **Rule** | One module (`src/core/rules`). Registry, packages, resolve, stamp, and mutation. CLI only renders and writes config. |
@@ -57,9 +61,25 @@ The website is mixed. Do not mix the two voices on one page.
 
 **`--json`:** Alias for `--format json`. Both work. `--ci` still implies JSON. Errors stay on stderr.
 
-**This pass is done when:** `dora --help` names the same first Review as the README (`dora review --quick`); `dora agent-help` exists and `--capabilities` is gone; per-command `--help` for review / fix / scan shows examples; `dora nosuch` prints one error and `Next: dora --help` (no help dump); `--json` works; agent scan skips the proceed gate; agent writes without `--yes`/`--dry-run` exit `2`; **and** README / `/commands` still agree with those lines.
+**Help/agent-help pass (2026-08-20) is done when:** `dora --help` names the same first Review as the README (`dora review --quick`); `dora agent-help` exists and `--capabilities` is gone; per-command `--help` for review / fix / scan shows examples; `dora nosuch` prints one error and `Next: dora --help` (no help dump); `--json` works; agent scan skips the proceed gate; agent writes without `--yes`/`--dry-run` exit `2`; **and** README / `/commands` still agree with those lines.
 
-Grill for this pass is settled (2026-08-20). Next: `/to-spec`, then tickets. Do not implement from this glossary alone.
+That grill is settled. Do not implement from this glossary alone.
+
+## Agent-contract pass (this grill)
+
+| Term | Meaning |
+|------|---------|
+| **Mechanical improve** | The Runner job for this pass: diagnose, then apply mechanical `dora fix --yes`. The human still owns judgment, Remove, Restore, and `memory promote`. |
+| **First loop (this pass)** | `dora review --quick`, then `dora fix --yes` when Findings are mechanical. Unused is a Next, not the start. Scan is a map. |
+| **Pass test** | This pass is done when both are true: (1) a cold Runner with only the shipped skill finishes the first loop and does not ask the human a question; (2) every verb that Runner needs is on `dora agent-help --json`, with a stable JSON shape and a Next line. |
+| **Harden first** | This pass changes existing verbs (JSON, Next, exit codes, read-only vs writes). It does not add new jobs first. |
+| **Subagent this pass** | Discover only. `dora new agent` and `dora agent-help` stay. Review does not grade Subagent files. |
+| **Skill on agent-help** | `dora skill unused` is **read-only**. `dora skill remove` and `restore` are **writes**. Do not label the whole group as writes only. |
+| **Runner verbs (this pass)** | `agent-help`, `review`, `fix`, `scan`, `sessions`, `skill unused`, `new`. `skill remove` / `restore` stay on the map as writes the human owns. |
+
+_Avoid_: “perfect”; “improve context” with no job; a Runner that Removes or promotes without the human; calling `AGENTS.md` “agent.md”; treating a Plugin-owned Skill as a `dora skill unused` / `remove` / `restore` target.
+
+Grill for this pass is **closed**. Shipped in v0.6.23. Spec: https://github.com/saif-shines/doraval/issues/44. Tickets: [#45](https://github.com/saif-shines/doraval/issues/45), [#46](https://github.com/saif-shines/doraval/issues/46), [#47](https://github.com/saif-shines/doraval/issues/47).
 
 **`llms.txt`:** generated from the site. Fix the pages. Do not hand-write a second index.
 
