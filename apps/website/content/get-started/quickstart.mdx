@@ -1,12 +1,12 @@
 ---
 title: Quick Start
-description: The dora loop — skill add, review --quick, then fix.
+description: Install the skill, run review --quick, then fix until exit 0.
 sidebar:
   label: Quick Start
   order: 3
 ---
 
-Every check follows this pattern.
+Run this loop after you install `dora`. You get Findings first, then mechanical fixes, then a clean Review.
 
 ## Core workflow
 
@@ -14,7 +14,7 @@ Every check follows this pattern.
 # 1. Install the skill
 npx skills add saif-shines/doraval
 
-# 2. Review — structure + heuristics, no Judge
+# 2. Review: structure + heuristics, no Judge
 dora review --quick
 
 # 3. Fix mechanical issues
@@ -40,7 +40,7 @@ dora memory add "Never use default exports" --weight 8
 dora conflicts --dry-run
 ```
 
-## 4. Review quality
+## Review quality
 
 `--quick` is tiers 1–2 (structure + heuristics). No Judge.
 
@@ -73,6 +73,11 @@ dora memory promote              # hard rules → AGENTS.md
 
 Weights: **8+** hard · **5** default · **1–3** soft. [Memory](/concepts/memory/).
 
+## Common mistakes
+
+- Empty `dora` prints `--help`. It does not Scan. Use `dora scan` for a workspace map.
+- `dora new` and `dora reconcile` exit `2`. Use `dora skill new` and `dora conflicts --dry-run`.
+
 ## Next
 
-[Commands](/commands/) · [Skills](/get-started/skills/) · [Installation](/get-started/installation/)
+[Commands](/commands/)

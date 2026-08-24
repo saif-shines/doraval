@@ -54,6 +54,6 @@ When writing or editing them:
 |---|---|
 | CLI commands | `src/cli/commands/` |
 | Core logic (review, fix, scaffold, memory) | `src/core/` |
-| Provider specs (`dora new`, `dora providers`) | `src/providers/` |
+| Provider specs (`dora skill new`, `dora plugin bump`) | `src/providers/` |
 | Website / docs | `apps/website/` |
 | Docs style prompt | `apps/website/.devex-kit/style-prompt-block.md` |

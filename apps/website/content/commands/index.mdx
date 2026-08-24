@@ -6,15 +6,23 @@ sidebar:
   order: 1
 ---
 
-`dora` and `doraval` are the same binary. Use `npx @hacksmith/doraval` if `dora` is not on `PATH`.
+Copy a command, then add flags from `--help`. `dora` and `doraval` are the same binary. Use `npx @hacksmith/doraval` if `dora` is not on `PATH`.
+
+Empty `dora` prints short `--help`. The first job is `dora review --quick`. The workspace map is `dora scan`.
 
 ```bash
-dora --help                  # first loop + command list
-dora review --help           # this command
-dora --help --json           # live map
+dora --help                  # first loop + verb list
+dora review --help           # one command
+dora --help --json           # live map for agents
 ```
 
-Exit `0` clean · `1` issues · `2` could not run.
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Clean |
+| `1` | Issues found |
+| `2` | Could not run |
 
 ## Scan
 
@@ -60,7 +68,7 @@ dora fix . --brief           # judgment items, then edit
 
 Re-run `dora review --quick` until exit `0`.
 
-## New
+## Create
 
 ```bash
 dora skill new --for claude --name review-pr --description "Reviews PRs" --yes
@@ -74,7 +82,8 @@ Always pass `--for`. Then `dora review --quick` the new path.
 ## Skill
 
 ```bash
-dora skill unused
+dora skill                    # Authored + Global Skills
+dora skill unused             # Remove candidates
 dora skill remove ghost --dry-run
 dora skill remove ghost --yes
 dora skill remove ghost --for claude --yes
@@ -173,6 +182,15 @@ dora --completion zsh
 dora --completion fish
 ```
 
-## Next
+## Common mistakes
 
-[Quick Start](/get-started/quickstart/) · [Review tiers](/concepts/review-tiers/) · [Memory](/concepts/memory/)
+- Empty `dora` is `--help`, not Scan. Use `dora scan` for the workspace map.
+- `dora new`, `dora sessions`, `dora rules`, `dora reconcile`, `dora bump`, `dora providers`, and `dora agent-help` exit `2`. Each prints a Next line with the new name.
+- `dora conflicts` applies with `--yes`. There is no `--apply`.
+- Judge keys live on `dora config setup`, not a `providers` command.
+
+## Related
+
+- [Quick Start](/get-started/quickstart/)
+- [Review tiers](/concepts/review-tiers/)
+- [Memory](/concepts/memory/)

@@ -14,7 +14,7 @@ You are writing developer documentation for https://doraval.thehacksmith.dev (do
 - **Reader** is the human. Use "you" on README, install, and get-started.
 - **Runner** is the agent that executes `dora`. Use "you" on the skill and on per-command `--help`.
 - Do not mix Reader and Runner on one surface.
-- `--help` split: top-level / most-common help talks to the Reader. `dora <command> --help` talks to the Runner.
+- `--help` talks to the Runner (the agent). README, install, and get-started talk to the Reader. Do not mix the two addressees on one page.
 - Present tense: "This command lists sessions" not "will list."
 - Imperative for procedures: "Run", "Pass", "Configure."
 - No filler: never "just", "simply", "easily", "obviously", "quickly", "basically", "we're excited."
@@ -70,14 +70,20 @@ Optional:
 
 Canonical command names (do not use retired names in user docs):
 
-| Use this | Not this (retired / folded) |
+| Use this | Not this |
 | --- | --- |
-| `dora` / `dora scan` | `dora validate` |
-| `dora review` | `dora judge`, `dora eval`, `dora lint`, `dora drift` (tiers cover these) |
+| `dora` (prints `--help`) | empty `dora` as Scan |
+| `dora scan` | bare `dora` for the workspace map |
+| `dora review --quick` | first job via Scan or `dora --yes` |
+| `dora --help --json` | `dora agent-help`, `--capabilities` |
+| `dora skill new` / `dora rule new` / `dora agent new` / `dora plugin new` | `dora new` |
+| `dora session` | `dora sessions` |
+| `dora rule` | `dora rules` |
+| `dora conflicts` | `dora reconcile` |
+| `dora plugin bump` | `dora bump` |
+| `dora config setup` | `dora providers` (keys). `dora scan` answers which agents this repo uses. |
+| `dora review` | `dora judge`, `dora eval`, `dora lint`, `dora drift` |
 | `dora memory` | `dora journal` |
-| `dora fix` | ad-hoc rewrite instructions without the CLI |
-| `dora new --for <agent>` | `dora claude new` / per-agent subcommands |
-| `dora reconcile` | manual multi-file merge without the tool |
 
 Binary aliases: `dora` and `doraval` are the same CLI.
 

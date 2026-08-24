@@ -12,6 +12,10 @@
 - `dora bump` is `dora plugin bump`. `dora providers` is gone (use `dora config setup` / `dora scan`).
 - Old names exit `2` with a Next line. No aliases.
 
+### Docs
+
+- Website, README, skill, and style prompt use the new command names. Empty `dora` is `--help`.
+
 ## 0.6.26
 
 ### Docs

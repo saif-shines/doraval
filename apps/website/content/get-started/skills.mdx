@@ -22,11 +22,11 @@ Add this if you want the same loop without the skill:
 ```markdown
 ## Context review
 
-Use `dora` to review agent context. Run `dora --help` for all commands.
+Use `dora` to review agent context. First command: `dora review --quick`. Workspace map: `dora scan`. Agent map: `dora --help --json`.
 
 Core workflow:
-1. `dora review --quick` — structure and heuristics, no Judge
-2. `dora fix <path> --yes` — mechanical fixes
+1. `dora review --quick` (structure and heuristics, no Judge)
+2. `dora fix <path> --yes` (mechanical fixes)
 3. Re-run `dora review --quick` until exit `0`
 ```
 
