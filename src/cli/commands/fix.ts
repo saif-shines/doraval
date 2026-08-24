@@ -4,6 +4,8 @@ import { resolve } from "path";
 import pc from "picocolors";
 import { confirm, isCancel } from "@clack/prompts";
 import { review } from "../../core/review.js";
+import { isSkillDir } from "../../core/skill-discovery.js";
+import { pluginNextCommands } from "../../core/skill-classify.js";
 import { collectFixes, type FixEdit, type FixResult } from "../../core/fix-engine.js";
 
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../out.js";
@@ -179,8 +181,20 @@ export default defineCommand({
       const unapplied = dryRun ? totalMech : totalMech - totalApplied;
       const exitCode = allJudgments.length > 0 || unapplied > 0 ? 1 : 0;
 
+      const pluginRoots = [...new Set(results.flatMap((r) => (r.pluginOwned && r.pluginRoot ? [r.pluginRoot] : [])))];
+      const skillRows = results.filter((r) => isSkillDir(r.path));
+      const pluginStamp =
+        skillRows.length > 0 && skillRows.every((r) => r.pluginOwned && r.pluginRoot) && pluginRoots.length === 1
+          ? { pluginOwned: true as const, pluginRoot: pluginRoots[0] }
+          : {};
+
       if (mode.format === "json") {
-        outJson({ mechanical: totalMech, judgment: allJudgments, applied: dryRun ? 0 : totalApplied });
+        outJson({
+          mechanical: totalMech,
+          judgment: allJudgments,
+          applied: dryRun ? 0 : totalApplied,
+          ...pluginStamp,
+        });
         await exit(exitCode);
         return;
       }
@@ -203,6 +217,13 @@ export default defineCommand({
           for (const j of allJudgments) ui.write(`    ${pc.yellow("⚠")} ${j}`);
           nextAction("dora fix --brief       copy an agent-ready prompt");
         }
+      }
+
+      if (pluginRoots.length > 0) ui.dim("  Plugin-owned");
+      for (const root of pluginRoots) {
+        const next = pluginNextCommands(root);
+        nextAction(next.review);
+        nextAction(next.fix);
       }
 
       ui.blank();

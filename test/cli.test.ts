@@ -775,6 +775,41 @@ describe("doraval CLI", () => {
 
       rmSync(dir, { recursive: true, force: true });
     });
+
+    test("Plugin Next on review, scan, and fix JSON", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-plug-next-"));
+      mkdirSync(join(dir, ".git"));
+      const plug = join(dir, "my-plug");
+      const inner = join(plug, "skills", "inner");
+      mkdirSync(join(plug, ".claude-plugin"), { recursive: true });
+      mkdirSync(inner, { recursive: true });
+      writeFileSync(join(plug, ".claude-plugin", "plugin.json"), "{}");
+      writeFileSync(join(inner, "SKILL.md"), '---\nname: inner\ndescription: "Use when testing plugin next"\n---\n\n1. Run it\n');
+
+      const reviewOut = runDoraval(["review", inner, "--quick", "--cwd", dir]);
+      const reviewText = reviewOut.stdout + reviewOut.stderr;
+      expect(reviewText).toContain(`dora review --quick ${plug}`);
+      expect(reviewText).toContain(`dora fix ${plug} --dry-run`);
+
+      const scan = runDoraval(["scan", "--json", "--yes", "--cwd", dir]);
+      const scanJson = JSON.parse(scan.stdout);
+      const cmds = (scanJson.suggestions as { command: string }[]).map((s) => s.command);
+      expect(cmds).toContain(`dora review --quick ${plug}`);
+      expect(cmds).toContain(`dora fix ${plug} --dry-run`);
+
+      const fixJson = runDoraval(["fix", inner, "--dry-run", "--json", "--cwd", dir]);
+      const fixBody = JSON.parse(fixJson.stdout);
+      expect(fixBody.pluginOwned).toBe(true);
+      expect(fixBody.pluginRoot).toBe(plug);
+      expect(fixBody.next).toBeUndefined();
+
+      const fixTable = runDoraval(["fix", inner, "--dry-run", "--cwd", dir]);
+      const fixText = fixTable.stdout + fixTable.stderr;
+      expect(fixText).toContain(`dora review --quick ${plug}`);
+      expect(fixText).toContain(`dora fix ${plug} --dry-run`);
+
+      rmSync(dir, { recursive: true, force: true });
+    });
   });
 
   describe("dora review <memory-file>", () => {

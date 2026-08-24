@@ -3,6 +3,7 @@ import { resolve } from "path";
 import pc from "picocolors";
 import { isCancel, select, spinner } from "@clack/prompts";
 import { listReviewTargets, review, type ReviewResult, type ReviewFinding } from "../../core/review.js";
+import { pluginNextCommands } from "../../core/skill-classify.js";
 
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
 import { isAgentCaller } from "../agent-detect.js";
@@ -117,6 +118,11 @@ function renderSingle(r: ReviewResult): void {
   if (fixable > 0) {
     nextAction(`dora fix ${r.path}      apply ${fixable} auto-fixable issue${fixable === 1 ? "" : "s"} (asks first)`);
   }
+  if (r.pluginOwned && r.pluginRoot) {
+    const next = pluginNextCommands(r.pluginRoot);
+    nextAction(next.review);
+    nextAction(next.fix);
+  }
   ui.blank();
 }
 
@@ -171,6 +177,12 @@ function renderAggregate(results: ReviewResult[]): void {
   summaryLine(
     `${results.length} skill${results.length === 1 ? "" : "s"} · ${totals.p} passed · ${totals.w} warnings · ${totals.e} errors`,
   );
+  const roots = [...new Set(results.flatMap((r) => (r.pluginRoot && r.pluginOwned ? [r.pluginRoot] : [])))];
+  for (const root of roots) {
+    const next = pluginNextCommands(root);
+    nextAction(next.review);
+    nextAction(next.fix);
+  }
   ui.blank();
 }
 

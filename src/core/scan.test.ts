@@ -91,6 +91,8 @@ describe("runScan", () => {
     expect(inner.pluginRoot).toBe(join(root, "my-plug"));
     expect(solo.pluginOwned).toBeUndefined();
     expect(solo.pluginRoot).toBeUndefined();
+    expect(result.suggestions.some((s) => s.command === `dora review --quick ${join(root, "my-plug")}`)).toBe(true);
+    expect(result.suggestions.some((s) => s.command === `dora fix ${join(root, "my-plug")} --dry-run`)).toBe(true);
   });
 
   test("skills are labeled with origin", async () => {

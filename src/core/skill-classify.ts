@@ -43,6 +43,14 @@ export function isPluginOwned(skillDir: string, stopAt?: string): boolean {
   return pluginRoot(skillDir, stopAt) !== undefined;
 }
 
+/** Runner Next for a Plugin-owned Skill. Dry-run only — no Plugin-wide --yes. */
+export function pluginNextCommands(root: string): { review: string; fix: string } {
+  return {
+    review: `dora review --quick ${root}`,
+    fix: `dora fix ${root} --dry-run`,
+  };
+}
+
 export function classifySkillDir(
   skillDir: string,
   opts: { cwd: string; home?: string }

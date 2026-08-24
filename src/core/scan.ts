@@ -14,7 +14,7 @@ import {
   type CrossAgentSurface,
   type DetectDeps,
 } from "./agent-detect.js";
-import { pluginRoot, type SkillOrigin } from "./skill-classify.js";
+import { pluginNextCommands, pluginRoot, type SkillOrigin } from "./skill-classify.js";
 import { resolveScanScope, type ScanScope } from "./scan-scope.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { detectSkillShadows, shadowWarningText, type SkillShadow } from "./skill-shadow.js";
@@ -318,6 +318,13 @@ export async function runScan(
     }
   } catch {
     // intentional: memory store optional; scan must not fail without it
+  }
+
+  const pluginRoots = [...new Set(health.flatMap((h) => (h.pluginOwned && h.pluginRoot ? [h.pluginRoot] : [])))];
+  for (const root of pluginRoots) {
+    const next = pluginNextCommands(root);
+    suggestions.push({ kind: "improve", title: "Plugin-owned Skill", command: next.review });
+    suggestions.push({ kind: "improve", title: "update Plugin (dry-run)", command: next.fix });
   }
 
   const removeCount = health.filter((h) => h.warnings.some((w) => w.code === "R034")).length;
