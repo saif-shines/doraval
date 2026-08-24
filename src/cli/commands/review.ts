@@ -83,6 +83,7 @@ function renderOptionalTier(
 function renderSingle(r: ReviewResult): void {
   ui.blank();
   ui.heading(`Reviewing ${r.path}`);
+  if (r.pluginOwned) ui.dim("  Plugin-owned");
   ui.blank();
 
   const s = r.tiers.structure;
@@ -158,7 +159,8 @@ function renderAggregate(results: ReviewResult[]): void {
 
   for (const r of shown) {
     const status = r.summary.errors > 0 ? "fail" as const : r.summary.warnings > 0 ? "warn" as const : "pass" as const;
-    renderCheck(status, `${r.path.padEnd(24)} ${countParts(r.summary.passed, r.summary.warnings, r.summary.errors)}`);
+    const mark = r.pluginOwned ? pc.dim("  Plugin-owned") : "";
+    renderCheck(status, `${r.path.padEnd(24)} ${countParts(r.summary.passed, r.summary.warnings, r.summary.errors)}${mark}`);
   }
 
   const totals = results.reduce(

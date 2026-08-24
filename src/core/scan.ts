@@ -14,7 +14,7 @@ import {
   type CrossAgentSurface,
   type DetectDeps,
 } from "./agent-detect.js";
-import type { SkillOrigin } from "./skill-classify.js";
+import { pluginRoot, type SkillOrigin } from "./skill-classify.js";
 import { resolveScanScope, type ScanScope } from "./scan-scope.js";
 import { findSkillDirs } from "./skill-discovery.js";
 import { detectSkillShadows, shadowWarningText, type SkillShadow } from "./skill-shadow.js";
@@ -69,6 +69,8 @@ export interface HealthEntry {
   status: "pass" | "warn" | "fail";
   errors: HealthItem[];
   warnings: HealthItem[];
+  pluginOwned?: boolean;
+  pluginRoot?: string;
 }
 
 export interface Suggestion {
@@ -145,12 +147,14 @@ export async function runScan(
       });
     }
 
+    const ownedRoot = pluginRoot(dir, scope.scanRoot);
     health.push({
       path: rel,
       origin,
       status: errors.length > 0 ? "fail" : warnings.length > 0 ? "warn" : "pass",
       errors,
       warnings,
+      ...(ownedRoot ? { pluginOwned: true, pluginRoot: ownedRoot } : {}),
     });
   }
 

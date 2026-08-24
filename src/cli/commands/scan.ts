@@ -93,7 +93,9 @@ function renderHuman(r: ScanResult): void {
     ui.blank();
     ui.heading("Health");
     for (const h of r.health) {
-      const suffix = h.origin === "authored" ? "" : pc.dim(`  (${h.origin})`);
+      const suffix =
+        (h.origin === "authored" ? "" : pc.dim(`  (${h.origin})`)) +
+        (h.pluginOwned ? pc.dim("  (Plugin-owned)") : "");
       const primary = h.errors[0] ?? h.warnings[0];
       renderCheck(
         h.status === "pass" ? "pass" : h.status,

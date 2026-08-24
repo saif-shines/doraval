@@ -5,7 +5,7 @@ import { checkSkill } from "./skill-check.js";
 import { buildLintPrompt, LintSchema, LINT_SYSTEM, type LintOutput } from "./skill-lint.js";
 import { judge, type JudgeOutcome, type JudgeRequest } from "./judge.js";
 import { findSkillDirs, isSkillDir } from "./skill-discovery.js";
-import type { SkillOrigin } from "./skill-classify.js";
+import { pluginRoot, type SkillOrigin } from "./skill-classify.js";
 import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
@@ -36,6 +36,8 @@ interface TierResult {
 export interface ReviewResult {
   path: string;
   origin: SkillOrigin;
+  pluginOwned?: boolean;
+  pluginRoot?: string;
   tiers: {
     structure: TierResult;
     heuristics: TierResult;
@@ -368,8 +370,14 @@ export async function review(path: string, opts: ReviewOptions = {}): Promise<Re
   const one = (target: string) =>
     isSkillDir(target) ? reviewSkill(target, per) : reviewMemoryFile(target, per);
 
-  if (opts.quick) return Promise.all(targets.map(one));
+  const stamp = (r: ReviewResult): ReviewResult => {
+    if (!isSkillDir(r.path)) return r;
+    const root = pluginRoot(r.path, cwd);
+    return root ? { ...r, pluginOwned: true, pluginRoot: root } : r;
+  };
+
+  if (opts.quick) return Promise.all(targets.map(one)).then((rows) => rows.map(stamp));
   const results: ReviewResult[] = [];
-  for (const target of targets) results.push(await one(target));
+  for (const target of targets) results.push(stamp(await one(target)));
   return results;
 }

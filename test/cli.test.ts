@@ -729,6 +729,52 @@ describe("doraval CLI", () => {
       expect(parsed.length).toBe(1);
       rmSync(dir, { recursive: true, force: true });
     });
+
+    test("Plugin-owned Skill is stamped; standalone is not", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-plug-rev-"));
+      mkdirSync(join(dir, ".git"));
+      const solo = join(dir, ".claude", "skills", "solo");
+      mkdirSync(solo, { recursive: true });
+      writeFileSync(join(solo, "SKILL.md"), '---\nname: solo\ndescription: "Use when testing standalone"\n---\n\n1. Run it\n');
+      const inner = join(dir, "my-plug", "skills", "inner");
+      mkdirSync(join(dir, "my-plug", ".claude-plugin"), { recursive: true });
+      mkdirSync(inner, { recursive: true });
+      writeFileSync(join(dir, "my-plug", ".claude-plugin", "plugin.json"), "{}");
+      writeFileSync(join(inner, "SKILL.md"), '---\nname: inner\ndescription: "Use when testing plugin-owned"\n---\n\n1. Run it\n');
+
+      const owned = runDoraval(["review", inner, "--quick", "--json", "--cwd", dir]);
+      const ownedJson = JSON.parse(owned.stdout);
+      const ownedSkill = ownedJson.find((r: { path: string }) => r.path === inner);
+      expect(ownedSkill.pluginOwned).toBe(true);
+      expect(ownedSkill.pluginRoot).toBe(join(dir, "my-plug"));
+
+      writeFileSync(join(dir, "AGENTS.md"), "# agents\n");
+      const table = runDoraval(["review", inner, "--quick", "--cwd", dir]);
+      expect(table.stdout + table.stderr).toMatch(/Plugin-owned/i);
+
+      const alone = runDoraval(["review", solo, "--quick", "--json", "--cwd", dir]);
+      const aloneJson = JSON.parse(alone.stdout);
+      const aloneSkill = aloneJson.find((r: { path: string }) => r.path === solo);
+      expect(aloneSkill.pluginOwned ?? false).toBe(false);
+      expect(aloneSkill.pluginRoot).toBeUndefined();
+
+      const plug = runDoraval(["review", join(dir, "my-plug"), "--quick", "--json", "--cwd", dir]);
+      const plugJson = JSON.parse(plug.stdout);
+      const fromRoot = plugJson.find((r: { path: string }) => r.path === inner);
+      expect(fromRoot.pluginOwned).toBe(true);
+      expect(fromRoot.pluginRoot).toBe(join(dir, "my-plug"));
+
+      const scan = runDoraval(["scan", "--json", "--yes", "--cwd", dir]);
+      const scanJson = JSON.parse(scan.stdout);
+      const row = scanJson.health.find((h: { path: string }) => h.path.includes("inner"));
+      expect(row.pluginOwned).toBe(true);
+      expect(row.pluginRoot).toBe(join(dir, "my-plug"));
+
+      const scanTable = runDoraval(["scan", "--yes", "--cwd", dir]);
+      expect(scanTable.stdout + scanTable.stderr).toMatch(/Plugin-owned/i);
+
+      rmSync(dir, { recursive: true, force: true });
+    });
   });
 
   describe("dora review <memory-file>", () => {

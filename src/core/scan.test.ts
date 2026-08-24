@@ -78,6 +78,21 @@ describe("runScan", () => {
     expect(result.suggestions.some((s) => s.command === "dora skill unused")).toBe(false);
   });
 
+  test("Plugin-owned Skill health has pluginOwned and pluginRoot", async () => {
+    const root = makeRepo();
+    writeSkill(root, ".claude/skills/solo", 'name: solo\ndescription: "Use when testing standalone"');
+    writeSkill(root, "my-plug/skills/inner", 'name: inner\ndescription: "Use when testing plugin-owned"');
+    mkdirSync(join(root, "my-plug", ".claude-plugin"), { recursive: true });
+    writeFileSync(join(root, "my-plug", ".claude-plugin", "plugin.json"), "{}");
+    const result = await runScan(root, noneInstalled);
+    const inner = result.health.find((h) => h.path.includes("inner"))!;
+    const solo = result.health.find((h) => h.path.includes("solo"))!;
+    expect(inner.pluginOwned).toBe(true);
+    expect(inner.pluginRoot).toBe(join(root, "my-plug"));
+    expect(solo.pluginOwned).toBeUndefined();
+    expect(solo.pluginRoot).toBeUndefined();
+  });
+
   test("skills are labeled with origin", async () => {
     const root = makeRepo();
     writeSkill(root, ".claude/skills/mine", 'name: mine\ndescription: "Use when testing"');
