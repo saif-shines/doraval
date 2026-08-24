@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.6.24
+
+### Features
+
+- Review and Scan mark **Plugin-owned** Skills (`pluginOwned`, `pluginRoot`).
+- After Review, Scan, or `fix` of that Skill, Next is
+  `dora review --quick <plugin-root>` and `dora fix <plugin-root> --dry-run`.
+
 ## 0.6.23
 
 ### Features

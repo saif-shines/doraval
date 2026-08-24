@@ -81,6 +81,25 @@ _Avoid_: “perfect”; “improve context” with no job; a Runner that Removes
 
 Grill for this pass is **closed**. Shipped in v0.6.23. Spec: https://github.com/saif-shines/doraval/issues/44. Tickets: [#45](https://github.com/saif-shines/doraval/issues/45), [#46](https://github.com/saif-shines/doraval/issues/46), [#47](https://github.com/saif-shines/doraval/issues/47).
 
+## Plugin-health pass (this grill)
+
+| Term | Meaning |
+|------|---------|
+| **Separate units** | A Plugin and a Skill are two things. A Plugin is not “a bag you must use instead of a Skill.” A Skill is not “the Plugin.” |
+| **Plugin Review** | `dora review <plugin-root>`. Same Review as today. Owned Skills are listed under that report. No new `dora plugin` verb. |
+| **This pass** | Health read/report for Plugin + owned Skills. Not Subagent Review. `dora skill unused` / `remove` / `restore` still skip Plugin-owned Skills. |
+| **Skill-path Review** | `dora review` of a Plugin-owned Skill is allowed. Health of that Skill only. Say it is Plugin-owned. |
+| **Skill-path fix** | `dora fix` of a Plugin-owned Skill still applies mechanical fixes to that Skill. Unchanged. |
+| **Plugin Next** | On Review of a Plugin-owned Skill, on that Skill’s Scan health row, and after `dora fix` of that Skill: say Plugin-owned. Next is `dora review --quick <plugin-root>` and `dora fix <plugin-root> --dry-run`. Do not auto `--yes` the whole Plugin. |
+| **JSON (this pass)** | Review / Scan / fix JSON marks a Plugin-owned Skill with `pluginOwned: true` and `pluginRoot`. No new top-level `next` array. |
+| **Runner-first (this pass)** | Design output for the Runner. The table may stay. Do not add human-only chrome. |
+
+_Avoid_: refusing all Skill paths inside a Plugin; a new `dora plugin` command; treating Plugin Review as a new report format; applying Plugin-wide `--yes` without the human.
+
+**Later product direction (not this pass):** the binary is for the Runner. Humans read README and the site. No new TTY pickers. Existing human confirms stay until a later grill. Not C (do not drop tables/confirms in this pass).
+
+Grill for this pass is **closed**. Shipped in v0.6.24. Spec: https://github.com/saif-shines/doraval/issues/48. Tickets: [#49](https://github.com/saif-shines/doraval/issues/49), [#50](https://github.com/saif-shines/doraval/issues/50).
+
 **`llms.txt`:** generated from the site. Fix the pages. Do not hand-write a second index.
 
 _Avoid_: one “you” for both on a **Reader** page; an agent page that still talks to a human (“use with your agent”); leading with `--format json` before a `--quick` review. Top-level `--help` is allowed to say “for agents.”
