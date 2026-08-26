@@ -239,3 +239,28 @@ go ahead /to-tickets
 <user_query>
 yes
 </user_query>
+
+---
+
+<user_query>
+/mattpocock-skills:implement 62
+</user_query>
+<skill_information>
+<skills_referenced>
+<skill name="mattpocock-skills:implement" path="/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/implement/SKILL.md"/>
+</skills_referenced>
+<skill name="mattpocock-skills:implement" args="62">
+Implement the work described by the user in the spec or tickets.
+
+Use /tdd where possible, at pre-agreed seams.
+
+Run typechecking regularly, single test files regularly, and the full test suite once at the end.
+
+Once done, use /code-review to review the work.
+
+Commit your work to the current branch.
+
+
+**ARGUMENTS:** 62
+</skill>
+</skill_information>
