@@ -367,12 +367,12 @@ describe("doraval CLI", () => {
       expect(help.stdout).toContain("--global");
     });
 
-    test("skill unused --help names --last and --since, not --global", () => {
+    test("skill unused --help names --last, --since, and --global", () => {
       const help = runDoraval(["skill", "unused", "--help"]);
       expect(help.exitCode).toBe(0);
       expect(help.stdout).toContain("--last");
       expect(help.stdout).toContain("--since");
-      expect(help.stdout).not.toContain("--global");
+      expect(help.stdout).toContain("--global");
     });
 
     test("skill unused lists nothing when there are no sessions", () => {
@@ -384,9 +384,26 @@ describe("doraval CLI", () => {
       expect(exitCode).toBe(0);
       const body = JSON.parse(stdout);
       expect(body.sessions).toBe(0);
+      expect(body.load).toBe("project");
+      expect(body.last).toBe(30);
+      expect(body.maxAgeDays).toBe(90);
       expect(body.candidates).toEqual([]);
       expect(body.recent).toEqual([]);
       expect(body.installAgeDays).toBe(90);
+      expect(body.reason).toBe("no-sessions");
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("skill unused --global --json uses Global load", () => {
+      const dir = authoredRepo();
+      const { exitCode, stdout } = runDoraval(
+        ["skill", "unused", "--global", "--json", "--cwd", dir],
+        { env: { CI: "1", HOME: dir } },
+      );
+      expect(exitCode).toBe(0);
+      const body = JSON.parse(stdout);
+      expect(body.load).toBe("global");
+      expect(body.candidates).toEqual([]);
       expect(body.reason).toBe("no-sessions");
       rmSync(dir, { recursive: true, force: true });
     });

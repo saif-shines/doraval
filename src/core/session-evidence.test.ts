@@ -220,5 +220,37 @@ describe("loadRecentSessions", () => {
     const lr = loadRecentSessions("/any", [a, b], { last: 3, maxAgeDays: 90 });
     expect(lr.sessions.map((s) => s.path)).toEqual([paths[0], paths[1], paths[2]]);
   });
+
+  test("Global load keeps last N per agent and includes another project's Session", async () => {
+    const { loadRecentSessions } = await import("./session-evidence.js");
+    const { mkdtempSync, writeFileSync } = await import("fs");
+    const { join } = await import("path");
+    const { tmpdir } = await import("os");
+    const dir = mkdtempSync(join(tmpdir(), "ev-glob-"));
+    const now = Date.now();
+    const make = (name: string, mtime: number) => {
+      const p = join(dir, name);
+      writeFileSync(p, "{}\n");
+      return { path: p, mtime, skillCount: 0 };
+    };
+    const claude = Array.from({ length: 32 }, (_, i) => make(`c${i}.jsonl`, now - i * 1000));
+    const grokOther = make("g-other.jsonl", now - 500);
+    const fakeClaude = {
+      agent: "claude-code", detect: () => true, findLatestSession: () => null, parse: () => prim({}),
+      listRecentSessions: () => [],
+      listAllRecentSessions: (limit = 10) => claude.slice(0, limit),
+    };
+    const fakeGrok = {
+      agent: "grok", detect: () => true, findLatestSession: () => null, parse: () => prim({}),
+      listRecentSessions: () => [],
+      listAllRecentSessions: () => [grokOther],
+    };
+    const lr = loadRecentSessions("/this/cwd", [fakeClaude, fakeGrok], { last: 30, maxAgeDays: 90 }, "global");
+    expect(lr.window).toEqual({ last: 30, maxAgeDays: 90 });
+    expect(lr.kind).toBe("global");
+    expect(lr.sessions.filter((s) => s.agent === "claude-code")).toHaveLength(30);
+    expect(lr.sessions.some((s) => s.path === grokOther.path)).toBe(true);
+    expect(lr.sessions.some((s) => s.path === claude[30]!.path)).toBe(false);
+  });
 });
 

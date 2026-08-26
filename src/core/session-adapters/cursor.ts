@@ -82,6 +82,23 @@ export function createCursorAdapter(homeDir: string = homedir()): SessionAdapter
     listRecentSessions(cwd: string, limit = 10): SessionListItem[] {
       return list(cwd, limit);
     },
+    listAllRecentSessions(limit = 10): SessionListItem[] {
+      const root = join(homeDir, ".cursor", "projects");
+      if (!existsSync(root)) return [];
+      const items: SessionListItem[] = [];
+      for (const proj of readdirSync(root, { withFileTypes: true })) {
+        if (!proj.isDirectory()) continue;
+        const base = join(root, proj.name, "agent-transcripts");
+        if (!existsSync(base)) continue;
+        for (const entry of readdirSync(base, { withFileTypes: true })) {
+          if (!entry.isDirectory()) continue;
+          const file = join(base, entry.name, `${entry.name}.jsonl`);
+          if (!existsSync(file)) continue;
+          items.push({ path: file, mtime: statSync(file).mtimeMs, skillCount: 0 });
+        }
+      }
+      return items.sort((a, b) => b.mtime - a.mtime).slice(0, limit);
+    },
     parse(path: string): Session {
       const sessionId = basename(path, ".jsonl");
       // cwd is recoverable from the dir name only lossily; derive display cwd from path segments

@@ -20,6 +20,7 @@ export default defineCommand({
       "  dora skill unused",
       "  dora skill unused --json",
       "  dora skill unused --last 10 --since 30",
+      "  dora skill unused --global",
       "Exit: 0 listed · 2 could not run",
     ].join("\n"),
   },
@@ -30,6 +31,7 @@ export default defineCommand({
     cwd: { type: "string", description: "Working directory override" },
     last: { type: "string", description: "How many recent Sessions to read (default 30)" },
     since: { type: "string", description: "Drop Sessions older than this many days (default 90)" },
+    global: { type: "boolean", description: "Global unused: home Skills, Sessions from every project", default: false },
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
@@ -41,8 +43,9 @@ export default defineCommand({
       maxAgeDays: sinceRaw,
       config: await readConfig(),
     });
-    const loaded = loadRecentSessions(cwd, undefined, window);
-    const report = listUnusedReport({ cwd, home: homedir(), loaded });
+    const scope = args.global ? "global" : "project";
+    const loaded = loadRecentSessions(cwd, undefined, window, scope);
+    const report = listUnusedReport({ cwd, home: homedir(), loaded, scope });
     const row = (m: (typeof report.candidates)[number], recentInstall: boolean) => ({
       name: m.name,
       dir: m.dir,
@@ -55,7 +58,10 @@ export default defineCommand({
 
     if (mode.format === "json") {
       outJson({
+        load: loaded.kind ?? scope,
         sessions: loaded.sessions.length,
+        last: window.last,
+        maxAgeDays: window.maxAgeDays,
         installAgeDays: report.installAgeDays,
         candidates,
         recent,

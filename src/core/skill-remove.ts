@@ -234,8 +234,11 @@ export function isRemoveCandidate(input: {
   origin: SkillOrigin;
   invoked: boolean;
   recentInstall: boolean;
+  scope?: "project" | "global";
 }): boolean {
-  return input.origin === "authored" && !input.invoked && !input.recentInstall;
+  if (input.invoked || input.recentInstall) return false;
+  if ((input.scope ?? "project") === "global") return input.origin === "global";
+  return input.origin === "authored";
 }
 
 export function listRemoveCandidates(opts: {
@@ -254,7 +257,9 @@ export function listUnusedReport(opts: {
   loaded: LoadResult;
   nowMs?: number;
   installAgeDays?: number;
+  scope?: "project" | "global";
 }): { candidates: SkillMatch[]; recent: SkillMatch[]; installAgeDays: number } {
+  const scope = opts.scope ?? "project";
   const installAgeDays = resolveInstallAgeDays({
     days: opts.installAgeDays,
     config: readConfigSync(),
@@ -265,15 +270,16 @@ export function listUnusedReport(opts: {
   const nowMs = opts.nowMs ?? Date.now();
   const candidates: SkillMatch[] = [];
   const recent: SkillMatch[] = [];
+  const want = scope === "global" ? "global" : "authored";
   for (const s of listProjectSkills(opts.cwd, opts.home)) {
-    if (s.origin !== "authored") continue;
-    if (isPluginOwned(s.dir, opts.cwd)) continue;
+    if (s.origin !== want) continue;
+    if (isPluginOwned(s.dir, scope === "global" ? undefined : opts.cwd)) continue;
     let mtimeMs: number;
     try { mtimeMs = statSync(join(s.dir, "SKILL.md")).mtimeMs; } catch { continue; }
     const invoked = skillWasInvoked(s.name, s.dir, opts.loaded);
     if (invoked) continue;
     const recentInstall = isRecentInstall(mtimeMs, nowMs, installAgeDays);
-    if (isRemoveCandidate({ origin: s.origin, invoked: false, recentInstall })) {
+    if (isRemoveCandidate({ origin: s.origin, invoked: false, recentInstall, scope })) {
       candidates.push(s);
     } else if (recentInstall) {
       recent.push(s);

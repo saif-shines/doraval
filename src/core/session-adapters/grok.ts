@@ -242,6 +242,42 @@ function listSessionDirs(group: string): string[] {
   }
 }
 
+function collectGrokGroup(group: string, limit: number): SessionListItem[] {
+  const res: SessionListItem[] = [];
+  const subs = listSessionDirs(group);
+  subs.sort((a, b) => sessionMtime(join(group, b)) - sessionMtime(join(group, a)));
+  for (const sub of subs.slice(0, limit)) {
+    const sessDir = join(group, sub);
+    const updates = join(sessDir, "updates.jsonl");
+    if (!existsSync(updates)) continue;
+    const summary = readJsonFile<GrokSummary>(join(sessDir, "summary.json"));
+    let skillCount = 0;
+    try {
+      const text = readFileSync(updates, "utf8");
+      const skills = new Set<string>();
+      for (const line of text.split("\n")) {
+        if (!line.includes("skill") && !line.includes("Skill") && !line.includes("SKILL.md")) continue;
+        const j = safeJsonParse<Record<string, unknown>>(line);
+        if (!j) continue;
+        const u = ((j.params as Record<string, unknown>)?.update ?? {}) as Record<string, unknown>;
+        for (const s of extractSkillsFromUpdate(u)) skills.add(s);
+      }
+      skillCount = skills.size;
+    } catch {
+      // intentional: list stays usable if updates unreadable
+    }
+    const signals = readJsonFile<GrokSignals>(join(sessDir, "signals.json"));
+    res.push({
+      path: updates,
+      mtime: sessionMtime(sessDir),
+      title: summary?.session_summary || summary?.info?.id || sub,
+      skillCount,
+      tokens: signals?.contextTokensUsed,
+    });
+  }
+  return res;
+}
+
 function sessionMtime(sessDir: string): number {
   const updates = join(sessDir, "updates.jsonl");
   try {
@@ -291,47 +327,35 @@ export function createGrokAdapter(
       }
     },
 
-    listRecentSessions(cwd: string, limit = 10): SessionListItem[] {
+    listAllRecentSessions(limit = 10): SessionListItem[] {
+      const root = sessionsRoot();
+      if (!existsSync(root)) return [];
       const res: SessionListItem[] = [];
+      try {
+        for (const name of readdirSync(root)) {
+          if (name.startsWith(".")) continue;
+          const group = join(root, name);
+          try {
+            if (!statSync(group).isDirectory()) continue;
+          } catch {
+            continue;
+          }
+          res.push(...collectGrokGroup(group, limit));
+        }
+      } catch {
+        return [];
+      }
+      return res.sort((a, b) => b.mtime - a.mtime).slice(0, limit);
+    },
+
+    listRecentSessions(cwd: string, limit = 10): SessionListItem[] {
       try {
         const group = findSessionGroup(sessionsRoot(), cwd);
         if (!group) return [];
-        const subs = listSessionDirs(group);
-        subs.sort((a, b) => sessionMtime(join(group, b)) - sessionMtime(join(group, a)));
-        for (const sub of subs.slice(0, limit)) {
-          const sessDir = join(group, sub);
-          const updates = join(sessDir, "updates.jsonl");
-          if (!existsSync(updates)) continue;
-          const summary = readJsonFile<GrokSummary>(join(sessDir, "summary.json"));
-          let skillCount = 0;
-          try {
-            // Light pass for list badges — full parse is for parse()
-            const text = readFileSync(updates, "utf8");
-            const skills = new Set<string>();
-            for (const line of text.split("\n")) {
-              if (!line.includes("skill") && !line.includes("Skill") && !line.includes("SKILL.md")) continue;
-              const j = safeJsonParse<Record<string, unknown>>(line);
-              if (!j) continue;
-              const u = ((j.params as Record<string, unknown>)?.update ?? {}) as Record<string, unknown>;
-              for (const s of extractSkillsFromUpdate(u)) skills.add(s);
-            }
-            skillCount = skills.size;
-          } catch {
-            // intentional: list stays usable if updates unreadable
-          }
-          const signals = readJsonFile<GrokSignals>(join(sessDir, "signals.json"));
-          res.push({
-            path: updates,
-            mtime: sessionMtime(sessDir),
-            title: summary?.session_summary || summary?.info?.id || sub,
-            skillCount,
-            tokens: signals?.contextTokensUsed,
-          });
-        }
+        return collectGrokGroup(group, limit);
       } catch {
-        // intentional: degrade to empty list for this home-dir walk
+        return [];
       }
-      return res;
     },
 
     parse(path: string): Session {

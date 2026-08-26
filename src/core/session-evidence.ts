@@ -23,11 +23,14 @@ export interface LoadedSession {
   primitives: Session;
 }
 
+export type LoadKind = "project" | "global";
+
 export interface LoadResult {
   sessions: LoadedSession[];
   adaptersDetected: string[];
   skipped: Record<string, number>;
   window?: ReviewWindow;
+  kind?: LoadKind;
 }
 
 /** Load once per review run; reviewAll threads the result to every skill. */
@@ -35,17 +38,21 @@ export function loadRecentSessions(
   cwd: string,
   adapters: SessionAdapter[] = getAllAdapters(),
   window: ReviewWindow = resolveReviewWindow({ config: readConfigSync() }),
+  kind: LoadKind = "project",
 ): LoadResult {
   const sessions: LoadedSession[] = [];
   const skipped: Record<string, number> = {};
   for (const adapter of adapters) {
     let listed;
     try {
-      listed = adapter.listRecentSessions(cwd, window.last);
+      listed = kind === "global"
+        ? (adapter.listAllRecentSessions?.(window.last) ?? [])
+        : adapter.listRecentSessions(cwd, window.last);
     } catch {
       skipped[adapter.agent] = (skipped[adapter.agent] ?? 0) + 1;
       continue;
     }
+    const agentSessions: LoadedSession[] = [];
     for (const item of listed) {
       if (!withinWindow(item.mtime, Date.now(), window.maxAgeDays)) continue;
       try {
@@ -53,18 +60,21 @@ export function loadRecentSessions(
           skipped[adapter.agent] = (skipped[adapter.agent] ?? 0) + 1;
           continue;
         }
-        sessions.push({ agent: adapter.agent, path: item.path, mtime: item.mtime, primitives: adapter.parse(item.path) });
+        agentSessions.push({ agent: adapter.agent, path: item.path, mtime: item.mtime, primitives: adapter.parse(item.path) });
       } catch {
         skipped[adapter.agent] = (skipped[adapter.agent] ?? 0) + 1;
       }
     }
+    agentSessions.sort((a, b) => b.mtime - a.mtime);
+    sessions.push(...(kind === "global" ? agentSessions.slice(0, window.last) : agentSessions));
   }
   sessions.sort((a, b) => b.mtime - a.mtime);
   return {
-    sessions: sessions.slice(0, window.last),
+    sessions: kind === "global" ? sessions : sessions.slice(0, window.last),
     adaptersDetected: adapters.map((a) => a.agent),
     skipped,
     window,
+    kind,
   };
 }
 

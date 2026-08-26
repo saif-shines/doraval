@@ -39,6 +39,11 @@ describe("isRemoveCandidate", () => {
     expect(isRemoveCandidate({ origin: "global", invoked: false, recentInstall: false })).toBe(false);
   });
 
+  test("Global scope allows a Global Skill and refuses an Authored Skill", () => {
+    expect(isRemoveCandidate({ origin: "global", invoked: false, recentInstall: false, scope: "global" })).toBe(true);
+    expect(isRemoveCandidate({ origin: "authored", invoked: false, recentInstall: false, scope: "global" })).toBe(false);
+  });
+
   test("Invoked Authored Skill is not a Remove candidate", () => {
     expect(isRemoveCandidate({ origin: "authored", invoked: true, recentInstall: false })).toBe(false);
   });
@@ -343,6 +348,37 @@ describe("planRemove + applyRemove", () => {
       expect(report.installAgeDays).toBe(90);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test("Global unused lists a home Skill and skips Authored", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    writeSkill(cwd, ".claude/skills/local", "local");
+    const ghost = writeSkill(home, ".claude/skills/ghost", "ghost");
+    const age = Date.now() / 1000 - 100 * 24 * 60 * 60;
+    utimesSync(join(ghost, "SKILL.md"), age, age);
+    utimesSync(join(cwd, ".claude/skills/local/SKILL.md"), age, age);
+    const loaded: LoadResult = {
+      sessions: [{
+        agent: "claude-code", path: "/tmp/s.jsonl", mtime: Date.now(),
+        primitives: {
+          sessionId: "s1", model: "m", agent: "claude-code", cwd,
+          toolCalls: [], toolCallCounts: {}, skillsInvoked: [],
+          userMessages: [], userTurnCount: 0, assistantText: [],
+        },
+      }],
+      adaptersDetected: ["claude-code"],
+      skipped: {},
+    };
+    try {
+      const project = listUnusedReport({ cwd, home, loaded, scope: "project" });
+      expect(project.candidates.map((c) => c.name)).toEqual(["local"]);
+      const global = listUnusedReport({ cwd, home, loaded, scope: "global" });
+      expect(global.candidates.map((c) => c.name)).toEqual(["ghost"]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
     }
   });
 

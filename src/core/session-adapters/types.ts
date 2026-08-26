@@ -14,6 +14,8 @@ export interface SessionAdapter {
   detect(): boolean;
   findLatestSession(cwd: string): string | null;
   listRecentSessions(cwd: string, limit?: number): SessionListItem[];
+  /** Newest Sessions for this agent across every project. Used by Global load. */
+  listAllRecentSessions?(limit?: number): SessionListItem[];
   parse(path: string): Session;
 }
 

@@ -79,16 +79,20 @@ function parseEvents(text: string): Session {
 export function createCopilotAdapter(homeDir: string = homedir()): SessionAdapter {
   const eventsPath = (id: string) => join(homeDir, ".copilot", "session-state", id, "events.jsonl");
 
-  function list(cwd: string, limit: number): SessionListItem[] {
+  function list(cwd: string | null, limit: number): SessionListItem[] {
     const dbPath = join(homeDir, ".copilot", "session-store.db");
     if (!existsSync(dbPath)) return [];
     let rows: SessionRow[];
     try {
       const db = new Database(dbPath, { readonly: true });
       try {
-        rows = db.query<SessionRow, [string, number]>(
-          `SELECT id, summary, updated_at FROM sessions WHERE cwd = ? ORDER BY updated_at DESC LIMIT ?`
-        ).all(cwd, limit);
+        rows = cwd == null
+          ? db.query<SessionRow, [number]>(
+              `SELECT id, summary, updated_at FROM sessions ORDER BY updated_at DESC LIMIT ?`
+            ).all(limit)
+          : db.query<SessionRow, [string, number]>(
+              `SELECT id, summary, updated_at FROM sessions WHERE cwd = ? ORDER BY updated_at DESC LIMIT ?`
+            ).all(cwd, limit);
       } finally {
         db.close();
       }
@@ -114,6 +118,9 @@ export function createCopilotAdapter(homeDir: string = homedir()): SessionAdapte
     },
     listRecentSessions(cwd: string, limit = 10): SessionListItem[] {
       return list(cwd, limit);
+    },
+    listAllRecentSessions(limit = 10): SessionListItem[] {
+      return list(null, limit);
     },
     parse(path: string): Session {
       return parseEvents(readFileSync(path, "utf8"));
