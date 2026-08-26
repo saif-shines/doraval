@@ -408,7 +408,7 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
-    test("named remove of a Plugin-owned Skill exits 1 and writes nothing", () => {
+    test("named remove of an Owned Plugin child deletes only that Skill", () => {
       const dir = mkdtempSync(join(tmpdir(), "dora-skill-rm-"));
       mkdirSync(join(dir, ".git"));
       const skill = join(dir, "my-plug", "skills", "inner");
@@ -416,14 +416,13 @@ describe("doraval CLI", () => {
       mkdirSync(skill, { recursive: true });
       writeFileSync(join(dir, "my-plug", ".claude-plugin", "plugin.json"), "{}");
       writeFileSync(join(skill, "SKILL.md"), `---\nname: inner\ndescription: "Use when testing plugin-owned"\n---\n\n1. Do the thing\n`);
-      const { exitCode, stderr } = runDoraval(
+      const { exitCode } = runDoraval(
         ["skill", "remove", "inner", "--yes", "--cwd", dir],
         { env: { CI: "1", HOME: dir } },
       );
-      expect(exitCode).toBe(1);
-      expect(existsSync(skill)).toBe(true);
-      expect(stderr).toContain("dora review --quick");
-      expect(stderr).toContain(join(dir, "my-plug"));
+      expect(exitCode).toBe(0);
+      expect(existsSync(skill)).toBe(false);
+      expect(existsSync(join(dir, "my-plug", ".claude-plugin", "plugin.json"))).toBe(true);
       rmSync(dir, { recursive: true, force: true });
     });
 

@@ -43,6 +43,14 @@ export function isPluginOwned(skillDir: string, stopAt?: string): boolean {
   return pluginRoot(skillDir, stopAt) !== undefined;
 }
 
+/** Manifest file under a Plugin root, if present. */
+export function pluginManifestFile(root: string): string | undefined {
+  for (const rel of pluginManifestRels()) {
+    const p = join(root, rel);
+    if (existsSync(p)) return p;
+  }
+}
+
 /** Runner Next for a Plugin-owned Skill. Dry-run only — no Plugin-wide --yes. */
 export function pluginNextCommands(root: string): { review: string; fix: string } {
   return {

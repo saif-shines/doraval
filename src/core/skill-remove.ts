@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { basename, isAbsolute, join, relative, resolve } from "path";
-import { classifySkillDir, isPluginOwned, pluginRoot, type SkillOrigin } from "./skill-classify.js";
+import { classifySkillDir, pluginManifestFile, pluginRoot, type SkillOrigin } from "./skill-classify.js";
 import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery.js";
 import { withinWindow } from "./session-adapters/types.js";
 import { getDoravalDir, readConfigSync } from "./journal-config.js";
@@ -12,6 +12,12 @@ export interface SkillMatch {
   dir: string;
   origin: SkillOrigin;
   agent?: string;
+}
+
+export interface UnusedRow extends SkillMatch {
+  kind: "skill" | "plugin";
+  removable: boolean;
+  pluginRoot?: string;
 }
 
 export type ResolveSkillResult =
@@ -103,8 +109,10 @@ export function planRemove(resolved: ResolveSkillResult, cwd?: string): RemovePl
   if (resolved.status === "ambiguous") return { ok: false, reason: "ambiguous" };
   if (resolved.status === "imported") return { ok: false, reason: "imported" };
   const { match } = resolved;
-  const root = pluginRoot(match.dir, cwd);
-  if (root) return { ok: false, reason: "plugin-owned", pluginRoot: root };
+  const root = pluginRoot(match.dir, cwd) ?? pluginRoot(match.dir);
+  if (root && resolve(match.dir) === resolve(root)) {
+    return { ok: false, reason: "plugin-owned", pluginRoot: root };
+  }
   if (match.origin === "authored") {
     return { ok: true, action: "delete", dir: match.dir, origin: "authored", name: match.name };
   }
@@ -251,6 +259,22 @@ export function listRemoveCandidates(opts: {
   return listUnusedReport(opts).candidates;
 }
 
+function listSkillsForUnused(cwd: string, home: string | undefined, scope: "project" | "global"): SkillMatch[] {
+  const seen = new Set<string>();
+  const out: SkillMatch[] = [];
+  const extra = scope === "global" && home ? [resolve(home, ".claude/plugins")] : [];
+  for (const s of [...listProjectSkills(cwd, home), ...extra.flatMap((root) => findSkillDirs(root).map((d) => toMatch(d, cwd, home)))]) {
+    if (seen.has(s.dir)) continue;
+    seen.add(s.dir);
+    out.push(s);
+  }
+  return out;
+}
+
+function asRow(s: SkillMatch, extra: Pick<UnusedRow, "kind" | "removable" | "pluginRoot">): UnusedRow {
+  return { ...s, ...extra };
+}
+
 export function listUnusedReport(opts: {
   cwd: string;
   home?: string;
@@ -258,7 +282,7 @@ export function listUnusedReport(opts: {
   nowMs?: number;
   installAgeDays?: number;
   scope?: "project" | "global";
-}): { candidates: SkillMatch[]; recent: SkillMatch[]; installAgeDays: number } {
+}): { candidates: UnusedRow[]; recent: UnusedRow[]; installAgeDays: number } {
   const scope = opts.scope ?? "project";
   const installAgeDays = resolveInstallAgeDays({
     days: opts.installAgeDays,
@@ -268,22 +292,73 @@ export function listUnusedReport(opts: {
     return { candidates: [], recent: [], installAgeDays };
   }
   const nowMs = opts.nowMs ?? Date.now();
-  const candidates: SkillMatch[] = [];
-  const recent: SkillMatch[] = [];
-  const want = scope === "global" ? "global" : "authored";
-  for (const s of listProjectSkills(opts.cwd, opts.home)) {
-    if (s.origin !== want) continue;
-    if (isPluginOwned(s.dir, scope === "global" ? undefined : opts.cwd)) continue;
-    let mtimeMs: number;
-    try { mtimeMs = statSync(join(s.dir, "SKILL.md")).mtimeMs; } catch { continue; }
-    const invoked = skillWasInvoked(s.name, s.dir, opts.loaded);
-    if (invoked) continue;
-    const recentInstall = isRecentInstall(mtimeMs, nowMs, installAgeDays);
-    if (isRemoveCandidate({ origin: s.origin, invoked: false, recentInstall, scope })) {
-      candidates.push(s);
-    } else if (recentInstall) {
-      recent.push(s);
+  const want = (o: SkillOrigin) => scope === "global" ? o === "global" || o === "imported" : o === "authored";
+  const standalone: SkillMatch[] = [];
+  const groups = new Map<string, SkillMatch[]>();
+  for (const s of listSkillsForUnused(opts.cwd, opts.home, scope)) {
+    if (!want(s.origin)) continue;
+    const root = pluginRoot(s.dir, scope === "global" ? undefined : opts.cwd);
+    if (root) {
+      const list = groups.get(root) ?? [];
+      list.push(s);
+      groups.set(root, list);
+    } else {
+      standalone.push(s);
     }
   }
+
+  const candidates: UnusedRow[] = [];
+  const recent: UnusedRow[] = [];
+
+  const consider = (s: SkillMatch, extra: Pick<UnusedRow, "kind" | "removable" | "pluginRoot">) => {
+    let mtimeMs: number;
+    try { mtimeMs = statSync(join(s.dir, "SKILL.md")).mtimeMs; } catch { return { invoked: false, recentInstall: false }; }
+    const invoked = skillWasInvoked(s.name, s.dir, opts.loaded);
+    if (invoked) return { invoked: true, recentInstall: false };
+    const recentInstall = isRecentInstall(mtimeMs, nowMs, installAgeDays);
+    const row = asRow(s, extra);
+    if (extra.pluginRoot || isRemoveCandidate({ origin: s.origin, invoked: false, recentInstall, scope })) {
+      if (recentInstall) recent.push(row);
+      else candidates.push(row);
+    } else if (recentInstall) {
+      recent.push(row);
+    }
+    return { invoked: false, recentInstall };
+  };
+
+  for (const s of standalone) {
+    consider(s, { kind: "skill", removable: true });
+  }
+
+  for (const [root, children] of groups) {
+    const owned = children.every((c) => c.origin !== "imported");
+    const states = children.map((c) => consider(c, {
+      kind: "skill",
+      removable: owned,
+      pluginRoot: root,
+    }));
+    const anyInvoked = states.some((st) => st.invoked);
+    if (anyInvoked) continue;
+    // Drop child rows — the Plugin is the unit.
+    const childDirs = new Set(children.map((c) => c.dir));
+    for (const list of [candidates, recent]) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        if (childDirs.has(list[i]!.dir)) list.splice(i, 1);
+      }
+    }
+    const manifest = pluginManifestFile(root);
+    let pluginRecent = false;
+    if (manifest) {
+      try { pluginRecent = isRecentInstall(statSync(manifest).mtimeMs, nowMs, installAgeDays); } catch { /* keep false */ }
+    }
+    const pluginRow = asRow({
+      name: basename(root),
+      dir: root,
+      origin: owned ? (scope === "global" ? "global" : "authored") : "imported",
+    }, { kind: "plugin", removable: false, pluginRoot: root });
+    if (pluginRecent) recent.push(pluginRow);
+    else candidates.push(pluginRow);
+  }
+
   return { candidates, recent, installAgeDays };
 }

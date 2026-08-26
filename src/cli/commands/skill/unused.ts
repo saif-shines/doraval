@@ -51,6 +51,9 @@ export default defineCommand({
       dir: m.dir,
       origin: m.origin,
       agent: m.agent,
+      kind: m.kind,
+      removable: m.removable,
+      pluginRoot: m.pluginRoot,
       recentInstall,
     });
     const candidates = report.candidates.map((m) => row(m, false));
@@ -85,7 +88,8 @@ export default defineCommand({
 
     for (const c of candidates) {
       const where = c.agent ? `${c.agent}  ${c.dir}` : c.dir;
-      ui.info(`  ${c.name}  ${where}`);
+      const tag = c.kind === "plugin" ? "plugin" : c.removable ? "" : "keep";
+      ui.info(`  ${c.name}  ${where}${tag ? `  ${tag}` : ""}`);
     }
     if (recent.length > 0) {
       if (candidates.length > 0) ui.blank();
@@ -112,7 +116,11 @@ export default defineCommand({
 
     ui.blank();
     summaryLine(`${candidates.length} Remove candidate${candidates.length === 1 ? "" : "s"}`);
-    nextAction(`dora skill remove ${candidates[0]!.name} --dry-run`);
+    const first = candidates[0]!;
+    const next = first.kind === "plugin" || !first.removable
+      ? `dora review --quick ${first.pluginRoot ?? first.dir}`
+      : `dora skill remove ${first.name} --dry-run`;
+    nextAction(next);
     ui.blank();
     await exit(0);
   },
