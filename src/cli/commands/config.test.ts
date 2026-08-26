@@ -21,6 +21,7 @@ describe("config helpers (B37)", () => {
   test("KNOWN_CONFIG_KEYS includes review_window.last and max_age_days", () => {
     expect(KNOWN_CONFIG_KEYS.some((k) => k.key === "review_window.last")).toBe(true);
     expect(KNOWN_CONFIG_KEYS.some((k) => k.key === "review_window.max_age_days")).toBe(true);
+    expect(KNOWN_CONFIG_KEYS.some((k) => k.key === "install_age_days")).toBe(true);
   });
 
   test("getNestedValue / setNestedValue", () => {

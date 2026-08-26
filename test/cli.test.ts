@@ -385,6 +385,8 @@ describe("doraval CLI", () => {
       const body = JSON.parse(stdout);
       expect(body.sessions).toBe(0);
       expect(body.candidates).toEqual([]);
+      expect(body.recent).toEqual([]);
+      expect(body.installAgeDays).toBe(90);
       expect(body.reason).toBe("no-sessions");
       rmSync(dir, { recursive: true, force: true });
     });

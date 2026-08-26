@@ -184,7 +184,7 @@ describe("review", () => {
     const dir = join(SANDBOX, ".claude", "skills", "ghost");
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "SKILL.md"), `---\nname: ghost\ndescription: "Use when testing remove candidates"\n---\n\n1. Do the thing\n`);
-    const old = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    const old = Date.now() / 1000 - 100 * 24 * 60 * 60;
     utimesSync(join(dir, "SKILL.md"), old, old);
     utimesSync(dir, old, old);
     const loadedSessions = {
@@ -223,7 +223,7 @@ describe("review", () => {
     const dir = join(SANDBOX, ".claude", "skills", "ghost-off");
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "SKILL.md"), `---\nname: ghost-off\ndescription: "Use when testing R034 off"\n---\n\n1. Do the thing\n`);
-    const old = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    const old = Date.now() / 1000 - 100 * 24 * 60 * 60;
     utimesSync(join(dir, "SKILL.md"), old, old);
     const home = mkdtempSync(join(tmpdir(), "dora-r034-off-"));
     const previous = process.env.DORAVAL_HOME;

@@ -77,6 +77,11 @@ export const KNOWN_CONFIG_KEYS: ConfigKeyDef[] = [
     description: "Drop Sessions older than this many days",
     kind: "number",
   },
+  {
+    key: "install_age_days",
+    description: "How old a Skill must be before unused may mark it a Remove candidate",
+    kind: "number",
+  },
 ];
 
 const KEY_HELP =

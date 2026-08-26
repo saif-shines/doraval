@@ -12,7 +12,7 @@ export interface ReviewWindowConfig {
   review_window?: { last?: number; max_age_days?: number };
 }
 
-function positiveInt(n: unknown, fallback: number): number {
+export function positiveInt(n: unknown, fallback: number): number {
   const v = typeof n === "string" && n.trim() !== "" ? Number(n) : n;
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.floor(v) : fallback;
 }

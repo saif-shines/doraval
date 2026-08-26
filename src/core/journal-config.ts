@@ -55,6 +55,7 @@ export interface JournalConfig {
   eval?: Partial<EvalConfig>;
   rules?: RulesConfig;
   review_window?: { last?: number; max_age_days?: number };
+  install_age_days?: number;
 }
 
 // ── Paths ──────────────────────────────────────────────────────────

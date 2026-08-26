@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { homedir } from "os";
 import { resolve } from "path";
-import { listRemoveCandidates } from "../../../core/skill-remove.js";
+import { listUnusedReport } from "../../../core/skill-remove.js";
 import { loadRecentSessions } from "../../../core/session-evidence.js";
 import { resolveReviewWindow } from "../../../core/review-window.js";
 import { readConfig } from "../../../core/journal-config.js";
@@ -42,18 +42,23 @@ export default defineCommand({
       config: await readConfig(),
     });
     const loaded = loadRecentSessions(cwd, undefined, window);
-    const matches = listRemoveCandidates({ cwd, home: homedir(), loaded });
-    const candidates = matches.map((m) => ({
+    const report = listUnusedReport({ cwd, home: homedir(), loaded });
+    const row = (m: (typeof report.candidates)[number], recentInstall: boolean) => ({
       name: m.name,
       dir: m.dir,
       origin: m.origin,
       agent: m.agent,
-    }));
+      recentInstall,
+    });
+    const candidates = report.candidates.map((m) => row(m, false));
+    const recent = report.recent.map((m) => row(m, true));
 
     if (mode.format === "json") {
       outJson({
         sessions: loaded.sessions.length,
+        installAgeDays: report.installAgeDays,
         candidates,
+        recent,
         ...(loaded.sessions.length === 0 ? { reason: "no-sessions" } : {}),
       });
       await exit(0);
@@ -72,17 +77,33 @@ export default defineCommand({
       return;
     }
 
-    if (candidates.length === 0) {
+    for (const c of candidates) {
+      const where = c.agent ? `${c.agent}  ${c.dir}` : c.dir;
+      ui.info(`  ${c.name}  ${where}`);
+    }
+    if (recent.length > 0) {
+      if (candidates.length > 0) ui.blank();
+      ui.heading("Recent install");
+      ui.blank();
+      for (const r of recent) {
+        ui.info(`  ${r.name}  installed in the last ${report.installAgeDays} days`);
+      }
+    }
+
+    if (candidates.length === 0 && recent.length === 0) {
       summaryLine("No Remove candidates.");
       ui.blank();
       await exit(0);
       return;
     }
 
-    for (const c of candidates) {
-      const where = c.agent ? `${c.agent}  ${c.dir}` : c.dir;
-      ui.info(`  ${c.name}  ${where}`);
+    if (candidates.length === 0) {
+      summaryLine(`No Remove candidates. ${recent.length} recent install${recent.length === 1 ? "" : "s"}.`);
+      ui.blank();
+      await exit(0);
+      return;
     }
+
     ui.blank();
     summaryLine(`${candidates.length} Remove candidate${candidates.length === 1 ? "" : "s"}`);
     nextAction(`dora skill remove ${candidates[0]!.name} --dry-run`);

@@ -47,7 +47,7 @@ describe("runScan", () => {
   test("Remove candidates appear in health and Next is dora skill unused", async () => {
     const root = makeRepo();
     writeSkill(root, ".claude/skills/ghost", 'name: ghost\ndescription: "Use when testing remove candidates"');
-    const old = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    const old = Date.now() / 1000 - 100 * 24 * 60 * 60;
     utimesSync(join(root, ".claude/skills/ghost/SKILL.md"), old, old);
     const loadedSessions = {
       sessions: [{

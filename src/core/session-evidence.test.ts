@@ -66,7 +66,7 @@ describe("collectSessionEvidence", () => {
     expect(collectSessionEvidence("ghost", "/x/ghost", lr, { required: true })[0]!.severity).toBe("warning");
   });
 
-  const oldMtime = Date.now() - 40 * 24 * 60 * 60 * 1000;
+  const oldMtime = Date.now() - 100 * 24 * 60 * 60 * 1000;
   const youngMtime = Date.now() - 24 * 60 * 60 * 1000;
 
   test("Authored + never invoked + old install emits R034 only", () => {

@@ -9,6 +9,8 @@ import {
   isRemoveCandidate,
   listQuarantine,
   listRemoveCandidates,
+  listUnusedReport,
+  resolveInstallAgeDays,
   planRemove,
   planRestore,
   resolveSkillName,
@@ -50,12 +52,28 @@ describe("isRecentInstall", () => {
   const day = 24 * 60 * 60 * 1000;
   const now = 1_700_000_000_000;
 
-  test("mtime from yesterday is a Recent install", () => {
-    expect(isRecentInstall(now - day, now)).toBe(true);
+  test("mtime from 20 days ago is a Recent install", () => {
+    expect(isRecentInstall(now - 20 * day, now, 90)).toBe(true);
   });
 
-  test("mtime older than 30 days is not a Recent install", () => {
-    expect(isRecentInstall(now - 31 * day, now)).toBe(false);
+  test("mtime from 40 days ago is still a Recent install", () => {
+    expect(isRecentInstall(now - 40 * day, now, 90)).toBe(true);
+  });
+
+  test("mtime from 100 days ago is not a Recent install", () => {
+    expect(isRecentInstall(now - 100 * day, now, 90)).toBe(false);
+  });
+
+  test("Review window days do not change Install age", () => {
+    expect(isRecentInstall(now - 40 * day, now, 90)).toBe(true);
+    expect(isRecentInstall(now - 40 * day, now, 14)).toBe(false);
+  });
+
+  test("config install_age_days overrides the default", () => {
+    expect(resolveInstallAgeDays({ config: { install_age_days: 14 } })).toBe(14);
+    expect(resolveInstallAgeDays({
+      config: { install_age_days: 14, review_window: { max_age_days: 7 } } as { install_age_days: number },
+    })).toBe(14);
   });
 });
 
@@ -301,7 +319,7 @@ describe("planRemove + applyRemove", () => {
     const old = writeSkill(cwd, ".claude/skills/ghost", "ghost");
     const young = writeSkill(cwd, ".claude/skills/fresh", "fresh");
     writeSkill(cwd, ".grok/skills/other", "other");
-    const age = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    const age = Date.now() / 1000 - 100 * 24 * 60 * 60;
     utimesSync(join(old, "SKILL.md"), age, age);
     utimesSync(young, Date.now() / 1000, Date.now() / 1000);
     const loaded: LoadResult = {
@@ -319,6 +337,10 @@ describe("planRemove + applyRemove", () => {
     try {
       const cands = listRemoveCandidates({ cwd, loaded });
       expect(cands.map((c) => c.name)).toEqual(["ghost"]);
+      const report = listUnusedReport({ cwd, loaded });
+      expect(report.candidates.map((c) => c.name)).toEqual(["ghost"]);
+      expect(report.recent.map((c) => c.name)).toEqual(["fresh"]);
+      expect(report.installAgeDays).toBe(90);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -330,7 +352,7 @@ describe("planRemove + applyRemove", () => {
     const plugSkill = writeSkill(cwd, "my-plug/skills/inner", "inner");
     mkdirSync(join(cwd, "my-plug", ".claude-plugin"), { recursive: true });
     writeFileSync(join(cwd, "my-plug", ".claude-plugin", "plugin.json"), "{}");
-    const age = Date.now() / 1000 - 40 * 24 * 60 * 60;
+    const age = Date.now() / 1000 - 100 * 24 * 60 * 60;
     utimesSync(join(old, "SKILL.md"), age, age);
     utimesSync(join(plugSkill, "SKILL.md"), age, age);
     const loaded: LoadResult = {

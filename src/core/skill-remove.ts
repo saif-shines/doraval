@@ -3,7 +3,8 @@ import { basename, isAbsolute, join, relative, resolve } from "path";
 import { classifySkillDir, isPluginOwned, pluginRoot, type SkillOrigin } from "./skill-classify.js";
 import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery.js";
 import { withinWindow } from "./session-adapters/types.js";
-import { getDoravalDir } from "./journal-config.js";
+import { getDoravalDir, readConfigSync } from "./journal-config.js";
+import { positiveInt } from "./review-window.js";
 import { skillWasInvoked, type LoadResult } from "./session-evidence.js";
 
 export interface SkillMatch {
@@ -211,11 +212,22 @@ export function applyRestore(plan: Extract<RestorePlan, { ok: true }>): void {
   writeRecords(listQuarantine().filter((r) => r.storedAt !== record.storedAt));
 }
 
-/** Recent install stays 30 days until Install age is its own config (#63). */
-const RECENT_INSTALL_DAYS = 30;
+export const INSTALL_AGE_DAYS = 90;
 
-export function isRecentInstall(mtimeMs: number, nowMs: number = Date.now()): boolean {
-  return withinWindow(mtimeMs, nowMs, RECENT_INSTALL_DAYS);
+/** Flag > config > default. Invalid values fall back. Independent of the Review window. */
+export function resolveInstallAgeDays(opts?: {
+  days?: number;
+  config?: { install_age_days?: number } | null;
+}): number {
+  return positiveInt(opts?.days, positiveInt(opts?.config?.install_age_days, INSTALL_AGE_DAYS));
+}
+
+export function isRecentInstall(
+  mtimeMs: number,
+  nowMs: number = Date.now(),
+  maxAgeDays: number = resolveInstallAgeDays({ config: readConfigSync() }),
+): boolean {
+  return withinWindow(mtimeMs, nowMs, maxAgeDays);
 }
 
 export function isRemoveCandidate(input: {
@@ -231,18 +243,41 @@ export function listRemoveCandidates(opts: {
   home?: string;
   loaded: LoadResult;
   nowMs?: number;
+  installAgeDays?: number;
 }): SkillMatch[] {
-  if (opts.loaded.sessions.length === 0) return [];
-  const nowMs = opts.nowMs ?? Date.now();
-  return listProjectSkills(opts.cwd, opts.home).filter((s) => {
-    if (s.origin !== "authored") return false;
-    if (isPluginOwned(s.dir, opts.cwd)) return false;
-    let mtimeMs: number;
-    try { mtimeMs = statSync(join(s.dir, "SKILL.md")).mtimeMs; } catch { return false; }
-    return isRemoveCandidate({
-      origin: s.origin,
-      invoked: skillWasInvoked(s.name, s.dir, opts.loaded),
-      recentInstall: isRecentInstall(mtimeMs, nowMs),
-    });
+  return listUnusedReport(opts).candidates;
+}
+
+export function listUnusedReport(opts: {
+  cwd: string;
+  home?: string;
+  loaded: LoadResult;
+  nowMs?: number;
+  installAgeDays?: number;
+}): { candidates: SkillMatch[]; recent: SkillMatch[]; installAgeDays: number } {
+  const installAgeDays = resolveInstallAgeDays({
+    days: opts.installAgeDays,
+    config: readConfigSync(),
   });
+  if (opts.loaded.sessions.length === 0) {
+    return { candidates: [], recent: [], installAgeDays };
+  }
+  const nowMs = opts.nowMs ?? Date.now();
+  const candidates: SkillMatch[] = [];
+  const recent: SkillMatch[] = [];
+  for (const s of listProjectSkills(opts.cwd, opts.home)) {
+    if (s.origin !== "authored") continue;
+    if (isPluginOwned(s.dir, opts.cwd)) continue;
+    let mtimeMs: number;
+    try { mtimeMs = statSync(join(s.dir, "SKILL.md")).mtimeMs; } catch { continue; }
+    const invoked = skillWasInvoked(s.name, s.dir, opts.loaded);
+    if (invoked) continue;
+    const recentInstall = isRecentInstall(mtimeMs, nowMs, installAgeDays);
+    if (isRemoveCandidate({ origin: s.origin, invoked: false, recentInstall })) {
+      candidates.push(s);
+    } else if (recentInstall) {
+      recent.push(s);
+    }
+  }
+  return { candidates, recent, installAgeDays };
 }
