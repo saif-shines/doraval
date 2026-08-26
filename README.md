@@ -40,7 +40,8 @@ dora review --quick --json
 dora scan                    # workspace map
 dora fix . --yes             # mechanical; no TTY
 dora skill new --for claude --name review-pr --yes
-dora skill unused            # list Remove candidates
+dora skill unused            # project Remove candidates
+dora skill unused --global   # home Skills; Sessions from every project
 dora skill remove ghost --yes
 dora memory add "Never use default exports" --weight 8
 dora conflicts --dry-run

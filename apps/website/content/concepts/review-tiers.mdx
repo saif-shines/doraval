@@ -31,7 +31,7 @@ Mines real agent session logs for mechanical evidence a skill was actually invok
 
 ## Session health
 
-A full Review also prints **Session health**. It is not a Finding and not a fifth tier. It reports token pressure from Sessions in the Review window: cache-read share ≥ 80%, call count ≥ 20, user turns ≥ 10. `--quick` omits it. Scan omits it.
+A full Review also prints **Session health**. It is not a Finding and not a fifth tier. It reports token pressure from Sessions in the Review window (default last 30 Sessions, 90 days): cache-read share ≥ 80%, call count ≥ 20, user turns ≥ 10. `--quick` omits it. Scan omits it.
 
 JSON: `sessionHealth` on each Review result (`window`, `sessionCount`, `signals`). Quiet Sessions have an empty `signals` list.
 

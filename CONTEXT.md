@@ -28,9 +28,9 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Session** | Past agent conversation transcript, normalized via **session adapters** into a list of **Events**, plus a derived summary for evidence and adherence eval. |
 | **Event** | One step inside a Session: a message, tool call, tool result, or error. The Session IR is a list of Events. _Avoid_: turn (not every Event is a user turn); entry (parser word); SessionPrimitives as the foundation. |
 | **Finding** | One Skill-check outcome (tier + severity + message + optional rule code / docUrl). The Skill-check module sets `structure` or `heuristics`. Review adds `llm` and `sessions`. Scan presents Skill Findings as health; shadows, overlaps, MCP, budget, and install stay Scan-only. |
-| **Review window** | Session evidence span Review already uses: last 10 Sessions, and only Session files newer than 30 days. |
+| **Review window** | Sessions that unused, Review, and `dora session` read. Count and time period are one configurable pair. Default is last 30 Sessions and 3 months. Two legal loads: **Project load** is last 30 in this directory. **Global load** is last 30 per agent, any project. Hits from every agent still count. Defaults live in `~/.doraval/config.yml`. Flags override one run. Old shipped default was last 10 Sessions and 30 days. _Avoid_: Evidence window; mixing the two loads in one verdict. |
 | **Never invoked** | A Skill with no invoke evidence in Sessions inside the Review window. Not the same as a remove candidate. |
-| **Recent install** | A Skill added inside the current Review window (`dora skill new`, `skills add`, copy, or clone). Never invoked is expected. Not a remove candidate. |
+| **Recent install** | A Skill or Plugin whose Install age is under the threshold. Unused reports the age. It is not a Remove candidate. _Avoid_: tying this to the Review window. |
 | **Remove candidate** | An Authored Skill that is Never invoked and not a Recent install. Its own Finding (new rule). Not R029. Review and Scan may recommend remove. A Global Skill is never a Remove candidate from one project’s Sessions. |
 | **Quarantine** | Move a Global Skill aside so it can be restored. Not a delete. _Avoid_: stash. |
 | **Remove** | Write action (`dora skill remove`). Deletes an Authored Skill. Quarantines a Global Skill. A name is enough. `--for` selects the agent. `--global` selects origin when Authored and Global share a name. One match: just Remove. Several matches (including same agent, two origins): TTY picker; a Runner must pass `--for` / `--global` / a path or it exits `2` with Next. |
@@ -161,6 +161,22 @@ _Avoid_: one “you” for both on a **Reader** page; an agent page that still t
 **Write gate:** `fix`, `conflicts`, and `memory promote` write files. A detected agent that omits `--yes` / `--dry-run` gets exit `2` and a Next line. No prompt. No write. See `docs/adr/0003-agent-write-needs-flag.md`.
 
 **Hard break (this pass):** `dora new`, `dora reconcile`, `dora agent-help`, `dora rules`, `dora sessions`, `dora bump`, and `dora providers` exit `2` with one Next line. They do not run. No hidden alias. _Avoid_: deprecation aliases.
+
+## Unused-scope pass (this grill)
+
+Grill is **closed**. Not shipped. Spec: https://github.com/saif-shines/doraval/issues/61. Tickets: [#62](https://github.com/saif-shines/doraval/issues/62), [#63](https://github.com/saif-shines/doraval/issues/63), [#64](https://github.com/saif-shines/doraval/issues/64), [#65](https://github.com/saif-shines/doraval/issues/65). ADR: `docs/adr/0010-two-session-loads.md`. Companion to ADR 0006.
+
+| Term | Meaning |
+|------|---------|
+| **Unused scope** | One unused audit names one Skill set and one Session set. The two must match. _Avoid_: mixing Global Skills with one project’s Sessions; “all Skills combined.” |
+| **Project unused** | Authored Skills + Project load. A Global Skill is not a Remove candidate here (ADR 0006). Review and `dora session` use this load. |
+| **Global unused** | Unused over Global Skills (and Plugin unused). Evidence is Global load. Verb is `dora skill unused --global`. Not shipped. Does not weaken ADR 0006 for Project unused. _Avoid_: home unused (say Global); a second unused verb. |
+| **Standalone Skill** | A Skill that is not Plugin-owned. Unused may name it. _Avoid_: individual; loose Skill. |
+| **Owned Plugin** | A Plugin whose files the user can edit. Not Imported. Unused may recommend Remove of an unused child Skill. _Avoid_: treating cache / `node_modules` as owned. |
+| **Plugin unused** | Unused names unused child Skills inside a Plugin. If every child is unused, unused names the Plugin only. Unused only suggests. It does not Remove. Remove of a child is a later named write, and only on an Owned Plugin. Imported cache: name the children, do not remove. |
+| **Install age** | Time since that Skill or Plugin landed on disk. Default three months. A child Skill uses its `SKILL.md` time. A Plugin row uses `plugin.json` time. Under the threshold, unused says it is recent. It is not a Remove candidate. _Avoid_: using the Review window as Install age; one mtime for every child. |
+
+_Avoid_: treating Imported (plugin cache / `node_modules`) as Global; a third mixed audit.
 
 ## Naming debt (intentional)
 

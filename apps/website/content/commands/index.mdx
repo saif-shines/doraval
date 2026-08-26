@@ -83,7 +83,9 @@ Always pass `--for`. Then `dora review --quick` the new path.
 
 ```bash
 dora skill                    # Authored + Global Skills
-dora skill unused             # Remove candidates
+dora skill unused             # this directory
+dora skill unused --global    # home Skills
+dora skill unused --last 10 --since 30
 dora skill remove ghost --dry-run
 dora skill remove ghost --yes
 dora skill remove ghost --for claude --yes
@@ -92,11 +94,17 @@ dora skill restore ghost --yes
 
 `dora skill unused` lists Remove candidates. It writes nothing.
 
-Deletes an Authored Skill. Quarantines a Global Skill (home copy). Restore puts that copy back.
+Project unused reads this directory’s Sessions (last 30, 90 days). `--global` reads last 30 Sessions per agent, any project, and lists home Skills only. Do not mix the two. `--last` and `--since` override one run.
+
+A Recent install is younger than Install age (default 90 days). Unused names it. It is not a Remove candidate. Config: `review_window.last`, `review_window.max_age_days`, `install_age_days`.
+
+A Plugin with some unused children lists those children. A Plugin with none invoked lists the Plugin only. Next on an Owned child is `dora skill remove <name> --dry-run`. Next on a Plugin row or an Imported child is `dora review --quick <plugin-root>`.
+
+Deletes an Authored Skill. Quarantines a Global Skill (home copy). An Owned Plugin child may be deleted. Restore puts a Quarantined Global Skill back. `dora skill remove <plugin-name>` does not uninstall a Plugin.
 
 A detected agent needs `--yes` or `--dry-run`. A name clash needs `--for`, `--global`, or a path.
 
-Scan and Review mark an Authored Skill that was never invoked in the Review window, and is not a Recent install, as [R034](/reference/rules/R034). That is a Remove candidate. A Global Skill is never a Remove candidate from one project’s Sessions.
+Scan and Review mark an Authored Skill that was never invoked in the Review window, and is not a Recent install, as [R034](/reference/rules/R034). That is a Remove candidate. A Global Skill is never a Remove candidate from one project’s Sessions. Use `dora skill unused --global` for home Skills.
 
 ## Memory
 

@@ -69,6 +69,31 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 - `.health[].status` is `"pass" | "warn" | "fail"` per artifact.
 - `.intelligence.judge` is `"api" | "delegate"`. `"delegate"` means evaluate the `JUDGE THIS` block on a later Review (not `--quick`). `--ci` still requires API credentials.
 
+## `dora skill unused --json`
+
+```jsonc
+{
+  "load": "project",          // or "global"
+  "sessions": 3,
+  "last": 30,
+  "maxAgeDays": 90,
+  "installAgeDays": 90,
+  "candidates": [
+    { "name": "ghost", "kind": "skill", "removable": true, "recentInstall": false }
+  ],
+  "recent": []
+}
+```
+
+`--global` sets `load` to `"global"`. No Sessions: `reason` is `"no-sessions"` and both lists are empty. `kind` is `"skill"` or `"plugin"`. `removable: false` means Review the Plugin root, not `dora skill remove`.
+
+### How to branch (unused)
+
+- `reason === "no-sessions"` → stop. Do not Remove.
+- A candidate with `removable: true` → `dora skill remove <name> --dry-run`.
+- `kind === "plugin"` or `removable: false` → `dora review --quick <pluginRoot>`.
+- Unused writes nothing.
+
 ## For hooks
 
 `dora memory context --json` emits the active memory set for injection at session start.

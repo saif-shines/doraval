@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## 0.6.28
+
+### Features
+
+- Review window default is last **30** Sessions and **90** days (was 10 / 30).
+  Config: `review_window.last`, `review_window.max_age_days`. Unused
+  `--last` / `--since` override one run. Review and `dora session` share
+  this window.
+- **Install age** is a second clock (default 90 days). Config:
+  `install_age_days`. Unused names a recent Skill. It is not a Remove
+  candidate.
+- **`dora skill unused --global`.** Home Skills. Last 30 Sessions per
+  agent, any project. Project unused still never marks a Global Skill.
+- Unused names unused **Plugin** children. All unused → the Plugin only.
+  Named Remove may delete an Owned child. Cache is name-only.
+
+### Docs
+
+- README, `/commands`, R034, and the shipped skill match unused-scope.
+
 ## 0.6.27
 
 ### Breaking

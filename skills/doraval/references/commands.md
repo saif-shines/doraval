@@ -10,7 +10,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora fix [path]` | Mechanical `--yes` or judgment `--brief` |
 | `dora scan` | Workspace map. Not the empty-argv default. |
 | `dora skill` | List Authored + Global Skills |
-| `dora skill unused` | Remove-candidate filter |
+| `dora skill unused` | Remove-candidate filter. `--global` is home Skills. `--last` / `--since` override the Review window for one run. |
 | `dora skill remove` / `restore` | Delete Authored or Quarantine / restore Global |
 | `dora skill new` | Scaffold a Skill |
 | `dora rule` | List review rules |
