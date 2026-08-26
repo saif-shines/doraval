@@ -1,5 +1,5 @@
-import { SESSION_MAX_AGE_DAYS, SESSION_WINDOW } from "./session-adapters/types.js";
 import type { LoadResult } from "./session-evidence.js";
+import { resolveReviewWindow } from "./review-window.js";
 
 export const CACHE_READ_THRESHOLD = 0.8;
 export const CALL_COUNT_THRESHOLD = 20;
@@ -58,8 +58,9 @@ export function collectSessionHealth(loaded: LoadResult): SessionHealth {
       });
     }
   }
+  const window = loaded.window ?? resolveReviewWindow();
   return {
-    window: { last: SESSION_WINDOW, maxAgeDays: SESSION_MAX_AGE_DAYS },
+    window: { last: window.last, maxAgeDays: window.maxAgeDays },
     sessionCount: loaded.sessions.length,
     signals,
   };

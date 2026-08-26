@@ -18,6 +18,11 @@ describe("config helpers (B37)", () => {
     expect(KNOWN_CONFIG_KEYS.some((k) => k.key === "eval.model")).toBe(true);
   });
 
+  test("KNOWN_CONFIG_KEYS includes review_window.last and max_age_days", () => {
+    expect(KNOWN_CONFIG_KEYS.some((k) => k.key === "review_window.last")).toBe(true);
+    expect(KNOWN_CONFIG_KEYS.some((k) => k.key === "review_window.max_age_days")).toBe(true);
+  });
+
   test("getNestedValue / setNestedValue", () => {
     const o: Record<string, unknown> = {};
     setNestedValue(o, "eval.model", "gpt-4o-mini");
@@ -59,6 +64,11 @@ describe("config helpers (B37)", () => {
     );
     expect(table).not.toContain(secret);
     expect(table).toContain("sk-a…mnop");
+  });
+
+  test("validateConfigValue rejects a non-positive review_window.last", () => {
+    expect(validateConfigValue("review_window.last", -1)).toMatch(/positive/);
+    expect(validateConfigValue("review_window.last", 30)).toBeNull();
   });
 
   test("validateConfigValue enforces judge enum", () => {

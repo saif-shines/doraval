@@ -207,6 +207,7 @@ describe("review", () => {
     expect(codes).not.toContain("R029");
     expect(result.sessionHealth?.sessionCount).toBe(1);
     expect(result.sessionHealth?.signals).toEqual([]);
+    expect(result.sessionHealth?.window).toEqual({ last: 30, maxAgeDays: 90 });
     expect(result.tiers.sessions?.findings.some((f) => (f as { code?: string }).code === "cache-read")).toBe(false);
   });
 

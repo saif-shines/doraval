@@ -16,7 +16,6 @@ import {
 import { utimesSync } from "fs";
 import type { LoadResult } from "./session-evidence.js";
 import { existsSync } from "fs";
-import { SESSION_MAX_AGE_DAYS } from "./session-adapters/types.js";
 
 function writeSkill(root: string, rel: string, name: string): string {
   const dir = join(root, rel);
@@ -51,12 +50,12 @@ describe("isRecentInstall", () => {
   const day = 24 * 60 * 60 * 1000;
   const now = 1_700_000_000_000;
 
-  test("mtime inside the Review window is a Recent install", () => {
+  test("mtime from yesterday is a Recent install", () => {
     expect(isRecentInstall(now - day, now)).toBe(true);
   });
 
-  test("mtime older than the Review window is not a Recent install", () => {
-    expect(isRecentInstall(now - (SESSION_MAX_AGE_DAYS + 1) * day, now)).toBe(false);
+  test("mtime older than 30 days is not a Recent install", () => {
+    expect(isRecentInstall(now - 31 * day, now)).toBe(false);
   });
 });
 

@@ -138,32 +138,87 @@ describe("collectSessionEvidence", () => {
 });
 
 describe("loadRecentSessions", () => {
-  test("excludes sessions older than 30 days; counts unparseable as skipped", async () => {
+  test("keeps a 45-day Session and drops a 100-day Session; counts unparseable as skipped", async () => {
     const { loadRecentSessions } = await import("./session-evidence.js");
-    const old = Date.now() - 31 * 24 * 60 * 60 * 1000;
+    const mid = Date.now() - 45 * 24 * 60 * 60 * 1000;
+    const old = Date.now() - 100 * 24 * 60 * 60 * 1000;
     const fresh = Date.now() - 1 * 24 * 60 * 60 * 1000;
-    // Fake adapter — no filesystem needed except one real tiny file for statSync
     const { mkdtempSync, writeFileSync } = await import("fs");
     const { join } = await import("path");
     const { tmpdir } = await import("os");
     const dir = mkdtempSync(join(tmpdir(), "ev-load-"));
     const freshPath = join(dir, "fresh.jsonl");
+    const midPath = join(dir, "mid.jsonl");
     writeFileSync(freshPath, "{}\n");
+    writeFileSync(midPath, "{}\n");
     const fake = {
       agent: "fake",
       detect: () => true,
       findLatestSession: () => null,
       listRecentSessions: () => [
         { path: freshPath, mtime: fresh, skillCount: 0 },
-        { path: join(dir, "old.jsonl"), mtime: old, skillCount: 0 },        // out of window
-        { path: join(dir, "missing.jsonl"), mtime: fresh, skillCount: 0 },  // statSync throws → skipped
+        { path: midPath, mtime: mid, skillCount: 0 },
+        { path: join(dir, "old.jsonl"), mtime: old, skillCount: 0 },
+        { path: join(dir, "missing.jsonl"), mtime: fresh, skillCount: 0 },
       ],
       parse: () => prim({}),
     };
     const lr = loadRecentSessions("/any", [fake]);
-    expect(lr.sessions).toHaveLength(1);
-    expect(lr.sessions[0]!.path).toBe(freshPath);
+    expect(lr.sessions.map((s) => s.path).sort()).toEqual([freshPath, midPath].sort());
     expect(lr.skipped["fake"]).toBe(1);
     expect(lr.adaptersDetected).toEqual(["fake"]);
+    expect(lr.window).toEqual({ last: 30, maxAgeDays: 90 });
+  });
+
+  test("explicit window maxAgeDays=1 drops a 45-day Session", async () => {
+    const { loadRecentSessions } = await import("./session-evidence.js");
+    const mid = Date.now() - 45 * 24 * 60 * 60 * 1000;
+    const { mkdtempSync, writeFileSync } = await import("fs");
+    const { join } = await import("path");
+    const { tmpdir } = await import("os");
+    const dir = mkdtempSync(join(tmpdir(), "ev-load-"));
+    const midPath = join(dir, "mid.jsonl");
+    writeFileSync(midPath, "{}\n");
+    const fake = {
+      agent: "fake",
+      detect: () => true,
+      findLatestSession: () => null,
+      listRecentSessions: () => [{ path: midPath, mtime: mid, skillCount: 0 }],
+      parse: () => prim({}),
+    };
+    const lr = loadRecentSessions("/any", [fake], { last: 30, maxAgeDays: 1 });
+    expect(lr.sessions).toEqual([]);
+    expect(lr.window).toEqual({ last: 30, maxAgeDays: 1 });
+  });
+
+  test("Project load keeps the newest last Sessions across adapters", async () => {
+    const { loadRecentSessions } = await import("./session-evidence.js");
+    const { mkdtempSync, writeFileSync } = await import("fs");
+    const { join } = await import("path");
+    const { tmpdir } = await import("os");
+    const dir = mkdtempSync(join(tmpdir(), "ev-load-"));
+    const paths = [0, 1, 2, 3].map((i) => {
+      const p = join(dir, `${i}.jsonl`);
+      writeFileSync(p, "{}\n");
+      return p;
+    });
+    const now = Date.now();
+    const a = {
+      agent: "a", detect: () => true, findLatestSession: () => null, parse: () => prim({}),
+      listRecentSessions: () => [
+        { path: paths[0]!, mtime: now, skillCount: 0 },
+        { path: paths[1]!, mtime: now - 1000, skillCount: 0 },
+      ],
+    };
+    const b = {
+      agent: "b", detect: () => true, findLatestSession: () => null, parse: () => prim({}),
+      listRecentSessions: () => [
+        { path: paths[2]!, mtime: now - 2000, skillCount: 0 },
+        { path: paths[3]!, mtime: now - 3000, skillCount: 0 },
+      ],
+    };
+    const lr = loadRecentSessions("/any", [a, b], { last: 3, maxAgeDays: 90 });
+    expect(lr.sessions.map((s) => s.path)).toEqual([paths[0], paths[1], paths[2]]);
   });
 });
+

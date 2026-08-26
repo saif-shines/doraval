@@ -30,6 +30,9 @@ describe("buildCapabilities", () => {
     expect(unused.examples).toContain("dora skill unused");
     expect(unused.flags["--yes"]).toBeUndefined();
     expect(unused.flags["--dry-run"]).toBeUndefined();
+    expect(unused.flags["--global"]).toBeUndefined();
+    expect(unused.flags["--last"]).toBeDefined();
+    expect(unused.flags["--since"]).toBeDefined();
     expect(skill).toBeDefined();
     expect(skill.label).toBe("writes");
     expect(skill.examples.some((e) => e.includes("remove"))).toBe(true);

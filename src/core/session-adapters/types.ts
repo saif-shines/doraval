@@ -1,4 +1,5 @@
 import type { Session } from "../session-parse.js";
+import { REVIEW_WINDOW_MAX_AGE_DAYS } from "../review-window.js";
 
 export interface SessionListItem {
   path: string;
@@ -16,11 +17,14 @@ export interface SessionAdapter {
   parse(path: string): Session;
 }
 
-export const SESSION_WINDOW = 10;
-export const SESSION_MAX_AGE_DAYS = 30;
+export const SESSION_MAX_AGE_DAYS = REVIEW_WINDOW_MAX_AGE_DAYS;
 export const SESSION_MAX_FILE_BYTES = 50 * 1024 * 1024;
 
-/** True if mtime falls within the 30-day evidence window. */
-export function withinWindow(mtimeMs: number, nowMs: number = Date.now()): boolean {
-  return nowMs - mtimeMs <= SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+/** True if mtime falls within maxAgeDays (default: Review window). */
+export function withinWindow(
+  mtimeMs: number,
+  nowMs: number = Date.now(),
+  maxAgeDays: number = SESSION_MAX_AGE_DAYS,
+): boolean {
+  return nowMs - mtimeMs <= maxAgeDays * 24 * 60 * 60 * 1000;
 }

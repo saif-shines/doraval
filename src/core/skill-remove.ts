@@ -211,8 +211,11 @@ export function applyRestore(plan: Extract<RestorePlan, { ok: true }>): void {
   writeRecords(listQuarantine().filter((r) => r.storedAt !== record.storedAt));
 }
 
+/** Recent install stays 30 days until Install age is its own config (#63). */
+const RECENT_INSTALL_DAYS = 30;
+
 export function isRecentInstall(mtimeMs: number, nowMs: number = Date.now()): boolean {
-  return withinWindow(mtimeMs, nowMs);
+  return withinWindow(mtimeMs, nowMs, RECENT_INSTALL_DAYS);
 }
 
 export function isRemoveCandidate(input: {

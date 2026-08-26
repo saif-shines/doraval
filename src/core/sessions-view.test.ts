@@ -75,8 +75,11 @@ describe("isKnownAgent", () => {
 });
 
 describe("listSessions", () => {
+  const now = Date.now();
+  const older = now - 1000;
+
   test("builds entries from injected adapters using real fixture data", () => {
-    const adapters = [fakeAdapter("claude-code", "mini-session.jsonl", 1000)];
+    const adapters = [fakeAdapter("claude-code", "mini-session.jsonl", now)];
     const entries = listSessions("/any/cwd", { adapters });
     expect(entries).toHaveLength(1);
     expect(entries[0]!.sessionId).toBe("test-session-001");
@@ -86,19 +89,19 @@ describe("listSessions", () => {
 
   test("sorts combined entries across adapters by mtime descending", () => {
     const adapters = [
-      fakeAdapter("claude-code", "mini-session.jsonl", 1000),
-      fakeAdapter("grok", "no-skills-session.jsonl", 2000),
+      fakeAdapter("claude-code", "mini-session.jsonl", older),
+      fakeAdapter("grok", "no-skills-session.jsonl", now),
     ];
     const entries = listSessions("/any/cwd", { adapters });
     expect(entries).toHaveLength(2);
-    expect(entries[0]!.agent).toBe("grok"); // mtime 2000, newer
+    expect(entries[0]!.agent).toBe("grok");
     expect(entries[1]!.agent).toBe("claude-code");
   });
 
   test("filters by agent, resolving the alias", () => {
     const adapters = [
-      fakeAdapter("claude-code", "mini-session.jsonl", 1000),
-      fakeAdapter("grok", "no-skills-session.jsonl", 2000),
+      fakeAdapter("claude-code", "mini-session.jsonl", now),
+      fakeAdapter("grok", "no-skills-session.jsonl", now),
     ];
     const entries = listSessions("/any/cwd", { adapters, agent: "claude" });
     expect(entries).toHaveLength(1);
@@ -106,9 +109,21 @@ describe("listSessions", () => {
   });
 
   test("turns and toolCalls come from the parsed primitives", () => {
-    const adapters = [fakeAdapter("claude-code", "mini-session.jsonl", 1000)];
+    const adapters = [fakeAdapter("claude-code", "mini-session.jsonl", now)];
     const entries = listSessions("/any/cwd", { adapters });
     expect(entries[0]!.toolCalls).toBeGreaterThan(0);
+  });
+
+  test("keeps a 45-day Session and drops a 100-day Session", () => {
+    const mid = now - 45 * 24 * 60 * 60 * 1000;
+    const ancient = now - 100 * 24 * 60 * 60 * 1000;
+    const adapters = [
+      fakeAdapter("claude-code", "mini-session.jsonl", mid),
+      fakeAdapter("grok", "no-skills-session.jsonl", ancient),
+    ];
+    const entries = listSessions("/any/cwd", { adapters });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.agent).toBe("claude-code");
   });
 });
 

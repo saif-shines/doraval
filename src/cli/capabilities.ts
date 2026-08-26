@@ -87,6 +87,8 @@ export function buildCapabilities(): CapabilitiesManifest {
       ], {
         ...COMMON_FLAGS,
         "--cwd": { description: "Working directory override" },
+        "--last": { description: "How many recent Sessions to read" },
+        "--since": { description: "Drop Sessions older than this many days" },
       }),
       cmd("skill", "writes", "List, new, remove, or restore a Skill.", [
         "dora skill",

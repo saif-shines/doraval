@@ -367,6 +367,14 @@ describe("doraval CLI", () => {
       expect(help.stdout).toContain("--global");
     });
 
+    test("skill unused --help names --last and --since, not --global", () => {
+      const help = runDoraval(["skill", "unused", "--help"]);
+      expect(help.exitCode).toBe(0);
+      expect(help.stdout).toContain("--last");
+      expect(help.stdout).toContain("--since");
+      expect(help.stdout).not.toContain("--global");
+    });
+
     test("skill unused lists nothing when there are no sessions", () => {
       const dir = authoredRepo();
       const { exitCode, stdout } = runDoraval(

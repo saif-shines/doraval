@@ -1,12 +1,14 @@
 import { statSync } from "fs";
 import { getAllAdapters } from "./session-adapters/index.js";
-import { SESSION_WINDOW, SESSION_MAX_FILE_BYTES, withinWindow, type SessionAdapter } from "./session-adapters/types.js";
+import { SESSION_MAX_FILE_BYTES, withinWindow, type SessionAdapter } from "./session-adapters/types.js";
 import type { Session } from "./session-parse.js";
 import type { ReviewFinding } from "./review.js";
 import { SESSION_CODES } from "./rules/bindings.js";
 import { ruleByCode } from "./rules/registry.js";
 import { isRecentInstall, isRemoveCandidate } from "./skill-remove.js";
 import type { SkillOrigin } from "./skill-classify.js";
+import { resolveReviewWindow, type ReviewWindow } from "./review-window.js";
+import { readConfigSync } from "./journal-config.js";
 
 function finding(partial: ReviewFinding): ReviewFinding {
   const code = SESSION_CODES[partial.id];
@@ -25,22 +27,27 @@ export interface LoadResult {
   sessions: LoadedSession[];
   adaptersDetected: string[];
   skipped: Record<string, number>;
+  window?: ReviewWindow;
 }
 
 /** Load once per review run; reviewAll threads the result to every skill. */
-export function loadRecentSessions(cwd: string, adapters: SessionAdapter[] = getAllAdapters()): LoadResult {
+export function loadRecentSessions(
+  cwd: string,
+  adapters: SessionAdapter[] = getAllAdapters(),
+  window: ReviewWindow = resolveReviewWindow({ config: readConfigSync() }),
+): LoadResult {
   const sessions: LoadedSession[] = [];
   const skipped: Record<string, number> = {};
   for (const adapter of adapters) {
     let listed;
     try {
-      listed = adapter.listRecentSessions(cwd, SESSION_WINDOW);
+      listed = adapter.listRecentSessions(cwd, window.last);
     } catch {
       skipped[adapter.agent] = (skipped[adapter.agent] ?? 0) + 1;
       continue;
     }
     for (const item of listed) {
-      if (!withinWindow(item.mtime)) continue;
+      if (!withinWindow(item.mtime, Date.now(), window.maxAgeDays)) continue;
       try {
         if (statSync(item.path).size > SESSION_MAX_FILE_BYTES) {
           skipped[adapter.agent] = (skipped[adapter.agent] ?? 0) + 1;
@@ -52,7 +59,13 @@ export function loadRecentSessions(cwd: string, adapters: SessionAdapter[] = get
       }
     }
   }
-  return { sessions, adaptersDetected: adapters.map((a) => a.agent), skipped };
+  sessions.sort((a, b) => b.mtime - a.mtime);
+  return {
+    sessions: sessions.slice(0, window.last),
+    adaptersDetected: adapters.map((a) => a.agent),
+    skipped,
+    window,
+  };
 }
 
 type EvidenceKind = "native" | "path" | "mention";

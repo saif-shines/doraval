@@ -3,6 +3,8 @@ import { homedir } from "os";
 import { resolve } from "path";
 import { listRemoveCandidates } from "../../../core/skill-remove.js";
 import { loadRecentSessions } from "../../../core/session-evidence.js";
+import { resolveReviewWindow } from "../../../core/review-window.js";
+import { readConfig } from "../../../core/journal-config.js";
 import { ui, resolveOutputMode, outJson, summaryLine, nextAction } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
@@ -17,6 +19,7 @@ export default defineCommand({
       "Examples:",
       "  dora skill unused",
       "  dora skill unused --json",
+      "  dora skill unused --last 10 --since 30",
       "Exit: 0 listed · 2 could not run",
     ].join("\n"),
   },
@@ -25,11 +28,20 @@ export default defineCommand({
     json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
     cwd: { type: "string", description: "Working directory override" },
+    last: { type: "string", description: "How many recent Sessions to read (default 30)" },
+    since: { type: "string", description: "Drop Sessions older than this many days (default 90)" },
   },
   async run({ args }) {
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     const cwd = args.cwd ? resolve(args.cwd as string) : process.cwd();
-    const loaded = loadRecentSessions(cwd);
+    const lastRaw = args.last != null ? Number(args.last) : undefined;
+    const sinceRaw = args.since != null ? Number(args.since) : undefined;
+    const window = resolveReviewWindow({
+      last: lastRaw,
+      maxAgeDays: sinceRaw,
+      config: await readConfig(),
+    });
+    const loaded = loadRecentSessions(cwd, undefined, window);
     const matches = listRemoveCandidates({ cwd, home: homedir(), loaded });
     const candidates = matches.map((m) => ({
       name: m.name,

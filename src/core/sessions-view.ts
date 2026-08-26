@@ -1,6 +1,9 @@
 import { basename, extname } from "path";
 import { getAllAdapters, ALL_ADAPTERS, type SessionAdapter } from "./session-adapters/index.js";
 import type { Session, SessionPrimitives } from "./session-parse.js";
+import { resolveReviewWindow, type ReviewWindow } from "./review-window.js";
+import { readConfigSync } from "./journal-config.js";
+import { withinWindow } from "./session-adapters/types.js";
 
 /** Human token line. Unset stays "unavailable" — never invent 0. */
 export function formatTokenLabel(primitives: SessionPrimitives, listTokens?: number | null): string {
@@ -60,16 +63,18 @@ function toEntry(adapter: SessionAdapter, s: { path: string; mtime: number; toke
 
 export function listSessions(
   cwd: string,
-  opts: { agent?: string; limit?: number; adapters?: SessionAdapter[] } = {}
+  opts: { agent?: string; limit?: number; adapters?: SessionAdapter[]; window?: ReviewWindow } = {}
 ): SessionListEntry[] {
+  const window = opts.window ?? resolveReviewWindow({ config: readConfigSync() });
   const pool = opts.adapters ?? getAllAdapters();
   const targetAgent = opts.agent ? resolveAgentAlias(opts.agent) : undefined;
   const adapters = targetAgent ? pool.filter((a) => a.agent === targetAgent) : pool;
 
   const withMtime: { entry: SessionListEntry; mtime: number }[] = [];
   for (const adapter of adapters) {
-    const sessions = adapter.listRecentSessions(cwd, opts.limit ?? 10);
+    const sessions = adapter.listRecentSessions(cwd, opts.limit ?? window.last);
     for (const s of sessions) {
+      if (!withinWindow(s.mtime, Date.now(), window.maxAgeDays)) continue;
       try {
         const primitives = adapter.parse(s.path);
         withMtime.push({ entry: toEntry(adapter, s, primitives), mtime: s.mtime });
@@ -81,7 +86,8 @@ export function listSessions(
 
   // Sort by the raw mtime, not the minute-truncated "when" string — two
   // sessions seconds apart within the same minute would otherwise tie.
-  return withMtime.sort((a, b) => b.mtime - a.mtime).map((x) => x.entry);
+  const limit = opts.limit ?? window.last;
+  return withMtime.sort((a, b) => b.mtime - a.mtime).slice(0, limit).map((x) => x.entry);
 }
 
 function needle(id: string): string {

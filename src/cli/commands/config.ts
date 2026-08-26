@@ -67,6 +67,16 @@ export const KNOWN_CONFIG_KEYS: ConfigKeyDef[] = [
     description: "Legacy journal remote (unused after journal removal)",
     legacy: true,
   },
+  {
+    key: "review_window.last",
+    description: "How many recent Sessions unused, Review, and session read",
+    kind: "number",
+  },
+  {
+    key: "review_window.max_age_days",
+    description: "Drop Sessions older than this many days",
+    kind: "number",
+  },
 ];
 
 const KEY_HELP =
@@ -141,9 +151,14 @@ export function coerceValue(raw: string): unknown {
   return raw;
 }
 
-/** Soft validation for known enum keys. Returns error message or null. */
+/** Soft validation for known enum and number keys. Returns error message or null. */
 export function validateConfigValue(key: string, value: unknown): string | null {
   const def = findKeyDef(key);
+  if (def?.kind === "number") {
+    const n = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(n) || n <= 0) return `${key} must be a positive number (got ${JSON.stringify(value)})`;
+    return null;
+  }
   if (!def?.options?.length) return null;
   const s = String(value);
   if (!def.options.includes(s)) {

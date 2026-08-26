@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { YAML } from "bun";
@@ -54,6 +54,7 @@ export interface JournalConfig {
   };
   eval?: Partial<EvalConfig>;
   rules?: RulesConfig;
+  review_window?: { last?: number; max_age_days?: number };
 }
 
 // ── Paths ──────────────────────────────────────────────────────────
@@ -108,11 +109,14 @@ export function ensureDoravalDirs(): void {
 
 // ── Read / Write ───────────────────────────────────────────────────
 
-export async function readConfig(): Promise<JournalConfig | null> {
+export function readConfigSync(): JournalConfig | null {
   const path = getConfigPath();
   if (!existsSync(path)) return null;
-  const raw = await Bun.file(path).text();
-  return YAML.parse(raw) as JournalConfig;
+  return YAML.parse(readFileSync(path, "utf8")) as JournalConfig;
+}
+
+export async function readConfig(): Promise<JournalConfig | null> {
+  return readConfigSync();
 }
 
 export async function writeConfig(config: JournalConfig): Promise<void> {

@@ -43,8 +43,8 @@ describe("collectSessionHealth", () => {
     const h = collectSessionHealth(load([]));
     expect(h.sessionCount).toBe(0);
     expect(h.signals).toEqual([]);
-    expect(h.window.last).toBe(10);
-    expect(h.window.maxAgeDays).toBe(30);
+    expect(h.window.last).toBe(30);
+    expect(h.window.maxAgeDays).toBe(90);
   });
 
   test("under all thresholds is quiet", () => {

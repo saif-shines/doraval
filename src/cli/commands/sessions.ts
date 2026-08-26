@@ -1,6 +1,8 @@
 import { defineCommand } from "citty";
 import pc from "picocolors";
 import { listSessions, isKnownAgent, resolveAgentAlias } from "../../core/sessions-view.js";
+import { resolveReviewWindow } from "../../core/review-window.js";
+import { readConfig } from "../../core/journal-config.js";
 import { ui, resolveOutputMode, outJson, summaryLine, emitError, nextAction } from "../out.js";
 import { exit } from "../render/exit.js";
 
@@ -32,7 +34,7 @@ export default defineCommand({
   meta: { name: "session", description: "List coding-agent sessions for this project" },
   args: {
     agent: { type: "string", description: "Filter by agent (claude, grok, cursor, codex, copilot)" },
-    limit: { type: "string", description: "Max sessions per agent", default: "10" },
+    limit: { type: "string", description: "Max sessions per agent (default: Review window last)" },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
@@ -65,9 +67,12 @@ export default defineCommand({
         return;
       }
 
+      const window = resolveReviewWindow({ config: await readConfig() });
+      const limitRaw = args.limit != null ? parseInt(args.limit as string, 10) : NaN;
       const entries = listSessions(args.cwd ? String(args.cwd) : process.cwd(), {
         agent: agent ? resolveAgentAlias(agent) : undefined,
-        limit: parseInt(args.limit as string, 10) || 10,
+        limit: Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : window.last,
+        window,
       });
 
       if (mode.format === "json") {
