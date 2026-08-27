@@ -408,3 +408,11 @@ ok
 <user_query>
 oh wait it's not done; can you /mattpocock-skills:implement here itself? we can /compact  if you want; I don't want to context switch
 </user_query>
+
+---
+
+<system-reminder>
+Background subagent "01a04180-4710-7563-a665-b16407382b74" (caveman:cavecrew-reviewer: "Standards review of #70 diff") completed successfully.
+Duration: 339.9s | Tool calls: 44 | Turns: 1
+Use get_task_output("01a04180-4710-7563-a665-b16407382b74") to see the full output.
+</system-reminder>
