@@ -148,7 +148,7 @@ This grill is **closed**. Spec: https://github.com/saif-shines/doraval/issues/51
 | **Plugin group** | `dora plugin` lists Plugins in the repo. `dora plugin new` scaffolds one. `dora plugin bump` raises plugin and marketplace semver. Review of a Plugin is still `dora review <plugin-root>`. _Avoid_: `dora plugin review`; top-level `dora bump`; `dora providers`. |
 | **Bare group lists** | `dora skill`, `dora memory`, `dora session`, `dora rule`, `dora config`, `dora agent`, `dora plugin` list. They do not dump usage. They do not open a hub. |
 | **Singular nouns** | CLI groups are singular: `skill`, `rule`, `session`, `memory`, `config`, `agent`, `plugin`. Old `rules` and `sessions` are a hard break. _Avoid_: `dora rules`; `dora sessions`. |
-| **Skill list** | Bare `dora skill` lists every Authored and Global Skill (name, origin, unused mark). `dora skill unused` is the Remove-candidate filter. _Avoid_: bare skill = unused only. |
+| **Skill list** | Bare `dora skill` lists every Authored and Global Skill (name, origin, unused mark). `dora skill unused` lists unused Skills. Remove candidates are never invoked and not a Recent install. _Avoid_: bare skill = unused only. |
 
 Grill for this pass is **closed**. Spec: https://github.com/saif-shines/doraval/issues/56. Tickets: [#57](https://github.com/saif-shines/doraval/issues/57), [#58](https://github.com/saif-shines/doraval/issues/58), [#59](https://github.com/saif-shines/doraval/issues/59), [#60](https://github.com/saif-shines/doraval/issues/60). ADRs: `docs/adr/0008-empty-argv-prints-help.md`, `docs/adr/0009-help-json-is-the-map.md` (supersedes 0004).
 
@@ -173,7 +173,7 @@ Grill is **closed**. Not shipped. Spec: https://github.com/saif-shines/doraval/i
 | **Global unused** | Unused over Global Skills (and Plugin unused). Evidence is Global load. Verb is `dora skill unused --global`. Not shipped. Does not weaken ADR 0006 for Project unused. _Avoid_: home unused (say Global); a second unused verb. |
 | **Standalone Skill** | A Skill that is not Plugin-owned. Unused may name it. _Avoid_: individual; loose Skill. |
 | **Owned Plugin** | A Plugin whose files the user can edit. Not Imported. Unused may recommend Remove of an unused child Skill. _Avoid_: treating cache / `node_modules` as owned. |
-| **Plugin unused** | Unused names unused child Skills inside a Plugin. If every child is unused, unused names the Plugin only. Unused only suggests. It does not Remove. Remove of a child is a later named write, and only on an Owned Plugin. Imported cache: name the children, do not remove. |
+| **Plugin unused** | Unused names unused child Skills inside a Plugin. If every child is unused, unused names the Plugin only. Unused only suggests. It does not Remove. Remove of a child is a later named write, and only on an Owned Plugin. Imported cache: a count on the unused table, not a name dump. Do not remove. |
 | **Install age** | Time since that Skill or Plugin landed on disk. Default three months. A child Skill uses its `SKILL.md` time. A Plugin row uses `plugin.json` time. Under the threshold, unused says it is recent. It is not a Remove candidate. _Avoid_: using the Review window as Install age; one mtime for every child. |
 
 _Avoid_: treating Imported (plugin cache / `node_modules`) as Global; a third mixed audit.

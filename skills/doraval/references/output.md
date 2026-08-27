@@ -116,8 +116,8 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 ### How to branch (unused)
 
 - `reason === "no-sessions"` → stop. Do not Remove.
-- A candidate with `removable: true` → `dora skill remove <name> --dry-run`.
-- `kind === "plugin"` or `removable: false` → `dora review --quick <pluginRoot>`. Do not Review `$HOME`.
+- A standalone candidate with `removable: true` and no `pluginRoot` → `dora skill remove <name> --dry-run`.
+- `kind === "plugin"` or `pluginRoot` set → `dora review --quick <pluginRoot>`. Do not Review `$HOME`.
 - `recent` → unused, recent install. Tell the user. Do not Remove.
 - Unused writes nothing.
 

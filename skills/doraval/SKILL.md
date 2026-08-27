@@ -68,7 +68,7 @@ Flags: `dora <command> --help`. Map: `dora --help --json`.
 
 - User states a durable rule → `dora memory add "<rule>" --weight <1-10>` (`≥ 7` is hard). Promote only when the user asks.
 - Review or Scan reports a conflict → `dora conflicts --dry-run`, then ask the user.
-- R034 / unused Authored Skill → `dora skill unused`, then `dora skill remove <name> --dry-run`. Home Skills: `dora skill unused --global`. Unused-but-recent is named (`never invoked`). It is not a Remove candidate. A Plugin row or `removable: false` → `dora review --quick <plugin-root>` (not `$HOME`). An Owned child with `removable: true` may be removed. Unused writes nothing.
+- R034 / unused Authored Skill → `dora skill unused`, then `dora skill remove <name> --dry-run` for a standalone Remove candidate. Home Skills: `dora skill unused --global`. Unused-but-recent is named (`never invoked`). It is not a Remove candidate. A Plugin row or a Plugin-owned Skill → `dora review --quick <plugin-root>` (not `$HOME`). Named Remove of an Owned child still works. Unused writes nothing.
 - Workspace map (not the first job) → `dora scan --yes`.
 
 Empty `dora` is `--help`. Scan is `dora scan`.

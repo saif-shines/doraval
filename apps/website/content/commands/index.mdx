@@ -98,7 +98,7 @@ Project unused reads this directory’s Sessions (last 30, 90 days). `--global` 
 
 A Recent install is younger than Install age (default 90 days). Unused names it as **never invoked**. It is not a Remove candidate. Imported cache is a count, not a name dump. Config: `review_window.last`, `review_window.max_age_days`, `install_age_days`.
 
-A Plugin with some unused children lists those children. A Plugin with none invoked lists the Plugin only. Next on an Owned child is `dora skill remove <name> --dry-run`. Next on a Plugin row or an Imported child is `dora review --quick <plugin-root>`.
+A Plugin with some unused children lists those children. A Plugin with none invoked lists the Plugin only. Next on a standalone unused Skill is `dora skill remove <name> --dry-run`. Next on a Plugin row or a Plugin-owned Skill is `dora review --quick <plugin-root>`. Next is never Review of `$HOME`. Home is never a Plugin root. An Owned child may still be removed by name.
 
 Deletes an Authored Skill. Quarantines a Global Skill (home copy). An Owned Plugin child may be deleted. Restore puts a Quarantined Global Skill back. `dora skill remove <plugin-name>` does not uninstall a Plugin.
 
