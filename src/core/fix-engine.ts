@@ -1,6 +1,9 @@
 import { readFileSync, writeFileSync } from "fs";
 import { resolve, basename } from "path";
 import type { ReviewFinding } from "./review.js";
+import { ruleByCode } from "./rules/registry.js";
+
+export const GENERIC_JUDGMENT_HINT = "Edit only the span this Finding names. Leave the rest.";
 
 export interface FixEdit {
   file: string;
@@ -9,9 +12,17 @@ export interface FixEdit {
   apply(): void;
 }
 
+export interface JudgmentItem {
+  message: string;
+  severity: "error" | "warning";
+  hint: string;
+  code?: string;
+  docUrl?: string;
+}
+
 export interface FixResult {
   mechanical: FixEdit[];
-  judgment: string[];
+  judgment: JudgmentItem[];
 }
 
 function generateDiff(before: string, after: string, file: string): string {
@@ -56,9 +67,23 @@ function buildAddFieldFix(skillDir: string, finding: ReviewFinding): FixEdit | n
   };
 }
 
+function toJudgmentItem(f: ReviewFinding): JudgmentItem {
+  const rule = f.code ? ruleByCode(f.code) : undefined;
+  const hint = f.hint?.trim() || rule?.title || GENERIC_JUDGMENT_HINT;
+  const item: JudgmentItem = {
+    message: f.message,
+    severity: f.severity as "error" | "warning",
+    hint,
+  };
+  if (f.code) item.code = f.code;
+  const docUrl = f.docUrl ?? rule?.docUrl;
+  if (docUrl) item.docUrl = docUrl;
+  return item;
+}
+
 export function collectFixes(findings: ReviewFinding[], skillDir: string): FixResult {
   const mechanical: FixEdit[] = [];
-  const judgment: string[] = [];
+  const judgment: JudgmentItem[] = [];
 
   for (const f of findings) {
     if (f.severity === "pass" || f.severity === "info") continue;
@@ -66,20 +91,20 @@ export function collectFixes(findings: ReviewFinding[], skillDir: string): FixRe
     if (f.fixable && f.fix) {
       switch (f.fix.type) {
         case "rename_field":
-          judgment.push(`[${f.id}] ${f.message} — rename requires human judgment`);
+          judgment.push(toJudgmentItem(f));
           break;
         case "add_field": {
           const edit = buildAddFieldFix(skillDir, f);
           if (edit) mechanical.push(edit);
-          else judgment.push(`[${f.id}] ${f.message} — no safe auto-derivable value; add by hand`);
+          else judgment.push(toJudgmentItem(f));
           break;
         }
         case "content":
-          judgment.push(`[${f.id}] ${f.message} — content rewrite needed`);
+          judgment.push(toJudgmentItem(f));
           break;
       }
     } else if (!f.fixable) {
-      judgment.push(`[${f.id}] ${f.message}`);
+      judgment.push(toJudgmentItem(f));
     }
   }
 

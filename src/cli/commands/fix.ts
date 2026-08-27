@@ -6,7 +6,7 @@ import { confirm, isCancel } from "@clack/prompts";
 import { review } from "../../core/review.js";
 import { isSkillDir } from "../../core/skill-discovery.js";
 import { pluginNextCommands } from "../../core/skill-classify.js";
-import { collectFixes, type FixEdit, type FixResult } from "../../core/fix-engine.js";
+import { collectFixes, type FixEdit, type FixResult, type JudgmentItem } from "../../core/fix-engine.js";
 
 import { ui, resolveOutputMode, outJson, emitError, summaryLine, nextAction } from "../out.js";
 import { isAgentCaller, refuseAgentWrite, shouldBlockAgentWrite } from "../agent-detect.js";
@@ -74,7 +74,18 @@ async function renderMechanical(
 
 interface SkillJudgments {
   path: string;
-  judgments: string[];
+  judgments: JudgmentItem[];
+}
+
+function formatJudgmentLine(j: JudgmentItem): string {
+  const tag = j.code ? `[${j.code}] ` : "";
+  return `${tag}${j.severity} — ${j.message}`;
+}
+
+function formatBriefIssue(j: JudgmentItem): string {
+  const lines = [`- ${formatJudgmentLine(j)}`, `  hint: ${j.hint}`];
+  if (j.docUrl) lines.push(`  doc: ${j.docUrl}`);
+  return lines.join("\n");
 }
 
 function buildBriefPrompt(perSkill: SkillJudgments[]): string {
@@ -88,7 +99,7 @@ function buildBriefPrompt(perSkill: SkillJudgments[]): string {
       `## Skill: ${s.path}`,
       "",
       "### Issues",
-      s.judgments.map((j) => `- ${j}`).join("\n"),
+      s.judgments.map(formatBriefIssue).join("\n"),
       "",
       "### Current SKILL.md",
       "```markdown",
@@ -148,7 +159,7 @@ export default defineCommand({
 
       let totalMech = 0;
       let totalApplied = 0;
-      const allJudgments: string[] = [];
+      const allJudgments: JudgmentItem[] = [];
       const perSkill: SkillJudgments[] = [];
 
       for (const r of results) {
@@ -214,7 +225,7 @@ export default defineCommand({
           ui.blank();
           ui.write(prompt);
         } else {
-          for (const j of allJudgments) ui.write(`    ${pc.yellow("⚠")} ${j}`);
+          for (const j of allJudgments) ui.write(`    ${pc.yellow("⚠")} ${formatJudgmentLine(j)}`);
           nextAction("dora fix --brief       copy an agent-ready prompt");
         }
       }

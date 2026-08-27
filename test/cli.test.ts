@@ -681,6 +681,13 @@ describe("doraval CLI", () => {
       rmSync(dir, { recursive: true, force: true });
     });
 
+    test("detected agent with --brief does not exit 2", () => {
+      const dir = fixableSkillRepo();
+      const { exitCode } = runDoraval(["fix", ".", "--brief", "--cwd", dir], { env: { CI: "1" } });
+      expect(exitCode).not.toBe(2);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
     test("detected agent conflicts and promote also exit 2", () => {
       const dir = fixableSkillRepo();
       const rec = runDoraval(["conflicts", "--cwd", dir], { env: { CI: "1" } });
@@ -714,6 +721,24 @@ describe("doraval CLI", () => {
       if (parsed.judgment.length === 0) expect(exitCode).toBe(0);
       rmSync(dir, { recursive: true, force: true });
     });
+
+    test("--yes exits 1 when Judgment items remain", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-fix-judg-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, ".claude", "skills", "voice");
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(
+        join(skill, "SKILL.md"),
+        '---\nname: voice\ndescription: "some things could maybe be done"\n---\n\nIt might be considered that things could be handled.\n'
+      );
+      const { exitCode, stdout } = runDoraval(
+        ["fix", ".", "--yes", "--format", "json", "--cwd", dir]
+      );
+      const parsed = JSON.parse(stdout);
+      expect(parsed.judgment.length).toBeGreaterThan(0);
+      expect(exitCode).toBe(1);
+      rmSync(dir, { recursive: true, force: true });
+    });
   });
 
   describe("dora fix --brief multi-skill", () => {
@@ -735,6 +760,61 @@ describe("doraval CLI", () => {
       expect(out).toContain("alpha");
       expect(out).toContain("beta");
       expect(out).not.toContain("## Current SKILL.md\n```markdown\n\n```"); // no empty root read
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("json judgment is objects; brief lists the same items with hint and SKILL.md", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-brief-obj-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, ".claude", "skills", "voice");
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(
+        join(skill, "SKILL.md"),
+        '---\nname: voice\ndescription: "some things could maybe be done"\n---\n\nIt might be considered that things could be handled.\n'
+      );
+      const jsonRun = runDoraval(["fix", ".", "--dry-run", "--json", "--cwd", dir]);
+      const body = JSON.parse(jsonRun.stdout);
+      expect(Array.isArray(body.judgment)).toBe(true);
+      expect(body.judgment.length).toBeGreaterThan(0);
+      for (const item of body.judgment) {
+        expect(typeof item).toBe("object");
+        expect(typeof item.message).toBe("string");
+        expect(["error", "warning"]).toContain(item.severity);
+        expect(typeof item.hint).toBe("string");
+        expect(item.hint.length).toBeGreaterThan(0);
+        if (item.code !== undefined) expect(item.code).toMatch(/^R\d+/);
+        if (item.docUrl !== undefined) expect(item.docUrl).toContain("/reference/rules/");
+      }
+
+      const brief = runDoraval(["fix", ".", "--brief", "--cwd", dir]);
+      const out = brief.stdout + brief.stderr;
+      expect(out).toContain("hint:");
+      expect(out).toContain("### Current SKILL.md");
+      expect(out).toContain("name: voice");
+      for (const item of body.judgment) {
+        expect(out).toContain(item.message);
+        expect(out).toContain(item.hint);
+        if (item.code) expect(out).toContain(item.code);
+        if (item.docUrl) expect(out).toContain(item.docUrl);
+      }
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("brief with no Judgment items prints no judgment-required prompt", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-brief-clean-"));
+      mkdirSync(join(dir, ".git"));
+      const skill = join(dir, ".claude", "skills", "ok");
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(
+        join(skill, "SKILL.md"),
+        '---\nname: ok\ndescription: "Use when the skill is already clean enough for a brief smoke."\n---\n\n1. Run the check.\n\nMUST keep this short.\n\n```bash\necho ok\n```\n'
+      );
+      const { stdout, stderr, exitCode } = runDoraval(["fix", ".", "--brief", "--cwd", dir]);
+      const out = stdout + stderr;
+      expect(out).not.toContain("judgment required");
+      const jsonRun = runDoraval(["fix", ".", "--dry-run", "--json", "--cwd", dir]);
+      const body = JSON.parse(jsonRun.stdout);
+      if (body.judgment.length === 0 && body.mechanical === 0) expect(exitCode).toBe(0);
       rmSync(dir, { recursive: true, force: true });
     });
   });
@@ -823,11 +903,15 @@ describe("doraval CLI", () => {
       expect(cmds).toContain(`dora review --quick ${plug}`);
       expect(cmds).toContain(`dora fix ${plug} --dry-run`);
 
+      writeFileSync(join(inner, "SKILL.md"), '---\nname: inner\ndescription: "some things could maybe be done"\n---\n\nIt might be considered that things could be handled.\n');
       const fixJson = runDoraval(["fix", inner, "--dry-run", "--json", "--cwd", dir]);
       const fixBody = JSON.parse(fixJson.stdout);
       expect(fixBody.pluginOwned).toBe(true);
       expect(fixBody.pluginRoot).toBe(plug);
       expect(fixBody.next).toBeUndefined();
+      expect(Array.isArray(fixBody.judgment)).toBe(true);
+      expect(fixBody.judgment.length).toBeGreaterThan(0);
+      expect(typeof fixBody.judgment[0]).toBe("object");
 
       const fixTable = runDoraval(["fix", inner, "--dry-run", "--cwd", dir]);
       const fixText = fixTable.stdout + fixTable.stderr;
