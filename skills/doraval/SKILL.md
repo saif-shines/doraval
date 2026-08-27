@@ -31,23 +31,23 @@ If `dora` is not on `PATH`, use `npx @hacksmith/doraval`.
    `--yes` applies frontmatter, formatting, and missing fields.
    Done: dry-run is clean, or `--yes` applied.
 
-4. **Judgment.** Do not skip.
+4. **Judgment.** Run Brief. Then **replace**.
    `dora fix <path> --brief` (or `--json`).
-   Each item has `message`, `severity`, `hint`, and optional `code` / `docUrl`.
-   Edit that Authored `SKILL.md`. Then step 5.
-   Done: every item edited.
+   Each item: `message`, `severity`, `hint`, optional `code` / `docUrl`.
+   Target is that Authored `SKILL.md`.
 
-   When you edit:
-   - State the intended rule in one sentence. Then make the smallest change.
-   - Replace text. Do not append another paragraph.
-   - Change only what the Brief item names. Leave the rest.
-   - Do not add hedging or extra examples from this one run.
-   - If the Skill already required the right behavior, do not thicken it. Show the Finding to the user and stop.
-   - Do not create a new Skill. Do not move text to `references/` unless a size Finding names that.
-   - Authored only. Do not edit Global or Imported.
+   **Replace** one item at a time:
+   - Name the intended rule in one sentence. Write the smallest wording that states it.
+   - Put that wording where the old sentence lived. One home.
+   - Stay inside the span the item names.
+   - Imperative. One statement of the rule.
+   - Skill already states the rule → show the Finding, leave the file.
+   - Stay in this Skill's files. A size Finding may move text into this Skill's `references/`.
+
+   Done: every item replaced or shown. Then step 5.
 
 5. **Re-review.** `dora review --quick <path>` after every edit.
-   Done: **exit 0**.
+   Done: **exit 0**. That is the only report-done.
 
 6. **Delegated Judge** only after step 5 is **exit 0** and a later Review (no `--quick`) is `delegated`.
    Read `JUDGE THIS`. Evaluate. Fix Findings.

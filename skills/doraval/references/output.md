@@ -79,7 +79,7 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
     {
       "message": "No guardrails found",
       "severity": "warning",
-      "hint": "Guardrail presence (heuristic)",
+      "hint": "Edit only the span this Finding names. Leave the rest.",
       "code": "R018",
       "docUrl": "https://doraval.dev/reference/rules/R018"
     }
@@ -92,7 +92,7 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 ### How to branch (Fix)
 
 - `mechanical` unapplied → `dora fix <path> --yes` (or `--dry-run` first).
-- `judgment.length > 0` → read `--brief` (or these objects), edit Authored `SKILL.md`, then `dora review --quick <path>`. Do not skip. Do not report done until Review is **exit 0**.
+- `judgment.length > 0` → read `--brief` (or these objects). **Replace** on the Authored `SKILL.md` (see the shipped Skill). Then `dora review --quick <path>`. Report done only on **exit 0**.
 - `--brief` is not a write. Bare `dora fix` as a Runner is **exit 2**.
 
 ## `dora skill unused --json`

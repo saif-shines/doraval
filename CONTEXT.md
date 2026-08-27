@@ -191,7 +191,7 @@ Grill is **closed**. Slice 1 shipped as #70 / #71. Slice 2 rewrite policy is in 
 | **Brief** | `dora fix --brief`. Must include each Judgment item’s rule code, `docUrl`, severity, and one rewrite hint, plus the current `SKILL.md`. No unused / Scan / Sessions dump. |
 | **Brief JSON** | `judgment` is a list of objects: `{code, message, docUrl, severity, hint}`. Not a list of strings. Hard break. One shape long-term. |
 | **Pass test (this pass)** | A cold Runner with only the shipped Skill runs Review, mechanical Fix, Brief, Judgment write, then re-review. **exit 0**. It does not ask the human. |
-| **Rewrite policy** | The shipped Skill tells the Runner how much to change. Smallest change. Replace, do not append. Only the Brief span. No hedging. Stop if the Skill already required the right behavior. Authored only. |
+| **Rewrite policy** | **Replace:** name the rule, write the smallest wording, one home, Brief span only. Skill already states the rule → show the Finding. Authored files only. |
 | **Hint** | Finding.hint if set, else the generic fallback: edit only the named span; leave the rest. Rule catalog titles are not Hints. No Judge on `--brief`. |
 
 _Avoid_: skill-doctor as a product name; a second Skill; `dora skill update`; calling this `dora update`; a Runner that Removes or promotes; Judgment write on a Global Skill; stuffing unused or Scan into `fix --brief`.
