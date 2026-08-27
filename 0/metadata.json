@@ -1,0 +1,54 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M11JRVJ4HS5DDAV3YA0F0BGC",
+  "session_id": "01a03c96-eb5a-7f53-b654-f785a4f66a17",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-27T12:23:02.514232Z",
+  "branch": "main",
+  "checkpoints_count": 15,
+  "files_touched": [
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "skills/doraval/SKILL.md",
+    "skills/doraval/references/commands.md",
+    "skills/doraval/references/output.md",
+    "src/cli/capabilities.ts",
+    "src/cli/commands/skill/unused.ts",
+    "src/core/skill-classify.test.ts",
+    "src/core/skill-classify.ts",
+    "src/core/skill-remove.test.ts",
+    "src/core/skill-remove.ts",
+    "test/cli.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "28df060daaee",
+  "checkpoint_transcript_start": 603,
+  "transcript_lines_at_start": 603,
+  "session_metrics": {
+    "turn_count": 46
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-27T12:23:02.223743Z",
+    "agent_lines": 120,
+    "agent_removed": 35,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 120,
+    "total_lines_changed": 155,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

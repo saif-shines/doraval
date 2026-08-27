@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M11JRVJ4HS5DDAV3YA0F0BGC",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 15,
+  "files_touched": [
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "skills/doraval/SKILL.md",
+    "skills/doraval/references/commands.md",
+    "skills/doraval/references/output.md",
+    "src/cli/capabilities.ts",
+    "src/cli/commands/skill/unused.ts",
+    "src/core/skill-classify.test.ts",
+    "src/core/skill-classify.ts",
+    "src/core/skill-remove.test.ts",
+    "src/core/skill-remove.ts",
+    "test/cli.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
