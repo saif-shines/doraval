@@ -1,0 +1,14 @@
+Review the uncommitted diff on /Users/saif/Experiments/doraval against GitHub issue https://github.com/saif-shines/doraval/issues/72 (and the live miss: unused --global hid unused-but-recent home Skills).
+
+Spec direction from #72:
+- unused --global must POINT AT unused home Skills, not only Remove candidates
+- unused-but-recent is still not a Remove candidate; still named as unused, with age
+- recent list must not drown standalone home Skills in Imported cache hashes
+- Next must not be `dora review --quick $HOME`
+- Do not auto-quarantine recent unused
+- Do not change the 90-day default
+- Home marketplace (.agents/plugins/marketplace.json) must not make $HOME a Plugin root
+
+Read `git diff` yourself.
+
+Report under 400 words: (a) requirements missing or partial; (b) scope creep; (c) implemented-but-wrong. Quote the spec line. One line per finding.

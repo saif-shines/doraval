@@ -1,0 +1,77 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M11JRVJ4HS5DDAV3YA0F0BGC",
+  "session_id": "01a04326-983e-77d3-98f8-93073fdc6f33",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-27T12:23:03.295638Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "skills/doraval/SKILL.md",
+    "skills/doraval/references/commands.md",
+    "skills/doraval/references/output.md",
+    "src/cli/capabilities.ts",
+    "src/cli/commands/skill/unused.ts",
+    "src/core/skill-classify.test.ts",
+    "src/core/skill-classify.ts",
+    "src/core/skill-remove.test.ts",
+    "src/core/skill-remove.ts",
+    "test/cli.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "10a719586ff6",
+  "initial_attribution": {
+    "calculated_at": "2026-08-27T12:23:03.258678Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 35,
+    "total_committed": 0,
+    "total_lines_changed": 35,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 120,
+      "user_lines_removed": 35,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "CHANGELOG.md": 6,
+        "CONTEXT.md": 2,
+        "README.md": 2,
+        "apps/website/content/commands/index.mdx": 2,
+        "skills/doraval/SKILL.md": 1,
+        "skills/doraval/references/commands.md": 1,
+        "skills/doraval/references/output.md": 3,
+        "src/cli/capabilities.ts": 1,
+        "src/cli/commands/skill/unused.ts": 33,
+        "src/core/skill-classify.test.ts": 14,
+        "src/core/skill-classify.ts": 4,
+        "src/core/skill-remove.test.ts": 37,
+        "src/core/skill-remove.ts": 13,
+        "test/cli.test.ts": 1
+      },
+      "user_removed_per_file": {
+        "CONTEXT.md": 2,
+        "README.md": 2,
+        "apps/website/content/commands/index.mdx": 2,
+        "skills/doraval/SKILL.md": 1,
+        "skills/doraval/references/commands.md": 1,
+        "skills/doraval/references/output.md": 2,
+        "src/cli/capabilities.ts": 1,
+        "src/cli/commands/skill/unused.ts": 20,
+        "src/core/skill-classify.ts": 3,
+        "src/core/skill-remove.ts": 1
+      }
+    }
+  ]
+}
