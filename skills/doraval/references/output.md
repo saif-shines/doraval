@@ -111,13 +111,14 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 }
 ```
 
-`--global` sets `load` to `"global"`. No Sessions: `reason` is `"no-sessions"` and both lists are empty. `kind` is `"skill"` or `"plugin"`. `removable: false` means Review the Plugin root, not `dora skill remove`.
+`--global` sets `load` to `"global"`. No Sessions: `reason` is `"no-sessions"` and both lists are empty. `kind` is `"skill"` or `"plugin"`. `removable: false` means Review the Plugin root, not `dora skill remove`. `recent` is unused but not a Remove candidate (Install age). Name those to the user. Do not Remove them.
 
 ### How to branch (unused)
 
 - `reason === "no-sessions"` → stop. Do not Remove.
 - A candidate with `removable: true` → `dora skill remove <name> --dry-run`.
-- `kind === "plugin"` or `removable: false` → `dora review --quick <pluginRoot>`.
+- `kind === "plugin"` or `removable: false` → `dora review --quick <pluginRoot>`. Do not Review `$HOME`.
+- `recent` → unused, recent install. Tell the user. Do not Remove.
 - Unused writes nothing.
 
 ## For hooks

@@ -14,6 +14,7 @@ import {
   planRemove,
   planRestore,
   resolveSkillName,
+  unusedNext,
 } from "./skill-remove.js";
 import { utimesSync } from "fs";
 import type { LoadResult } from "./session-evidence.js";
@@ -360,6 +361,29 @@ describe("planRemove + applyRemove", () => {
     }
   });
 
+  test("Global unused does not treat a home marketplace as a Plugin", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    mkdirSync(join(home, ".agents", "plugins"), { recursive: true });
+    writeFileSync(join(home, ".agents", "plugins", "marketplace.json"), "{}");
+    const ghost = writeSkill(home, ".agents/skills/ghost", "ghost");
+    const fresh = writeSkill(home, ".agents/skills/fresh", "fresh");
+    ageFile(join(ghost, "SKILL.md"), 100);
+    const report = listUnusedReport({ cwd, home, loaded: loaded(cwd, []), scope: "global" });
+    try {
+      expect(report.candidates).toEqual([expect.objectContaining({
+        name: "ghost", kind: "skill", removable: true, origin: "global",
+      })]);
+      expect(report.candidates[0]?.pluginRoot).toBeUndefined();
+      expect(report.recent).toEqual([expect.objectContaining({
+        name: "fresh", kind: "skill", origin: "global",
+      })]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   test("Global unused lists a home Skill and skips Authored", () => {
     const cwd = mkdtempSync(join(tmpdir(), "dora-rm-"));
     const home = mkdtempSync(join(tmpdir(), "dora-home-"));
@@ -471,6 +495,19 @@ describe("planRemove + applyRemove", () => {
       else process.env.DORAVAL_HOME = prev;
       rmSync(doraHome, { recursive: true, force: true });
     }
+  });
+});
+
+describe("unusedNext", () => {
+  test("standalone Remove candidate wins; plugin-owned is Review; unused-recent is not Next", () => {
+    expect(unusedNext([
+      { name: "caveman", dir: "/plug/skills/caveman", origin: "global", kind: "skill", removable: true, pluginRoot: "/plug" },
+      { name: "ghost", dir: "/home/.agents/skills/ghost", origin: "global", kind: "skill", removable: true },
+    ])).toBe("dora skill remove ghost --dry-run");
+    expect(unusedNext([
+      { name: "caveman", dir: "/plug/skills/caveman", origin: "global", kind: "skill", removable: true, pluginRoot: "/plug" },
+    ])).toBe("dora review --quick /plug");
+    expect(unusedNext([])).toBeUndefined();
   });
 });
 

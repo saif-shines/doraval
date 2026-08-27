@@ -20,15 +20,16 @@ function pluginManifestRels(): string[] {
   return [...rels];
 }
 
-/** Ancestor directory that holds a Plugin manifest, if any. `stopAt` (usually cwd) is the last dir checked. */
-export function pluginRoot(skillDir: string, stopAt?: string): string | undefined {
+/** Ancestor directory that holds a Plugin manifest, if any. `stopAt` (usually cwd) is the last dir checked. Home is never a Plugin. */
+export function pluginRoot(skillDir: string, stopAt?: string, home?: string): string | undefined {
   const stop = stopAt ? resolve(stopAt) : undefined;
+  const homeAbs = resolve(home ?? homedir());
   let dir = resolve(skillDir);
   const rels = pluginManifestRels();
   const underStop = (found: string) =>
     !stop || found === stop || found.startsWith(stop + sep);
   while (true) {
-    if (rels.some((rel) => existsSync(join(dir, rel)))) {
+    if (dir !== homeAbs && rels.some((rel) => existsSync(join(dir, rel)))) {
       return underStop(dir) ? dir : undefined;
     }
     if (stop && dir === stop) return undefined;

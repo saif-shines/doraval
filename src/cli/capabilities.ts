@@ -81,7 +81,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--dry-run": { description: "Show diffs, write nothing" },
         "--brief": { description: "Agent-ready Judgment items (code, docUrl, severity, hint)" },
       }, [{ name: "path", required: false, type: "string" }]),
-      cmd("skill unused", "read-only", "List Authored Skills that are Remove candidates.", [
+      cmd("skill unused", "read-only", "List unused Skills. Remove candidates are never invoked and not a Recent install.", [
         "dora skill unused",
         "dora skill unused --json",
       ], {

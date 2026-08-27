@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixes
+
+- `dora skill unused --global` names unused-but-recent Skills as
+  never invoked. Imported cache is a count. Home is not a Plugin
+  root (`#72`).
+
 ## 0.6.29
 
 ### Breaking

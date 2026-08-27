@@ -89,4 +89,18 @@ describe("isPluginOwned", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("a user-home marketplace is not a Plugin root", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-home-"));
+    mkdirSync(join(home, ".agents", "plugins"), { recursive: true });
+    writeFileSync(join(home, ".agents", "plugins", "marketplace.json"), "{}");
+    const skill = join(home, ".agents", "skills", "ghost");
+    mkdirSync(skill, { recursive: true });
+    writeFileSync(join(skill, "SKILL.md"), "---\nname: ghost\n---\n");
+    try {
+      expect(pluginRoot(skill, undefined, home)).toBeUndefined();
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
 });

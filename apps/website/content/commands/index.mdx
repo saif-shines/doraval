@@ -92,11 +92,11 @@ dora skill remove ghost --for claude --yes
 dora skill restore ghost --yes
 ```
 
-`dora skill unused` lists Remove candidates. It writes nothing.
+`dora skill unused` lists unused Skills. It writes nothing.
 
 Project unused reads this directory’s Sessions (last 30, 90 days). `--global` reads last 30 Sessions per agent, any project, and lists home Skills only. Do not mix the two. `--last` and `--since` override one run.
 
-A Recent install is younger than Install age (default 90 days). Unused names it. It is not a Remove candidate. Config: `review_window.last`, `review_window.max_age_days`, `install_age_days`.
+A Recent install is younger than Install age (default 90 days). Unused names it as **never invoked**. It is not a Remove candidate. Imported cache is a count, not a name dump. Config: `review_window.last`, `review_window.max_age_days`, `install_age_days`.
 
 A Plugin with some unused children lists those children. A Plugin with none invoked lists the Plugin only. Next on an Owned child is `dora skill remove <name> --dry-run`. Next on a Plugin row or an Imported child is `dora review --quick <plugin-root>`.
 

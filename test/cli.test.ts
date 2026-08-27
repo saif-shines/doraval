@@ -387,6 +387,7 @@ describe("doraval CLI", () => {
       expect(help.stdout).toContain("--last");
       expect(help.stdout).toContain("--since");
       expect(help.stdout).toContain("--global");
+      expect(help.stdout).toContain("List unused Skills");
     });
 
     test("skill unused lists nothing when there are no sessions", () => {

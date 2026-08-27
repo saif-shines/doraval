@@ -20,6 +20,18 @@ export interface UnusedRow extends SkillMatch {
   pluginRoot?: string;
 }
 
+export function isStandaloneUnused(row: UnusedRow): boolean {
+  return row.kind === "skill" && row.origin !== "imported" && !row.pluginRoot;
+}
+
+/** Next for unused. Standalone Remove first. Plugin rows Review the root. Never Review home. */
+export function unusedNext(candidates: UnusedRow[]): string | undefined {
+  const first = candidates.find((c) => c.removable && isStandaloneUnused(c));
+  if (first) return `dora skill remove ${first.name} --dry-run`;
+  const plug = candidates.find((c) => c.pluginRoot);
+  if (plug?.pluginRoot) return `dora review --quick ${plug.pluginRoot}`;
+}
+
 export type ResolveSkillResult =
   | { status: "unique"; match: SkillMatch }
   | { status: "none" }
@@ -297,7 +309,7 @@ export function listUnusedReport(opts: {
   const groups = new Map<string, SkillMatch[]>();
   for (const s of listSkillsForUnused(opts.cwd, opts.home, scope)) {
     if (!want(s.origin)) continue;
-    const root = pluginRoot(s.dir, scope === "global" ? undefined : opts.cwd);
+    const root = pluginRoot(s.dir, scope === "global" ? undefined : opts.cwd, opts.home);
     if (root) {
       const list = groups.get(root) ?? [];
       list.push(s);

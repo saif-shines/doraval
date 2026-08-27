@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
 import { homedir } from "os";
 import { resolve } from "path";
-import { listUnusedReport } from "../../../core/skill-remove.js";
+import { isStandaloneUnused, listUnusedReport, unusedNext } from "../../../core/skill-remove.js";
 import { loadRecentSessions } from "../../../core/session-evidence.js";
 import { resolveReviewWindow } from "../../../core/review-window.js";
 import { readConfig } from "../../../core/journal-config.js";
@@ -12,7 +12,7 @@ export default defineCommand({
   meta: {
     name: "unused",
     description: [
-      "List Authored Skills that are Remove candidates (never invoked, not a Recent install)",
+      "List unused Skills. Remove candidates are never invoked and not a Recent install",
       "",
       "Read-only. Writes nothing.",
       "",
@@ -75,52 +75,65 @@ export default defineCommand({
     }
 
     ui.blank();
-    ui.heading("dora skill — Remove candidates");
+    ui.heading("dora skill — Unused");
     ui.blank();
 
     if (loaded.sessions.length === 0) {
-      summaryLine("No recent sessions. Cannot mark Remove candidates.");
+      summaryLine("No recent sessions. Cannot mark unused Skills.");
       nextAction("dora session");
       ui.blank();
       await exit(0);
       return;
     }
 
-    for (const c of candidates) {
+    const standRecent = recent.filter(isStandaloneUnused);
+    const importedN = [...candidates, ...recent].filter((r) => r.origin === "imported").length;
+    const shownCandidates = candidates.filter((c) => c.origin !== "imported");
+
+    for (const c of shownCandidates) {
       const where = c.agent ? `${c.agent}  ${c.dir}` : c.dir;
       const tag = c.kind === "plugin" ? "plugin" : c.removable ? "" : "keep";
       ui.info(`  ${c.name}  ${where}${tag ? `  ${tag}` : ""}`);
     }
-    if (recent.length > 0) {
-      if (candidates.length > 0) ui.blank();
-      ui.heading("Recent install");
+    if (standRecent.length > 0 || recent.some((r) => r.kind === "plugin")) {
+      if (shownCandidates.length > 0) ui.blank();
+      ui.heading("Unused — recent install");
       ui.blank();
-      for (const r of recent) {
-        ui.info(`  ${r.name}  installed in the last ${report.installAgeDays} days`);
+      for (const r of standRecent) {
+        ui.info(`  ${r.name}  never invoked  installed in the last ${report.installAgeDays} days`);
+      }
+      for (const r of recent.filter((x) => x.kind === "plugin")) {
+        ui.info(`  ${r.name}  plugin  installed in the last ${report.installAgeDays} days`);
       }
     }
+    if (importedN > 0) ui.dim(`  ${importedN} imported cache Skill${importedN === 1 ? "" : "s"} (not removable)`);
 
-    if (candidates.length === 0 && recent.length === 0) {
-      summaryLine("No Remove candidates.");
+    if (shownCandidates.length === 0 && standRecent.length === 0 && importedN === 0) {
+      summaryLine("No unused Skills.");
       ui.blank();
       await exit(0);
       return;
     }
 
-    if (candidates.length === 0) {
-      summaryLine(`No Remove candidates. ${recent.length} recent install${recent.length === 1 ? "" : "s"}.`);
+    if (shownCandidates.length === 0) {
+      const n = standRecent.length;
+      summaryLine(
+        n > 0
+          ? `No Remove candidates. ${n} unused recent install${n === 1 ? "" : "s"}.`
+          : "No Remove candidates.",
+      );
       ui.blank();
       await exit(0);
       return;
     }
 
     ui.blank();
-    summaryLine(`${candidates.length} Remove candidate${candidates.length === 1 ? "" : "s"}`);
-    const first = candidates[0]!;
-    const next = first.kind === "plugin" || !first.removable
-      ? `dora review --quick ${first.pluginRoot ?? first.dir}`
-      : `dora skill remove ${first.name} --dry-run`;
-    nextAction(next);
+    const extra = standRecent.length > 0
+      ? `. ${standRecent.length} unused recent install${standRecent.length === 1 ? "" : "s"}`
+      : "";
+    summaryLine(`${shownCandidates.length} Remove candidate${shownCandidates.length === 1 ? "" : "s"}${extra}`);
+    const next = unusedNext(shownCandidates);
+    if (next) nextAction(next);
     ui.blank();
     await exit(0);
   },
