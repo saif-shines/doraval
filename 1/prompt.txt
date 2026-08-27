@@ -1,0 +1,9 @@
+Review the uncommitted diff on /Users/saif/Experiments/doraval (branch main vs working tree) on the STANDARDS axis only.
+
+Read `git diff` yourself. Files: src/core/skill-classify.ts, src/core/skill-remove.ts, src/cli/commands/skill/unused.ts, tests, docs.
+
+Repo standards: Agents.md (YAGNI, reuse, stdlib, fewest files, one small test, no version bump). CONTEXT.md glossary. Comments short, no narration.
+
+Smell baseline (judgement): Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest.
+
+Report under 400 words: (a) documented-standard breaches with file+rule; (b) baseline smells as judgement calls. Skip tooling-enforced issues. One line per finding: path:line: severity: problem. Fix.
