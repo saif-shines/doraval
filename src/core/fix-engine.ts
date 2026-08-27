@@ -69,7 +69,9 @@ function buildAddFieldFix(skillDir: string, finding: ReviewFinding): FixEdit | n
 
 function toJudgmentItem(f: ReviewFinding): JudgmentItem {
   const rule = f.code ? ruleByCode(f.code) : undefined;
-  const hint = f.hint?.trim() || rule?.title || GENERIC_JUDGMENT_HINT;
+  // Rule.title is a catalog label, not a rewrite line. Until rules grow a hint
+  // field, only Finding.hint or the generic fallback.
+  const hint = f.hint?.trim() || GENERIC_JUDGMENT_HINT;
   const item: JudgmentItem = {
     message: f.message,
     severity: f.severity as "error" | "warning",

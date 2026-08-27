@@ -192,7 +192,7 @@ Grill is **closed**. Spec: slice 1 (richer Brief + do not skip). Slice 2 Skill r
 | **Brief JSON** | `judgment` is a list of objects: `{code, message, docUrl, severity, hint}`. Not a list of strings. Hard break. One shape long-term. |
 | **Pass test (this pass)** | A cold Runner with only the shipped Skill runs Review, mechanical Fix, Brief, Judgment write, then re-review. **exit 0**. It does not ask the human. |
 | **Rewrite policy** | The shipped Skill tells the Runner how much to change. The CLI does not lock surgical vs whole-file. Details of that Skill text are parked (you will give them). |
-| **Hint** | One static line per rule, copied into Brief. If a rule has no line, use one generic fallback: edit only the named span; leave the rest. No Judge on `--brief`. |
+| **Hint** | Finding.hint if set, else the generic fallback: edit only the named span; leave the rest. Rule catalog titles are not Hints. No Judge on `--brief`. |
 
 _Avoid_: skill-doctor as a product name; a second Skill; `dora skill update`; calling this `dora update`; a Runner that Removes or promotes; Judgment write on a Global Skill; stuffing unused or Scan into `fix --brief`.
 

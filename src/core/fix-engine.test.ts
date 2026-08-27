@@ -51,7 +51,7 @@ describe("collectFixes", () => {
     ]);
   });
 
-  test("hint falls back to the rule title when Finding has no hint", () => {
+  test("hint does not use the rule catalog title", () => {
     const findings: ReviewFinding[] = [
       {
         id: "heur-002",
@@ -64,7 +64,8 @@ describe("collectFixes", () => {
       },
     ];
     const result = collectFixes(findings, "/some/skill");
-    expect(result.judgment[0]!.hint).toBe("Trigger clarity (heuristic)");
+    expect(result.judgment[0]!.hint).toBe(FALLBACK);
+    expect(result.judgment[0]!.hint).not.toBe("Trigger clarity (heuristic)");
     expect(result.judgment[0]!.docUrl).toBe("https://doraval.dev/reference/rules/R014");
   });
 
