@@ -7,7 +7,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | --- | --- |
 | `dora` | Short `--help`. First job is `dora review --quick`. |
 | `dora review [path]` | Gate: structure → heuristics → Judge → sessions. Full Review adds Session health. `--quick` skips Judge and Session health. |
-| `dora fix [path]` | Mechanical `--yes` or judgment `--brief` |
+| `dora fix [path]` | Mechanical `--yes`. Judgment `--brief` / `--json` (`message`, `severity`, `hint`, optional `code` / `docUrl`). |
 | `dora scan` | Workspace map. Not the empty-argv default. |
 | `dora skill` | List Authored + Global Skills |
 | `dora skill unused` | Remove-candidate filter. `--global` is home Skills. `--last` / `--since` override the Review window for one run. |

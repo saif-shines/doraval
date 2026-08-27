@@ -178,6 +178,24 @@ Grill is **closed**. Not shipped. Spec: https://github.com/saif-shines/doraval/i
 
 _Avoid_: treating Imported (plugin cache / `node_modules`) as Global; a third mixed audit.
 
+## Judgment-loop pass (this grill)
+
+Grill is **closed**. Spec: slice 1 (richer Brief + do not skip). Slice 2 Skill rewrite policy stays parked.
+
+| Term | Meaning |
+|------|---------|
+| **This pass** | Two slices. Slice 1: richer Brief + the smallest Skill change so the Runner does not skip Judgment. Slice 2: rewrite-policy Skill text, when you give it. One shipped Skill. Authored only. Unused / Scan / Sessions stay on their own verbs. |
+| **Parked** | (1) Copy or refresh the shipped Doraval Skill onto disk. (2) Global Judgment writes. (3) Memory overhaul. (4) One packet that dumps unused + Scan + Sessions. (5) Slice 2 Skill rewrite policy. |
+| **Judgment write** | The Runner edits an Authored `SKILL.md` for Judgment items, then re-reviews. Allowed on a Plugin-owned Authored Skill (same as Skill-path fix). The human still owns Remove, Restore, and `memory promote`. This supersedes the agent-contract line “the human still owns judgment” for this pass. |
+| **Judgment** | A Finding that `dora fix --yes` will not write. The Runner reads Brief, does the Judgment write, then re-reviews. |
+| **Brief** | `dora fix --brief`. Must include each Judgment item’s rule code, `docUrl`, severity, and one rewrite hint, plus the current `SKILL.md`. No unused / Scan / Sessions dump. |
+| **Brief JSON** | `judgment` is a list of objects: `{code, message, docUrl, severity, hint}`. Not a list of strings. Hard break. One shape long-term. |
+| **Pass test (this pass)** | A cold Runner with only the shipped Skill runs Review, mechanical Fix, Brief, Judgment write, then re-review. **exit 0**. It does not ask the human. |
+| **Rewrite policy** | The shipped Skill tells the Runner how much to change. The CLI does not lock surgical vs whole-file. Details of that Skill text are parked (you will give them). |
+| **Hint** | One static line per rule, copied into Brief. If a rule has no line, use one generic fallback: edit only the named span; leave the rest. No Judge on `--brief`. |
+
+_Avoid_: skill-doctor as a product name; a second Skill; `dora skill update`; calling this `dora update`; a Runner that Removes or promotes; Judgment write on a Global Skill; stuffing unused or Scan into `fix --brief`.
+
 ## Naming debt (intentional)
 
 - **`JournalConfig` / `journal:`** — historical. Prefer saying **config** in docs and new code comments. Full rename is not required for correctness.

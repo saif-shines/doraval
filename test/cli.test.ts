@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import pkg from "../package.json" with { type: "json" };
-import { fixturePath, runDoraval } from "./helpers/spawn-cli.js";
+import { fixturePath, repoRoot, runDoraval } from "./helpers/spawn-cli.js";
 import { join } from "path";
 import { tmpdir } from "os";
-import { rmSync, mkdirSync, mkdtempSync, writeFileSync, existsSync } from "fs";
+import { rmSync, mkdirSync, mkdtempSync, writeFileSync, existsSync, readFileSync } from "fs";
 
 describe("doraval CLI", () => {
   describe("help and version", () => {
@@ -38,6 +38,18 @@ describe("doraval CLI", () => {
       const yes = stdout.indexOf("--yes");
       expect(dry).toBeGreaterThan(-1);
       expect(yes).toBeGreaterThan(dry);
+      expect(stdout).toMatch(/hint/);
+    });
+
+    test("shipped Skill names Brief fields and forbids skip", () => {
+      const text = readFileSync(join(repoRoot, "skills/doraval/SKILL.md"), "utf-8");
+      expect(text).toContain("dora fix");
+      expect(text).toContain("--brief");
+      expect(text).toContain("hint");
+      expect(text).toContain("docUrl");
+      expect(text).toContain("Do not skip");
+      expect(text).toContain("exit 0");
+      expect(text).not.toContain("shown to the user");
     });
 
     test("scan --help shows dora scan and json/yes", () => {

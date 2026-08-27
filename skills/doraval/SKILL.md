@@ -31,8 +31,11 @@ If `dora` is not on `PATH`, use `npx @hacksmith/doraval`.
    `--yes` applies frontmatter, formatting, and missing fields.
    Done: dry-run is clean, or `--yes` applied.
 
-4. **Judgment.** `dora fix <path> --brief`, then hand-edit.
-   Done: every brief item is edited or shown to the user.
+4. **Judgment.** Do not skip.
+   `dora fix <path> --brief` (or `--json`).
+   Each item has `message`, `severity`, `hint`, and optional `code` / `docUrl`.
+   Edit that Authored `SKILL.md`. Then step 5.
+   Done: every item edited.
 
 5. **Re-review.** `dora review --quick <path>` after every edit.
    Done: **exit 0**.
@@ -47,7 +50,7 @@ Add `--format json` when you will branch on fields. Add `--ci` in CI.
 ## Writes
 
 Pass `--yes` or `--dry-run` on `fix`, `conflicts`, `memory promote`, `skill remove`, and `skill restore`.
-A missing flag is **exit 2**.
+`--brief` is not a write. A missing write flag is **exit 2**.
 
 ## Side paths
 

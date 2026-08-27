@@ -79,7 +79,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         ...COMMON_FLAGS,
         "--yes": { description: "Apply without prompting" },
         "--dry-run": { description: "Show diffs, write nothing" },
-        "--brief": { description: "Agent-ready prompt for judgment fixes" },
+        "--brief": { description: "Agent-ready Judgment items (code, docUrl, severity, hint)" },
       }, [{ name: "path", required: false, type: "string" }]),
       cmd("skill unused", "read-only", "List Authored Skills that are Remove candidates.", [
         "dora skill unused",

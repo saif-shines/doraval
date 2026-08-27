@@ -69,6 +69,32 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 - `.health[].status` is `"pass" | "warn" | "fail"` per artifact.
 - `.intelligence.judge` is `"api" | "delegate"`. `"delegate"` means evaluate the `JUDGE THIS` block on a later Review (not `--quick`). `--ci` still requires API credentials.
 
+## `dora fix --json`
+
+```jsonc
+{
+  "mechanical": 1,
+  "applied": 1,
+  "judgment": [
+    {
+      "message": "No guardrails found",
+      "severity": "warning",
+      "hint": "Guardrail presence (heuristic)",
+      "code": "R018",
+      "docUrl": "https://doraval.dev/reference/rules/R018"
+    }
+  ]
+}
+```
+
+`judgment` is objects, not strings. `hint` is never empty. `code` and `docUrl` are omitted when the Finding has none.
+
+### How to branch (Fix)
+
+- `mechanical` unapplied → `dora fix <path> --yes` (or `--dry-run` first).
+- `judgment.length > 0` → read `--brief` (or these objects), edit Authored `SKILL.md`, then `dora review --quick <path>`. Do not skip. Do not report done until Review is **exit 0**.
+- `--brief` is not a write. Bare `dora fix` as a Runner is **exit 2**.
+
 ## `dora skill unused --json`
 
 ```jsonc

@@ -130,7 +130,7 @@ export default defineCommand({
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
     yes: { type: "boolean", description: "Pre-approve all fixes (for agents/CI)", default: false },
     "dry-run": { type: "boolean", description: "Show diffs but write nothing", default: false },
-    brief: { type: "boolean", description: "Emit an agent-ready prompt for judgment fixes", default: false },
+    brief: { type: "boolean", description: "Emit agent-ready Judgment items (code, docUrl, severity, hint)", default: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
