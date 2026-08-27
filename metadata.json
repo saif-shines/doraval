@@ -1,0 +1,18 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M10R8RKP04J3M2ANRS8WCWDG",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 18,
+  "files_touched": [
+    "CONTEXT.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
