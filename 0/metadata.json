@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M10VT2E8PWDQPXATEXJMZXXW",
+  "session_id": "01a03c96-eb5a-7f53-b654-f785a4f66a17",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-27T05:41:44.478456Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".github/workflows/release.yml"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "5631fb253598",
+  "checkpoint_transcript_start": 576,
+  "transcript_lines_at_start": 576,
+  "session_metrics": {
+    "turn_count": 31
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-27T05:41:44.337982Z",
+    "agent_lines": 2,
+    "agent_removed": 2,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 2,
+    "total_lines_changed": 4,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
