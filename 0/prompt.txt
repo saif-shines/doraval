@@ -402,3 +402,9 @@ ok
 <user_query>
 ok
 </user_query>
+
+---
+
+<user_query>
+oh wait it's not done; can you /mattpocock-skills:implement here itself? we can /compact  if you want; I don't want to context switch
+</user_query>
