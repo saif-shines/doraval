@@ -1,0 +1,16 @@
+Review the UNCOMMITTED working-tree diff in /Users/saif/Experiments/doraval for Standards only.
+
+Files that belong to ticket #70 (ignore README.md unless it is part of the fix; CONTEXT.md is glossary from the grill — mention only if it violates standards):
+- src/core/fix-engine.ts
+- src/core/fix-engine.test.ts
+- src/cli/commands/fix.ts
+- test/cli.test.ts
+
+Standards sources:
+- AGENTS.md / Agents.md (ponytail ladder, no extra deps, fewest files)
+- CONTRIBUTING.md
+- CONTEXT.md product terms
+
+Smell baseline (judgement calls only): Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest.
+
+Report (a) documented-standard breaches (b) baseline smells. Under 400 words. Skip tooling-enforced nits.
