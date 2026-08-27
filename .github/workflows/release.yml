@@ -92,7 +92,7 @@ jobs:
           chmod +x ${{ matrix.binary }} 2>/dev/null || true
           ./${{ matrix.binary }} --version
           mkdir -p smoke-repo/.git && cd smoke-repo
-          ../${{ matrix.binary }} --format json | grep -q '"empty"'
+          ../${{ matrix.binary }} scan --format json --yes | grep -q '"empty"'
 
   create-release:
     if: github.event_name == 'push'
@@ -205,7 +205,7 @@ jobs:
               if ./node_modules/.bin/doraval --version 2>/dev/null | grep -q .; then
                 ./node_modules/.bin/doraval --version
                 mkdir -p .git
-                ./node_modules/.bin/doraval --format json | grep -q '"empty"'
+                ./node_modules/.bin/doraval scan --format json --yes | grep -q '"empty"'
                 echo "install verification OK"
                 exit 0
               fi
