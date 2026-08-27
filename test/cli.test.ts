@@ -48,6 +48,9 @@ describe("doraval CLI", () => {
       expect(text).toContain("hint");
       expect(text).toContain("docUrl");
       expect(text).toContain("Do not skip");
+      expect(text).toContain("smallest change");
+      expect(text).toContain("Do not append");
+      expect(text).toContain("Authored only");
       expect(text).toContain("exit 0");
       expect(text).not.toContain("shown to the user");
     });

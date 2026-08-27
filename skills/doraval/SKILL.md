@@ -37,6 +37,15 @@ If `dora` is not on `PATH`, use `npx @hacksmith/doraval`.
    Edit that Authored `SKILL.md`. Then step 5.
    Done: every item edited.
 
+   When you edit:
+   - State the intended rule in one sentence. Then make the smallest change.
+   - Replace text. Do not append another paragraph.
+   - Change only what the Brief item names. Leave the rest.
+   - Do not add hedging or extra examples from this one run.
+   - If the Skill already required the right behavior, do not thicken it. Show the Finding to the user and stop.
+   - Do not create a new Skill. Do not move text to `references/` unless a size Finding names that.
+   - Authored only. Do not edit Global or Imported.
+
 5. **Re-review.** `dora review --quick <path>` after every edit.
    Done: **exit 0**.
 
