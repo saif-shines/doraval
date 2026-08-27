@@ -1,0 +1,24 @@
+Review whether the UNCOMMITTED #70 implementation in /Users/saif/Experiments/doraval matches the spec.
+
+Parent spec: GitHub issue https://github.com/saif-shines/doraval/issues/69 (Judgment loop slice 1)
+Ticket: https://github.com/saif-shines/doraval/issues/70
+
+Ticket acceptance criteria:
+- dora fix --json judgment is array of objects not strings
+- each object has message, severity, non-empty hint
+- code and docUrl present when Finding has them; omitted or null when not
+- Hint order: Finding hint, then rule line, then generic fallback
+- pass and info Findings do not appear
+- mechanical name add_field stays mechanical
+- --brief lists same items as --json with code, docUrl, severity, hint, current SKILL.md
+- two Skills get two Brief sections; no empty root SKILL.md dump
+- --brief with zero Judgment items prints no “judgment required” prompt
+- Agent bare dora fix still exits 2; --brief does not
+- Exit 1 when Judgment remains after --yes applies all mechanical
+- Plugin-owned Authored Skill still gets Judgment items; Next still names plugin root
+
+Read the changed source: src/core/fix-engine.ts, src/cli/commands/fix.ts, tests.
+
+Report: (a) missing/partial criteria (b) scope creep (c) implemented but wrong. Quote the criterion. Under 400 words.
+
+This ticket does NOT require shipped Skill lockstep (that is ticket 2).

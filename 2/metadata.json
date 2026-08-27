@@ -1,0 +1,52 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M10R5DM2VEW0P1BS72NQZ7N2",
+  "session_id": "01a04180-4710-7563-a665-b176b875e416",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-27T04:38:02.235536Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/cli/commands/fix.ts",
+    "src/core/fix-engine.test.ts",
+    "src/core/fix-engine.ts",
+    "test/cli.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "fcd531c4cd8f",
+  "initial_attribution": {
+    "calculated_at": "2026-08-27T04:38:02.216499Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 157,
+    "human_modified": 48,
+    "human_removed": 0,
+    "total_committed": 157,
+    "total_lines_changed": 205,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 209,
+      "user_lines_removed": 24,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "CONTEXT.md": 18,
+        "README.md": 4,
+        "src/cli/commands/fix.ts": 16,
+        "src/core/fix-engine.test.ts": 74,
+        "src/core/fix-engine.ts": 31,
+        "test/cli.test.ts": 66
+      },
+      "user_removed_per_file": {
+        "src/cli/commands/fix.ts": 5,
+        "src/core/fix-engine.test.ts": 13,
+        "src/core/fix-engine.ts": 6
+      }
+    }
+  ]
+}
