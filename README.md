@@ -31,6 +31,10 @@ dora review --quick
 
 You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run.
 
+## Roadmap
+
+Public board: [Roadmap](https://github.com/users/saif-shines/projects/1/views/4).
+
 ## Commands
 
 ```sh
