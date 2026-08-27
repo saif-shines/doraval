@@ -17,10 +17,13 @@ npx skills add saif-shines/doraval
 # 2. Review: structure + heuristics, no Judge
 dora review --quick
 
-# 3. Fix mechanical issues
+# 3. Mechanical fix
 dora fix . --yes
 
-# 4. Re-review until exit 0
+# 4. Judgment: read Brief, replace Authored SKILL.md
+dora fix . --brief
+
+# 5. Re-review until exit 0
 dora review --quick
 ```
 
@@ -58,7 +61,7 @@ Tiers: [Review tiers](/concepts/review-tiers/).
 ```bash
 dora fix . --dry-run
 dora fix . --yes                 # agents / CI
-dora fix . --brief               # judgment items, then re-review
+dora fix . --brief               # Judgment items; then replace
 ```
 
 Mechanical issues apply with `--yes`. Judgment items do not. Re-run `dora review --quick` until exit `0`.

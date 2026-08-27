@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.6.29
+
+### Breaking
+
+- `dora fix --json` `judgment` is an array of objects
+  (`message`, `severity`, `hint`, optional `code` / `docUrl`).
+  The old string list is gone.
+
+### Features
+
+- `--brief` prints the same items: code, doc, severity, hint, and the
+  current `SKILL.md`. Hint is `Finding.hint` or a generic fallback.
+- Shipped Skill: run Brief, then **replace**. Skip is not done.
+
+### Docs
+
+- README, `/commands`, quick start, and the shipped skill match the loop.
+
 ## 0.6.28
 
 ### Features

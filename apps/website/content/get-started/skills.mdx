@@ -13,7 +13,7 @@ npx skills add saif-shines/doraval
 npx skills list
 ```
 
-The skill tells the agent to run `dora review --quick` first. Then JSON. Then fix. It does not hang on TTY prompts.
+The skill tells the agent to run `dora review --quick` first. Then mechanical Fix. Then `--brief`. Then replace. It does not hang on TTY prompts.
 
 ## AGENTS.md
 
@@ -26,8 +26,9 @@ Use `dora` to review agent context. First command: `dora review --quick`. Worksp
 
 Core workflow:
 1. `dora review --quick` (structure and heuristics, no Judge)
-2. `dora fix <path> --yes` (mechanical fixes)
-3. Re-run `dora review --quick` until exit `0`
+2. `dora fix <path> --yes` (mechanical)
+3. `dora fix <path> --brief` (Judgment; replace Authored SKILL.md)
+4. Re-run `dora review --quick` until exit `0`
 ```
 
 If `dora` is not on `PATH`, use `npx @hacksmith/doraval`.
