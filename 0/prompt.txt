@@ -495,3 +495,9 @@ ok
 <user_query>
 I wand to see the diff of changes ot the skills part espeically
 </user_query>
+
+---
+
+<user_query>
+I want you take a mmoment to use /writing-for-agents and improve this 
+</user_query>
