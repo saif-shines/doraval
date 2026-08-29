@@ -1,0 +1,49 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1690JTH3VEP9ZK4NWSFEPJR",
+  "session_id": "01a04784-a9bc-7562-b140-318b6e29d803",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-29T08:08:42.574995Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "apps/website/blume.config.ts",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/get-started/connect.mdx",
+    "apps/website/content/get-started/meta.ts",
+    "apps/website/content/get-started/skills.mdx",
+    "skills/doraval/SKILL.md",
+    "skills/doraval/references/commands.md",
+    "skills/doraval/references/output.md"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "70a2526388f0",
+  "checkpoint_transcript_start": 1031,
+  "transcript_lines_at_start": 1031,
+  "session_metrics": {
+    "turn_count": 52
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-29T08:08:42.30899Z",
+    "agent_lines": 88,
+    "agent_removed": 6,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 88,
+    "total_lines_changed": 94,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
