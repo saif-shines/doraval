@@ -18,7 +18,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora session` | List Sessions. `show <id>` (short id is enough if unique) |
 | `dora memory` | List principles. `add` / `promote` (`promote` writes `AGENTS.md`) |
 | `dora conflicts` | Cross-agent contradictions (`--dry-run`, then `--yes`) |
-| `dora config` | List keys. `get` / `set` / `setup` (Judge keys) |
+| `dora config` | List keys. `get` / `set` / `setup`. Secret `set` needs `--yes` or `--dry-run`. |
 | `dora agent` | List Subagents |
 | `dora agent new` | Scaffold a Subagent |
 | `dora plugin` | List Plugins |

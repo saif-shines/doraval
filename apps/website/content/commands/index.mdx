@@ -152,9 +152,10 @@ dora config setup            # Judge wizard
 dora config get eval.model
 dora config set eval.model gpt-4.1
 dora config set eval.judge auto
+dora config set identity.api_key <token> --yes
 ```
 
-`--deep` needs a Judge. Do not paste API keys into chat.
+A detected agent must pass `--yes` or `--dry-run` to set a secret. `--deep` needs a Judge. Do not paste API keys into chat.
 
 ## Plugin bump
 

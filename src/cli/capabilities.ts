@@ -121,7 +121,8 @@ export function buildCapabilities(): CapabilitiesManifest {
       cmd("config", "read-only", "List, get, or set config. Mutating subcommands write.", [
         "dora config",
         "dora config setup",
-      ], COMMON_FLAGS),
+        "dora config set identity.api_key <token> --yes",
+      ], { ...COMMON_FLAGS, "--dry-run": { description: "Plan only" }, "--yes": { description: "Write a secret without prompting" } }),
       cmd("agent", "writes", "List Subagents; new.", [
         "dora agent",
         "dora agent new --for claude --yes",

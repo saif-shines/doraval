@@ -50,4 +50,12 @@ describe("buildCapabilities", () => {
     expect(review.description).toMatch(/Session health/i);
     expect(m.commands.some((c) => c.name === "analyse" || c.name === "analyze")).toBe(false);
   });
+
+  test("config map names write flags for secret set", () => {
+    const m = buildCapabilities();
+    const config = m.commands.find((c) => c.name === "config")!;
+    expect(config.flags["--yes"]).toBeDefined();
+    expect(config.flags["--dry-run"]).toBeDefined();
+    expect(config.examples.some((e) => e.includes("identity.api_key") && e.includes("--yes"))).toBe(true);
+  });
 });

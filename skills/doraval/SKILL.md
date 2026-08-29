@@ -58,7 +58,7 @@ Add `--format json` when you will branch on fields. Add `--ci` in CI.
 
 ## Writes
 
-Pass `--yes` or `--dry-run` on `fix`, `conflicts`, `memory promote`, `skill remove`, and `skill restore`.
+Pass `--yes` or `--dry-run` on `fix`, `conflicts`, `memory promote`, `skill remove`, `skill restore`, and `config set` of a secret.
 `--brief` is not a write. A missing write flag is **exit 2**.
 
 ## Side paths
