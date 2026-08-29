@@ -23,6 +23,16 @@
   to = "/.netlify/functions/identity"
   status = 200
 
+[[redirects]]
+  from = "/probe"
+  to = "/.netlify/functions/identity"
+  status = 200
+
+[[redirects]]
+  from = "/probe/*"
+  to = "/.netlify/functions/identity"
+  status = 200
+
 # Canonical: doraval.dev. Old hosts + www → apex.
 [[redirects]]
   from = "https://doraval.thehacksmith.dev/*"

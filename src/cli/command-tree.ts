@@ -104,4 +104,5 @@ export const topLevelSubCommands = {
   agent: () => Promise.resolve(agent),
   plugin: () => Promise.resolve(plugin),
   update: () => import("./commands/update.js").then((m) => m.default),
+  probe: () => import("./commands/probe.js").then((m) => m.default),
 };

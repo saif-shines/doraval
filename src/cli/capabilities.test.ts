@@ -51,6 +51,14 @@ describe("buildCapabilities", () => {
     expect(m.commands.some((c) => c.name === "analyse" || c.name === "analyze")).toBe(false);
   });
 
+  test("probe is a write on the map", () => {
+    const m = buildCapabilities();
+    const probe = m.commands.find((c) => c.name === "probe")!;
+    expect(probe.label).toBe("writes");
+    expect(probe.flags["--yes"]).toBeDefined();
+    expect(probe.flags["--dry-run"]).toBeDefined();
+  });
+
   test("config map names write flags for secret set", () => {
     const m = buildCapabilities();
     const config = m.commands.find((c) => c.name === "config")!;

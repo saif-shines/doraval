@@ -1,4 +1,7 @@
 import type { IdentityDeps, ScalekitEnv } from "./http.ts";
+import { MemoryProbeStore } from "./store.ts";
+
+const store = new MemoryProbeStore();
 
 export function envFromProcess(env: NodeJS.ProcessEnv = process.env): ScalekitEnv {
   return {
@@ -58,6 +61,18 @@ export function liveDeps(env: ScalekitEnv = envFromProcess()): IdentityDeps {
       const oid = c?.oid;
       if (typeof oid !== "string" || !oid) return null;
       return { organizationId: oid, userId: typeof c.sub === "string" ? c.sub : undefined };
+    },
+    store,
+    async validateKey(token) {
+      try {
+        const { ScalekitClient } = await import("@scalekit-sdk/node");
+        const sk = new ScalekitClient(env.environmentUrl!, env.clientId!, env.clientSecret!);
+        const result = await sk.token.validateToken(token);
+        const oid = result.tokenInfo?.organizationId;
+        return typeof oid === "string" && oid ? { organizationId: oid } : null;
+      } catch {
+        return null;
+      }
     },
   };
 }

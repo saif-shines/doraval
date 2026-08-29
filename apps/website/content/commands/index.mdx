@@ -144,6 +144,15 @@ Read-only. Adapters: Claude, Grok, Cursor, Codex, Copilot.
 
 The table shortens the id. `show` accepts that short id when it is unique. `--json` has the full `sessionId`. `show` prints token totals when the log has them. It says `unavailable` when it does not.
 
+## Probe
+
+```bash
+dora probe --dry-run
+dora probe --yes
+```
+
+Sends hello to doraval.dev and waits for ack. Needs `identity.api_key`. A detected agent must pass `--yes` or `--dry-run`.
+
 ## Config
 
 ```bash

@@ -14,6 +14,7 @@ describe("doraval CLI", () => {
       expect(stdout).toContain("review");
       expect(stdout).toContain("fix");
       expect(stdout).toContain("skill");
+      expect(stdout).toContain("probe");
       expect(stdout).toContain("npx skills add saif-shines/doraval");
       expect(stdout).toContain("dora review --quick");
       expect(stdout).toContain("https://doraval.dev");
@@ -1023,6 +1024,54 @@ describe("doraval CLI", () => {
       const { stdout, stderr, exitCode } = runDoraval(["session", "--help"]);
       expect(exitCode).toBe(0);
       expect((stdout + stderr)).toContain("show");
+    });
+  });
+
+  describe("dora probe", () => {
+    test("probe --help talks to the Runner and names write flags", () => {
+      const { exitCode, stdout } = runDoraval(["probe", "--help"]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--yes");
+      expect(stdout).toContain("--dry-run");
+      expect(stdout).toContain("Detected agents");
+    });
+
+    test("without a key exits 2 with Next to config set", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-probe-"));
+      const { exitCode, stderr } = runDoraval(["probe"], {
+        env: {
+          CI: "",
+          GIT_TERMINAL_PROMPT: "",
+          CLAUDECODE: "",
+          GEMINI_CLI: "",
+          COPILOT_CLI: "",
+          PI_CODING_AGENT: "",
+          DORAVAL_HOME: dir,
+        },
+      });
+      expect(exitCode).toBe(2);
+      expect(stderr).toMatch(/identity\.api_key/);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("detected agent without --yes or --dry-run exits 2 and sends nothing", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-probe-"));
+      const { exitCode, stderr } = runDoraval(["probe"], {
+        env: { CI: "1", DORAVAL_HOME: dir, DORAVAL_SITE: "http://127.0.0.1:1" },
+      });
+      expect(exitCode).toBe(2);
+      expect(stderr).toMatch(/--yes|--dry-run/);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--dry-run prints the plan and sends nothing", () => {
+      const dir = mkdtempSync(join(tmpdir(), "dora-probe-"));
+      const { exitCode, stdout, stderr } = runDoraval(["probe", "--dry-run"], {
+        env: { CI: "1", DORAVAL_HOME: dir },
+      });
+      expect(exitCode).toBe(2);
+      expect(stdout + stderr).toMatch(/identity\.api_key|Would POST hello/);
+      rmSync(dir, { recursive: true, force: true });
     });
   });
 

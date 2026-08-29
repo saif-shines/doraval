@@ -15,6 +15,8 @@ export type IdentityDeps = {
   logoutUrl: (opts: { idTokenHint?: string; postLogoutRedirectUri: string }) => string;
   mintToken: (organizationId: string) => Promise<{ token: string; tokenId: string }>;
   readAccess: (accessToken: string) => { organizationId: string; userId?: string } | null;
+  validateKey?: (token: string) => { organizationId: string } | null | Promise<{ organizationId: string } | null>;
+  store?: import("./store.ts").MemoryProbeStore;
 };
 
 const ACCESS = "sk_access";
@@ -95,12 +97,21 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
 
   if (path === "/account" && req.method === "GET") {
     const access = readCookie(req, ACCESS);
-    if (!access || !deps.readAccess(access)) {
+    const who = access ? deps.readAccess(access) : null;
+    if (!who) {
       return Response.redirect("/auth/login", 302);
     }
+    const pending = deps.store?.pending(who.organizationId) ?? [];
+    const probes = pending
+      .map(
+        (p) =>
+          `<p>hello</p><form method="post" action="/probe/${p.id}/ack"><button type="submit">ack</button></form>`,
+      )
+      .join("");
     return html(
       200,
-      `<p>Mint an API key for the CLI. Copy it once. Then: <code>dora config set identity.api_key &lt;token&gt; --yes</code></p>
+      `${probes}
+       <p>Mint an API key for the CLI. Copy it once. Then: <code>dora config set identity.api_key &lt;token&gt; --yes</code></p>
        <form method="post" action="/account/key"><button type="submit">Mint API key</button></form>
        <p><a href="/auth/logout">Log out</a></p>`,
     );
@@ -120,5 +131,40 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     );
   }
 
+  const probeId = path.match(/^\/probe\/([^/]+)$/)?.[1];
+  const ackId = path.match(/^\/probe\/([^/]+)\/ack$/)?.[1];
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+
+  if (path === "/probe" && req.method === "POST") {
+    const who = (await deps.validateKey?.(bearer)) ?? null;
+    if (!who || !deps.store) return json(401, { error: "bad-key" });
+    const row = deps.store.create(who.organizationId);
+    return json(200, row);
+  }
+
+  if (probeId && req.method === "GET") {
+    const who = (await deps.validateKey?.(bearer)) ?? null;
+    if (!who || !deps.store) return json(401, { error: "bad-key" });
+    const row = deps.store.get(probeId);
+    if (!row || row.organizationId !== who.organizationId) return json(404, { error: "missing" });
+    return json(200, row);
+  }
+
+  if (ackId && req.method === "POST") {
+    const access = readCookie(req, ACCESS);
+    const who = access ? deps.readAccess(access) : null;
+    if (!who) return Response.redirect("/auth/login", 302);
+    const row = deps.store?.ack(ackId, who.organizationId);
+    if (!row) return html(404, `<p>No such hello.</p>`);
+    return html(200, `<p>ack</p><p><a href="/account">Back</a></p>`);
+  }
+
   return html(404, `<p>Not found.</p>`);
+}
+
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 }

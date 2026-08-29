@@ -15,6 +15,7 @@ export const ROOT_VERBS: [string, string][] = [
   ["agent", "List Subagents; new"],
   ["plugin", "List Plugins; new; bump semver"],
   ["update", "Update doraval"],
+  ["probe", "Send hello to doraval.dev and wait for ack"],
 ];
 
 export function printRootHelp(): void {

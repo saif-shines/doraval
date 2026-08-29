@@ -25,6 +25,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora plugin new` | Scaffold a Plugin |
 | `dora plugin bump` | Plugin and marketplace semver |
 | `dora update` | Update doraval |
+| `dora probe` | Send hello to doraval.dev and wait for ack |
 
 Writes take `--yes` or `--dry-run`. Missing flag is **exit 2**.
 Add `--format json` after Findings when you will branch on fields.

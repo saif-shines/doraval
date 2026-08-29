@@ -133,6 +133,14 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora plugin bump",
       ], COMMON_FLAGS),
       cmd("update", "writes", "Update doraval to the latest version.", ["dora update"]),
+      cmd("probe", "writes", "Send hello to doraval.dev and wait for ack.", [
+        "dora probe --dry-run",
+        "dora probe --yes",
+      ], {
+        ...COMMON_FLAGS,
+        "--yes": { description: "Run without prompting" },
+        "--dry-run": { description: "Show the plan, send nothing" },
+      }),
     ],
     intelligence: {
       mechanical: true,

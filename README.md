@@ -53,6 +53,7 @@ dora conflicts --dry-run
 dora session
 dora session show <id>       # short table id is enough if unique
 dora config setup
+dora probe --yes             # hello / ack with doraval.dev
 dora --help                  # first loop
 dora --help --json           # live map
 ```
