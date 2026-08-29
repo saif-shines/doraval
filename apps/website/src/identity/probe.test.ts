@@ -66,7 +66,7 @@ describe("probe HTTP (#78)", () => {
     await call("/probe", { method: "POST", headers: { authorization: "Bearer good" } }, d);
     const visitor = await call("/account", {}, d);
     expect(visitor.status).toBe(302);
-    expect(visitor.headers.get("location")).toBe("/auth/login");
+    expect(visitor.headers.get("location")).toBe("https://doraval.dev/auth/login");
     const access = jwt({ oid: "org_1" });
     const page = await call("/account", { headers: { cookie: `sk_access=${access}` } }, d);
     expect(page.status).toBe(200);

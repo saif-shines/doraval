@@ -74,7 +74,7 @@ describe("identity HTTP (#77)", () => {
     const res = await call("/auth/callback?code=abc", {}, d);
     expect(saw).toBe("abc");
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/account");
+    expect(res.headers.get("location")).toBe("https://doraval.dev/account");
     const cookies = res.headers.getSetCookie?.() ?? [];
     expect(cookies.join("\n")).toMatch(/sk_access=/);
     expect(cookies.join("\n")).toMatch(/HttpOnly/i);
@@ -84,7 +84,7 @@ describe("identity HTTP (#77)", () => {
   test("account without a cookie sends the visitor to login", async () => {
     const res = await call("/account");
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/auth/login");
+    expect(res.headers.get("location")).toBe("https://doraval.dev/auth/login");
   });
 
   test("account with a cookie shows mint, not Config, and never says session", async () => {
@@ -113,7 +113,7 @@ describe("identity HTTP (#77)", () => {
   test("mint without login is refused", async () => {
     const res = await call("/account/key", { method: "POST" });
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/auth/login");
+    expect(res.headers.get("location")).toBe("https://doraval.dev/auth/login");
   });
 
   test("logout clears cookies", async () => {

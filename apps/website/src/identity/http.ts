@@ -49,6 +49,11 @@ function readCookie(req: Request, name: string): string | undefined {
   }
 }
 
+function redirect(req: Request, to: string): Response {
+  const location = to.startsWith("http") ? to : new URL(to, req.url).href;
+  return new Response(null, { status: 302, headers: { location } });
+}
+
 function withCookies(res: Response, cookies: string[]): Response {
   const headers = new Headers(res.headers);
   for (const c of cookies) headers.append("Set-Cookie", c);
@@ -67,7 +72,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
       prompt: path.endsWith("signup") ? "create" : undefined,
       redirectUri: deps.env.redirectUri,
     });
-    return Response.redirect(location, 302);
+    return redirect(req, location);
   }
 
   if (path === "/auth/callback") {
@@ -77,7 +82,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const code = url.searchParams.get("code") ?? "";
     if (!code) return html(400, `<p>Missing authorization code.</p>`);
     const tokens = await deps.exchangeCode(code, deps.env.redirectUri);
-    const res = Response.redirect("/account", 302);
+    const res = redirect(req, "/account");
     return withCookies(res, [
       cookie(ACCESS, tokens.accessToken),
       cookie(ID, tokens.idToken),
@@ -92,14 +97,14 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
           postLogoutRedirectUri: new URL("/", req.url).origin,
         })
       : "/";
-    return withCookies(Response.redirect(dest, 302), [clearCookie(ACCESS), clearCookie(ID)]);
+    return withCookies(redirect(req, dest), [clearCookie(ACCESS), clearCookie(ID)]);
   }
 
   if (path === "/account" && req.method === "GET") {
     const access = readCookie(req, ACCESS);
     const who = access ? deps.readAccess(access) : null;
     if (!who) {
-      return Response.redirect("/auth/login", 302);
+      return redirect(req, "/auth/login");
     }
     const pending = deps.store?.pending(who.organizationId) ?? [];
     const probes = pending
@@ -120,7 +125,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
   if (path === "/account/key" && req.method === "POST") {
     const access = readCookie(req, ACCESS);
     const claims = access ? deps.readAccess(access) : null;
-    if (!claims) return Response.redirect("/auth/login", 302);
+    if (!claims) return redirect(req, "/auth/login");
     const minted = await deps.mintToken(claims.organizationId);
     return html(
       200,
@@ -153,7 +158,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
   if (ackId && req.method === "POST") {
     const access = readCookie(req, ACCESS);
     const who = access ? deps.readAccess(access) : null;
-    if (!who) return Response.redirect("/auth/login", 302);
+    if (!who) return redirect(req, "/auth/login");
     const row = deps.store?.ack(ackId, who.organizationId);
     if (!row) return html(404, `<p>No such hello.</p>`);
     return html(200, `<p>ack</p><p><a href="/account">Back</a></p>`);
