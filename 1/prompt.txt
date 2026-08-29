@@ -1,0 +1,12 @@
+Review this uncommitted diff against Doraval coding standards. Repo: /Users/saif/Experiments/doraval. Diff is vs HEAD (uncommitted).
+
+Standards: Agents.md ponytail ladder (YAGNI, reuse, stdlib, no new deps, shortest form). Comments short/factual. No speculative abstractions.
+
+Smell baseline (judgement only; repo standard wins): Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest.
+
+Report — per file/hunk where relevant — (a) every place the diff violates a documented standard: cite the standard; and (b) any baseline smell: name it and quote the hunk. Distinguish hard violations from judgement calls. Skip anything tooling enforces. Under 400 words.
+
+DIFF:
+The change adds `identity.api_key` to KNOWN_CONFIG_KEYS as secret, optional `identity?: { api_key?: string }` on JournalConfig, write-gate on `dora config set` for any isSecretKey (agent needs --yes/--dry-run), --dry-run prints plan and writes nothing, tests in config.test.ts and test/cli.test.ts spawn-CLI.
+
+Read the actual files if needed.

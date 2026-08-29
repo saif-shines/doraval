@@ -1,0 +1,49 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M15TCWECEVW1WVWGJJ58ETQH",
+  "session_id": "01a04ba1-7d28-7a71-8231-079ff2a6d934",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-29T03:53:16.135003Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/cli/commands/config.test.ts",
+    "src/cli/commands/config.ts",
+    "src/core/journal-config.ts",
+    "test/cli.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "c695561048cf",
+  "initial_attribution": {
+    "calculated_at": "2026-08-29T03:53:16.111924Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 95,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 95,
+    "total_lines_changed": 95,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 115,
+      "user_lines_removed": 1,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "CONTEXT.md": 20,
+        "src/cli/commands/config.test.ts": 13,
+        "src/cli/commands/config.ts": 20,
+        "src/core/journal-config.ts": 1,
+        "test/cli.test.ts": 61
+      },
+      "user_removed_per_file": {
+        "CONTEXT.md": 1
+      }
+    }
+  ]
+}
