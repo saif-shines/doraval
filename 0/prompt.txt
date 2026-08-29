@@ -669,3 +669,19 @@ I"ve added call back redirect
 <user_query>
 yes push and it iwll be dployed autoamtically
 </user_query>
+
+---
+
+<user_query>
+This function has crashed
+An unhandled error in the function code triggered the following message:
+
+TypeError - Failed to parse URL from /account
+
+Stack trace
+TypeError: Failed to parse URL from /account
+    at Response.redirect (node:internal/deps/undici/undici:9430:17)
+    at handleIdentity (/var/task/netlify/functions/identity.js:46415:26)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Runtime.handler (/var/task/netlify/functions/identity.js:46612:15)
+</user_query>
