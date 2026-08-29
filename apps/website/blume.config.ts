@@ -54,7 +54,8 @@ export default defineConfig({
   },
   deployment: {
     site: "https://doraval.dev",
-    output: "static",
+    output: "server",
+    adapter: "node",
   },
   ai: {
     llmsTxt: true,

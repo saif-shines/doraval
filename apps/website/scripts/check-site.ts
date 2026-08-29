@@ -1,7 +1,9 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const dist = join(import.meta.dir, "..", "dist");
+const website = join(import.meta.dir, "..");
+const distClient = join(website, "dist", "client");
+const dist = existsSync(join(distClient, "llms.txt")) ? distClient : join(website, "dist");
 
 function walk(dir: string, acc: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -17,7 +19,7 @@ if (!existsSync(dist)) {
   process.exit(1);
 }
 
-for (const f of ["llms.txt", "llms-full.txt"] as const) {
+for (const f of ["llms.txt", "llms-full.txt", "get-started/index.html"] as const) {
   const p = join(dist, f);
   if (!existsSync(p)) {
     console.error(`check-site: missing ${f}`);

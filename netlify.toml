@@ -1,6 +1,6 @@
 [build]
   command = "bun install && bun run site:build"
-  publish = "apps/website/dist"
+  publish = "apps/website/dist/client"
 
 [build.environment]
   # Ensure Bun is used
