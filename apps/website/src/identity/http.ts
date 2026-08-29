@@ -16,7 +16,7 @@ export type IdentityDeps = {
   mintToken: (organizationId: string) => Promise<{ token: string; tokenId: string }>;
   readAccess: (accessToken: string) => { organizationId: string; userId?: string } | null;
   validateKey?: (token: string) => { organizationId: string } | null | Promise<{ organizationId: string } | null>;
-  store?: import("./store.ts").MemoryProbeStore;
+  store?: import("./store.ts").ProbeStore;
 };
 
 const ACCESS = "sk_access";
@@ -106,7 +106,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     if (!who) {
       return redirect(req, "/auth/login");
     }
-    const pending = deps.store?.pending(who.organizationId) ?? [];
+    const pending = (await deps.store?.pending(who.organizationId)) ?? [];
     const probes = pending
       .map(
         (p) =>
@@ -143,14 +143,14 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
   if (path === "/probe" && req.method === "POST") {
     const who = (await deps.validateKey?.(bearer)) ?? null;
     if (!who || !deps.store) return json(401, { error: "bad-key" });
-    const row = deps.store.create(who.organizationId);
+    const row = await deps.store.create(who.organizationId);
     return json(200, row);
   }
 
   if (probeId && req.method === "GET") {
     const who = (await deps.validateKey?.(bearer)) ?? null;
     if (!who || !deps.store) return json(401, { error: "bad-key" });
-    const row = deps.store.get(probeId);
+    const row = await deps.store.get(probeId);
     if (!row || row.organizationId !== who.organizationId) return json(404, { error: "missing" });
     return json(200, row);
   }
@@ -159,7 +159,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const access = readCookie(req, ACCESS);
     const who = access ? deps.readAccess(access) : null;
     if (!who) return redirect(req, "/auth/login");
-    const row = deps.store?.ack(ackId, who.organizationId);
+    const row = await deps.store?.ack(ackId, who.organizationId);
     if (!row) return html(404, `<p>No such hello.</p>`);
     return html(200, `<p>ack</p><p><a href="/account">Back</a></p>`);
   }

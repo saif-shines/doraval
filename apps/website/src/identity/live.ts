@@ -1,7 +1,7 @@
 import type { IdentityDeps, ScalekitEnv } from "./http.ts";
-import { MemoryProbeStore } from "./store.ts";
+import { MemoryProbeStore, type ProbeStore } from "./store.ts";
 
-const store = new MemoryProbeStore();
+const memory = new MemoryProbeStore();
 
 export function envFromProcess(env: NodeJS.ProcessEnv = process.env): ScalekitEnv {
   return {
@@ -22,7 +22,7 @@ function decodeJwt(token: string): Record<string, unknown> | null {
   }
 }
 
-export function liveDeps(env: ScalekitEnv = envFromProcess()): IdentityDeps {
+export function liveDeps(env: ScalekitEnv = envFromProcess(), store: ProbeStore = memory): IdentityDeps {
   return {
     env,
     authorize({ prompt, redirectUri }) {

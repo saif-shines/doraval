@@ -1,5 +1,6 @@
 import { handleIdentity } from "../../apps/website/src/identity/http.ts";
 import { liveDeps } from "../../apps/website/src/identity/live.ts";
+import { blobsContext, JsonProbeStore, remoteIo } from "../../apps/website/src/identity/store.ts";
 
 type NetlifyEvent = {
   rawUrl?: string;
@@ -8,6 +9,7 @@ type NetlifyEvent = {
   headers: Record<string, string | undefined>;
   body: string | null;
   isBase64Encoded?: boolean;
+  blobs?: string;
 };
 
 export async function handler(event: NetlifyEvent) {
@@ -28,7 +30,9 @@ export async function handler(event: NetlifyEvent) {
     headers,
     body: event.httpMethod === "GET" || event.httpMethod === "HEAD" ? undefined : event.body,
   });
-  const res = await handleIdentity(req, liveDeps());
+  const blobs = blobsContext(event);
+  const store = blobs ? new JsonProbeStore(remoteIo(blobs)) : undefined;
+  const res = await handleIdentity(req, liveDeps(undefined, store));
   const outHeaders: Record<string, string> = {};
   const setCookie: string[] = [];
   res.headers.forEach((value, key) => {
