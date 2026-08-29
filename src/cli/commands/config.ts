@@ -639,7 +639,7 @@ const configSetup = defineCommand({
 export default defineCommand({
   meta: {
     name: "config",
-    description: "List, get, or set config (Judge keys)",
+    description: "List, get, or set config",
   },
   args: {
     format: { type: "string", description: "Output format: table | json", default: "table" },

@@ -11,7 +11,7 @@ export const ROOT_VERBS: [string, string][] = [
   ["session", "List coding-agent sessions"],
   ["memory", "Capture principles; promote to AGENTS.md"],
   ["conflicts", "Settle cross-agent contradictions"],
-  ["config", "List, get, or set config (Judge keys)"],
+  ["config", "List, get, or set config"],
   ["agent", "List Subagents; new"],
   ["plugin", "List Plugins; new; bump semver"],
   ["update", "Update doraval"],
