@@ -25,7 +25,7 @@ Agent-readable glossary for architecture and code. Product language wins over le
 | **Judge** | One module (`judge()`). Owns mode (**api** / **delegate** / **fail**) and transport. Review passes prompt, schema, and `ci`. |
 | **Memory** | Product term for principles, artifacts, and always-on files (`AGENTS.md`, `CLAUDE.md`, …) under `~/.doraval/memory/` and project roots. |
 | **Config** | Global product config at `~/.doraval/config.yml`. Code type is still `JournalConfig` (legacy name — not a “journal product”). Holds projects, `eval.*` judge settings (vendor, model, API key), rules, agent command. CLI: `dora config` (list / get / set / setup). Not `dora providers`. _Avoid_: a second key command; `dora judge` as a verb. |
-| **Session** | Past agent conversation transcript, normalized via **session adapters** into a list of **Events**, plus a derived summary for evidence and adherence eval. |
+| **Session** | Past agent conversation transcript, normalized via **session adapters** into a list of **Events**, plus a derived summary for evidence and adherence eval. _Avoid_: login session; auth session; a signed-in visit. |
 | **Event** | One step inside a Session: a message, tool call, tool result, or error. The Session IR is a list of Events. _Avoid_: turn (not every Event is a user turn); entry (parser word); SessionPrimitives as the foundation. |
 | **Finding** | One Skill-check outcome (tier + severity + message + optional rule code / docUrl). The Skill-check module sets `structure` or `heuristics`. Review adds `llm` and `sessions`. Scan presents Skill Findings as health; shadows, overlaps, MCP, budget, and install stay Scan-only. |
 | **Review window** | Sessions that unused, Review, and `dora session` read. Count and time period are one configurable pair. Default is last 30 Sessions and 3 months. Two legal loads: **Project load** is last 30 in this directory. **Global load** is last 30 per agent, any project. Hits from every agent still count. Defaults live in `~/.doraval/config.yml`. Flags override one run. Old shipped default was last 10 Sessions and 30 days. _Avoid_: Evidence window; mixing the two loads in one verdict. |
@@ -195,6 +195,25 @@ Grill is **closed**. Slice 1 shipped as #70 / #71. Slice 2 rewrite policy is in 
 | **Hint** | Finding.hint if set, else the generic fallback: edit only the named span; leave the rest. Rule catalog titles are not Hints. No Judge on `--brief`. |
 
 _Avoid_: skill-doctor as a product name; a second Skill; `dora skill update`; calling this `dora update`; a Runner that Removes or promotes; Judgment write on a Global Skill; stuffing unused or Scan into `fix --brief`.
+
+## Identity pass (this grill)
+
+Grill is **closed**. #66. Shared understanding 2026-08-28. Shipped 2026-08-29. Live hello/ack on doraval.dev.
+
+| Term | Meaning |
+|------|---------|
+| **This pass** | When logged in and Connected, a Probe: CLI sends hello, the UI shows it, the user acks, the CLI prints ack. Config stays on the machine. The UI does not write `config.yml`. The Probe server lives on doraval.dev. Proven by a live deploy. |
+| **Probe** | A two-way hello/ack between the CLI and doraval.dev. Not Config sync. Not a Config editor. |
+| **Config UI** | A screen on doraval.dev for Config. Viewing it requires login. A visitor sees Sign-up / login, not Config. Not this pass. |
+| **Destination** | Config UI lives on doraval.dev. Local-only UI is not the destination. |
+| **Connected** | The CLI holds an API key issued by doraval.dev and can talk to that account. Not “dora is on PATH.” This pass. |
+| **Config sync** | The CLI pushes Config to doraval.dev after it is Connected. Not this pass. The site does not read the machine. |
+| **Parked identity** | Config sync, Config UI. Later: observability. Not Memory overhaul. |
+| **Sign-up** | A human creates an account with Scalekit OAuth. Not a Runner login. Not a Session. |
+| **API auth** | A key from doraval.dev. Stored in Config (`dora config`), next to Judge keys. Used to call the hosted API. Never pushed back to the site. |
+| **Coming soon** | A visible stub for a later identity feature. Not a working Sign-up. |
+
+_Avoid_: calling a login a Session; treating “dora is installed” as Connected; a local UI as the destination.
 
 ## Naming debt (intentional)
 
