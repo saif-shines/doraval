@@ -8,6 +8,21 @@
   # Blume requires Node >= 22.12
   NODE_VERSION = "22"
 
+[[redirects]]
+  from = "/auth/*"
+  to = "/.netlify/functions/identity"
+  status = 200
+
+[[redirects]]
+  from = "/account"
+  to = "/.netlify/functions/identity"
+  status = 200
+
+[[redirects]]
+  from = "/account/*"
+  to = "/.netlify/functions/identity"
+  status = 200
+
 # Canonical: doraval.dev. Old hosts + www → apex.
 [[redirects]]
   from = "https://doraval.thehacksmith.dev/*"
