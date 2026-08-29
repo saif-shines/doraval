@@ -1,0 +1,16 @@
+Review this uncommitted Doraval diff against GitHub issue #75 and parent spec #74 (this pass only: Config holds the identity API key).
+
+Repo: /Users/saif/Experiments/doraval
+
+#75 acceptance:
+- dora config knows one new secret key for the identity API token
+- dora config set writes it; dora config list redacts it
+- detected agent without --yes or --dry-run exits 2 and writes nothing
+- --dry-run prints the plan and writes nothing
+- --yes writes the key
+- Human get/list do not print the raw token
+- No Probe command. No site change. No Scalekit.
+
+Report: (a) requirements missing or partial; (b) behaviour not asked for (scope creep); (c) implemented but wrong. Quote the spec/ticket line. Under 400 words.
+
+Read src/cli/commands/config.ts, journal-config.ts, tests if needed.

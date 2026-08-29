@@ -3,7 +3,7 @@
   "checkpoint_id": "01M15TCWECEVW1WVWGJJ58ETQH",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 34,
+  "checkpoints_count": 35,
   "files_touched": [
     "src/cli/commands/config.test.ts",
     "src/cli/commands/config.ts",
@@ -22,6 +22,12 @@
       "transcript": "/1/full.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": "/2/prompt.txt"
     }
   ]
 }
