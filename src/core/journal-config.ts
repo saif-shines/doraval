@@ -56,6 +56,7 @@ export interface JournalConfig {
   rules?: RulesConfig;
   review_window?: { last?: number; max_age_days?: number };
   install_age_days?: number;
+  identity?: { api_key?: string };
 }
 
 // ── Paths ──────────────────────────────────────────────────────────

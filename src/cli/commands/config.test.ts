@@ -24,6 +24,12 @@ describe("config helpers (B37)", () => {
     expect(KNOWN_CONFIG_KEYS.some((k) => k.key === "install_age_days")).toBe(true);
   });
 
+  test("KNOWN_CONFIG_KEYS includes identity.api_key as a secret", () => {
+    const def = KNOWN_CONFIG_KEYS.find((k) => k.key === "identity.api_key");
+    expect(def?.kind).toBe("secret");
+    expect(isSecretKey("identity.api_key")).toBe(true);
+  });
+
   test("getNestedValue / setNestedValue", () => {
     const o: Record<string, unknown> = {};
     setNestedValue(o, "eval.model", "gpt-4o-mini");
@@ -65,6 +71,13 @@ describe("config helpers (B37)", () => {
     );
     expect(table).not.toContain(secret);
     expect(table).toContain("sk-a…mnop");
+
+    const idTable = formatConfigTable(
+      listConfigRows({ identity: { api_key: secret } }),
+    );
+    expect(idTable).not.toContain(secret);
+    expect(idTable).toContain("sk-a…mnop");
+    expect(formatSetDisplay("identity.api_key", secret)).toBe("(set)");
   });
 
   test("validateConfigValue rejects a non-positive review_window.last", () => {

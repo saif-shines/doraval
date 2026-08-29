@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { select, text, password, isCancel } from "@clack/prompts";
 import pc from "picocolors";
 import { ui, guidedError, resolveOutputMode, outJson } from "../out.js";
+import { isAgentCaller, refuseAgentWrite, shouldBlockAgentWrite } from "../agent-detect.js";
 import {
   readConfig,
   writeConfig,
@@ -81,6 +82,11 @@ export const KNOWN_CONFIG_KEYS: ConfigKeyDef[] = [
     key: "install_age_days",
     description: "How old a Skill must be before unused may mark it a Remove candidate",
     kind: "number",
+  },
+  {
+    key: "identity.api_key",
+    description: "API key from doraval.dev (Connected). Never pushed back to the site",
+    kind: "secret",
   },
 ];
 
@@ -512,6 +518,8 @@ const configSet = defineCommand({
   args: {
     key: { type: "positional", description: "Dot-notation key (e.g. eval.model)", required: true },
     value: { type: "positional", description: "Value to set", required: true },
+    yes: { type: "boolean", description: "Write without prompting", default: false, alias: "y" },
+    "dry-run": { type: "boolean", description: "Show the plan, write nothing", default: false },
   },
   async run({ args }) {
     const key = String(args.key);
@@ -520,6 +528,18 @@ const configSet = defineCommand({
     if (err) {
       ui.fail(err);
       await exit(1);
+      return;
+    }
+    const yes = Boolean(args.yes);
+    const dryRun = Boolean(args["dry-run"]);
+    if (isSecretKey(key) && shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun })) {
+      refuseAgentWrite("dora config set --dry-run");
+      await exit(2);
+      return;
+    }
+    if (dryRun) {
+      ui.info(`${key} = ${formatSetDisplay(key, coerced)}`);
+      await exit(0);
       return;
     }
     await saveKey(key, coerced);

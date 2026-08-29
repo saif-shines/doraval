@@ -1025,4 +1025,65 @@ describe("doraval CLI", () => {
       expect((stdout + stderr)).toContain("show");
     });
   });
+
+  describe("dora config identity.api_key", () => {
+    const token = "dv_test_identity_token_abcdef";
+
+    function home(): string {
+      return mkdtempSync(join(tmpdir(), "dora-id-cfg-"));
+    }
+
+    test("config set --help names --yes and --dry-run", () => {
+      const { exitCode, stdout } = runDoraval(["config", "set", "--help"]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("--yes");
+      expect(stdout).toContain("--dry-run");
+    });
+
+    test("detected agent without --yes or --dry-run exits 2 and writes nothing", () => {
+      const dir = home();
+      const { exitCode, stderr } = runDoraval(
+        ["config", "set", "identity.api_key", token],
+        { env: { CI: "1", DORAVAL_HOME: dir } },
+      );
+      expect(exitCode).toBe(2);
+      expect(stderr).toMatch(/--yes|--dry-run/);
+      expect(existsSync(join(dir, "config.yml"))).toBe(false);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--dry-run prints the plan and writes nothing", () => {
+      const dir = home();
+      const { exitCode, stdout, stderr } = runDoraval(
+        ["config", "set", "identity.api_key", token, "--dry-run"],
+        { env: { CI: "1", DORAVAL_HOME: dir } },
+      );
+      expect(exitCode).toBe(0);
+      expect(stdout + stderr).toContain("identity.api_key");
+      expect(stdout + stderr).not.toContain(token);
+      expect(existsSync(join(dir, "config.yml"))).toBe(false);
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("--yes writes the key; list and get do not print it", () => {
+      const dir = home();
+      const set = runDoraval(
+        ["config", "set", "identity.api_key", token, "--yes"],
+        { env: { CI: "1", DORAVAL_HOME: dir } },
+      );
+      expect(set.exitCode).toBe(0);
+      expect(set.stdout + set.stderr).not.toContain(token);
+      const yaml = readFileSync(join(dir, "config.yml"), "utf8");
+      expect(yaml).toContain(token);
+      const list = runDoraval(["config"], { env: { CI: undefined, DORAVAL_HOME: dir } });
+      expect(list.exitCode).toBe(0);
+      expect(list.stdout + list.stderr).not.toContain(token);
+      const get = runDoraval(["config", "get", "identity.api_key"], {
+        env: { CI: undefined, DORAVAL_HOME: dir },
+      });
+      expect(get.exitCode).toBe(0);
+      expect(get.stdout + get.stderr).not.toContain(token);
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
 });
