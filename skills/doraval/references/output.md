@@ -121,6 +121,22 @@ A Review **without** `--quick` also sets `sessionHealth` on each result: `{ wind
 - `recent` → unused, recent install. Tell the user. Do not Remove.
 - Unused writes nothing.
 
+## `dora probe --json`
+
+```jsonc
+{ "status": "acked", "id": "prb_1" }
+```
+
+`status` is `acked` | `timeout` | `bad-key` | `no-key` | `error`. `id` is set after hello is created.
+
+### How to branch (Probe)
+
+- `acked` (exit `0`) → the loop worked. Stop.
+- `no-key` (exit `2`) → tell the user to mint on `/account`, then `dora config set identity.api_key <token> --yes`. Do not invent a token.
+- `timeout` (exit `1`) → tell the user to stay on `/account` and click ack, then `dora probe --yes` again.
+- `bad-key` (exit `1`) → tell the user to mint a new key and set it. Do not retry with the same token.
+- Missing `--yes` / `--dry-run` is exit `2`. Send nothing.
+
 ## For hooks
 
 `dora memory context --json` emits the active memory set for injection at session start.

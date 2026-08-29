@@ -18,14 +18,14 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora session` | List Sessions. `show <id>` (short id is enough if unique) |
 | `dora memory` | List principles. `add` / `promote` (`promote` writes `AGENTS.md`) |
 | `dora conflicts` | Cross-agent contradictions (`--dry-run`, then `--yes`) |
-| `dora config` | List keys. `get` / `set` / `setup`. Secret `set` needs `--yes` or `--dry-run`. |
+| `dora config` | List keys. `get` / `set` / `setup`. Secret `set` needs `--yes` or `--dry-run`. `identity.api_key` is minted on doraval.dev/account. Never echo it. |
 | `dora agent` | List Subagents |
 | `dora agent new` | Scaffold a Subagent |
 | `dora plugin` | List Plugins |
 | `dora plugin new` | Scaffold a Plugin |
 | `dora plugin bump` | Plugin and marketplace semver |
 | `dora update` | Update doraval |
-| `dora probe` | Send hello to doraval.dev and wait for ack |
+| `dora probe` | POST hello; poll until ack or 60s timeout. Needs `identity.api_key`. Human clicks ack on `/account`. `--json` is `{status,id}`. |
 
 Writes take `--yes` or `--dry-run`. Missing flag is **exit 2**.
 Add `--format json` after Findings when you will branch on fields.

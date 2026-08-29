@@ -70,5 +70,6 @@ Flags: `dora <command> --help`. Map: `dora --help --json`.
 - Review or Scan reports a conflict → `dora conflicts --dry-run`, then ask the user.
 - R034 / unused Authored Skill → `dora skill unused`, then `dora skill remove <name> --dry-run` for a standalone Remove candidate. Home Skills: `dora skill unused --global`. Unused-but-recent is named (`never invoked`). It is not a Remove candidate. A Plugin row or a Plugin-owned Skill → `dora review --quick <plugin-root>` (not `$HOME`). Named Remove of an Owned child still works. Unused writes nothing.
 - Workspace map (not the first job) → `dora scan --yes`.
+- Prove the CLI can talk to doraval.dev → the user mints a key on `/account`, then `dora config set identity.api_key <token> --yes`, then `dora probe --yes`. You do not automate Sign-up. Never echo the token. Branch on `--json`: [output.md](references/output.md).
 
 Empty `dora` is `--help`. Scan is `dora scan`.

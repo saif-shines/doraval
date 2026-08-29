@@ -1,0 +1,55 @@
+---
+title: Connect the CLI
+description: Log in on doraval.dev, mint an API key, store it, then probe.
+sidebar:
+  label: Connect
+  order: 5
+---
+
+**Connected** means this CLI holds a valid API key from doraval.dev. It does not mean `dora` is on `PATH`. Sign-up and login are for you. Do not automate the browser.
+
+A **Probe** is the check: the CLI sends hello, you click ack on the site, the CLI prints ack. Config stays on the machine. The site does not write `config.yml`.
+
+## Mint a key
+
+1. Open [doraval.dev/account](https://doraval.dev/account). Log in or sign up.
+2. Click **Mint API key**.
+3. Copy the token once. The site does not show it again.
+
+```bash
+dora config set identity.api_key <token> --yes
+```
+
+Do not paste the token into chat. `dora config` list and get mask it.
+
+## Probe
+
+Stay on `/account`. Then:
+
+```bash
+dora probe --dry-run
+dora probe --yes
+```
+
+Click **ack** on the pending hello within 60 seconds.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Acked |
+| `1` | Timeout or bad key |
+| `2` | No key, or a detected agent omitted `--yes` / `--dry-run` |
+
+`--json` is `{ "status", "id" }`. `status` is `acked`, `timeout`, `bad-key`, `no-key`, or `error`.
+
+A new `dora probe` is a new hello. An old ack does not close it.
+
+## Common mistakes
+
+- Probe without `identity.api_key` exits `2`. Mint first.
+- Leave `/account` or wait past 60 seconds and the CLI times out. Run `dora probe --yes` again and click ack.
+- This is not Config sync. The CLI does not upload `config.yml`.
+
+## Related
+
+- [Commands](/commands/)
+- [Quick Start](/get-started/quickstart/)

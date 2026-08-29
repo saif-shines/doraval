@@ -149,9 +149,14 @@ The table shortens the id. `show` accepts that short id when it is unique. `--js
 ```bash
 dora probe --dry-run
 dora probe --yes
+dora probe --yes --json
 ```
 
-Sends hello to doraval.dev and waits for ack. Needs `identity.api_key`. A detected agent must pass `--yes` or `--dry-run`.
+Sends hello to doraval.dev and waits for ack. Needs `identity.api_key`. Stay logged in on `/account` and click **ack** within 60 seconds. A detected agent must pass `--yes` or `--dry-run`.
+
+Exit `0` acked · `1` timeout or bad key · `2` no key or missing write flag.
+
+Mint and store the key first: [Connect the CLI](/get-started/connect/).
 
 ## Config
 
@@ -164,7 +169,7 @@ dora config set eval.judge auto
 dora config set identity.api_key <token> --yes
 ```
 
-A detected agent must pass `--yes` or `--dry-run` to set a secret. `--deep` needs a Judge. Do not paste API keys into chat.
+`identity.api_key` is the token from [doraval.dev/account](https://doraval.dev/account). A detected agent must pass `--yes` or `--dry-run` to set a secret. `--deep` needs a Judge. Do not paste API keys into chat.
 
 ## Plugin bump
 
@@ -206,9 +211,11 @@ dora --completion fish
 - `dora new`, `dora sessions`, `dora rules`, `dora reconcile`, `dora bump`, `dora providers`, and `dora agent-help` exit `2`. Each prints a Next line with the new name.
 - `dora conflicts` applies with `--yes`. There is no `--apply`.
 - Judge keys live on `dora config setup`, not a `providers` command.
+- `dora probe` without `identity.api_key` exits `2`. Mint the key on `/account` first.
 
 ## Related
 
+- [Connect the CLI](/get-started/connect/)
 - [Quick Start](/get-started/quickstart/)
 - [Review tiers](/concepts/review-tiers/)
 - [Memory](/concepts/memory/)

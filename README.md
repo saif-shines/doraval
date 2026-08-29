@@ -58,6 +58,8 @@ dora --help                  # first loop
 dora --help --json           # live map
 ```
 
+Log in at [doraval.dev/account](https://doraval.dev/account), mint a key, then `dora config set identity.api_key <token> --yes` before `dora probe --yes`. Walkthrough: [Connect the CLI](https://doraval.dev/get-started/connect/).
+
 More: [doraval.dev/commands](https://doraval.dev/commands/).
 
 ## Building from source
