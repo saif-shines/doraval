@@ -532,3 +532,26 @@ In either form, avoid specific file paths or code snippets — they go stale fas
 <user_query>
 sounds good
 </user_query>
+
+---
+
+<user_query>
+/mattpocock-skills:implement
+</user_query>
+<skill_information>
+<skills_referenced>
+<skill name="mattpocock-skills:implement" path="/Users/saif/.grok/installed-plugins/skills-bce86e95/./skills/engineering/implement/SKILL.md"/>
+</skills_referenced>
+<skill name="mattpocock-skills:implement">
+Implement the work described by the user in the spec or tickets.
+
+Use /tdd where possible, at pre-agreed seams.
+
+Run typechecking regularly, single test files regularly, and the full test suite once at the end.
+
+Once done, use /code-review to review the work.
+
+Commit your work to the current branch.
+
+</skill>
+</skill_information>
