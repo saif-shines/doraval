@@ -146,7 +146,7 @@ The table shortens the id. `show` accepts that short id when it is unique. `--js
 
 ## Harness
 
-A **routine** is a saved use case at `~/.dora/harness/<slug>/`. `dora harness` is the front desk. Hermes is the agent. Full flow: [dora harness](/commands/harness/).
+A **routine** is a saved use case at `~/.dora/harness/<slug>/`. `dora harness` is the front desk. Hermes is the agent. Full flow: [dora harness](/commands/harness/). `dora harness new` starts `ask-dora` / `grilling-for-routine`. The family is `ask-dora`, `review-with-dora`, `grilling-for-routine`, and `writing-for-routine`.
 
 ```bash
 dora harness
@@ -226,7 +226,7 @@ dora --completion fish
 - `dora conflicts` applies with `--yes`. There is no `--apply`.
 - Judge keys live on `dora config setup`, not a `providers` command.
 - `dora probe` without `identity.api_key` exits `2`. Mint the key on `/account` first.
-- Empty `dora harness new` starts the grill. It does not write a routine folder.
+- Empty `dora harness new` starts `ask-dora` / `grilling-for-routine`. It does not write a routine folder.
 - Laptop close is host sleep, not `dora harness pause`. See [dora harness](/commands/harness/).
 
 ## Related

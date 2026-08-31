@@ -25,7 +25,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora plugin new` | Scaffold a Plugin |
 | `dora plugin bump` | Plugin and marketplace semver |
 | `dora harness` | List routines at `~/.dora/harness/<slug>/`. |
-| `dora harness new` | Start the grill. `--accept --yes` writes the folder after the printed one-pass command. |
+| `dora harness new` | Start `ask-dora` / `grilling-for-routine`. `--accept --yes` writes the folder after the printed one-pass command. |
 | `dora harness boot <slug>` | Start the Hermes gateway and one cron job. Then run `hermes mcp login scalekit`. Dora exits. |
 | `dora harness pause <slug>` | Pause that job only. Gateway stays up. |
 | `dora harness resume <slug>` | Start later ticks again. |

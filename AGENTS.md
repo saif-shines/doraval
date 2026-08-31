@@ -30,7 +30,7 @@ A user-visible feature is not released until the docs match the binary. CHANGELO
 
 - `apps/website/content/` (canonical Reader docs)
 - README command catalog
-- `skills/doraval/` (Runner: `SKILL.md` + `references/`)
+- `skills/ask-dora/`, `skills/review-with-dora/`, `skills/grilling-for-routine/`, `skills/writing-for-routine/`
 
 Help text (`dora --help`, `dora --help --json`) is part of the product. If a new help line would disagree with README or `/commands`, update those pages in the same change.
 

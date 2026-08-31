@@ -119,9 +119,9 @@ export const harnessNew = defineCommand({
   meta: {
     name: "new",
     description: [
-      "Start the grill and create a routine",
+      "Start ask-dora / grilling-for-routine and create a routine",
       "",
-      "Bare new starts the grill skill.",
+      "Bare new starts ask-dora, which loads grilling-for-routine.",
       "Write the folder only after one pass, or after --accept of the printed command.",
     ].join("\n"),
   },

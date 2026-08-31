@@ -44,7 +44,7 @@ describe("doraval CLI", () => {
     });
 
     test("shipped Skill names Brief fields and forbids skip", () => {
-      const text = readFileSync(join(repoRoot, "skills/doraval/SKILL.md"), "utf-8");
+      const text = readFileSync(join(repoRoot, "skills/review-with-dora/SKILL.md"), "utf-8");
       expect(text).toContain("dora fix");
       expect(text).toContain("--brief");
       expect(text).toContain("hint");

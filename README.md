@@ -27,6 +27,8 @@ npx skills add saif-shines/doraval
 dora review --quick
 ```
 
+That add installs four skills: `ask-dora`, `review-with-dora`, `grilling-for-routine`, and `writing-for-routine`. Type `/ask-dora` for a Dora job or a routine idea.
+
 `--quick` is structure and heuristics only. No Judge. No API key.
 
 You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run.
@@ -53,7 +55,7 @@ dora conflicts --dry-run
 dora session
 dora session show <id>       # short table id is enough if unique
 dora harness                 # list routines
-dora harness new             # start the grill
+dora harness new             # start ask-dora / grilling-for-routine
 dora harness boot <slug>     # start Hermes gateway + one cron job; then hermes mcp login scalekit
 dora harness pause <slug>
 dora harness resume <slug>
@@ -89,7 +91,7 @@ bun run build                  # emit bin/doraval.js
 | `src/cli/` | citty CLI surface (`dora` / `doraval`) |
 | `src/core/` | Scan, review, fix, memory, sessions, scaffold |
 | `src/providers/` | Packaging / provider specs (`dora skill new`, `dora plugin bump`) |
-| `skills/doraval/` | Agent skill shipped via `npx skills add saif-shines/doraval` |
+| `skills/` | `ask-dora`, `review-with-dora`, `grilling-for-routine`, `writing-for-routine` |
 | `apps/website/` | Docs site ([Blume](https://github.com/saif-shines/blume)) |
 | `scripts/` | Release, platform packages, publish helpers |
 | `test/` | Fixtures and CLI tests |

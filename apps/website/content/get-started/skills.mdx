@@ -1,23 +1,32 @@
 ---
 title: Skills
-description: Install the doraval skill and point AGENTS.md at dora.
+description: Install the four skills and point AGENTS.md at dora.
 sidebar:
   label: Skills
   order: 4
 ---
 
-The shipped skill is the **Runner** guide. Coding assistants load it after `npx skills add`.
+`npx skills add saif-shines/doraval` installs four skills for an internal teammate. Type `/ask-dora` for a Dora job or a routine idea.
 
 ```bash
 npx skills add saif-shines/doraval
 npx skills list
 ```
 
-The skill tells the agent to run `dora review --quick` first. Then mechanical Fix. Then `--brief`. Then replace. It does not hang on TTY prompts.
+| Skill | Job |
+| --- | --- |
+| `ask-dora` | Router. The only name you must remember. |
+| `review-with-dora` | Review, fix, unused, scan. Loop until exit 0. |
+| `grilling-for-routine` | Interview for a loop-able routine idea. |
+| `writing-for-routine` | Write the unattended night prompt. |
+
+`ask-dora` loads `review-with-dora` for a Dora job. It loads `grilling-for-routine` for a routine, a loop, recurring, or a routine idea. `grilling-for-routine` loads `writing-for-routine` for the night prompt.
+
+`review-with-dora` tells the agent to run `dora review --quick` first. Then mechanical Fix. Then `--brief`. Then replace. It does not hang on TTY prompts.
 
 ## AGENTS.md
 
-Add this if you want the same loop without the skill:
+Add this if you want the same review loop without `review-with-dora`:
 
 ```markdown
 ## Context review
