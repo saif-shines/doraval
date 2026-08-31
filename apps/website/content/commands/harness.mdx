@@ -1,0 +1,86 @@
+---
+title: dora harness
+description: Grill a routine, test it once, then boot it on Hermes.
+sidebar:
+  label: Harness
+  order: 2
+---
+
+`dora harness` is the front desk for an internal teammate. Hermes is the agent that runs the night pass. A **routine** is the saved folder at `~/.dora/harness/<slug>/`. Dora does not install Hermes and does not run the MCP login.
+
+## Before you start
+
+Install [Hermes Agent](https://hermes-agent.nousresearch.com/docs/). Reload the shell so `hermes` is on `PATH`. Bring your own LLM credits. Paste a Scalekit Agent Gateway MCP URL when the grill asks.
+
+Missing Hermes prints official install steps and stops. Dora does not fake a test run.
+
+## Create a routine
+
+```bash
+dora harness new
+```
+
+Bare `new` starts the grill skill. Collect skills to run, skills to refer to, and the MCP URL. Then print or run one live pass. Write the folder only after that pass, or after you accept the printed command:
+
+```bash
+dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url>
+```
+
+The printed one-pass command looks like this:
+
+```bash
+hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
+```
+
+`--run-budget` is the max tick (default 10 minutes). Skills to run are passed as `--skills`. Dora refuses to overwrite an existing slug.
+
+## Boot the night job
+
+```bash
+dora harness boot <slug>
+```
+
+Boot starts the Hermes gateway as a machine service, adds the Scalekit MCP server, tests it, enables `mcp-scalekit` on the cron platform, and writes one cron job. Then Dora exits. Hermes owns the timer.
+
+After boot, run this yourself. Dora stays off the browser path:
+
+```bash
+hermes mcp login scalekit
+```
+
+If a refresh token dies later, run that login again. If the Scalekit connected account is dead, open the provider link again.
+
+## Pause, resume, list, open
+
+```bash
+dora harness list
+dora harness pause <slug>
+dora harness resume <slug>
+dora harness open <slug>
+```
+
+`pause` pauses that cron job only. The gateway stays up. A pass that already started may finish. `resume` starts later ticks again. `list` shows each slug as running, paused, or none. `open` opens the routine folder.
+
+Laptop close is host sleep, not pause. Cron does not run while the host sleeps. Due jobs can fire on wake if the job is not paused.
+
+## Defaults
+
+| Field | Default |
+| --- | --- |
+| Interval | every 1 hour |
+| Max tick (one pass) | 10 minutes (`--run-budget`) |
+| Night idle cap | Hermes `HERMES_CRON_TIMEOUT` (default 600s) |
+
+Both interval and max tick are per routine. A busy night job can run longer than the idle cap.
+
+## Common mistakes
+
+- Treating laptop close as `dora harness pause`. Sleep stops the clock. It does not pause the job.
+- Expecting Dora to finish `hermes mcp login scalekit`. You run that in a real terminal.
+- Re-running `--accept` on the same slug. Dora refuses to overwrite the folder.
+- Expecting a chat app in the harness. Connectors live on a use case, not in this group.
+
+## Related
+
+- [Commands](/commands/)
+- [Hermes Agent docs](https://hermes-agent.nousresearch.com/docs/)

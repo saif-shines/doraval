@@ -146,9 +146,7 @@ The table shortens the id. `show` accepts that short id when it is unique. `--js
 
 ## Harness
 
-A **routine** is a saved use case at `~/.dora/harness/<slug>/`. It holds the unattended prompt, skill directories to run, skill directories to refer to, the Scalekit Agent Gateway MCP URL, the interval, and the max tick.
-
-`dora harness` is the front desk for an internal teammate. Hermes is the agent. Dora does not install Hermes. After boot, run `hermes mcp login scalekit`. Dora does not run that login. If a refresh token dies, run that command again. If the Scalekit connected account is dead, open the provider link again.
+A **routine** is a saved use case at `~/.dora/harness/<slug>/`. `dora harness` is the front desk. Hermes is the agent. Full flow: [dora harness](/commands/harness/).
 
 ```bash
 dora harness
@@ -159,16 +157,6 @@ dora harness pause <slug>
 dora harness resume <slug>
 dora harness open <slug>
 ```
-
-`new` starts the grill skill. Dora writes the routine folder only when you pass `--accept` after the printed one-pass command.
-
-`boot` starts the Hermes gateway as a machine service and writes one cron job. Dora then exits. `pause` pauses that job only. The gateway stays up. `resume` starts later ticks again.
-
-Laptop close is host sleep, not pause. Cron does not run while the host sleeps. Due jobs can fire on wake if the job is not paused.
-
-If Hermes is missing, `boot`, `pause`, and `resume` print official install steps and stop.
-
-Default interval is every 1 hour. Default max tick is 10 minutes. Both are per routine.
 
 ## Probe
 
@@ -239,9 +227,7 @@ dora --completion fish
 - Judge keys live on `dora config setup`, not a `providers` command.
 - `dora probe` without `identity.api_key` exits `2`. Mint the key on `/account` first.
 - Empty `dora harness new` starts the grill. It does not write a routine folder.
-- Laptop close is host sleep, not `dora harness pause`. Due jobs can fire on wake if the job is not paused.
-- Dora does not install Hermes. Missing Hermes prints install steps and stops.
-- Dora does not run `hermes mcp login scalekit`. Run it yourself after boot.
+- Laptop close is host sleep, not `dora harness pause`. See [dora harness](/commands/harness/).
 
 ## Related
 

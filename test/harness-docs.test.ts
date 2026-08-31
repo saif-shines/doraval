@@ -13,22 +13,27 @@ describe("dora harness docs lockstep", () => {
   test("README, website, and shipped skill name the same verbs", () => {
     const readme = read("README.md");
     const site = read("apps/website/content/commands/index.mdx");
+    const harness = read("apps/website/content/commands/harness.mdx");
     const skill = read("skills/doraval/SKILL.md");
     const catalog = read("skills/doraval/references/commands.md");
     for (const verb of VERBS) {
       const line = `dora harness ${verb}`;
       expect(readme).toContain(line);
       expect(site).toContain(line);
+      expect(harness).toContain(line);
       expect(catalog).toContain(verb);
     }
     expect(skill).toContain("dora harness");
     for (const verb of VERBS) expect(skill).toContain(`dora harness ${verb}`);
     expect(site.toLowerCase()).toContain("routine");
     expect(catalog.toLowerCase()).toContain("routine");
-    expect(site).toContain("hermes mcp login scalekit");
+    expect(harness).toContain("hermes mcp login scalekit");
     expect(catalog).toContain("hermes mcp login scalekit");
     expect(skill).toContain("hermes mcp login scalekit");
-    expect(site).toMatch(/fire on wake/i);
+    expect(harness).toMatch(/fire on wake/i);
+    expect(harness).toMatch(/internal teammate/i);
+    expect(harness).not.toMatch(/buy|pricing|for customers|sign up today/i);
+    expect(harness).not.toMatch(/Discord|Webflow|OOO calendar/i);
   });
 
   test("help and the JSON map name harness and the verbs", () => {
@@ -52,8 +57,7 @@ describe("dora harness docs lockstep", () => {
   });
 
   test("Reader docs do not sell a customer product or force a sample use case", () => {
-    const site = read("apps/website/content/commands/index.mdx");
-    const harness = site.slice(site.indexOf("## Harness"));
+    const harness = read("apps/website/content/commands/harness.mdx");
     expect(harness).toMatch(/internal teammate/i);
     expect(harness).not.toMatch(/buy|pricing|for customers|sign up today/i);
     expect(harness).not.toMatch(/Discord|Webflow|OOO calendar/i);
