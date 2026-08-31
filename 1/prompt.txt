@@ -1,0 +1,21 @@
+I want to understand one more behavior. In case once the agent starts running by hermes, that termianl, that has to stay open?
+
+---
+
+what is a ticker or a heatbeat
+
+---
+
+I'veen playing around this in differen terminal but sounds like these terms are harder to understand in teh first go; are docs claer?
+
+---
+
+/diagnosing-bugs can you find the bugs like these ?
+
+---
+
+so is it worth fixing
+
+---
+
+is the work done so far committed and pushed
