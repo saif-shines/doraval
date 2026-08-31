@@ -1,8 +1,10 @@
 import { dirname, join } from "path";
-import { existsSync } from "fs";
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { spawnSync } from "bun";
 import { describe, expect, test } from "bun:test";
 import { runDoraval } from "./helpers/spawn-cli.js";
+import { writeRoutine } from "../src/core/routine.js";
 
 /** PATH that can run bun but has no `hermes` binary. */
 function pathWithoutHermes(): string {
@@ -38,9 +40,66 @@ describe("dora harness", () => {
   });
 
   test("empty dora harness list reports no routines", () => {
-    const { exitCode, stdout, stderr } = runDoraval(["harness", "list"]);
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-empty-"));
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "list"], { env: { HOME: home } });
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toMatch(/no routines/i);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("dora harness list names existing slugs", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-list-"));
+    writeRoutine(home, {
+      slug: "ooo-calendar",
+      prompt: "Check OOO.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "list"], { env: { HOME: home } });
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("ooo-calendar");
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("dora harness open without a slug exits non-zero", () => {
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "open"]);
+    expect(exitCode).not.toBe(0);
+    expect(stdout + stderr).toMatch(/slug/i);
+  });
+
+  test("dora harness open prints the routine folder", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-opened-"));
+    const dir = writeRoutine(home, {
+      slug: "ooo-calendar",
+      prompt: "Check OOO.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const bin = mkdtempSync(join(tmpdir(), "dora-open-bin-"));
+    for (const name of ["open", "xdg-open", "explorer"]) {
+      writeFileSync(join(bin, name), "#!/bin/sh\nexit 0\n");
+      chmodSync(join(bin, name), 0o755);
+    }
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "open", "ooo-calendar"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain(dir);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("dora harness open unknown slug exits non-zero", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-open-"));
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "open", "missing-slug"], {
+      env: { HOME: home },
+    });
+    expect(exitCode).not.toBe(0);
+    expect(stdout + stderr).toContain("missing-slug");
+    expect(stdout + stderr.toLowerCase()).not.toMatch(/opened|started/);
+    rmSync(home, { recursive: true, force: true });
   });
 
   for (const verb of ["boot", "pause", "resume"] as const) {

@@ -1,6 +1,8 @@
 import { spawnSync } from "bun";
+import { homedir } from "os";
 import { defineCommand } from "citty";
-import { ui, resolveOutputMode, outJson, summaryLine, guidedError } from "../out.js";
+import { listRoutineSlugs, openRoutine } from "../../core/routine.js";
+import { ui, resolveOutputMode, outJson, summaryLine, guidedError, nextAction } from "../out.js";
 import { exit } from "../render/exit.js";
 
 function hermesInstalled(): boolean {
@@ -58,15 +60,22 @@ export const harnessList = defineCommand({
       ci: args.ci as boolean,
       json: args.json as boolean,
     });
+    const slugs = listRoutineSlugs(homedir());
     if (mode.format === "json") {
-      outJson([]);
+      outJson(slugs);
       await exit(0);
       return;
     }
     ui.blank();
     ui.heading("dora harness");
     ui.blank();
-    summaryLine("No routines.");
+    if (slugs.length === 0) {
+      summaryLine("No routines.");
+    } else {
+      for (const slug of slugs) ui.info(`  ${slug}`);
+      ui.blank();
+      summaryLine(`${slugs.length} routine${slugs.length === 1 ? "" : "s"}`);
+    }
     ui.blank();
     await exit(0);
   },
@@ -74,6 +83,31 @@ export const harnessList = defineCommand({
 
 export const harnessOpen = defineCommand({
   meta: { name: "open", description: "Open a routine folder" },
+  args: {
+    slug: { type: "positional", description: "Routine slug", required: true },
+  },
+  async run({ args }) {
+    const slug = String(args.slug ?? "").trim();
+    if (!slug) {
+      guidedError({
+        context: "dora harness open needs a routine slug",
+        problem: "Missing slug",
+        solutions: ["Pass the slug from `dora harness list`."],
+        next: "dora harness list",
+      });
+      await exit(2);
+      return;
+    }
+    try {
+      const dir = openRoutine(homedir(), slug);
+      ui.info(dir);
+      await exit(0);
+    } catch (e) {
+      ui.fail(e instanceof Error ? e.message : String(e));
+      nextAction("dora harness list");
+      await exit(1);
+    }
+  },
 });
 
 export default harnessList;
