@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.6.32
+
+### Features
+
+- Four shipped skills from `npx skills add saif-shines/doraval`:
+  `ask-dora`, `review-with-dora`, `grilling-for-routine`,
+  `writing-for-routine`. The skill named `doraval` is gone (`#85`–`#89`).
+- `grilling-for-routine` checks loop-able first. It copies named skills
+  into the routine. The original is not a write target (`#86`, `#88`).
+- `writing-for-routine` is the home for the night prompt (`#87`).
+
+### Docs
+
+- README, website, `AGENTS.md`, and `dora harness new --help` name the
+  same four skills and the same `dora harness` verbs (`#89`).
+
 ## 0.6.30
 
 ### Fixes
