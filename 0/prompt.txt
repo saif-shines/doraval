@@ -1,0 +1,77 @@
+/ask-matt I think there is not proper skill in here. I have a mental model form the user stand point that user will start by running ask-dora and move forward
+
+---
+
+Here's how I'm thinking
+
+user will write 
+"/ask-dora" and then the use case we want them to describe
+
+for examples "/ask-dora always poll for ooo-holidays channel, and create events on team holidays calendar on google calendar"
+
+From there, the agent that user is using should
+
+1. interally think and start grilling user with quesitons
+2. the questions basically are aimed towareds creating a unattended prompt. It has as much as information as possible to make sure it werites proper prompt here where matt's writing for agents skill smight help
+3. this essesionnaly is go to that harness related pack/routine where skill + prmpt + connectors information is stored.
+4. now validates (similar or adopt form code review skill) against the practicality and agent should tell the deeveloper what's possible and possible, it should make calls to scalekit connectors docs pageto know if that connector is availbale.
+5. then do a run or recommend the user to run a in a sepearte terminal jus to onc esee i heremes boots up, and uses this prompt + skillset + connectots are configured
+- ofcourse, the skillset is something user will add or point to on the fly which dora will copy to the routine pack
+- connectors are something that they will be prompted ot use scalekit to bring them
+- prompt is generated in earlyt
+
+once the run is successful, now it's poitn of loop it. user can configure any loop.
+
+we should also handle cases like what if user runs of out oauth validting or tokens
+
+---
+
+q1 - would like to research and do stuff simlar to that of matt-pockock skills, q2 - A, q3 - I did not understand: I wanted those skills that user will mention or point github link to or local links to, they shoudl duplicatively copy because we don't want to mess with originals, instead this way routine level optimizaitons are easy to do
+
+---
+
+q4 - a but calling it writing-for-routine, grilling-for-routine, discover connectors, q5 - A
+
+---
+
+q6 - b, q7 - A
+
+---
+
+q8 - a, q9 - B
+
+---
+
+q10 - it's a routing file, you do not assume user will only ask routine related quesiton. they may ask anything about dora cli in general; only when it's related routine, loops or recurring or use case that fits a routine happens then it should do C; 
+
+q11 - C
+
+---
+
+A
+
+---
+
+we don't need to copy as it; but similar more how his writing-for-agent skill recommends; I dont' want to reference anything to matt's text or anything; but incase you were saying we are going to put MIT tkhat' s totally file
+
+q13 - we need to think littel deeper, because matt's skills are optimized for any software project and form ideation  to implementation
+
+for us, it's specific to and agent idea that runs locally via coding agent to make it work
+
+---
+
+q14 - first ideas comes n uwser types, here first paass at is this ideal loop-able? then after first run test if it's working then put it on loop using hermes
+
+q15 - I still am thinking, routine agent idea? routine idea? routine.agent?
+
+---
+
+q15 - A, q16 - A
+
+---
+
+A
+
+---
+
+A

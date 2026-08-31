@@ -1,0 +1,158 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1BW2NHE95YH8A3H4C9M06BK",
+  "session_id": "01a05727-fe2a-71c1-9fdd-5518daaaa2cb",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-31T12:18:04.748108Z",
+  "branch": "main",
+  "checkpoints_count": 13,
+  "save_step_count": 11,
+  "files_touched": [
+    "CONTEXT.md",
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "skills/doraval/SKILL.md",
+    "skills/doraval/references/commands.md",
+    "skills/grill-routine/SKILL.md",
+    "src/cli/commands/harness.ts",
+    "src/core/hermes.test.ts",
+    "src/core/hermes.ts",
+    "src/core/routine.test.ts",
+    "src/core/routine.ts",
+    "test/harness-docs.test.ts",
+    "test/harness.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "5e06a3325804",
+  "checkpoint_transcript_start": 213,
+  "transcript_lines_at_start": 213,
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-grok-ask-matt-2026-08-31T11:25:25.207116Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "ask-matt"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "8d577e2f9216",
+      "timestamp": "2026-08-31T11:25:25.207116Z",
+      "native": {
+        "command": "/ask-matt"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/ask-matt",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 14
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-31T12:18:04.631317Z",
+    "agent_lines": 214,
+    "agent_removed": 85,
+    "human_added": 27,
+    "human_modified": 6,
+    "human_removed": 0,
+    "total_committed": 247,
+    "total_lines_changed": 332,
+    "agent_percentage": 90.06024096385542,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 15,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 19,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 19,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 26,
+      "agent_lines_removed": 21
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 26,
+      "agent_lines_removed": 21
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 27,
+      "agent_lines_removed": 21
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 29,
+      "agent_lines_removed": 21
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 30,
+      "agent_lines_removed": 21
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 33,
+      "user_lines_removed": 6,
+      "agent_lines_added": 30,
+      "agent_lines_removed": 21,
+      "user_added_per_file": {
+        "src/core/hermes.test.ts": 12,
+        "src/core/routine.test.ts": 15,
+        "test/harness.test.ts": 6
+      },
+      "user_removed_per_file": {
+        "src/core/hermes.test.ts": 5,
+        "test/harness.test.ts": 1
+      }
+    },
+    {
+      "checkpoint_number": 11,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 253,
+      "agent_lines_removed": 91
+    }
+  ]
+}
