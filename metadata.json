@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1BMVVW9H5GB91DA8PKMP7VY",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "skills/doraval/references/commands.md",
+    "src/cli/capabilities.ts",
+    "src/cli/command-tree.ts",
+    "src/cli/commands/harness.ts",
+    "src/cli/completion-script.test.ts",
+    "src/cli/completion-script.ts",
+    "src/cli/root-help.ts",
+    "test/cli.test.ts",
+    "test/harness.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
