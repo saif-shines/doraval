@@ -32,7 +32,7 @@ The printed one-pass command looks like this:
 hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
 ```
 
-`--run-budget` is the max tick (default 10 minutes). Skills to run are passed as `--skills`. Dora refuses to overwrite an existing slug.
+`--run-budget` is the one-pass time limit (default 10 minutes). Skills to run are passed as `--skills`. Dora refuses to overwrite an existing slug.
 
 ## Boot the night job
 
@@ -40,15 +40,24 @@ hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
 dora harness boot <slug>
 ```
 
-Boot starts the Hermes gateway as a machine service, adds the Scalekit MCP server, tests it, enables `mcp-scalekit` on the cron platform, and writes one cron job. Then Dora exits. Hermes owns the timer.
+Boot tells Hermes to run this routine on a schedule. Then Dora exits. You can close that terminal.
 
-After boot, run this yourself. Dora stays off the browser path:
+Hermes keeps a background service on this Mac. That service starts the job again when the interval is due. You do not leave a chat window open.
+
+After boot, log in once in a real terminal. Dora does not open the browser:
 
 ```bash
 hermes mcp login scalekit
 ```
 
-If a refresh token dies later, run that login again. If the Scalekit connected account is dead, open the provider link again.
+If a later run cannot reach Scalekit, run that login again. If the Scalekit account itself is dead, open the provider link again.
+
+To see that the background service is up:
+
+```bash
+hermes gateway status
+hermes cron status
+```
 
 ## Pause, resume, list, open
 
@@ -59,19 +68,19 @@ dora harness resume <slug>
 dora harness open <slug>
 ```
 
-`pause` pauses that cron job only. The gateway stays up. A pass that already started may finish. `resume` starts later ticks again. `list` shows each slug as running, paused, or none. `open` opens the routine folder.
+`pause` skips later runs of that routine only. Other routines keep going. A run that already started may finish. `resume` starts later runs again. `list` shows each slug as running, paused, or none. `open` opens the routine folder.
 
-Laptop close is host sleep, not pause. Cron does not run while the host sleeps. Due jobs can fire on wake if the job is not paused.
+Close the laptop and the Mac sleeps. Jobs do not run while the Mac sleeps. That is not pause. Due jobs can fire on wake if the job is not paused.
 
 ## Defaults
 
 | Field | Default |
 | --- | --- |
-| Interval | every 1 hour |
-| Max tick (one pass) | 10 minutes (`--run-budget`) |
-| Night idle cap | Hermes `HERMES_CRON_TIMEOUT` (default 600s) |
+| How often it runs | every 1 hour |
+| One-pass time limit | 10 minutes |
+| Night stop if the job sits idle | 10 minutes (Hermes default) |
 
-Both interval and max tick are per routine. A busy night job can run longer than the idle cap.
+You can change the interval and the one-pass limit per routine. A busy night job can keep going past 10 minutes if it is still working.
 
 ## Common mistakes
 
