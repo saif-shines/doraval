@@ -1,0 +1,17 @@
+Handoff file is ready.
+
+Path: /var/folders/8s/zmk7zzzn1892s9w59g96_5fr0000gn/T/handoff-local-use-cases.md
+
+Open doraval in a new chat. Point that chat at this file and at the spec:
+
+/Users/saif/Projects/feedback-syndicate/saif-shines/devex-kit/.scratch/local-use-cases/spec.md
+
+First command there: /to-tickets.
+
+---
+
+this look sright
+
+---
+
+I want to focus on adding skills to this repo, currently what do we have?

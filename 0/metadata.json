@@ -1,0 +1,58 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1BRZD1SFJ75431BN3VSZE7P",
+  "session_id": "01a05727-fe2a-71c1-9fdd-5518daaaa2cb",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-31T11:23:51.620032Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "skills/doraval/SKILL.md",
+    "skills/doraval/references/commands.md",
+    "src/cli/capabilities.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "918279a96d9b",
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-31T11:23:51.557191Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 1,
+    "human_removed": 6,
+    "total_committed": 6,
+    "total_lines_changed": 7,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 101,
+      "user_lines_removed": 7,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "README.md": 7,
+        "apps/website/content/commands/index.mdx": 23,
+        "skills/doraval/SKILL.md": 1,
+        "skills/doraval/references/commands.md": 7,
+        "src/cli/capabilities.ts": 7,
+        "test/harness-docs.test.ts": 56
+      },
+      "user_removed_per_file": {
+        "README.md": 1,
+        "apps/website/content/commands/index.mdx": 2,
+        "skills/doraval/references/commands.md": 1,
+        "src/cli/capabilities.ts": 3
+      }
+    }
+  ]
+}
