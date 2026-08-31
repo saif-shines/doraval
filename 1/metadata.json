@@ -1,0 +1,59 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1BY1BQKH84QTN80HZ4A3E6Z",
+  "session_id": "01a0573f-19a5-7682-b440-21ec90efaf80",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-31T12:52:22.993002Z",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "apps/website/package.json",
+    "jsr.json",
+    "package.json"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "1dbe95ae37dd",
+  "checkpoint_transcript_start": 1209,
+  "transcript_lines_at_start": 1209,
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-grok-diagnosing-bugs-2026-08-31T12:46:45.101459Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "diagnosing-bugs"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "b7bbf734b3cd",
+      "timestamp": "2026-08-31T12:46:45.101459Z",
+      "native": {
+        "command": "/diagnosing-bugs"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/diagnosing-bugs",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 19
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-31T12:52:22.692521Z",
+    "agent_lines": 3,
+    "agent_removed": 3,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 3,
+    "total_lines_changed": 6,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
