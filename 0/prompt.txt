@@ -1,0 +1,9 @@
+[Image #1]  this command stays stuck when I ran when my coding agent suggested
+
+---
+
+after coding agent used the skill to it let me paste the scalekit's agent gateway url it also asked to use hemes command to login and then threw this eerorp that config is not found; [Image #1]  is if there is a gap in skilsl or command chain somehwere?
+
+---
+
+yes please using /writing-for-agents  if its' a skill problem, else like how youd in teh code
