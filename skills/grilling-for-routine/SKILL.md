@@ -61,7 +61,14 @@ Offer `dora review --quick` on each copy. The teammate can skip.
 5. Load `writing-for-routine`. Write the night prompt.
 6. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass.
 7. Write the routine folder only after that pass, or after the teammate accepts the printed command. Save copies the skills into the routine. Then offer `dora review --quick` on each copy. The teammate can skip.
-8. After `dora harness boot`, tell the teammate to run `hermes mcp login scalekit`. Dora does not run that login. If a refresh token dies, run that command again. If the Scalekit connected account is dead, open the provider link again.
+8. Register Scalekit on Hermes, then login.
+   Boot registers it: `dora harness boot <slug>`.
+   The same add is `hermes mcp add scalekit --url <mcp-url> --auth oauth` in a real terminal.
+   Login without that add fails: server not found.
+   After the add, the teammate runs `hermes mcp login scalekit` in a real terminal.
+   Done-when: login is the next line only after boot or that add.
+   Dora does not run login. Dora does not edit `~/.hermes/config.yaml`.
+   If a refresh token dies, run that login again. If the Scalekit connected account is dead, open the provider link again.
 
 Do not ask for the loop interval during this grill. Default is 1 hour. Ask after a good run.
 
@@ -76,5 +83,8 @@ MUST copy named skills into the routine.
 MUST NOT require a skill because a connector exists.
 MUST NOT write the original skill directory.
 MUST NOT invent a registry, a slug, a connector, or a loop interval.
+MUST register scalekit with boot or `hermes mcp add` before `hermes mcp login scalekit`.
+MUST NOT run or tell login before that add.
+MUST NOT edit Hermes config.
 MUST NOT write the folder when the idea is not loop-able.
 MUST NOT write the folder before the one pass or an accepted printed command.
