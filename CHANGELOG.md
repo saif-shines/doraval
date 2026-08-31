@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.6.33
+
+### Fixes
+
+- `grilling-for-routine` accepts **none** for skills to run and skills
+  to refer to. A connector is not a skill.
+- Register Scalekit with `dora harness boot` or `hermes mcp add` before
+  `hermes mcp login scalekit`. Login without that add fails.
+
 ## 0.6.32
 
 ### Features
