@@ -1,0 +1,52 @@
+/mattpocock-skills:implement 83
+
+---
+
+okway what next?
+
+---
+
+I installe hermes and set it up parallelly. Let's give some setps so that I can test dora locally
+
+---
+
+I have restaretd termianl can you check
+
+---
+
+for now let's test what's built so far so that I can give you feedback
+
+---
+
+how do I start hermees agents, that is missing?
+
+---
+
+I see this erro ✗ usage: hermes [-h] [--version] [-z PROMPT] [--usage-file PATH] [-m MODEL]
+              [--provider PROVIDER] [--reasoning LEVEL] [-t TOOLSETS]
+              [--resume SESSION] [--no-restore-cwd] [--in DIR]
+              [--continue [SESSION_NAME]] [--worktree] [--accept-hooks]
+              [--skills SKILLS] [--yolo] [--pass-session-id]
+              [--ignore-user-config] [--ignore-rules] [--safe-mode] [--tui]
+              [--cli] [--dev]
+              {chat,model,moa,fallback,worktree,browser,secrets,egress,migrate,gateway,proxy,lsp,setup,whatsapp,whatsapp-cloud,slack,send,login,logout,auth,status,pause,resume,cron,sync,webhook,peer,portal,kanban,project,hooks,doctor,verify,security,approvals,dump,debug,backup,checkpoints,import,import-agent,config,skin,console,pairing,skills,bundles,plugins,curator,pets,journey,learning,memory-graph,memory,tools,computer-use,mcp,sessions,insights,monitoring,claw,update,uninstall,acp,profile,completion,dashboard,serve,desktop,gui,logs,prompt-size}
+              ...
+hermes: error: unrecognized arguments: --toolsets mcp-scalekit --timeout 600
+
+  Next: dora harness list
+
+---
+
+I think you should use exa search and reserach the all the commadns and modifcations with hermes becasue it's going to be first class provider for dora now /research
+
+---
+
+now can you run a relevant  /mattpocock-skills:code-review
+
+---
+
+fix ALL issues
+
+---
+
+sounds good so far
