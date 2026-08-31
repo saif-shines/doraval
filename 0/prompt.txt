@@ -1,0 +1,9 @@
+can I compact and run to-tickets?
+
+---
+
+/to-tickets
+
+---
+
+yes
