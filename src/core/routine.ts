@@ -1,5 +1,6 @@
 import { spawnSync } from "bun";
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "fs";
+import { YAML } from "bun";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "fs";
 import { join } from "path";
 
 const DEFAULT_INTERVAL = "1h";
@@ -91,4 +92,45 @@ export function openRoutine(home: string, slug: string, openDir: (dir: string) =
   }
   openDir(dir);
   return dir;
+}
+
+export type Routine = RoutineInput & { dir: string };
+
+function defaultMcpUrlPath(home: string): string {
+  return join(home, ".dora", "default-mcp-url");
+}
+
+export function readDefaultMcpUrl(home: string): string | undefined {
+  const p = defaultMcpUrlPath(home);
+  if (!existsSync(p)) return undefined;
+  const url = readFileSync(p, "utf8").trim();
+  return url || undefined;
+}
+
+export function writeDefaultMcpUrl(home: string, url: string): void {
+  mkdirSync(join(home, ".dora"), { recursive: true });
+  writeFileSync(defaultMcpUrlPath(home), url.trim() + "\n");
+}
+
+export function readRoutine(home: string, slug: string): Routine {
+  assertSlug(slug);
+  const dir = routineDir(home, slug);
+  const yml = join(dir, "routine.yml");
+  const promptPath = join(dir, "prompt.md");
+  if (!existsSync(yml) || !existsSync(promptPath)) {
+    throw new Error(`No routine named "${slug}".`);
+  }
+  const data = YAML.parse(readFileSync(yml, "utf8")) as Record<string, unknown>;
+  const skillsRun = Array.isArray(data.skills_run) ? data.skills_run.map(String) : [];
+  const skillsRefer = Array.isArray(data.skills_refer) ? data.skills_refer.map(String) : [];
+  return {
+    slug,
+    dir,
+    prompt: readFileSync(promptPath, "utf8"),
+    skillsRun,
+    skillsRefer,
+    mcpUrl: String(data.mcp_url ?? ""),
+    interval: String(data.interval ?? DEFAULT_INTERVAL),
+    maxTick: String(data.max_tick ?? DEFAULT_MAX_TICK),
+  };
 }

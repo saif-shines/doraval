@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test } from "bun:test";
-import { listRoutineSlugs, openRoutine, writeRoutine } from "./routine.js";
+import { listRoutineSlugs, openRoutine, readDefaultMcpUrl, readRoutine, writeDefaultMcpUrl, writeRoutine } from "./routine.js";
 
 function tmpHome(): string {
   return mkdtempSync(join(tmpdir(), "dora-routine-"));
@@ -79,6 +79,46 @@ describe("writeRoutine", () => {
     const yaml = readFileSync(join(dir, "routine.yml"), "utf8");
     expect(yaml).not.toMatch(/^evil:/m);
     expect(yaml).toContain("\\nevil: true");
+    rmSync(home, { recursive: true, force: true });
+  });
+});
+
+describe("readRoutine", () => {
+  test("reads the folder contract back", () => {
+    const home = tmpHome();
+    writeRoutine(home, {
+      slug: "ooo-calendar",
+      prompt: "Check the OOO calendar.",
+      skillsRun: ["/skills/run"],
+      skillsRefer: ["/skills/refer"],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const r = readRoutine(home, "ooo-calendar");
+    expect(r.slug).toBe("ooo-calendar");
+    expect(r.prompt).toBe("Check the OOO calendar.\n");
+    expect(r.skillsRun).toEqual(["/skills/run"]);
+    expect(r.skillsRefer).toEqual(["/skills/refer"]);
+    expect(r.mcpUrl).toBe("https://gw.example/mcp");
+    expect(r.interval).toBe("1h");
+    expect(r.maxTick).toBe("10m");
+    rmSync(home, { recursive: true, force: true });
+  });
+});
+
+describe("default MCP URL", () => {
+  test("saves a shared URL outside the routine folder", () => {
+    const home = tmpHome();
+    expect(readDefaultMcpUrl(home)).toBeUndefined();
+    writeDefaultMcpUrl(home, "https://gw.example/mcp");
+    expect(readDefaultMcpUrl(home)).toBe("https://gw.example/mcp");
+    writeRoutine(home, {
+      slug: "odd-job",
+      prompt: "x",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://other.example/mcp",
+    });
+    expect(readDefaultMcpUrl(home)).toBe("https://gw.example/mcp");
     rmSync(home, { recursive: true, force: true });
   });
 });
