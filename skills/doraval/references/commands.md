@@ -24,7 +24,13 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora plugin` | List Plugins |
 | `dora plugin new` | Scaffold a Plugin |
 | `dora plugin bump` | Plugin and marketplace semver |
-| `dora harness` | List routines. `new` / `boot` / `pause` / `resume` / `list` / `open` |
+| `dora harness` | List routines at `~/.dora/harness/<slug>/`. |
+| `dora harness new` | Start the grill. `--accept --yes` writes the folder after the printed one-pass command. |
+| `dora harness boot <slug>` | Start the Hermes gateway and one cron job. Then Dora exits. |
+| `dora harness pause <slug>` | Pause that job only. Gateway stays up. |
+| `dora harness resume <slug>` | Start later ticks again. |
+| `dora harness list` | Name slugs. Show running or paused. |
+| `dora harness open <slug>` | Open that routine folder. |
 | `dora update` | Update doraval |
 | `dora probe` | POST hello; poll until ack or 60s timeout. Needs `identity.api_key`. Human clicks ack on `/account`. `--json` is `{status,id}`. |
 

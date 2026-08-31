@@ -52,7 +52,13 @@ dora memory add "Never use default exports" --weight 8
 dora conflicts --dry-run
 dora session
 dora session show <id>       # short table id is enough if unique
-dora harness                 # list routines; new, boot, pause, resume, open
+dora harness                 # list routines
+dora harness new             # start the grill
+dora harness boot <slug>     # start Hermes gateway + one cron job
+dora harness pause <slug>
+dora harness resume <slug>
+dora harness list
+dora harness open <slug>     # open the routine folder
 dora config setup
 dora probe --yes             # hello / ack with doraval.dev
 dora --help                  # first loop
