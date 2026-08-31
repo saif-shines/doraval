@@ -150,6 +150,13 @@ describe("dora harness", () => {
     expect(text).toMatch(/internal teammate/i);
     expect(text).toMatch(/writing-for-routine/);
     expect(text).toMatch(/reuse/i);
+    expect(text).toMatch(/project `skills\/`/);
+    expect(text).toMatch(/home skills/i);
+    expect(text).toMatch(/GitHub URL/);
+    expect(text).toMatch(/registry/i);
+    expect(text).toMatch(/copies each skill folder into the routine/i);
+    expect(text).toMatch(/dora review --quick/);
+    expect(text).toMatch(/skip/i);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");
     expect(text).not.toMatch(/matt|pocock|writing-for-agents/i);
@@ -186,8 +193,6 @@ describe("dora harness", () => {
         "Check the inbox.",
         "--mcp-url",
         "https://gw.example/mcp",
-        "--skills-run",
-        "/skills/run",
       ],
       { env: { HOME: home, PATH: pathWithoutHermes() } },
     );
@@ -199,6 +204,67 @@ describe("dora harness", () => {
     expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
     expect(readFileSync(join(home, ".dora", "default-mcp-url"), "utf8").trim()).toBe("https://gw.example/mcp");
     rmSync(home, { recursive: true, force: true });
+  });
+
+  test("new --accept copies a named skill into the routine and leaves the original", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-copy-"));
+    const cwd = mkdtempSync(join(tmpdir(), "dora-harness-copy-cwd-"));
+    const src = join(cwd, "skills", "inbox");
+    mkdirSync(src, { recursive: true });
+    const original = "---\nname: inbox\ndescription: poll the inbox\n---\n\n# inbox\n";
+    writeFileSync(join(src, "SKILL.md"), original);
+    const { exitCode } = runDoraval(
+      [
+        "harness",
+        "new",
+        "--accept",
+        "--yes",
+        "--slug",
+        "night-inbox",
+        "--prompt",
+        "Poll.",
+        "--mcp-url",
+        "https://gw.example/mcp",
+        "--skills-run",
+        "inbox",
+      ],
+      { env: { HOME: home, PATH: pathWithoutHermes() }, cwd },
+    );
+    expect(exitCode).toBe(0);
+    const copy = join(home, ".dora", "harness", "night-inbox", "skills", "inbox", "SKILL.md");
+    expect(readFileSync(copy, "utf8")).toBe(original);
+    writeFileSync(copy, "tuned\n");
+    expect(readFileSync(join(src, "SKILL.md"), "utf8")).toBe(original);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("new --accept with a missing skill name asks and does not write", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-ask-"));
+    const cwd = mkdtempSync(join(tmpdir(), "dora-harness-ask-cwd-"));
+    const { exitCode, stdout, stderr } = runDoraval(
+      [
+        "harness",
+        "new",
+        "--accept",
+        "--yes",
+        "--slug",
+        "nope",
+        "--prompt",
+        "x",
+        "--mcp-url",
+        "https://gw.example/mcp",
+        "--skills-run",
+        "missing-skill",
+      ],
+      { env: { HOME: home, PATH: pathWithoutHermes() }, cwd },
+    );
+    expect(exitCode).not.toBe(0);
+    expect(stdout + stderr).toMatch(/path or a GitHub URL/i);
+    expect(stdout + stderr.toLowerCase()).not.toMatch(/registry/);
+    expect(existsSync(join(home, ".dora", "harness", "nope", "prompt.md"))).toBe(false);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
   });
 
   test("new --run-one-pass without Hermes does not write and does not fake success", () => {
@@ -229,7 +295,7 @@ describe("dora harness", () => {
     writeRoutine(home, {
       slug: "night-pass",
       prompt: "Check the inbox.",
-      skillsRun: ["/skills/run"],
+      skillsRun: [],
       skillsRefer: [],
       mcpUrl: "https://gw.example/mcp",
     });

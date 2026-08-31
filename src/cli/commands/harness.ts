@@ -241,7 +241,7 @@ export const harnessNew = defineCommand({
     }
 
     try {
-      const dir = writeRoutine(home, draft);
+      const dir = writeRoutine(home, draft, { cwd: process.cwd() });
       if (!readDefaultMcpUrl(home)) writeDefaultMcpUrl(home, mcpUrl);
       ui.info(`  Wrote ${dir}`);
       ui.blank();

@@ -37,6 +37,16 @@ Collect all three before you write the unattended prompt:
 
 A default shared MCP URL may already be saved. Reuse it. Ask before you override it for this routine.
 
+## Routine copy
+
+A skill source is a name, a local path, or a GitHub URL.
+
+Name lookup: project `skills/`, then home skills, then ask for a path or a GitHub URL. Do not invent a registry.
+
+Dora copies each skill folder into the routine. Night-pass edits land on the copy. Do not write the original.
+
+Offer `dora review --quick` on each copy. The teammate can skip.
+
 ## Order
 
 1. Run the loop-able check.
@@ -45,17 +55,19 @@ A default shared MCP URL may already be saved. Reuse it. Ask before you override
 4. Run the connector check.
 5. Load `writing-for-routine`. Write the night prompt.
 6. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass.
-7. Write the routine folder only after that pass, or after the teammate accepts the printed command.
+7. Write the routine folder only after that pass, or after the teammate accepts the printed command. Save copies the skills into the routine. Then offer `dora review --quick` on each copy. The teammate can skip.
 8. After `dora harness boot`, tell the teammate to run `hermes mcp login scalekit`. Dora does not run that login. If a refresh token dies, run that command again. If the Scalekit connected account is dead, open the provider link again.
 
 Do not ask for the loop interval during this grill. Default is 1 hour. Ask after a good run.
 
 ```bash
-dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --skills-run <dir> --skills-refer <dir>
+dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --skills-run <name|path|url> --skills-refer <name|path|url>
 ```
 
 MUST run the loop-able check first.
 MUST collect the gate before save.
+MUST copy named skills into the routine.
+MUST NOT write the original skill directory.
+MUST NOT invent a registry, a slug, a connector, or a loop interval.
 MUST NOT write the folder when the idea is not loop-able.
 MUST NOT write the folder before the one pass or an accepted printed command.
-MUST NOT invent a slug, a connector, or a loop interval.
