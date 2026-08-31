@@ -157,6 +157,10 @@ describe("dora harness", () => {
     expect(text).toMatch(/copies each skill folder into the routine/i);
     expect(text).toMatch(/dora review --quick/);
     expect(text).toMatch(/skip/i);
+    expect(text).toMatch(/Say \*\*none\*\* if the MCP tools are enough/);
+    expect(text).toMatch(/A connector is not a skill/);
+    expect(text).toMatch(/MUST accept none for skills to run and skills to refer/);
+    expect(text).toMatch(/MUST NOT require a skill because a connector exists/);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");
     expect(text).not.toMatch(/matt|pocock|writing-for-agents/i);

@@ -31,11 +31,16 @@ An interval job cannot do a push, a webhook, or a human in the loop every tick. 
 
 Collect all three before you write the unattended prompt:
 
-1. Skills to **run** (directories the night pass loads)
-2. Skills to **refer to** (directories the prompt may cite)
-3. Scalekit Agent Gateway **MCP URL**
+1. Skills to **run** (optional extra SKILL.md folders the night pass loads).
+   Say **none** if the MCP tools are enough.
+2. Skills to **refer to** (optional folders the prompt may cite).
+   Say **none** if none.
+3. Scalekit Agent Gateway **MCP URL** (required).
+   Slack, GitHub, and other connectors live here. A connector is not a skill.
 
 A default shared MCP URL may already be saved. Reuse it. Ask before you override it for this routine.
+
+If no matching skill is on disk, do not invent one. Offer **none**, a local path, or a GitHub URL. Do not treat a missing Slack or GitHub skill as a blocker.
 
 ## Routine copy
 
@@ -66,7 +71,9 @@ dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-ur
 
 MUST run the loop-able check first.
 MUST collect the gate before save.
+MUST accept none for skills to run and skills to refer.
 MUST copy named skills into the routine.
+MUST NOT require a skill because a connector exists.
 MUST NOT write the original skill directory.
 MUST NOT invent a registry, a slug, a connector, or a loop interval.
 MUST NOT write the folder when the idea is not loop-able.
