@@ -32,6 +32,21 @@ describe("writeRoutine", () => {
     rmSync(home, { recursive: true, force: true });
   });
 
+  test("refuses to overwrite an existing routine", () => {
+    const home = tmpHome();
+    const input = {
+      slug: "ooo-calendar",
+      prompt: "First.",
+      skillsRun: [] as string[],
+      skillsRefer: [] as string[],
+      mcpUrl: "https://gw.example/mcp",
+    };
+    writeRoutine(home, input);
+    expect(() => writeRoutine(home, { ...input, prompt: "Second." })).toThrow(/already exists/i);
+    expect(readFileSync(join(home, ".dora", "harness", "ooo-calendar", "prompt.md"), "utf8")).toBe("First.\n");
+    rmSync(home, { recursive: true, force: true });
+  });
+
   test("interval and max tick can be set per routine", () => {
     const home = tmpHome();
     const dir = writeRoutine(home, {

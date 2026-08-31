@@ -178,7 +178,7 @@ describe("dora harness", () => {
     const out = stdout + stderr;
     expect(exitCode).toBe(0);
     expect(out).toContain("https://hermes-agent.nousresearch.com/install.sh");
-    expect(out).toContain("hermes -z");
+    expect(out).toContain("hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600");
     expect(out.toLowerCase()).not.toMatch(/test run (passed|succeeded)|faked/);
     expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
     expect(readFileSync(join(home, ".dora", "default-mcp-url"), "utf8").trim()).toBe("https://gw.example/mcp");
@@ -224,11 +224,70 @@ describe("dora harness", () => {
     expect(exitCode).toBe(0);
     const logText = readFileSync(log, "utf8");
     expect(logText).toContain("gateway install");
+    expect(logText).toContain("gateway start");
     expect(logText).toContain("cron create");
-    expect(logText).toContain("mcp-scalekit");
+    expect(logText).toContain("mcp add scalekit");
+    expect(logText).toContain("mcp test scalekit");
+    expect(logText).toContain("tools enable mcp-scalekit --platform cron");
     expect(stdout + stderr).toMatch(/booted/i);
+    expect(stdout + stderr).toContain("hermes mcp login scalekit");
+    expect(stdout + stderr).toMatch(/fire on wake/i);
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("boot stops when mcp add and mcp test both fail", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-mcpfail-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check the inbox.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { bin, log } = fakeHermes(home, "[active] night-pass\n", { failMcp: true });
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "boot", "night-pass"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).not.toBe(0);
+    const out = stdout + stderr;
+    expect(out).toContain("hermes mcp login scalekit");
+    expect(out).toMatch(/provider link/i);
+    expect(out.toLowerCase()).not.toMatch(/booted/);
+    const logText = readFileSync(log, "utf8");
+    expect(logText).not.toContain("cron create");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("new --accept refuses to overwrite an existing routine", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-ow-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "First.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { exitCode, stdout, stderr } = runDoraval(
+      [
+        "harness",
+        "new",
+        "--accept",
+        "--yes",
+        "--slug",
+        "night-pass",
+        "--prompt",
+        "Second.",
+        "--mcp-url",
+        "https://gw.example/mcp",
+      ],
+      { env: { HOME: home, PATH: pathWithoutHermes() } },
+    );
+    expect(exitCode).not.toBe(0);
+    expect(stdout + stderr).toMatch(/already exists/i);
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "prompt.md"), "utf8")).toBe("First.\n");
+    rmSync(home, { recursive: true, force: true });
   });
 
   test("pause and resume call hermes cron for that slug only", () => {
@@ -296,10 +355,22 @@ describe("dora harness", () => {
   });
 });
 
-function fakeHermes(home: string, listOut = "[active] night-pass\n"): { bin: string; log: string } {
+function fakeHermes(
+  home: string,
+  listOut = "[active] night-pass\n",
+  opts: { failMcp?: boolean } = {},
+): { bin: string; log: string } {
   const bin = mkdtempSync(join(tmpdir(), "dora-hermes-bin-"));
   const log = join(home, "hermes-log");
   mkdirSync(home, { recursive: true });
+  const failMcp = opts.failMcp
+    ? `
+if [ "$1" = mcp ]; then
+  echo "mcp failed" >&2
+  exit 1
+fi
+`
+    : "";
   writeFileSync(
     join(bin, "hermes"),
     `#!/bin/sh
@@ -307,6 +378,7 @@ echo "$@" >> "${log}"
 if [ "$1" = cron ] && [ "$2" = list ]; then
   printf '%s' '${listOut.replace(/'/g, "")}'
 fi
+${failMcp}
 exit 0
 `,
   );

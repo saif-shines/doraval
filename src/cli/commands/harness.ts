@@ -16,6 +16,8 @@ import {
   bootArgs,
   defaultHermesRun,
   listJobStates,
+  loginCommand,
+  MCP_SERVER,
   onePassArgs,
   onePassCommand,
   pauseArgs,
@@ -59,6 +61,59 @@ function printHermesInstall(): void {
   });
 }
 
+function printGrill(home: string): void {
+  const dir = grillSkillDir();
+  ui.blank();
+  ui.heading("dora harness new");
+  ui.blank();
+  ui.info(`  Grill: ${dir}`);
+  ui.info("  Hermes is the agent. Read SKILL.md. Interview the teammate.");
+  ui.blank();
+  ui.info("  Gate: skills to run, skills to refer to, MCP URL.");
+  ui.info("  Order: interview, write the unattended prompt, one pass, then save.");
+  const def = readDefaultMcpUrl(home);
+  if (def) ui.info(`  Default MCP URL: ${def}`);
+  ui.blank();
+  nextAction(
+    "dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --skills-run <dir> --skills-refer <dir>",
+  );
+  ui.blank();
+}
+
+function printMcpNext(): void {
+  nextAction(loginCommand());
+  ui.dim("  If a refresh token dies, run that login again.");
+  ui.dim("  If the Scalekit connected account is dead, open the provider link again.");
+}
+
+function mcpNotReady(detail?: string): Error {
+  return new Error(
+    [detail, `Scalekit MCP is not ready. Run: ${loginCommand()}`, "If the Scalekit connected account is dead, open the provider link again."]
+      .filter(Boolean)
+      .join("\n"),
+  );
+}
+
+async function requireHermesSlug(raw: unknown, context: string): Promise<string | undefined> {
+  if (!hermesInstalled()) {
+    printHermesInstall();
+    await exit(2);
+    return;
+  }
+  const slug = String(raw ?? "").trim();
+  if (!slug) {
+    guidedError({
+      context,
+      problem: "Missing slug",
+      solutions: ["Pass the slug from `dora harness list`."],
+      next: "dora harness list",
+    });
+    await exit(2);
+    return;
+  }
+  return slug;
+}
+
 export const harnessNew = defineCommand({
   meta: {
     name: "new",
@@ -92,22 +147,7 @@ export const harnessNew = defineCommand({
     const slug = typeof args.slug === "string" ? args.slug.trim() : "";
 
     if (!accept && !runPass && !dryRun && !slug) {
-      const dir = grillSkillDir();
-      ui.blank();
-      ui.heading("dora harness new");
-      ui.blank();
-      ui.info(`  Grill: ${dir}`);
-      ui.info("  Read SKILL.md. Interview the teammate.");
-      ui.blank();
-      ui.info("  Gate: skills to run, skills to refer to, MCP URL.");
-      ui.info("  Order: interview, write the unattended prompt, one pass, then save.");
-      const def = readDefaultMcpUrl(home);
-      if (def) ui.info(`  Default MCP URL: ${def}`);
-      ui.blank();
-      nextAction(
-        "dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --skills-run <dir> --skills-refer <dir>",
-      );
-      ui.blank();
+      printGrill(home);
       await exit(0);
       return;
     }
@@ -166,10 +206,20 @@ export const harnessNew = defineCommand({
         shouldRun = ans === "yes";
       }
       if (shouldRun) {
-        defaultHermesRun(["mcp", "add", "scalekit", "--url", mcpUrl, "--auth", "oauth"]);
+        const added = defaultHermesRun(["mcp", "add", MCP_SERVER, "--url", mcpUrl, "--auth", "oauth"]);
+        if (added.exitCode !== 0) {
+          const tested = defaultHermesRun(["mcp", "test", MCP_SERVER]);
+          if (tested.exitCode !== 0) {
+            ui.fail(mcpNotReady(added.stderr.trim()).message);
+            printMcpNext();
+            await exit(2);
+            return;
+          }
+        }
         const r = defaultHermesRun(onePassArgs(draft));
         if (r.exitCode !== 0) {
           ui.fail(r.stderr.trim() || "One-pass command failed.");
+          printMcpNext();
           await exit(2);
           return;
         }
@@ -189,11 +239,17 @@ export const harnessNew = defineCommand({
       return;
     }
 
-    const dir = writeRoutine(home, draft);
-    if (!readDefaultMcpUrl(home)) writeDefaultMcpUrl(home, mcpUrl);
-    ui.info(`  Wrote ${dir}`);
-    ui.blank();
-    await exit(0);
+    try {
+      const dir = writeRoutine(home, draft);
+      if (!readDefaultMcpUrl(home)) writeDefaultMcpUrl(home, mcpUrl);
+      ui.info(`  Wrote ${dir}`);
+      ui.blank();
+      await exit(0);
+    } catch (e) {
+      ui.fail(e instanceof Error ? e.message : String(e));
+      nextAction("dora harness open " + slug);
+      await exit(2);
+    }
   },
 });
 
@@ -201,7 +257,14 @@ function runBoot(slug: string): void {
   const routine = readRoutine(homedir(), slug);
   for (const args of bootArgs(routine)) {
     const r = defaultHermesRun(args);
-    if (args[0] === "mcp" && r.exitCode !== 0) continue;
+    if (args[0] === "mcp" && args[1] === "add" && r.exitCode !== 0) {
+      const tested = defaultHermesRun(["mcp", "test", MCP_SERVER]);
+      if (tested.exitCode !== 0) throw mcpNotReady(r.stderr.trim());
+      continue;
+    }
+    if (args[0] === "mcp" && args[1] === "test" && r.exitCode !== 0) {
+      throw mcpNotReady(r.stderr.trim());
+    }
     if (r.exitCode !== 0) {
       throw new Error(r.stderr.trim() || `hermes ${args.join(" ")} failed`);
     }
@@ -216,6 +279,7 @@ export const harnessBoot = defineCommand({
       "",
       "Starts the Hermes gateway as a machine service, writes one cron job, then exits.",
       "Laptop close is host sleep, not pause. Cron does not run while the host sleeps.",
+      "Due jobs can fire on wake if the job is not paused.",
     ].join("\n"),
   },
   args: {
@@ -254,10 +318,7 @@ export const harnessBoot = defineCommand({
         slugs[0]!,
       );
       if (picked === "__new__") {
-        const dir = grillSkillDir();
-        ui.info(`  Grill: ${dir}`);
-        nextAction("dora harness new");
-        ui.blank();
+        printGrill(home);
         await exit(0);
         return;
       }
@@ -271,11 +332,13 @@ export const harnessBoot = defineCommand({
     try {
       runBoot(slug);
       ui.info(`  Booted ${slug}. Dora does not own the timer.`);
-      ui.dim("  Laptop close is host sleep, not pause.");
+      ui.dim("  Laptop close is host sleep, not pause. Due jobs can fire on wake if the job is not paused.");
+      printMcpNext();
       ui.blank();
       await exit(0);
     } catch (e) {
       ui.fail(e instanceof Error ? e.message : String(e));
+      printMcpNext();
       nextAction("dora harness list");
       await exit(2);
     }
@@ -296,22 +359,8 @@ export const harnessPause = defineCommand({
     slug: { type: "positional", description: "Routine slug", required: true },
   },
   async run({ args }) {
-    if (!hermesInstalled()) {
-      printHermesInstall();
-      await exit(2);
-      return;
-    }
-    const slug = String(args.slug ?? "").trim();
-    if (!slug) {
-      guidedError({
-        context: "dora harness pause needs a routine slug",
-        problem: "Missing slug",
-        solutions: ["Pass the slug from `dora harness list`."],
-        next: "dora harness list",
-      });
-      await exit(2);
-      return;
-    }
+    const slug = await requireHermesSlug(args.slug, "dora harness pause needs a routine slug");
+    if (!slug) return;
     const r = defaultHermesRun(pauseArgs(slug));
     if (r.exitCode !== 0) {
       ui.fail(r.stderr.trim() || "Pause failed.");
@@ -330,22 +379,8 @@ export const harnessResume = defineCommand({
     slug: { type: "positional", description: "Routine slug", required: true },
   },
   async run({ args }) {
-    if (!hermesInstalled()) {
-      printHermesInstall();
-      await exit(2);
-      return;
-    }
-    const slug = String(args.slug ?? "").trim();
-    if (!slug) {
-      guidedError({
-        context: "dora harness resume needs a routine slug",
-        problem: "Missing slug",
-        solutions: ["Pass the slug from `dora harness list`."],
-        next: "dora harness list",
-      });
-      await exit(2);
-      return;
-    }
+    const slug = await requireHermesSlug(args.slug, "dora harness resume needs a routine slug");
+    if (!slug) return;
     const r = defaultHermesRun(resumeArgs(slug));
     if (r.exitCode !== 0) {
       ui.fail(r.stderr.trim() || "Resume failed.");

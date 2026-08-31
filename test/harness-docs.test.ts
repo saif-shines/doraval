@@ -25,6 +25,10 @@ describe("dora harness docs lockstep", () => {
     for (const verb of VERBS) expect(skill).toContain(`dora harness ${verb}`);
     expect(site.toLowerCase()).toContain("routine");
     expect(catalog.toLowerCase()).toContain("routine");
+    expect(site).toContain("hermes mcp login scalekit");
+    expect(catalog).toContain("hermes mcp login scalekit");
+    expect(skill).toContain("hermes mcp login scalekit");
+    expect(site).toMatch(/fire on wake/i);
   });
 
   test("help and the JSON map name harness and the verbs", () => {

@@ -54,7 +54,7 @@ dora session
 dora session show <id>       # short table id is enough if unique
 dora harness                 # list routines
 dora harness new             # start the grill
-dora harness boot <slug>     # start Hermes gateway + one cron job
+dora harness boot <slug>     # start Hermes gateway + one cron job; then hermes mcp login scalekit
 dora harness pause <slug>
 dora harness resume <slug>
 dora harness list

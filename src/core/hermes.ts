@@ -25,20 +25,37 @@ export function hermesTimeoutSec(maxTick: string): number {
   return n;
 }
 
-export function onePassArgs(routine: Pick<Routine, "prompt" | "maxTick">): string[] {
-  return [
-    "-z",
+export function onePassArgs(
+  routine: Pick<Routine, "prompt"> & Partial<Pick<Routine, "maxTick" | "skillsRun">>,
+): string[] {
+  const args = [
+    "chat",
     "--toolsets",
     `mcp-${MCP_SERVER}`,
-    "--timeout",
+    "--oneshot",
+    "--run-budget",
     String(hermesTimeoutSec(routine.maxTick ?? "10m")),
-    routine.prompt.trim(),
   ];
+  for (const skill of routine.skillsRun ?? []) {
+    args.push("--skills", skill);
+  }
+  args.push("-q", routine.prompt.trim());
+  return args;
 }
 
-export function onePassCommand(routine: Pick<Routine, "prompt" | "maxTick">): string {
+export function onePassCommand(
+  routine: Pick<Routine, "prompt"> & Partial<Pick<Routine, "maxTick" | "skillsRun">>,
+): string {
   const args = onePassArgs(routine);
   return ["hermes", ...args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))].join(" ");
+}
+
+export function loginArgs(): string[] {
+  return ["mcp", "login", MCP_SERVER];
+}
+
+export function loginCommand(): string {
+  return `hermes ${loginArgs().join(" ")}`;
 }
 
 export function bootArgs(routine: Routine): string[][] {
@@ -49,17 +66,16 @@ export function bootArgs(routine: Routine): string[][] {
     routine.prompt.trim(),
     "--name",
     routine.slug,
-    "--toolsets",
-    `mcp-${MCP_SERVER}`,
-    "--timeout",
-    String(hermesTimeoutSec(routine.maxTick ?? "10m")),
   ];
   for (const skill of routine.skillsRun) {
     create.push("--skill", skill);
   }
   return [
     ["gateway", "install"],
+    ["gateway", "start"],
     ["mcp", "add", MCP_SERVER, "--url", routine.mcpUrl, "--auth", "oauth"],
+    ["mcp", "test", MCP_SERVER],
+    ["tools", "enable", `mcp-${MCP_SERVER}`, "--platform", "cron"],
     create,
   ];
 }

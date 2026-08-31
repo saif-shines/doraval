@@ -42,6 +42,9 @@ function assertSlug(slug: string): void {
 export function writeRoutine(home: string, input: RoutineInput): string {
   assertSlug(input.slug);
   const dir = routineDir(home, input.slug);
+  if (existsSync(join(dir, "prompt.md")) || existsSync(join(dir, "routine.yml"))) {
+    throw new Error(`Routine already exists: ${input.slug}`);
+  }
   mkdirSync(dir, { recursive: true });
   const prompt = input.prompt.endsWith("\n") ? input.prompt : input.prompt + "\n";
   writeFileSync(join(dir, "prompt.md"), prompt);

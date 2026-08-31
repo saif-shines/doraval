@@ -215,6 +215,19 @@ Grill is **closed**. #66. Shared understanding 2026-08-28. Shipped 2026-08-29. L
 
 _Avoid_: calling a login a Session; treating “dora is installed” as Connected; a local UI as the destination.
 
+## Harness (shipped)
+
+`dora harness` is the front desk. Hermes is the agent. 2026-08-31.
+
+| Term | Meaning |
+|------|---------|
+| **Routine** | Saved folder at `~/.dora/harness/<slug>/`. The only product object. _Avoid_: pack. |
+| **Loop** | The same unattended prompt on an interval. Hermes cron. Default 1 hour. |
+| **Max tick** | One-pass wall clock via `hermes chat --run-budget`. Default 10 minutes. Night idle cap is Hermes `HERMES_CRON_TIMEOUT` (default 600s). |
+| **Harness** | Verbs: `new`, `boot`, `pause`, `resume`, `list`, `open`. |
+
+_Avoid_: Dora on the OAuth / magic-link path; Slack, Discord, or Webflow in the harness; writing loop terms into kit CONTEXT.md.
+
 ## Naming debt (intentional)
 
 - **`JournalConfig` / `journal:`** — historical. Prefer saying **config** in docs and new code comments. Full rename is not required for correctness.

@@ -14,24 +14,25 @@ const routine: Routine = {
 };
 
 describe("hermes command builders", () => {
-  test("boot starts the gateway, adds MCP, and creates a cron job with mcp-scalekit", () => {
+  test("boot starts the gateway, adds MCP, enables mcp-scalekit on cron, then creates the job", () => {
     const cmds = bootArgs(routine);
     expect(cmds[0]).toEqual(["gateway", "install"]);
-    expect(cmds[1]).toEqual(["mcp", "add", "scalekit", "--url", "https://gw.example/mcp", "--auth", "oauth"]);
-    expect(cmds[2]).toEqual([
+    expect(cmds[1]).toEqual(["gateway", "start"]);
+    expect(cmds[2]).toEqual(["mcp", "add", "scalekit", "--url", "https://gw.example/mcp", "--auth", "oauth"]);
+    expect(cmds[3]).toEqual(["mcp", "test", "scalekit"]);
+    expect(cmds[4]).toEqual(["tools", "enable", "mcp-scalekit", "--platform", "cron"]);
+    expect(cmds[5]).toEqual([
       "cron",
       "create",
       "every 1h",
       "Check the inbox.",
       "--name",
       "night-pass",
-      "--toolsets",
-      "mcp-scalekit",
-      "--timeout",
-      "600",
       "--skill",
       "/skills/run",
     ]);
+    expect(JSON.stringify(cmds)).not.toContain("--timeout");
+    expect(JSON.stringify(cmds)).not.toContain("--toolsets");
   });
 
   test("pause and resume target that job name only", () => {
@@ -39,12 +40,13 @@ describe("hermes command builders", () => {
     expect(resumeArgs("night-pass")).toEqual(["cron", "resume", "night-pass"]);
   });
 
-  test("one-pass command uses the MCP toolset and does not start a cron job", () => {
+  test("one-pass command uses the MCP toolset, skills, and run-budget", () => {
     const cmd = onePassCommand(routine);
-    expect(cmd).toContain("hermes -z");
-    expect(cmd).toContain("mcp-scalekit");
-    expect(cmd).toContain("600");
+    expect(cmd).toContain("hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600");
+    expect(cmd).toContain("--skills /skills/run");
+    expect(cmd).toContain("-q");
     expect(cmd).not.toContain("cron");
+    expect(cmd).not.toContain("--timeout");
   });
 });
 

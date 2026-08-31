@@ -8,7 +8,7 @@ description: >-
 
 # Grill a routine
 
-Use this grill with an internal teammate. Turn a use case into a routine. Do not pick a sample product.
+Use this grill with an internal teammate. Turn a use case into a routine. Hermes is the agent. Do not pick a sample product.
 
 ## Gate
 
@@ -27,6 +27,7 @@ A default shared MCP URL may already be saved. Reuse it. Ask before you override
 3. Keep answers in the prompt file. Load writing-for-agents and write the unattended prompt for an agent. Imperative. No second-person identity. No em dashes.
 4. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass.
 5. Write the routine folder only after that pass, or after the teammate accepts the printed command.
+6. After `dora harness boot`, tell the teammate to run `hermes mcp login scalekit`. Dora does not run that login. If a refresh token dies, run that command again. If the Scalekit connected account is dead, open the provider link again.
 
 ```bash
 dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --skills-run <dir> --skills-refer <dir>
