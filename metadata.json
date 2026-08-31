@@ -1,0 +1,22 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1BXQ2H0M6DV934ZWN7RT6V5",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "skills/ask-dora/SKILL.md",
+    "skills/review-with-dora/SKILL.md",
+    "skills/review-with-dora/references/commands.md",
+    "skills/review-with-dora/references/output.md",
+    "test/ask-dora.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
