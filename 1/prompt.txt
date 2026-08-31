@@ -1,0 +1,9 @@
+I think it's also better to document this in the docs? meanings website?
+
+---
+
+can you run the docs locally so that I can review?
+
+---
+
+I want you to tell me the goals we set out to do in this session, and where are we now?
