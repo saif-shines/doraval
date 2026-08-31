@@ -7,9 +7,9 @@ function skill(name: string): string {
   return readFileSync(join(repoRoot, "skills", name, "SKILL.md"), "utf8");
 }
 
-describe("ask-dora skill family (ticket 85)", () => {
-  test("dora review --quick on ask-dora and review-with-dora exits 0", () => {
-    for (const name of ["ask-dora", "review-with-dora"] as const) {
+describe("ask-dora skill family (tickets 85-87)", () => {
+  test("dora review --quick on each family skill exits 0", () => {
+    for (const name of ["ask-dora", "review-with-dora", "grilling-for-routine", "writing-for-routine"] as const) {
       const r = runDoraval(["review", `skills/${name}`, "--quick", "--format", "json"]);
       expect(r.exitCode).toBe(0);
       const rows = JSON.parse(r.stdout) as Array<{ path: string; summary: { errors: number } }>;
@@ -50,5 +50,18 @@ describe("ask-dora skill family (ticket 85)", () => {
     expect(text).toContain("replace");
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");
+  });
+
+  test("writing-for-routine teaches steps and done-when", () => {
+    const text = skill("writing-for-routine");
+    expect(text).toMatch(/^name:\s*writing-for-routine/m);
+    expect(text).toMatch(/steps/i);
+    expect(text).toMatch(/done-when/i);
+    expect(text).toMatch(/second-person/i);
+    expect(text).toMatch(/em dash/i);
+    expect(text).toMatch(/internal teammate/i);
+    expect(text).not.toMatch(/You are/);
+    expect(text).not.toContain("—");
+    expect(text).not.toMatch(/matt|pocock|writing-for-agents/i);
   });
 });

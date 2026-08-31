@@ -128,27 +128,43 @@ describe("dora harness", () => {
   }
 
   test("dora review --quick on the grill skill exits 0", () => {
-    const { exitCode } = runDoraval(["review", "skills/grill-routine", "--quick"]);
-    expect(exitCode).toBe(0);
+    const r = runDoraval(["review", "skills/grilling-for-routine", "--quick", "--format", "json"]);
+    expect(r.exitCode).toBe(0);
+    const rows = JSON.parse(r.stdout) as Array<{ path: string; summary: { errors: number } }>;
+    const skillRow = rows.find((row) => row.path.replace(/\\/g, "/").endsWith("skills/grilling-for-routine"));
+    expect(skillRow).toBeDefined();
+    expect(skillRow!.summary.errors).toBe(0);
   });
 
-  test("grill skill names the gate and the one-pass-then-save order", () => {
-    const text = readFileSync(join(import.meta.dir, "../skills/grill-routine/SKILL.md"), "utf8");
+  test("grill skill names loop-able first, the gate, and the one-pass-then-save order", () => {
+    const text = readFileSync(join(import.meta.dir, "../skills/grilling-for-routine/SKILL.md"), "utf8");
+    expect(text).toMatch(/^name:\s*grilling-for-routine/m);
+    expect(text).toMatch(/loop-able/i);
     expect(text).toMatch(/skills to \*\*run\*\*/i);
     expect(text).toMatch(/skills to \*\*refer to\*\*/i);
     expect(text).toMatch(/MCP URL/i);
+    expect(text).toMatch(/discover-connectors/);
+    expect(text).toMatch(/webhook/i);
     expect(text).toMatch(/one pass/i);
     expect(text).toMatch(/Write the routine folder only after/i);
+    expect(text).toMatch(/internal teammate/i);
+    expect(text).toMatch(/writing-for-routine/);
+    expect(text).toMatch(/reuse/i);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");
+    expect(text).not.toMatch(/matt|pocock|writing-for-agents/i);
+    expect(existsSync(join(import.meta.dir, "../skills/grill-routine/SKILL.md"))).toBe(false);
   });
 
-  test("dora harness new starts the grill skill", () => {
+  test("dora harness new starts ask-dora / grilling-for-routine", () => {
     const home = mkdtempSync(join(tmpdir(), "dora-harness-grill-"));
     const { exitCode, stdout, stderr } = runDoraval(["harness", "new"], { env: { HOME: home } });
     const out = stdout + stderr;
     expect(exitCode).toBe(0);
-    expect(out).toContain("grill-routine");
+    expect(out).toContain("ask-dora");
+    expect(out).toContain("grilling-for-routine");
+    expect(out).not.toMatch(/skills\/grill-routine/);
+    expect(out).not.toMatch(/skills\/doraval/);
     expect(out).toMatch(/skills to run/i);
     expect(out).toMatch(/MCP URL/i);
     expect(out).toMatch(/one pass/i);

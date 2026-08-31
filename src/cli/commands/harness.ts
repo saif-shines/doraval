@@ -36,11 +36,11 @@ function hermesInstalled(): boolean {
 }
 
 function grillSkillDir(): string {
-  const here = join(import.meta.dir, "../../../skills/grill-routine");
+  const here = join(import.meta.dir, "../../../skills/grilling-for-routine");
   if (existsSync(join(here, "SKILL.md"))) return here;
-  const cwd = join(process.cwd(), "skills/grill-routine");
+  const cwd = join(process.cwd(), "skills/grilling-for-routine");
   if (existsSync(join(cwd, "SKILL.md"))) return cwd;
-  throw new Error("grill-routine skill not found");
+  throw new Error("grilling-for-routine skill not found");
 }
 
 function splitDirs(raw: string | undefined): string[] {
@@ -66,6 +66,7 @@ function printGrill(home: string): void {
   ui.blank();
   ui.heading("dora harness new");
   ui.blank();
+  ui.info("  Start: ask-dora");
   ui.info(`  Grill: ${dir}`);
   ui.info("  Hermes is the agent. Read SKILL.md. Interview the teammate.");
   ui.blank();
