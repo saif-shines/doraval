@@ -1,0 +1,18 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1BY16PCHFXB91JX0H08K0BD",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "apps/website/content/commands/harness.mdx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}

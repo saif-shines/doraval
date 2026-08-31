@@ -1,0 +1,29 @@
+/mattpocock-skills:implement 85
+
+---
+
+<system-reminder>
+Background task "call-998cc58f-dae1-4d22-9f90-fd99d7a2c1cf-90" completed (exit code: 2).
+Command: cd /Users/saif/Experiments/doraval && bun test test/ask-dora.test.ts && echo '==== WARN ====' && bun run src/cli/index.ts -- review skills/ask-dora --quick --format json | bun -e '
+const j=JSON.parse(await Bun.stdin.text());
+for (const row of j) {
+  if (!row.path.includes("ask-dora")) continue;
+  for (const tier of Object.values(row.tiers)) {
+    for (const f of tier.findings||[]) {
+      if (f.severity === "warning" || f.severity === "error") console.log("ask-dora", f.severity, f.code, f.message);
+    }
+  }
+}
+' && bun run src/cli/index.ts -- review skills/review-with-dora --quick --format json | bun -e '
+const j=JSON.parse(await Bun.stdin.text());
+for (const row of j) {
+  if (!row.path.includes("review-with-dora")) continue;
+  for (const tier of Object.values(row.tiers)) {
+    for (const f of tier.findings||[]) {
+      if (f.severity === "warning" || f.severity === "error") console.log("rwd", f.severity, f.code, f.message);
+    }
+  }
+}
+' && echo '==== TYPE ====' && bun run typecheck | Duration: 17.2s
+Use get_command_or_subagent_output("call-998cc58f-dae1-4d22-9f90-fd99d7a2c1cf-90") to see the full output.
+</system-reminder>
