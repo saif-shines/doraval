@@ -132,6 +132,10 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora plugin new --for claude --yes",
         "dora plugin bump",
       ], COMMON_FLAGS),
+      cmd("harness", "read-only", "List routines; new, boot, pause, resume, open.", [
+        "dora harness",
+        "dora harness list",
+      ], COMMON_FLAGS),
       cmd("update", "writes", "Update doraval to the latest version.", ["dora update"]),
       cmd("probe", "writes", "Send hello to doraval.dev and wait for ack.", [
         "dora probe --dry-run",

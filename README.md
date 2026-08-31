@@ -52,6 +52,7 @@ dora memory add "Never use default exports" --weight 8
 dora conflicts --dry-run
 dora session
 dora session show <id>       # short table id is enough if unique
+dora harness                 # list routines; new, boot, pause, resume, open
 dora config setup
 dora probe --yes             # hello / ack with doraval.dev
 dora --help                  # first loop

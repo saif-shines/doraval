@@ -24,6 +24,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora plugin` | List Plugins |
 | `dora plugin new` | Scaffold a Plugin |
 | `dora plugin bump` | Plugin and marketplace semver |
+| `dora harness` | List routines. `new` / `boot` / `pause` / `resume` / `list` / `open` |
 | `dora update` | Update doraval |
 | `dora probe` | POST hello; poll until ack or 60s timeout. Needs `identity.api_key`. Human clicks ack on `/account`. `--json` is `{status,id}`. |
 

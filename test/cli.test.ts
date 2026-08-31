@@ -15,6 +15,7 @@ describe("doraval CLI", () => {
       expect(stdout).toContain("fix");
       expect(stdout).toContain("skill");
       expect(stdout).toContain("probe");
+      expect(stdout).toContain("harness");
       expect(stdout).toContain("npx skills add saif-shines/doraval");
       expect(stdout).toContain("dora review --quick");
       expect(stdout).toContain("https://doraval.dev");

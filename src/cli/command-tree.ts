@@ -87,6 +87,20 @@ export const plugin = defineGroup(
   () => import("./commands/plugin/list.js"),
 );
 
+export const harness = defineGroup(
+  "harness",
+  "List routines; new, boot, pause, resume, open",
+  {
+    new: () => import("./commands/harness.js").then((m) => m.harnessNew),
+    boot: () => import("./commands/harness.js").then((m) => m.harnessBoot),
+    pause: () => import("./commands/harness.js").then((m) => m.harnessPause),
+    resume: () => import("./commands/harness.js").then((m) => m.harnessResume),
+    list: () => import("./commands/harness.js").then((m) => m.harnessList),
+    open: () => import("./commands/harness.js").then((m) => m.harnessOpen),
+  },
+  () => import("./commands/harness.js"),
+);
+
 export const config = () => import("./commands/config.js").then((m) => m.default);
 export const rule = () => import("./commands/rules.js").then((m) => m.default);
 
@@ -103,6 +117,7 @@ export const topLevelSubCommands = {
   config,
   agent: () => Promise.resolve(agent),
   plugin: () => Promise.resolve(plugin),
+  harness: () => Promise.resolve(harness),
   update: () => import("./commands/update.js").then((m) => m.default),
   probe: () => import("./commands/probe.js").then((m) => m.default),
 };
