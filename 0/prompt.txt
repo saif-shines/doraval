@@ -1,0 +1,37 @@
+okay let's put everything to test
+
+---
+
+I want you to give me manual instructions so that I can test this out fully
+
+---
+
+now let's say I have an idea that is to pay attention to slck channel and approve prs, where do I start
+
+---
+
+i'm testing it with a use case
+
+---
+
+it asked me this question [Image #1]  I was wondering if user has already mentioned routine, why is that there is a optionto on a timer ? the routine in dora is going work like an agent on a loop that will look kup slack ? or you were just making sure it's routine use case?
+
+---
+
+okay in that case that is expected.
+
+---
+
+At this part [Image #1]  is' confusing
+
+because for my use case I don't have a explict idea in my head to add skills; so I was left worndering what skills? 
+
+how do we solve it
+
+---
+
+what will you patch to?
+
+---
+
+yes

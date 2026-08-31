@@ -1,0 +1,177 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1C6XREJWXDW8XR6DQCTRZJS",
+  "session_id": "01a05727-fe2a-71c1-9fdd-5518daaaa2cb",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-31T15:27:41.161335Z",
+  "branch": "main",
+  "checkpoints_count": 9,
+  "files_touched": [
+    "skills/grilling-for-routine/SKILL.md",
+    "test/harness.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "5953f7995328",
+  "checkpoint_transcript_start": 1277,
+  "transcript_lines_at_start": 1277,
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-grok-ask-matt-2026-08-31T11:25:25.207116Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "ask-matt"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "8d577e2f9216",
+      "timestamp": "2026-08-31T11:25:25.207116Z",
+      "native": {
+        "command": "/ask-matt"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/ask-matt",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-to-tickets-2026-08-31T12:20:15.507832Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "to-tickets"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "a02da69126e2",
+      "timestamp": "2026-08-31T12:20:15.507832Z",
+      "native": {
+        "command": "/to-tickets"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/to-tickets",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-08-31T12:31:07.518552Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "4362fd0e498a",
+      "timestamp": "2026-08-31T12:31:07.518552Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-08-31T12:48:02.812373Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "bcf5d7b929f1",
+      "timestamp": "2026-08-31T12:48:02.812373Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-08-31T14:07:39.292392Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "adbd829bc2fb",
+      "timestamp": "2026-08-31T14:07:39.292392Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-08-31T14:26:15.615024Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "805c43373943",
+      "timestamp": "2026-08-31T14:26:15.615024Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 33
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-31T15:27:40.772021Z",
+    "agent_lines": 14,
+    "agent_removed": 3,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 14,
+    "total_lines_changed": 17,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
