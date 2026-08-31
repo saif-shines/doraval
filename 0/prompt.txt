@@ -1,0 +1,9 @@
+<system-reminder>
+Background task "call-bf80c255-075d-4ef8-b458-d4dcbef57943-45" completed (exit code: 2).
+Command: bun run typecheck | Duration: 18.5s
+Use get_command_or_subagent_output("call-bf80c255-075d-4ef8-b458-d4dcbef57943-45") to see the full output.
+</system-reminder>
+
+---
+
+/mattpocock-skills:implement 88
