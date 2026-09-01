@@ -1,0 +1,1 @@
+I think you got it wrong' becasue discover-connectors is simply lookup the public list of connectosr; now imagin user begins to ask how to add that connector and configure the ocnneciton form the scalekti dashboard? you dont' ahve that knwoledge
