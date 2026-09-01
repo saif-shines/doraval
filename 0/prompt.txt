@@ -1,0 +1,192 @@
+# Handoff — Doraval dogfood → programmatize routines
+
+Date: 2026-09-01  
+Repo: `/Users/saif/Experiments/doraval`  
+Branch: `main` = `origin/main` at `40d0790` (`chore(release): 0.6.33`)  
+Version: **0.6.33** tagged `v0.6.33`
+
+Next session focus: **grill the “programmatize” idea**, then spec/tickets. Do not implement in the grill chat.
+
+## Suggested skills
+
+Invoke in this order unless the user redirects:
+
+1. **`/grill-with-docs`** (mattpocock) — start here. Working directory exists. Leave a paper trail. Do not use `/grill-me`.
+2. **`/grilling`** — interview primitive the grill wrapper runs.
+3. **`writing-for-agents`** — if grill output is a skill or CONTEXT.md edit.
+4. **`writing-for-routine`** (this repo: `skills/writing-for-routine/`) — product home for night-prompt craft. The new idea likely extends this plus the folder writer.
+5. After grill settles: **`/to-spec`** then **`/to-tickets`**. Then **`/implement`** one ticket per **fresh** chat.
+6. Underneath if words slip: **`/domain-modeling`**, **`ponytail`**.
+
+Do **not** start with `/implement`, `/wayfinder`, `/diagnosing-bugs`, or `/triage`.
+
+## What to do next
+
+User asked `/ask-matt how?` for: prefer to **programmatize** stable parts of a routine, store scripts in the same routine folder, next tick runs those scripts instead of re-thinking the whole job in chat.
+
+Router answer already given (this session, turn 46): grill-with-docs → maybe prototype if Hermes-can-run-a-file is unknown → to-spec → to-tickets → implement.
+
+On `/grill-with-docs`, settle at least:
+
+- What a **script** is (shell? Hermes skill? Node?)
+- Who writes it (grill, first one-pass, the human)
+- When it is allowed (only after one good pass? only if the step is deterministic?)
+- How the next tick runs it (Hermes `--skills`? `hermes` calling a file under the routine dir?)
+- What stays in `prompt.md`
+- Folder contract vs #80 (`writeRoutine` in `src/core/routine.ts`)
+
+Keep use cases **small** and **loop-able** (already shipped). Programmatize is a second preference, not a replacement for the loop-able check.
+
+## Shipped (do not redo)
+
+Ask-dora family spec: `.scratch/ask-dora/spec.md`  
+Parent: https://github.com/saif-shines/doraval/issues/84 (still **open** on purpose)  
+Children #85–#89 **closed**. Harness #79–#83 **closed**.
+
+| Tag | What |
+|-----|------|
+| v0.6.32 | Four skills; delete skill named `doraval`; lockstep docs |
+| v0.6.33 | Grill: **none** is valid for skills; register Scalekit **before** `hermes mcp login` |
+
+Key commits after 0.6.31: `c406121` #85, `23dc285` #86+#87, `3c0aa30` #88, `74cb0e3` #89, `4ebb14e` none-at-gate, `26a5316` add-before-login, `40d0790` 0.6.33.
+
+Seams already agreed for the family: skill-folder `dora review --quick`, harness-docs lockstep, CLI pointer. Tests: `test/ask-dora.test.ts`, `test/harness.test.ts`, `test/harness-docs.test.ts`.
+
+## Constraints (still bind)
+
+- Work in **doraval**, not the kit. Do not write loop terms into kit `CONTEXT.md`.
+- No third CLI. Hermes is configured, not forked. Do not install Hermes unless asked.
+- First reader: internal Scalekit teammate. User brings LLM credits. One user, one machine.
+- Tracker: **GitHub**, not Linear. Dual `gh`: create issues as `saif-at-scalekit`; labels / push as `saif-shines`.
+- Feature release = docs lockstep. No version bump unless asked. User asked for 0.6.32 and 0.6.33.
+- `npx skills add saif-shines/doraval` ships four: `ask-dora`, `review-with-dora`, `grilling-for-routine`, `writing-for-routine`.
+- `writeRoutine` already allows **empty** skill arrays. Copy at save. Originals are not write targets.
+- Dora stays off OAuth. Human runs `hermes mcp login scalekit` in a **real** terminal after **boot** or `hermes mcp add scalekit --url <url> --auth oauth`.
+
+## Dogfood feedback (listen mode — not built)
+
+User tested a loop-able Slack-poll + rule-approve-PR idea in another agent. Then asked this session to **listen only**, then plan later. Notes:
+
+1. **Bare `dora harness pause`** — expected a TTY list of running loops and a pick. Got required `SLUG` error. `boot` already lists + picks on TTY; `pause` / `resume` / `open` do not.
+2. **Save does not check connected accounts** — grill + `--accept` store the MCP URL only. No live Slack/GitHub account check.
+3. **Boot / resume should verify accounts** — if a provider is down, stop and show Scalekit’s auth link. Do not start or resume the loop. Today boot only `mcp add` + `mcp test` on the Scalekit **server**, not a GitHub connected account.
+4. **Dead connector at night** — Dora has exited. User learns from Hermes cron logs or from “the job did nothing.” No Dora notifier. Spec stories 30–31 are “stop and say the next command,” not a ping.
+5. **Programmatize (next build)** — see above. This is the one they asked to focus on.
+
+## Dogfood gotchas (already patched in skills, still true in the wild)
+
+- `--accept` on a TTY with Hermes present asks **Run the one-pass now?** **Run it** calls `hermes mcp add … --auth oauth` with **piped** stdio → looks hung. Agents must choose Print only. Human logs in in a real terminal.
+- `hermes mcp login scalekit` before `mcp add` → `Server 'scalekit' not found in config.` Do not hand-edit `~/.hermes/config.yaml`.
+- Coding agents skip boot and jump to login. Grill step 8 now forbids that (0.6.33). Re-add skills after pull: `npx skills add saif-shines/doraval`.
+
+## Redactions
+
+Do not copy from the old transcript into new docs:
+
+- Scalekit Agent Gateway MCP URL (pasted in dogfood). Treat as a secret. Ask the human if needed.
+- Slack channel name, Slack mention, and any PR URLs from the test case. Refer as “the Slack + PR approve dogfood.”
+
+## Do not
+
+- Rebuild `dora harness` boot/pause/list/open unless a ticket says so (programmatize may extend `writeRoutine` only).
+- Invent a public skill registry.
+- Force a sample routine idea in shipped files.
+- Close or edit #84 unless asked.
+- Push or bump unless asked.
+
+## Artifacts to read first
+
+- `.scratch/ask-dora/spec.md`
+- `.scratch/local-use-cases/spec.md` (folder contract / harness)
+- `skills/grilling-for-routine/SKILL.md`
+- `skills/writing-for-routine/SKILL.md`
+- `src/core/routine.ts` (`writeRoutine`, copy)
+- `src/core/hermes.ts` (`onePassArgs`, `bootArgs`)
+- `src/cli/commands/harness.ts` (TTY picker on **boot** only; pause requires slug)
+- `WIP.md` (gitignored pin; may be stale vs 0.6.33)
+
+---
+
+<system-reminder>
+Background subagent "01a05c22-d4cb-75e2-92a9-abb17586eb26" (caveman:cavecrew-investigator: "Map writeRoutine folder contract") completed successfully.
+Duration: 97.9s | Tool calls: 49 | Turns: 1
+Use get_task_output("01a05c22-d4cb-75e2-92a9-abb17586eb26") to see the full output.
+</system-reminder>
+
+---
+
+<system-reminder>
+Background subagent "01a05c22-d4cb-75e2-92a9-abc1e2e05b4e" (explore: "Find Hermes file-run facts") completed successfully.
+Duration: 155.7s | Tool calls: 62 | Turns: 1
+Use get_task_output("01a05c22-d4cb-75e2-92a9-abc1e2e05b4e") to see the full output.
+</system-reminder>
+
+---
+
+ask question one by one
+
+---
+
+B and if there are helpful scripts users cna load it via skill, the skills will referenc eit? how does that look?
+
+---
+
+D;
+
+---
+
+I also think in the dora's output you should be ok in outputting ht helpful heremes commadns that cna help montior view and see the this agent that is running on the loop where usful or required
+
+q3 -  D
+
+---
+
+we have to think through, where ever relevant it can be shown; note that hermes is only one agent but there can be others as well so who show hermes command because hermes agent is what that works in the back ground; but in future make sur ewe leave way for someting equivalent to come it
+
+---
+
+B
+
+---
+
+what is a nitght tick?
+
+---
+
+C
+
+---
+
+A
+
+---
+
+So after first pass, you may figoure out new details and experience you get form the user; what's working and not. based on that you add it or we go and kupdate; so I am not sure which is best ehre
+
+---
+
+B
+
+---
+
+A
+
+---
+
+A
+
+---
+
+A
+
+---
+
+/to-spec
+
+---
+
+/to-tickets
+
+---
+
+looks good
