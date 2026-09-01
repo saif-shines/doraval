@@ -153,6 +153,20 @@ describe("dora harness docs lockstep", () => {
     expect(harness).not.toMatch(/Discord|Webflow|OOO calendar/i);
   });
 
+  test("Reader pages that start a routine share one /ask-dora example", () => {
+    const example = "/ask-dora turn this loop-able check into a routine";
+    const pages = [
+      read("README.md"),
+      read("apps/website/content/commands/harness.mdx"),
+      read("apps/website/content/commands/index.mdx"),
+      read("apps/website/content/get-started/skills.mdx"),
+    ];
+    for (const text of pages) {
+      expect(text).toContain(example);
+      expect(text).not.toMatch(/Discord|Webflow|OOO calendar/);
+    }
+  });
+
   test("Reader page names Skill script, Tick never writes, and Runtime", () => {
     const harness = read("apps/website/content/commands/harness.mdx");
     const skills = read("apps/website/content/get-started/skills.mdx");

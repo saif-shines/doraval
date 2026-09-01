@@ -29,6 +29,10 @@ dora review --quick
 
 That add installs four skills: `ask-dora`, `review-with-dora`, `grilling-for-routine`, and `writing-for-routine`. Type `/ask-dora` for a Dora job or a routine idea.
 
+```text
+/ask-dora turn this loop-able check into a routine
+```
+
 `--quick` is structure and heuristics only. No Judge. No API key.
 
 You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run.
