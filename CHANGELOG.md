@@ -13,6 +13,8 @@
 - `ask-dora` routes a pocket job and `dora harness new` to the grill.
   Existing-routine verbs do not load the grill. Missing Hermes prints
   install steps.
+- Connector-only asks load `discover-connectors` when present. If
+  missing, print the official authstack install and stop.
 
 ## 0.6.34
 

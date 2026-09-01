@@ -36,6 +36,11 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).toContain("dora harness new");
     expect(text).toMatch(/Hermes is missing/);
     expect(text).toMatch(/Do not load the grill/);
+    expect(text).toContain("discover-connectors");
+    expect(text).toContain("scalekit-inc/authstack");
+    expect(text).toContain("https://docs.scalekit.com/dev-kit/build-with-ai/");
+    expect(text).toMatch(/reload skills|restart the session/);
+    expect(text).toMatch(/Do not invent a catalog/);
     expect(text).toMatch(/internal teammate/i);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");

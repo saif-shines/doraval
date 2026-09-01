@@ -59,6 +59,15 @@ Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill.
 
 Load `discover-connectors` (Scalekit). Look up the live catalog. Say what exists. Say if a needed connector is missing. Do not vendor that catalog here.
 
+If `discover-connectors` is not on disk: print official install, then stop. Do not invent a catalog.
+
+```
+https://docs.scalekit.com/dev-kit/build-with-ai/
+npx skills add scalekit-inc/authstack
+```
+
+Then tell the teammate to reload skills or restart the session and try again. Dora does not install authstack.
+
 An interval job cannot do a push, a webhook, or a human in the loop every tick. Say so when the idea needs one of those.
 
 ## Gate
@@ -130,7 +139,8 @@ MUST accept none for skills to run and skills to refer.
 MUST copy named skills into the routine.
 MUST NOT require a skill because a connector exists.
 MUST NOT write the original skill directory.
-MUST NOT invent a registry, a slug, a connector, or a loop interval.
+MUST NOT invent a registry, a slug, a connector, a connector catalog, or a loop interval.
+MUST print the official authstack install when `discover-connectors` is missing.
 MUST register scalekit with boot or `hermes mcp add` before `hermes mcp login scalekit`.
 MUST NOT run or tell login before that add.
 MUST NOT edit Hermes config.
