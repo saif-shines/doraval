@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.6.34
+
+### Features
+
+- After one good one-pass, the grill may freeze a deterministic step
+  as a Fixed step (`#91`).
+- `dora harness` prints Runtime watch commands after `boot`, `list`,
+  `pause`, and `resume` (`#92`).
+
+### Docs
+
+- README, `/commands`, and the two craft skills name Fixed step and
+  Runtime watch (`#93`).
+
 ## 0.6.33
 
 ### Fixes
