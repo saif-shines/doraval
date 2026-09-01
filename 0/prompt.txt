@@ -1,0 +1,1896 @@
+I think you should introduce the concept of pocket agents in teh docs and show the entire loop of runnign pocket agents; if you want I can giv eyou example chat transcript so that you can use ot construct pocket agents quickstart in the docs
+
+---
+
+here i is ## Tools
+
+- Lifecycle event
+- Lifecycle event
+
+## User
+
+/ask-dora hi
+
+## Assistant
+
+The ask is "hi". I will read the router skill, then look up the matching `dora` verb.
+
+## Tools
+
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/ask-dora/SKILL.md
+- Execute: dora --help --json (List dora verbs from help JSON)
+- Lifecycle event
+
+## Assistant
+
+`hi` maps to `probe`. That verb sends hello to doraval.dev and waits for an ack.
+
+Next command:
+
+```
+dora probe --yes
+```
+
+Dry run first:
+
+```
+dora probe --dry-run
+```
+
+### 🔴 Turn 0
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+/ask-dora what can you help with
+
+## Assistant
+
+The ask is “what can you help with”. That is not a job and not a routine. I will print the map.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Lifecycle event
+
+## Assistant
+
+This is the map.
+
+```
+Dora jobs: review, fix, unused, scan. Load review-with-dora.
+Routine flow: only for a routine, a loop, recurring, or a routine idea.
+  Load grilling-for-routine. Night prompt: writing-for-routine.
+After a routine exists: dora harness boot, pause, resume, list, open.
+```
+
+Name one of those. I will load the matching skill.
+
+### 🔴 Turn 1
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+/ask-dora I have a use case where I want to run a routine that looks at a slack channel and approve a pr on my behalf
+
+## Assistant
+
+This is a routine idea. I will load `grilling-for-routine` and follow it.
+
+## Tools
+
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/grilling-for-routine/SKILL.md
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Lifecycle event
+
+## Assistant
+
+This idea can be a routine. Same prompt can run on a timer.
+
+It can be **loop-able** if the job polls Slack and approves a PR with no human on that tick.
+
+It is **not loop-able** if Slack must push a webhook, or if you must confirm every PR.
+
+I need a few facts before I write the night prompt.
+
+1. Poll Slack on a timer, or wait for a Slack push?
+2. Approve with no human on that tick, or wait for you each time?
+3. What in Slack means “approve this PR”? (example: a GitHub bot post, a `/approve` message, a thread)
+4. Which PRs? (one repo, any repo, only review requests for you)
+
+Answer those four. Then I collect skills and the MCP URL.
+
+### 🔴 Turn 30
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+user will say mention slack my username approve and link to the pr, I need you to approve the pr that's it, now I am assuming it will run on a 1m loop or something
+
+## Assistant
+
+This is still a routine. I will confirm the loop, then collect skills, connectors, and the MCP URL. Interval stays unset for now.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/grilling-for-routine/SKILL.md
+- Read: /Users/saif/.grok/skills/discover-connectors/SKILL.md
+- WebSearch: open https://docs.scalekit.com/agentkit/connectors.md
+- IntegrationSearch (MCP tool discovery)
+- Search: mcp-url|mcp_url|agent gateway|mcp.scalekit
+- Execute: dora config --json 2>/dev/null; echo '---'; dora harness list --json 2>/dev/null; echo '---'; ls -la skills 2>/dev/null | head; ls -la .dora 2>/dev/null | head (Read dora config, harness list, local skills)
+
+## Assistant
+
+Scalekit MCP is not connected. I will look up Slack and GitHub in the live catalog, then find a saved MCP URL.
+
+## Tools
+
+- WebSearch: find "[Ss]lack|[Gg]it[Hh]ub"
+- Search: mcp.?url|agent.?gateway|https://.*mcp
+- Execute: dora harness open smoke-date 2>/dev/null; echo '---'; find . -path '*harness*' -o -path '*routine*' -o -name '*mcp*' 2>/dev/null | head -50; echo '---'; ls -la ~/.doraval 2>/dev/null | head; ls -la .dora 2>/dev/null; find . -name 'prompt.md' -o -name 'routine.json' -o -name 'harness.json' 2>/dev/null | head (Find saved routine MCP URL and harness files)
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/writing-for-routine/SKILL.md
+- Search: mcp.?url|MCP URL|agent gateway
+- Execute: dora harness --help --json 2>/dev/null | head -c 8000; echo; echo '=== open ==='; dora harness open --help 2>&1 | head -40; echo '=== list verbose ==='; dora harness list 2>&1; echo '=== find smoke ==='; find ~ -name '*smoke-date*' 2>/dev/null | head; find /Users/saif/Projects/feedback-syndicate -name '*smoke-date*' 2>/dev/null | head (Locate smoke-date routine and harness help)
+- WebSearch: open https://docs.scalekit.com/agentkit/connectors/slack/
+- WebSearch: open https://docs.scalekit.com/agentkit/connectors/github/
+- Execute: dora harness list; echo '---'; dora harness new --help 2>&1 | head -80; echo '---'; ls /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora 2>/dev/null; ls /Users/saif/.doraval/pending 2>/dev/null; ls /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills | rg -i 'slack|github|pr|review|approve' ; echo '---HOME---'; ls /Users/saif/.grok/skills 2>/dev/null | rg -i 'slack|github' | head (Harness help and slack/github skill names)
+- WebSearch: find "slack_(fetch_conversation|search|list_conversation|conversations_history|get_conversation)"
+- WebSearch: find "github_.*(review|pull_request|pr_)"
+- Execute: dora harness open smoke-date 2>&1 | head -40; echo '=== skills project ==='; ls /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills; echo '=== home slack/github ==='; ls /Users/saif/.grok/skills 2>/dev/null | rg -i 'slack|github|pull-request|pr-review' | head -40; ls /Users/saif/.agents/skills 2>/dev/null | rg -i 'slack|github|pull-request|pr-review' | head -20 (Open smoke-date and list slack/github skills)
+- ListDir: /Users/saif/.dora/harness/smoke-date
+- ListDir: /Users/saif/.dora/harness
+- Search: mcp
+- Lifecycle event
+
+## Assistant
+
+This is still **loop-able**. Same prompt can poll Slack on a timer. No human on that tick.
+
+Do not set a 1 minute loop now. The grill default is 1 hour. We pick the interval after one good run.
+
+**What it does**
+
+Someone posts: mention you, the word `approve`, and a PR URL.  
+The job finds that message.  
+The job approves that PR. Stop. No merge.
+
+**Connectors (live catalog)**
+
+These exist:
+
+- `slack` — read channel history and search messages
+- `github` — create a PR review
+
+Smallest tool set:
+
+- `slack_fetch_conversation_history` or `slack_search_messages`
+- `github_pull_request_review_create` with `event=APPROVE`
+
+Scalekit MCP is not connected in this session. I used the docs catalog. I did not run a tool.
+
+**Gate (need all three)**
+
+No Slack or GitHub skill is in project `skills/` or the home skills I checked. Name a skill path or a GitHub URL. Do not skip this.
+
+1. Skills to **run** — name them.
+2. Skills to **refer to** — name them, or say none.
+3. Scalekit Agent Gateway **MCP URL** — none is saved for this work. The only saved URL is a smoke dummy. Paste yours.
+
+Also send:
+
+- Your Slack username
+- The Slack channel
+
+**Slug**
+
+A readable option is `slack-pr-approve`. Pick that, or send another name.
+
+After those answers, I write the night prompt.
+
+### 🔴 Turn 3
+
+## Tools
+
+- Lifecycle event
+- Lifecycle event
+
+## Assistant
+
+Still waiting on the gate.
+
+Send the Slack username, the channel, the MCP URL, and the skill names (or paths). Then I write the night prompt.
+
+### 🔴 Turn 3
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+#akshay-pr-review is slack channel my slack user name is just @saif
+
+## Assistant
+
+Channel and username are set. I still need the gate before I write the night prompt.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/grilling-for-routine/SKILL.md
+- Lifecycle event
+
+## Assistant
+
+Locked:
+
+- Channel: `#akshay-pr-review`
+- Mention: `@saif`
+- Trigger: `@saif` + `approve` + a PR link
+- Action: approve that PR only
+
+Still loop-able. Poll the channel. No human on that tick.
+
+I still need the gate. I will not write the night prompt without it.
+
+1. Skills to **run** — a name, a local path, or a GitHub URL.
+2. Skills to **refer to** — same, or say `none`.
+3. Scalekit Agent Gateway **MCP URL** — paste it.
+
+No Slack or GitHub skill is in this project’s `skills/` folder. Give a path or a GitHub URL.
+
+Also pick a slug. A readable option is `slack-pr-approve`. Send that name, or send another.
+
+### 🔴 Turn 5
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+https://scalekitforecosystem.scalekit.cloud/mcp is agent gateway url
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Lifecycle event
+
+## Assistant
+
+MCP URL is locked:
+
+`https://scalekitforecosystem.scalekit.cloud/mcp`
+
+I will reuse this URL. Say so if you want a different one.
+
+Gate status:
+
+1. Skills to **run** — still missing
+2. Skills to **refer to** — still missing
+3. MCP URL — set
+
+I will not write the night prompt until you name the skills.
+
+Give a name, a local path, or a GitHub URL for skills to run.  
+Say `none` if there is nothing to refer to.
+
+Also pick a slug. A readable option is `slack-pr-approve`.
+
+### 🔴 Turn 6
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+for this we don't need skills sinc eit;a s simple use case
+
+## Assistant
+
+Skills are none. I will lock that, write the night prompt, and print the one-pass command. Slug still needs your pick.
+
+## Tools
+
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/writing-for-routine/SKILL.md
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: command -v hermes; hermes --version 2>/dev/null; ls /Users/saif/.dora/harness 2>/dev/null (Check if Hermes is installed)
+- Edit: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora/draft-night-prompt.md
+- Lifecycle event
+
+## Assistant
+
+Skills are locked as **none** to run and **none** to refer to.
+
+The night prompt is at `.dora/draft-night-prompt.md`.
+
+It polls `#akshay-pr-review`. It keeps a message only if it has `@saif`, the word `approve`, and a PR link. It approves that PR. It does not merge.
+
+Hermes is present. I did not write the routine folder yet.
+
+Offered slug: `slack-pr-approve`. Send another name if you want.
+
+One-pass command:
+
+```bash
+dora harness new --accept --yes --slug slack-pr-approve --prompt-file /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora/draft-night-prompt.md --mcp-url https://scalekitforecosystem.scalekit.cloud/mcp
+```
+
+Say **run it** and I run that command. Or send a different slug first.
+
+After the folder exists and you boot, run `hermes mcp login scalekit`. Dora does not run that login.
+
+### 🔴 Turn 34
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+I ran it in seperate termianl but I don't knwo what is happening
+
+## Assistant
+
+I will check the routine folder, the harness list, and any running process.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: dora harness list; echo '=== folder ==='; ls -la /Users/saif/.dora/harness 2>/dev/null; echo '=== slack-pr-approve ==='; ls -la /Users/saif/.dora/harness/slack-pr-approve 2>/dev/null; echo '=== processes ==='; ps aux | rg -i 'dora|hermes' | rg -v rg; echo '=== launchd/cron-ish ==='; ls /Users/saif/.dora 2>/dev/null (Check harness state, folder, and processes)
+- Read: /Users/saif/.dora/harness/slack-pr-approve/routine.yml
+- Read: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+- Execute: echo '=== children of harness new ==='; pstree -p 97089 2>/dev/null || ps -g 97089 -o pid,ppid,stat,etime,command 2>/dev/null; echo '=== by ppid ==='; ps -ax -o pid,ppid,stat,etime,command | awk 'NR==1 || $2==97089 || $1==97089'; echo '=== dora harness open ==='; dora harness open slack-pr-approve 2>&1; echo '=== default mcp ==='; cat /Users/saif/.dora/default-mcp-url 2>/dev/null; echo '=== harness new source hint ==='; rg -l 'harness new' /Users/saif/Experiments/doraval/src --glob '*.ts' | head (Inspect stuck harness new process and routine state)
+- Lifecycle event
+
+## Assistant
+
+The command worked. The folder exists. The terminal is not stuck.
+
+What is running now:
+
+1. Dora wrote `slack-pr-approve`.
+2. Dora then started Hermes for the **first one-shot pass**.
+3. Hermes is quiet (`-q`). That is why the terminal looks empty.
+
+This pass is the first try of the night prompt. It is not the hourly loop yet. The loop starts only after `dora harness boot`.
+
+The first pass talks to Scalekit MCP. If Hermes is not logged in, this pass can sit or fail.
+
+Do this:
+
+1. Leave that terminal open until Hermes prints a result or an error.
+2. If it sits with no output for a long time, stop it with Ctrl+C.
+3. Then run: `hermes mcp login scalekit`
+4. Then run: `dora harness boot slack-pr-approve`
+
+Folder: `/Users/saif/.dora/harness/slack-pr-approve`  
+Interval in the file is `1h`. We change that after a good run.
+
+Paste the last lines from that terminal if you want me to read them.
+
+### 🔴 Turn 35
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+since it's hard to wait for an hour can you kill it and put 1m interval? so that I can mention @saif and approve ? and check? or is there a better way
+
+## Assistant
+
+A 1 minute loop is fine for a check. I will stop the current pass, then set the interval. I will also look for a one-tick command. That may be simpler than a 1 minute loop.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Search: interval|boot|tick|one-pass|oneshot
+- Execute: dora harness --help --json 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); cmds=d if isinstance(d,list) else d.get("commands",d.get("subcommands",[]));
+import pprint
+if isinstance(d, dict):
+  print(list(d.keys())[:20])
+  if "commands" in d:
+    for c in d["commands"]:
+      print(c.get("name"), c.get("description","")[:120])
+' (List harness subcommands from JSON help)
+- Read: /Users/saif/Experiments/doraval/src/cli/commands/harness.ts (251-400)
+- Search: interval|bootArgs|routine.yml
+- Read: /Users/saif/Experiments/doraval/src/core/hermes.ts
+- Read: /Users/saif/Experiments/doraval/src/cli/commands/harness.ts (141-260)
+
+## Assistant
+
+A 1 minute loop works. A one-tick run after you post is faster. I will stop the stuck pass, then set the interval to 1 minute.
+
+## Tools
+
+- Edit: /Users/saif/.dora/harness/slack-pr-approve/routine.yml
+- Execute: # kill the stuck one-pass only, not the hermes gateway
+kill 97295 97089 2>/dev/null
+sleep 0.5
+ps -p 97089,97295 -o pid,stat,command 2>/dev/null || echo 'oneshot gone'
+echo '=== remaining hermes/dora related ==='
+ps aux | rg 'harness new|hermes chat --oneshot|mcp-scalekit' | rg -v rg || echo none (Kill stuck harness new and Hermes one-shot)
+- Execute: kill -9 97295 97089 2>/dev/null
+sleep 0.3
+ps -p 97089,97295 -o pid,stat,command 2>/dev/null || echo 'oneshot gone'
+ps aux | rg 'harness new|hermes chat --oneshot' | rg -v rg || echo 'no oneshot left'
+echo '=== interval ==='
+rg interval /Users/saif/.dora/harness/slack-pr-approve/routine.yml (Force-kill remaining one-shot and confirm interval)
+- Lifecycle event
+
+## Assistant
+
+The stuck pass is dead. Interval is now `1m`.
+
+A 1 minute loop is fine. A faster check is one tick after you post. Then you do not wait.
+
+Do this:
+
+1. In that old terminal, press Ctrl+C if it is still sitting there.
+2. Run `hermes mcp login scalekit`  
+   The last pass sat because this login was missing.
+3. In `#akshay-pr-review`, post `@saif approve` and the PR link.
+4. Then either:
+   - say **run one tick** here, and I fire one pass now, or
+   - run `dora harness boot slack-pr-approve` and wait about one minute.
+
+I will not boot until you finish the login. Boot will fail or hang without it.
+
+### 🔴 Turn 36
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+ hermes mcp login scalekit
+  ✗ Server 'scalekit' not found in config.
+
+## Assistant
+
+Login failed because Hermes has no `scalekit` server yet. I will add it with the routine URL, then you can log in.
+
+## Tools
+
+- Read: /Users/saif/.dora/harness/slack-pr-approve/routine.yml
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: hermes mcp --help 2>&1 | head -80; echo '=== list ==='; hermes mcp list 2>&1; echo '=== add help ==='; hermes mcp add --help 2>&1 | head -60 (Inspect Hermes MCP add/list commands)
+- Execute: hermes mcp add scalekit --url https://scalekitforecosystem.scalekit.cloud/mcp --auth oauth (Add Scalekit MCP server to Hermes config)
+- Execute: hermes mcp list 2>&1; echo '=== find config ==='; ls -la ~/.hermes 2>/dev/null | head; rg -l 'mcp' ~/.hermes --glob '*.{json,yml,yaml,toml}' -g '!**/venv/**' -g '!**/node_modules/**' 2>/dev/null | head -20 (Find Hermes MCP config path after failed add)
+- Search: mcp_servers|mcpServers|"mcp"
+- Execute: ls ~/.hermes/*.yaml ~/.hermes/*.yml ~/.hermes/*.json ~/.hermes/config* 2>/dev/null; echo '---'; ls ~/.hermes | head -60 (List Hermes top-level config files)
+- Read: /Users/saif/.hermes/hermes-agent/optional-mcps/n8n/manifest.yaml (1-80)
+- Search: mcp_servers
+- Search: mcp_servers|auth.*oauth
+- Read: /Users/saif/.hermes/config.yaml (1-80)
+- Search: def _save_mcp_server|auth.*oauth|url:
+- Read: /Users/saif/.hermes/hermes-agent/hermes_cli/mcp_config.py (81-130)
+- Read: /Users/saif/.hermes/config.yaml (81-160)
+- Read: /Users/saif/.hermes/hermes-agent/hermes_cli/mcp_config.py (491-540)
+- Read: /Users/saif/.hermes/config.yaml (151-174)
+- Edit: /Users/saif/.hermes/config.yaml
+- Execute: hermes mcp list 2>&1 (Verify scalekit MCP now appears in Hermes)
+- Lifecycle event
+
+## Assistant
+
+`scalekit` was missing. I added it to Hermes.
+
+The name is now in the config. The URL is the one from the gate.
+
+Login must run in **your** terminal. It opens a browser. I cannot do that step.
+
+```bash
+hermes mcp login scalekit
+```
+
+Finish the browser login. Then post `@saif approve` plus the PR link in `#akshay-pr-review`.
+
+After that, say **run one tick** here. That is faster than waiting one minute. Or run `dora harness boot slack-pr-approve`.
+
+### 🔴 Turn 10
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+find done see if you have requried tools?
+
+## Assistant
+
+I will test the Scalekit login and list Slack and GitHub tools.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: hermes mcp test scalekit 2>&1; echo '=== login help ==='; hermes mcp login --help 2>&1 | head -30 (Test Scalekit MCP connection after login)
+
+## Assistant
+
+Login works. I will search the gateway for Slack and GitHub tools. Those sit behind `execute_tool`.
+
+## Tools
+
+- Execute: hermes tools --help 2>&1 | head -40; echo '=== enable? ==='; hermes tools 2>&1 | head -20 (See how Hermes lists MCP tools)
+- Execute: hermes tools list 2>&1 | rg -i 'scalekit|slack|github|connect_account|list_available|search_available|execute_tool' | head -80 (List Hermes tools matching Scalekit Slack GitHub)
+- Execute: hermes chat --toolsets mcp-scalekit --oneshot --run-budget 90 -q 'Use only Scalekit MCP tools. 1) Call list_connections. 2) Call search_available_tools for slack. 3) Call search_available_tools for github. 4) Call list_available_tools if needed. Reply with: connections present, whether slack_fetch_conversation_history or slack_search_messages exists, whether github_pull_request_review_create exists, and any connect_account links if slack or github is missing. Do not approve any PR.' (Ask Hermes to search Slack and GitHub tools)
+- Lifecycle event
+
+## Assistant
+
+Login is done. Scalekit MCP is connected.
+
+**Have now**
+
+- Slack connection `slack-grok` is active.
+- `slack_fetch_conversation_history` is ready.
+- `slack_search_messages` is ready.
+
+**Missing**
+
+- GitHub connection `github-connect` is not connected.
+- `github_pull_request_review_create` exists, but it needs that connection.
+
+Open this link and finish GitHub auth:
+
+https://scalekitforecosystem.scalekit.cloud/magicLink/c7119e85-36ce-4922-9531-a717a7d257ea
+
+It expires at `2026-08-31T15:46:52Z`.
+
+After that, post `@saif approve` plus the PR link in `#akshay-pr-review`. Then say **run one tick**.
+
+### 🔴 Turn 11
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+I just did
+
+## Assistant
+
+I will check that GitHub is connected, then we can run one tick.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: hermes chat --toolsets mcp-scalekit --oneshot --run-budget 60 -q 'Use only Scalekit MCP tools. Call list_connections. Then search_available_tools for github_pull_request_review_create. Reply only: GitHub connection status, connected_account_id if any, and whether github_pull_request_review_create is ready. Do not approve any PR. Do not connect accounts.' (Verify GitHub connected account is ready)
+- Lifecycle event
+
+## Assistant
+
+GitHub is connected. The approve tool is ready.
+
+Slack was already ready.
+
+Post this in `#akshay-pr-review`:
+
+`@saif approve` and the PR link.
+
+Then say **run one tick**. I will fire one pass. That is faster than waiting one minute.
+
+### 🔴 Turn 12
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+will you also reply if approve or not approved?
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+- Lifecycle event
+
+## Assistant
+
+No. The current prompt does not post a Slack reply.
+
+It only approves the PR. Then it stops.
+
+I can add one reply in the same thread:
+
+- `approved` plus the PR link, or
+- `not approved` plus the reason
+
+Say **add the reply** if you want that. Then post in `#akshay-pr-review` and say **run one tick**.
+
+### 🔴 Turn 13
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+I just did
+
+## Assistant
+
+I will add the Slack reply to the prompt, then run one tick. You posted, so this pass should see it.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Edit: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora/draft-night-prompt.md
+- Edit: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+- Execute: hermes chat --oneshot --run-budget 300 -q "$(cat /Users/saif/.dora/harness/slack-pr-approve/prompt.md)" (Run one night-prompt tick via Hermes)
+
+## Assistant
+
+The tick ran. I will remove leftover parse files Hermes wrote in this repo.
+
+## Tools
+
+- Execute: rm -f /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora/parse_slack.py /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora/parse_history.py /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora/search_parsed.json (Remove Hermes scratch files from the repo)
+- Lifecycle event
+
+## Assistant
+
+I added the Slack reply step. Then I ran one tick.
+
+It found your message. It did **not** approve the PR.
+
+- Channel: `#akshay-pr-review`
+- PR: https://github.com/scalekit-inc/scalekit/pull/2474
+- Reason: GitHub returned `403`. The `scalekit-inc` org blocks this OAuth app.
+- Slack: it posted **not approved** plus that reason in the thread.
+
+Check that thread.
+
+To make approve work, allow this GitHub OAuth app on the `scalekit-inc` org. Then say **run one tick** again.
+
+### 🔴 Turn 14
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+can you try again
+
+## Assistant
+
+I will clear the last handled timestamp so the same PR can be retried, then run one tick.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/.dora/harness/slack-pr-approve/handled_timestamps.json
+- Edit: /Users/saif/.dora/harness/slack-pr-approve/handled_timestamps.json
+- Execute: hermes chat --oneshot --run-budget 300 -q "$(cat /Users/saif/.dora/harness/slack-pr-approve/prompt.md)" (Retry one night-prompt tick via Hermes)
+
+## Assistant
+
+The last tick skipped the old Slack message. I will retry the approve on that PR now.
+
+## Tools
+
+- Execute: rm -f /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.dora/akshay-pr-review-gate-state.json
+hermes chat --oneshot --run-budget 120 -q 'Retry only this: call github_pull_request_review_create on owner=scalekit-inc repo=scalekit pull_number=2474 event=APPROVE. Do not merge. Then reply in Slack channel C0B4VJKLN0P thread_ts=1788191171.018439: approved plus the PR URL if success, or not approved plus the error if fail. Do not skip because of a prior 403. Report the GitHub result only.' (Force-retry GitHub approve and Slack reply)
+- Lifecycle event
+
+## Assistant
+
+Tried again. Same result.
+
+GitHub still returns `403`. The `scalekit-inc` org blocks this OAuth app. The PR was not approved. A new **not approved** reply is in the Slack thread.
+
+The loop cannot fix this. An org admin must allow the GitHub OAuth app for `scalekit-inc`. Then I can retry.
+
+### 🔴 Turn 15
+
+## Tools
+
+- Lifecycle event
+- Lifecycle event
+- Lifecycle event
+- Lifecycle event
+
+## User
+
+what is happening in this session
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+I'll check the session turn index and the current harness state so I can tell you what this session is doing.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- ListDir: /Users/saif/.dora/harness/slack-pr-approve
+- Read: /Users/saif/.dora/harness/slack-pr-approve/routine.yml
+- Read: /Users/saif/.dora/harness/slack-pr-approve/handled_timestamps.json
+- Read: /Users/saif/.dora/harness/slack-pr-approve/prompt.md (1-30)
+
+## Assistant
+
+This session builds a Slack poll that approves GitHub PRs for you.
+
+You want this loop:
+1. Read `#akshay-pr-review`.
+2. Find a message that mentions `@saif`, says `approve`, and has a PR link.
+3. Approve that PR. Do not merge.
+4. Reply in the same Slack thread.
+
+The harness folder exists at `~/.dora/harness/slack-pr-approve/`.
+Poll interval is `1m`.
+The loop is **not** on a timer yet.
+
+Slack works.
+GitHub login also works.
+The approve call still fails.
+
+GitHub returns `403`.
+The `scalekit-inc` org blocks this OAuth app.
+OAuth is a login token from GitHub.
+An org admin must allow that app.
+
+We already tried PR `scalekit-inc/scalekit#2474`.
+The PR was **not** approved.
+Slack already has **not approved** replies.
+
+A new retry will fail until the org allows the app.
+Then I can run one tick again.
+
+### 🔴 Turn 8
+
+## User
+
+/ask-dora how do I shut down these pocket agents?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+This is a Dora control question, not a new loop. I'll look up the matching `dora` command for shutting pocket agents down.
+
+## Tools
+
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/ask-dora/SKILL.md
+- Execute: dora --help --json 2>/dev/null || (command -v dora; ls /Users/saif/Experiments/doraval 2>/dev/null; type dora; which -a dora) (Get dora CLI help as JSON)
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+
+## Assistant
+
+The matching verb is `dora harness pause`. I'll pull the pause help and the current routine list so I can give you the exact next command.
+
+## Tools
+
+- Execute: dora harness --help 2>&1; echo '---'; dora harness pause --help 2>&1; echo '---'; dora harness list --json 2>&1 || dora harness list 2>&1 (Get harness pause help and list routines)
+- Execute: echo '=== harness list ==='; dora harness list 2>&1; echo '=== hermes processes ==='; pgrep -fl hermes 2>/dev/null || echo 'no hermes procs'; echo '=== hermes cron ==='; hermes cron list 2>&1 | head -80; echo '=== hermes gateway ==='; hermes --help 2>&1 | head -40 (Check Hermes processes, cron, and gateway)
+
+## Assistant
+
+Use this command:
+
+```bash
+dora harness pause slack-pr-approve
+```
+
+That stops the 1-minute cron job. Cron is the timer that starts each tick.
+
+The Hermes gateway stays up. The gateway is the background service that runs those jobs.
+
+`slack-pr-approve` is running now. It last ran at 20:02. The next run is due at 20:03.
+
+`smoke-date` is not running.
+
+Close the laptop if you want the host to sleep. Sleep is not pause. Jobs can fire again when the machine wakes.
+
+Say if you want me to run the pause.
+
+### 🔴 Turn 17
+
+## User
+
+can you pause it
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+I'll pause `slack-pr-approve` now.
+
+## Tools
+
+- Execute: dora harness pause slack-pr-approve (Pause slack-pr-approve Hermes cron job)
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: dora harness list; echo '---'; hermes cron list (Confirm slack-pr-approve is paused)
+
+## Assistant
+
+Paused.
+
+Later ticks will not run.
+A tick that already started may still finish.
+
+Hermes now shows no scheduled jobs.
+The gateway is still up.
+
+Resume later with:
+
+```bash
+dora harness resume slack-pr-approve
+```
+
+### 🔴 Turn 18
+
+## User
+
+/ask-dora how do I see the logs of all if it's ticks?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+This is a logs question, not a new loop. I'll look up the matching command for tick history.
+
+## Tools
+
+- Execute: dora --help --json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print('\n'.join(f\"{c['name']}: {c['description']}\" for c in d.get('commands',[])))"; echo '--- harness ---'; dora harness --help 2>&1; echo '--- hermes logs ---'; hermes logs --help 2>&1 | head -60; echo '--- hermes cron ---'; hermes cron --help 2>&1 | head -80; echo '--- hermes cron runs ---'; hermes cron runs --help 2>&1 | head -50 (Look up Dora and Hermes log commands)
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+
+## Assistant
+
+Dora has no `logs` command.
+
+Start here:
+
+```bash
+dora harness list
+```
+
+That list points at Hermes for tick history.
+
+See every tick:
+
+```bash
+hermes cron runs
+```
+
+See the cron log lines:
+
+```bash
+hermes logs --component cron
+```
+
+Open the dashboard if you want a UI:
+
+```bash
+hermes dashboard
+```
+
+`hermes cron runs` is the tick list. Each row is one pass.
+
+### 🔴 Turn 19
+
+## User
+
+what is the command to spcifically see the entire loop and chat conversation where hermes ran that pr
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+I'll look up the Hermes command that opens the full tick chat, not just the run list.
+
+## Tools
+
+- Execute: echo '=== hermes sessions ==='; hermes sessions --help 2>&1 | head -80; echo '=== hermes cron runs ==='; hermes cron runs --help 2>&1; echo '=== last runs ==='; hermes cron runs --limit 20 2>&1; echo '=== hermes logs session ==='; hermes logs --help 2>&1 | rg -n -i 'session|chat|transcript' ; echo '=== hermes dashboard ==='; hermes dashboard --help 2>&1 | head -40 (Find Hermes command for tick chat transcripts)
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: echo '=== sessions list help ==='; hermes sessions list --help 2>&1; echo '=== sessions export help ==='; hermes sessions export --help 2>&1; echo '=== sessions browse help ==='; hermes sessions browse --help 2>&1; echo '=== recent sessions ==='; hermes sessions list 2>&1 | head -60 (Find how to export a Hermes tick chat)
+
+## Assistant
+
+Use the session store. That store keeps the full tick chat.
+
+List the ticks:
+
+```bash
+hermes sessions list
+```
+
+Each `slack-pr-approve` row is one loop. The `ID` column is the chat id.
+
+Print one full chat as Markdown:
+
+```bash
+hermes sessions export --format md --session-id cron_7fb399cdb688_20260901_200353
+```
+
+That id is the latest tick. Swap the id for an older tick.
+
+Browse in a picker:
+
+```bash
+hermes sessions browse
+```
+
+`hermes cron runs` only lists pass or fail. It does not show the chat.
+
+### 🔴 Turn 20
+
+## User
+
+when I tried to open hermes it shows  saif@MacBook-Pro-2  ~/Projects/feedback-syndicate/build-with-ai/test-agents   main ● ? ↑1  hermes sessions browse
+Resuming session: cron_7fb399cdb688_20260901_195653
+Traceback (most recent call last):
+  File "/Users/saif/.hermes/hermes-agent/hermes", line 10, in <module>
+    from hermes_cli.main import main
+  File "/Users/saif/.hermes/hermes-agent/hermes_cli/main.py", line 716, in <module>
+    from hermes_cli.config import get_hermes_home
+  File "/Users/saif/.hermes/hermes-agent/hermes_cli/config.py", line 375, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+`browse` tried to resume that tick, then Hermes started with a Python that lacks `yaml`. I'll check which interpreter it uses and how to open the chat without that crash.
+
+## Tools
+
+- Read: /Users/saif/.hermes/hermes-agent/hermes (1-12)
+- Execute: echo '=== which hermes ==='; which -a hermes; echo '=== type ==='; type hermes; echo '=== shebang/file ==='; file /Users/saif/.hermes/hermes-agent/hermes; head -15 /Users/saif/.hermes/hermes-agent/hermes; echo '=== PATH python ==='; which -a python python3; python3 -c 'import sys; print(sys.executable); import yaml; print("yaml", yaml.__file__)' 2>&1; echo '=== venv python ==='; /Users/saif/.hermes/hermes-agent/venv/bin/python -c 'import sys; print(sys.executable); import yaml; print("yaml", yaml.__file__)' 2>&1; echo '=== hermes sessions export dry ==='; hermes sessions export --format md --session-id cron_7fb399cdb688_20260901_195653 --dry-run 2>&1 | head -40 (Diagnose Hermes yaml import and session export)
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/.local/bin/hermes (1-5)
+- Search: Resuming session
+- Execute: ls -la /Users/saif/.local/bin/hermes /Users/saif/.hermes/hermes-agent/hermes; echo '---'; head -30 /Users/saif/.local/bin/hermes (Compare installed hermes vs source wrapper)
+- Read: /Users/saif/.hermes/hermes-agent/hermes_cli/sessions_cmd.py (1201-1280)
+- Read: /Users/saif/.hermes/hermes-agent/hermes_cli/relaunch.py
+
+## Assistant
+
+`browse` did not open a log. It tried to **resume** that tick as a live chat.
+
+Then it restarted Hermes with the wrong Python.
+
+The restart used Homebrew `python3`. That Python does not have the `yaml` package. The Hermes venv does have it.
+
+Do not use `browse` to read the chat.
+
+Export the full tick instead:
+
+```bash
+hermes sessions export --format md --session-id cron_7fb399cdb688_20260901_195653
+```
+
+That write is already done. Open this file:
+
+`~/.hermes/session-exports/cron_7fb399cdb688_20260901_195653-slack-pr-approve-sep-01-19-59.md`
+
+Resume the live chat only if you want Hermes to keep going:
+
+```bash
+hermes --resume cron_7fb399cdb688_20260901_195653
+```
+
+That path uses the venv. The `yaml` error should not appear.
+
+### 🔴 Turn 21
+
+## User
+
+/ask-dora I want to understand what happens if I close my laptop? does that agent running will be automatically paused?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+This is a laptop-sleep question, not a new loop. I'll confirm what Dora says about close vs pause.
+
+## Tools
+
+- Execute: dora harness boot --help 2>&1; echo '====='; dora harness pause --help 2>&1; echo '====='; dora harness list 2>&1; echo '====='; hermes cron list 2>&1 (Confirm Dora laptop-sleep vs pause facts)
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+
+## Assistant
+
+No. Close the laptop is **host sleep**. It is not pause.
+
+While the machine sleeps, cron does not run.
+Cron is the timer that starts each tick.
+
+When the machine wakes, due jobs can fire. That happens if the job is not paused.
+
+Pause is a separate command:
+
+```bash
+dora harness pause slack-pr-approve
+```
+
+That command is already done for `slack-pr-approve`.
+Hermes now shows no scheduled jobs.
+A lid close will not start that loop.
+
+### 🔴 Turn 22
+
+## Tools
+
+- Lifecycle event
+- Lifecycle event
+
+## User
+
+/ask-dora can you go back to slack-pr-approve pocket agent and add reference to scalekit's skills since it's helpful?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+This is a change to an existing pocket agent, not a new loop. I will load the Dora router, then find the verb that updates skills on `slack-pr-approve`.
+
+## Tools
+
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/ask-dora/SKILL.md
+- Read: ~/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/grilling-for-routine/SKILL.md
+- Execute: dora --help --json 2>/dev/null || (command -v dora; ls ~/.dora 2>/dev/null; which dora doraval 2>/dev/null; type dora 2>/dev/null) (Get Dora CLI verbs as JSON)
+
+## Assistant
+
+The routine already exists. After save, I only change `prompt.md` and skill copies. I will open the harness and find Scalekit skills on disk.
+
+## Tools
+
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/writing-for-routine/SKILL.md
+- ListDir: /Users/saif/.dora/harness/slack-pr-approve
+- Execute: dora harness --help 2>/dev/null; echo '---'; dora harness open --help 2>/dev/null; echo '---'; dora harness list --json 2>/dev/null; echo '---'; ls -la /Users/saif/.dora/harness/slack-pr-approve/ 2>/dev/null; echo '---SKILLS---'; ls /Users/saif/Projects/feedback-syndicate/build-with-ai/skills 2>/dev/null | head -50; echo '---PROJECT SKILLS---'; ls /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills 2>/dev/null | head -20; echo '---HOME---'; ls ~/.agents/skills 2>/dev/null | rg -i 'scalekit|agentkit|saaskit|mcp' | head -40 (Inspect harness, Dora verbs, Scalekit skills)
+
+## Assistant
+
+I will read the current night prompt and list Scalekit skills that this loop can cite.
+
+## Tools
+
+- Read: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+- Read: /Users/saif/.dora/harness/slack-pr-approve/routine.yml
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/skills/README.md
+- ListDir: /Users/saif/Projects/feedback-syndicate/build-with-ai/skills/skills
+- Search: skills.refer|skills_refer|skills-refer|refer
+- Search: skills-refer|skills_refer|skillsRefer
+
+## Assistant
+
+I will check how Dora stores a refer skill, then pick the Scalekit skills that help this Slack and GitHub loop.
+
+## Tools
+
+- Read: /Users/saif/Experiments/doraval/src/core/routine.ts (141-220)
+- Search: skillsRefer|skills_refer|skills-refer
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/skills/skills/discover-connectors/SKILL.md
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/skills/skills/integrate-agentkit/SKILL.md
+- Search: skillsRefer|skills_refer|refer
+- Read: /Users/saif/Experiments/doraval/src/core/hermes.ts (1-112)
+- Read: /Users/saif/Experiments/doraval/src/core/routine.ts (2-51)
+- Search: function yamlList|function yamlScalar|function copySkillDir
+- Read: /Users/saif/Experiments/doraval/src/core/routine.test.ts (2-91)
+
+## Assistant
+
+This is a refer change, not a run change. I will copy the two Scalekit skills that help Slack and GitHub tool lookup, then update the night prompt.
+
+## Tools
+
+- Execute: SRC="/Users/saif/Projects/feedback-syndicate/build-with-ai/skills/skills"
+DEST="/Users/saif/.dora/harness/slack-pr-approve/skills"
+mkdir -p "$DEST"
+cp -R "$SRC/discover-connectors" "$DEST/discover-connectors"
+cp -R "$SRC/integrate-agentkit" "$DEST/integrate-agentkit"
+# confirm copies, not originals
+ls -la "$DEST"
+echo "---"
+test -f "$DEST/discover-connectors/SKILL.md" && echo "discover-connectors ok"
+test -f "$DEST/integrate-agentkit/SKILL.md" && echo "integrate-agentkit ok"
+# originals still exist
+test -f "$SRC/discover-connectors/SKILL.md" && echo "original discover-connectors untouched"
+test -f "$SRC/integrate-agentkit/SKILL.md" && echo "original integrate-agentkit untouched" (Copy Scalekit refer skills into harness)
+- Edit: /Users/saif/.dora/harness/slack-pr-approve/routine.yml
+- Edit: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+- Edit: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+
+## Assistant
+
+I added a **refer** set to `slack-pr-approve`. I did not add a **run** set.
+
+**What that means:** the night pass may read those folders. Hermes does not load them as `--skill` on every tick.
+
+**Copied into the pocket agent** (not the originals):
+
+- `discover-connectors` — Slack and GitHub tool names and input schemas
+- `integrate-agentkit` — what to do if a connection is not ACTIVE
+
+SaaSKit, SSO, and SCIM skills stay out. They do not help this loop.
+
+**Where it lives**
+
+- Prompt: `~/.dora/harness/slack-pr-approve/prompt.md`
+- Config: `~/.dora/harness/slack-pr-approve/routine.yml`
+- Copies: `~/.dora/harness/slack-pr-approve/skills/`
+
+The loop is still paused. This change does not start ticks.
+
+Optional next command, or skip it:
+
+```bash
+dora review --quick ~/.dora/harness/slack-pr-approve/skills/discover-connectors
+dora review --quick ~/.dora/harness/slack-pr-approve/skills/integrate-agentkit
+```
+
+To start the loop later:
+
+```bash
+dora harness resume slack-pr-approve
+```
+
+GitHub approve still fails with org OAuth 403 until an admin allows the app.
+
+### 🔴 Turn 23
+
+## User
+
+how dod you get dora skilsl on this directory? is it this directlry level or globalc level
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+I will check where Dora reads skills from: this project, your home folder, or both.
+
+## Tools
+
+- Read: ~/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Experiments/doraval/src/core/routine.ts (51-140)
+- Search: HOME_SKILL|project.*skill|global|resolveSkillRef|skill.?root
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/grilling-for-routine/SKILL.md
+- Execute: echo '=== this dir .agents/skills (Dora router) ==='
+ls /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills
+echo
+echo '=== this dir skills/ (Dora name lookup) ==='
+ls /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/skills 2>/dev/null || echo '(none)'
+echo
+echo '=== official Scalekit pack ==='
+ls /Users/saif/Projects/feedback-syndicate/build-with-ai/skills/skills | head
+echo
+echo '=== home global Scalekit-ish ==='
+ls /Users/saif/.agents/skills | rg 'agentkit|scalekit|discover|expose|saaskit' | head
+echo
+echo '=== pocket agent copies ==='
+ls /Users/saif/.dora/harness/slack-pr-approve/skills (Show project vs global vs pocket skill locations)
+
+## Assistant
+
+Neither. I did not install Scalekit skills on this directory. I also did not install them as global Dora skills.
+
+I copied two folders from the official Scalekit pack into the pocket agent only.
+
+**Source (not this repo):**  
+`build-with-ai/skills/skills/`
+
+**Destination (pocket agent only):**  
+`~/.dora/harness/slack-pr-approve/skills/`
+
+That folder is for `slack-pr-approve` only. Other projects do not see it. Home global skills do not change.
+
+---
+
+Dora has three places. They are different.
+
+| Place | Path | Role |
+|---|---|---|
+| This directory | `test-agents/.agents/skills/` | Dora router: `ask-dora`, grill, write |
+| This directory | `test-agents/skills/` | Empty. Dora name lookup starts here. |
+| Global (home) | `~/.agents/skills/`, also `~/.claude/skills`, `~/.grok/skills` | Name lookup if the project has no match |
+| Pocket agent | `~/.dora/harness/slack-pr-approve/skills/` | The copies the night pass may cite |
+
+Name lookup order: project `skills/`, then home, then ask for a path or a GitHub URL.
+
+I skipped that lookup. I used a full path to the Scalekit pack. Then I copied into the harness.
+
+`/ask-dora` works here because this directory already has `.agents/skills/ask-dora`. That is project-level for this chat. It is not how Slack and GitHub skills got onto the pocket agent.
+
+### 🔴 Turn 24
+
+## User
+
+/ask-dora can you add them form scalekit-inc/authstack?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+This is a source change on the existing pocket agent. I will find `scalekit-inc/authstack` and see which skills it has.
+
+## Tools
+
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/ask-dora/SKILL.md
+- Read: ~/.grok/plugin-data/turn-index/CURRENT
+- Search: authstack
+- ListDir: /Users/saif/Projects/feedback-syndicate/build-with-ai
+- Search: authstack
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/authstack/README.md (1-60)
+- ListDir: /Users/saif/Projects/feedback-syndicate/build-with-ai/authstack/kits/agentkit/skills
+- ListDir: /Users/saif/Projects/feedback-syndicate/build-with-ai/authstack/skills
+- Execute: cd /Users/saif/Projects/feedback-syndicate/build-with-ai/authstack && git remote -v && git rev-parse --abbrev-ref HEAD && git status -sb | head (Confirm authstack remote and branch)
+
+## Assistant
+
+AuthStack has those skills under AgentKit. I will replace the current copies with that source. I will not add SaaSKit.
+
+## Tools
+
+- Read: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+- Read: /Users/saif/.dora/harness/slack-pr-approve/routine.yml
+- Execute: SRC="/Users/saif/Projects/feedback-syndicate/build-with-ai/authstack/kits/agentkit/skills"
+DEST="/Users/saif/.dora/harness/slack-pr-approve/skills"
+rm -rf "$DEST/discover-connectors" "$DEST/integrate-agentkit"
+cp -R "$SRC/discover-connectors" "$DEST/discover-connectors"
+cp -R "$SRC/integrate-agentkit" "$DEST/integrate-agentkit"
+echo "=== dest ==="
+ls -la "$DEST"
+echo "=== dest discover files ==="
+find "$DEST/discover-connectors" -type f | sort
+echo "=== dest integrate files ==="
+find "$DEST/integrate-agentkit" -type f | sort
+# originals still in authstack
+test -f "$SRC/discover-connectors/SKILL.md" && echo "authstack discover-connectors untouched"
+test -f "$SRC/integrate-agentkit/SKILL.md" && echo "authstack integrate-agentkit untouched" (Replace refer copies from authstack AgentKit)
+- Edit: /Users/saif/.dora/harness/slack-pr-approve/prompt.md
+
+## Assistant
+
+Yes. The refer copies now come from `scalekit-inc/authstack`.
+
+I used the local checkout at `build-with-ai/authstack`. I did not clone again.
+
+**Source:** `kits/agentkit/skills/`
+
+**Still refer only (not run):**
+
+- `discover-connectors`
+- `integrate-agentkit`
+
+I did not add SaaSKit. Those skills do not help this Slack and GitHub loop.
+
+The pocket agent still has only those two folders under `~/.dora/harness/slack-pr-approve/skills/`.
+
+The loop is still paused.
+
+Optional review, or skip:
+
+```bash
+dora review --quick ~/.dora/harness/slack-pr-approve/skills/discover-connectors
+dora review --quick ~/.dora/harness/slack-pr-approve/skills/integrate-agentkit
+```
+
+### 🔴 Turn 25
+
+## Tools
+
+- Lifecycle event
+- Lifecycle event
+
+## User
+
+let's work on a new procket agent
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+You want a new pocket agent. I will read the Dora grill skill first, then I will ask you the first locked questions.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/ask-dora/SKILL.md
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/grilling-for-routine/SKILL.md
+
+## Assistant
+
+Yes. We start a new pocket agent.
+
+A pocket agent is a **routine**. That word means one job that repeats on a timer.
+
+I need the job first. I cannot write a folder yet.
+
+**Loop check:** the same prompt must run again with no human on each tick.  
+**Pocket check:** one job, one machine, one user.
+
+Tell me the one job in one sentence.
+
+Examples of the shape, not a pick:
+
+- Watch a Slack channel. Do one action when a match appears.
+- Scan a list. Write one status when something changes.
+
+Do not name a slug yet.  
+Do not pick an interval yet.  
+The old agent `slack-pr-approve` stays paused.
+
+### 🔴 Turn 26
+
+## User
+
+/ask-dora i want to build a pocket agent that will extend on top of https://github.com/Nityay123/scalekit-connector-lp-skill and will run every 6 hours and update the connectors page on webflow I also ahve it's api key
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+This is a routine idea. I will grill it next. First I will read the existing skill and check if Webflow is a live connector.
+
+## Tools
+
+- WebSearch: github.com/Nityay123/scalekit-connector-lp-skill
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/writing-for-routine/SKILL.md
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/discover-connectors/SKILL.md
+- WebSearch: open https://github.com/Nityay123/scalekit-connector-lp-skill
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/authstack/kits/agentkit/skills/discover-connectors/SKILL.md
+- WebSearch: open https://docs.scalekit.com/agentkit/connectors.md
+- Execute: gh repo view Nityay123/scalekit-connector-lp-skill --json name,description,url,isPrivate,defaultBranchRef 2>&1; echo '===='; gh api repos/Nityay123/scalekit-connector-lp-skill/contents --jq '.[].name' 2>&1 (Inspect GitHub skill repo via gh)
+- Execute: gh search repos "scalekit-connector-lp" --limit 10 2>&1; echo '===='; gh search repos "connector-lp-skill" --limit 10 2>&1; echo '===='; gh api users/Nityay123/repos --jq '.[].name' 2>&1 | head -40; echo '===='; rg -l -i 'scalekit-connector-lp|connector-lp-skill' /Users/saif/Projects/feedback-syndicate --glob '!**/node_modules/**' --glob '!**/.git/**' -g '!**/skills/**' 2>/dev/null | head -20 (Find the lp-skill repo or local copy)
+- Read: /Users/saif/Projects/feedback-syndicate/docs/developer-docs/src/content/docs/agentkit/connectors/webflowmcp.mdx (1-71)
+
+## Assistant
+
+This idea is loop-able. The same prompt can run again with no human on each tick.
+
+This idea is almost pocket. One job, one machine, one user. I still need a few facts before I write a folder.
+
+I looked up the live catalog. **Webflow MCP exists.** The connector id is `webflowmcp`. It can list sites, pages, and CMS items. It can update them.
+
+I tried `https://github.com/Nityay123/scalekit-connector-lp-skill`. GitHub returns **404**. I cannot copy a skill I cannot read.
+
+Do **not** paste the Webflow API key here.
+
+Answer these. One line each is enough.
+
+1. **Skill source.** Give a path on this machine, or a URL I can open. Or say **none**.
+2. **Run or refer.** Should that skill load every tick (**run**), or only be cited (**refer**)?
+3. **Webflow target.** Site name or site id. Page slug or page id. Example: `scalekit.com` / `/connectors`.
+4. **Update type.** CMS items, or the page body?
+5. **Publish.** Publish after a write, or leave the change as a draft?
+6. **MCP URL.** The last live one was `https://scalekitforecosystem.scalekit.cloud/mcp`. Reuse that, or give another URL?
+
+You asked for 6 hours. I will not set the interval now. Default is 1 hour. We set 6 hours after one good run.
+
+Do not send the API key in chat. Prefer `webflowmcp` on the gateway. The key stays in Scalekit.
+
+### 🔴 Turn 27
+
+## User
+
+use a subagent and create a agents.md where you write prefer exa search over normal  websera?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+You want an `AGENTS.md` that prefers Exa search. I will check the project, then start a subagent to write the file.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- ListDir: .
+- Search: exa
+
+## User
+
+whya re you thinking os much?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+I will write the file now. No more lookup.
+
+## Tools
+
+- Edit: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/AGENTS.md
+
+## Assistant
+
+Sorry. I waited too long.
+
+`AGENTS.md` is in this project now.
+
+It says: use Exa first. Use normal web search only if Exa fails.
+
+### 🔴 Turn 34
+
+## User
+
+okay let's continue building our pocket agent
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+We pick up the Webflow connectors pocket agent. I will check the skill repo with Exa, then I will ask only the missing facts.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- IntegrationSearch (MCP tool discovery)
+- UseTool: exa__web_search_exa
+- UseTool: exa__web_fetch_exa
+
+## Assistant
+
+We continue the same pocket agent.
+
+**Job so far:** poll Scalekit connectors, then update the Webflow connectors page.
+
+**Loop check:** pass.  
+**Pocket check:** still open. I need the target.
+
+The GitHub skill is still missing. Exa cannot open `Nityay123/scalekit-connector-lp-skill`.
+
+Reply with these six facts. One line each.
+
+1. **Skill source** — a path I can read, a public URL, or **none**
+2. **Run or refer**
+3. **Webflow site** — name or id
+4. **Page** — slug or id, for example `/connectors`
+5. **Write type** — CMS items, or page body
+6. **Publish** — yes or draft
+
+MCP URL: reuse `https://scalekitforecosystem.scalekit.cloud/mcp`? Say **yes** or give another URL.
+
+Do not paste the API key.  
+Do not pick a slug yet.  
+Interval stays unset until one good run.
+
+### 🔴 Turn 30
+
+## Tools
+
+- Lifecycle event
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/AGENTS.md
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+
+## Assistant
+
+The Exa `AGENTS.md` file is done. That side task is closed.
+
+I still wait on the six facts for the pocket agent. Send those when you are ready.
+
+### 🔴 Turn 31
+
+## Tools
+
+- Lifecycle event
+
+## User
+
+I want to use same mcp url; but what should be done?  /ask-dora 
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+You locked the MCP URL. I will say what is left, then I will ask only the open facts.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/grilling-for-routine/SKILL.md
+
+## Assistant
+
+Same MCP URL is locked: `https://scalekitforecosystem.scalekit.cloud/mcp`.
+
+Here is what is left.
+
+**Done**
+- Loop check: pass.
+- Connector check: `webflowmcp` exists.
+- MCP URL: reuse the one above.
+
+**Not done**
+The night prompt is not specific yet. I cannot write `prompt.md` until the job names one site and one page.
+
+**What you do now**
+
+1. Put the Webflow API key in the Scalekit gateway. Do not put it in chat. Open the Webflow connector on that same MCP URL. Connect the site.
+2. Pick the skill gate. The GitHub skill is still 404. I recommend **run = none** and **refer = none**. Say **yes** to that, or give a local path.
+3. Name the write target:
+   - site name or id
+   - page slug or id
+   - CMS items, or page body
+   - publish, or draft
+
+**What I do after that**
+
+1. I write `prompt.md`.
+2. We run one pass. That pass does not write files.
+3. You accept the save.
+4. Then we save the routine folder.
+5. Then we boot. Then you log in if the gateway asks.
+6. After one good run, we set 6 hours.
+
+Reply with the three items above. That is enough to continue.
+
+### 🔴 Turn 36
+
+## User
+
+while the webflowmcp exists on agentkit, it does not existi on he scalekit agent gateway right?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+I will check two places: the AgentKit catalog, and the live Agent Gateway. Those are not the same list.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- IntegrationSearch (MCP tool discovery)
+- UseTool: exa__web_search_exa
+
+## Assistant
+
+The catalog is not the gateway. I will check what that gateway actually exposes.
+
+## Tools
+
+- IntegrationSearch (MCP tool discovery)
+- Search: webflow|list_tools|search_tools|slack
+- Search: scalekitforecosystem|webflowmcp|mcp_servers
+- Search: webflow|list_tools|search_tools|connectors
+- Read: /Users/saif/.dora/harness/slack-pr-approve/prompt.md (1-32)
+- UseTool: exa__web_fetch_exa
+
+## Assistant
+
+Yes. Those are two different lists.
+
+**AgentKit catalog** has `webflowmcp`. That is the product catalog. It is not your gateway.
+
+**Agent Gateway** is one scoped MCP URL. That URL only exposes connectors you add to that endpoint. Your URL is `https://scalekitforecosystem.scalekit.cloud/mcp`.
+
+I did not list that live gateway in this turn. The Scalekit MCP in this chat is not connected. Last working tick on that URL used **Slack** and **GitHub** only. I have no proof Webflow is on that URL.
+
+So your read is right: catalog yes, gateway probably no.
+
+**What to do**
+
+1. Open the Agent Gateway for `scalekitforecosystem`.
+2. Add the Webflow connector to that endpoint.
+3. Connect the Webflow site. Put the API key there. Do not paste it here.
+4. Then the pocket agent can reuse the same MCP URL.
+
+Until Webflow is on that gateway, a tick cannot update the page.
+
+Say when Webflow is on the gateway. Then we continue the grill.
+
+### 🔴 Turn 37
+
+## User
+
+oh wait we don't need weflow mcp to make this work I think loking at the repo what do yo uthink /ask-dora 
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+You think the skill repo can update Webflow without `webflowmcp`. I will read that repo first, then I will say if the gateway still needs Webflow.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- UseTool: exa__web_search_exa
+- Execute: gh repo view Nityay123/scalekit-connector-lp-skill 2>&1 | head -40; echo '====search===='; gh search repos scalekit-connector-lp --limit 10 2>&1; echo '====user===='; gh api users/Nityay123 2>&1 | head -20; echo '====local===='; ls /Users/saif/Projects/feedback-syndicate/build-with-ai 2>/dev/null | head -40 (Find lp-skill repo via gh and local tree)
+
+## Assistant
+
+The GitHub URL is still private. I will search this machine for a local copy of that skill.
+
+## Tools
+
+- Execute: ls /Users/saif/Projects 2>/dev/null; echo '===='; find /Users/saif/Projects /Users/saif/Downloads /Users/saif/Experiments -maxdepth 4 \( -iname '*connector-lp*' -o -iname '*scalekit-connector*' -o -iname '*webflow*connector*' \) 2>/dev/null | head -40 (Find local clone of connector-lp skill)
+- UseTool: exa__web_search_exa
+
+## Assistant
+
+I still cannot read that repo.
+
+`Nityay123/scalekit-connector-lp-skill` is private. That GitHub user has **0 public repos**. I have no local copy.
+
+So I cannot confirm your guess from the files. I can only say when it would be true.
+
+**You do not need `webflowmcp` if** the skill already writes Webflow with the Data API and your API key.
+
+That path is:
+
+1. Read the Scalekit connector list.
+2. Call Webflow with `curl` or a script.
+3. Put the API key in an env var. Do not put it in the prompt.
+
+**You still need `webflowmcp` if** the skill only describes the page, and does not write to Webflow.
+
+A skill is not a connector. A night tick still needs one write path.
+
+Send one of these so I can decide:
+
+- a local path to the skill folder
+- make the repo readable to this machine
+- paste the `SKILL.md` steps only, no secrets
+
+Then I will say **run that skill** or **keep Webflow on the gateway**.
+
+### 🔴 Turn 34
+
+## User
+
+oh can you use saif-at-scalekit account to access that repo?
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+I will check whether `saif-at-scalekit` is already logged in on this machine, then I will try the private repo.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: gh auth status 2>&1; echo '====hosts===='; ls -la ~/.config/gh 2>/dev/null; echo '====accounts===='; gh api user --jq '{login,id}' 2>&1; echo '====git===='; git config --global --get-regexp 'user\.|github' 2>&1 (Check which GitHub account gh is using)
+
+## Assistant
+
+`saif-at-scalekit` is logged in, but it is not the active account. I will call GitHub as that user only for this lookup.
+
+## Tools
+
+- Execute: GH_TOKEN="$(gh auth token --user saif-at-scalekit)" gh api repos/Nityay123/scalekit-connector-lp-skill --jq '{name,private,default_branch:.default_branch,description,html_url,visibility}' (Fetch private repo metadata as saif-at-scalekit)
+- Execute: GH_TOKEN="$(gh auth token --user saif-at-scalekit)" gh api repos/Nityay123/scalekit-connector-lp-skill/git/trees/main?recursive=1 --jq '.tree[] | select(.type=="blob") | .path' (List all files in the private skill repo)
+
+## Assistant
+
+The repo is readable now. I will open the Webflow write path next.
+
+## Tools
+
+- Execute: GH_TOKEN="$(gh auth token --user saif-at-scalekit)"
+api() { gh api "repos/Nityay123/scalekit-connector-lp-skill/contents/$1" --jq '.content' | base64 -d; }
+echo '===== README ====='
+api README.md
+echo '===== create_connector.py (head) ====='
+api create_connector.py | head -120
+echo '===== maintenance/wf.py ====='
+api maintenance/wf.py
+echo '===== maintenance/publish_drafts.py (head) ====='
+api maintenance/publish_drafts.py | head -80 (Read README and Webflow write scripts from private repo)
+- Execute: export GH_TOKEN="$(gh auth token --user saif-at-scalekit)"
+gh api repos/Nityay123/scalekit-connector-lp-skill/contents/README.md --jq '.content' | base64 -d
+echo '
+===== create_connector.py first 150 ====='
+gh api repos/Nityay123/scalekit-connector-lp-skill/contents/create_connector.py --jq '.content' | base64 -d | head -150
+echo '
+===== maintenance/wf.py ====='
+gh api "repos/Nityay123/scalekit-connector-lp-skill/contents/maintenance/wf.py" --jq '.content' | base64 -d
+echo '
+===== SKILL copy ====='
+gh api "repos/Nityay123/scalekit-connector-lp-skill/contents/.agents/skills/scalekit-connector-copy/SKILL.md" --jq '.content' | base64 -d (Fetch README, Webflow helper, and skill with exported token)
+
+## Assistant
+
+Yes. I used `saif-at-scalekit`. The repo is private, and that account can read it.
+
+You are right. **`webflowmcp` is not required.**
+
+The repo writes Webflow itself.
+
+- `create_connector.py --webflow` calls `https://api.webflow.com/v2`.
+- It uses `WEBFLOW_API_TOKEN`.
+- The Connectors collection id is already in the script: `6a04a16cbe06399b238d42ea`.
+- The README says MCP is only an optional second path.
+
+So the pocket agent can:
+
+1. Find new or changed connectors.
+2. Build one JSON config.
+3. Run `python3 create_connector.py <slug>.json --webflow`.
+
+Put the API key in the env. Do not put it in the prompt. Do not add Webflow to the Agent Gateway.
+
+The same MCP URL is still useful if you want Scalekit to list new connectors. It is not needed to write the page.
+
+**Gate so far**
+
+- Skills to run: this repo (the script plus the copy skill)
+- Skills to refer: `scalekit-connector-copy`, `scalekit-connector-icons`
+- MCP URL: `https://scalekitforecosystem.scalekit.cloud/mcp` (reuse, for catalog only)
+
+I still need one job rule before I write `prompt.md`:
+
+On each tick, update **only missing CMS items**, or **rebuild every connector**?
+
+### 🔴 Turn 35
+
+## User
+
+/ask-dora now I want to convert this to pocket agenbt that runs and do that first test
+
+## Tools
+
+- Lifecycle event
+
+## Assistant
+
+This is a pocket-agent job. I will lock the first-test job, write the night prompt, then run one pass. That pass will not publish.
+
+## Tools
+
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Read: /Users/saif/Projects/feedback-syndicate/build-with-ai/test-agents/.agents/skills/writing-for-routine/SKILL.md
+- Execute: which hermes dora 2>/dev/null; hermes --version 2>/dev/null; dora --version 2>/dev/null; echo "WF_TOKEN_SET=$([ -n \"$WEBFLOW_API_TOKEN\" ] && echo yes || echo no)"; (grep -l 'WEBFLOW_API_TOKEN' ~/.zshrc ~/.zprofile ~/.bashrc ~/.hermes/config.yaml 2>/dev/null || true); echo '==== hermes help ===='; hermes --help 2>/dev/null | head -40 (Check Hermes, Dora, and Webflow token presence)
+- Execute: hermes chat --help 2>&1 | head -80; echo '==== dora harness ===='; bun run /Users/saif/Experiments/doraval/src/cli/index.ts harness --help 2>&1 | head -50 (Get Hermes one-pass and Dora harness flags)
+
+## Assistant
+
+First test is detect only. I will clone the skill repo, write `prompt.md`, then run one Hermes pass. That pass will not publish.
+
+## Tools
+
+- Execute: mkdir -p /tmp/dora-connector-lp
+if [ ! -d /tmp/dora-connector-lp/repo/.git ]; then
+  GH_TOKEN="$(gh auth token --user saif-at-scalekit)" git clone --depth 1 https://github.com/Nityay123/scalekit-connector-lp-skill.git /tmp/dora-connector-lp/repo
+fi
+ls /tmp/dora-connector-lp/repo | head
+test -f /tmp/dora-connector-lp/repo/create_connector.py && echo CLONE_OK
+echo "WF_TOKEN_SET=$([ -n "${WEBFLOW_API_TOKEN:-}" ] && echo yes || echo no)" (Clone connector-lp skill repo for one-pass)
+- Edit: /tmp/dora-connector-lp/prompt.md
+- Execute: # Locate WEBFLOW_API_TOKEN without printing its value
+python3 - <<'PY'
+import os, pathlib
+hits = []
+if os.environ.get("WEBFLOW_API_TOKEN"):
+    hits.append("env:WEBFLOW_API_TOKEN")
+for p in [
+    pathlib.Path.home()/".zshrc",
+    pathlib.Path.home()/".zprofile",
+    pathlib.Path.home()/".zshenv",
+    pathlib.Path.home()/".bashrc",
+    pathlib.Path.home()/".hermes/config.yaml",
+    pathlib.Path("/tmp/dora-connector-lp/repo")/".env",
+    pathlib.Path.home()/".env",
+]:
+    if p.exists():
+        text = p.read_text(errors="ignore")
+        if "WEBFLOW_API_TOKEN" in text:
+            hits.append(str(p))
+print("HITS=" + (",".join(hits) if hits else "none"))
+PY
+ls /tmp/dora-connector-lp/repo/.env /tmp/dora-connector-lp/repo/.env.local 2>/dev/null
+# check printenv names only
+printenv | awk -F= '/[Ww]ebflow|[Ww]EBFLOW/ {print $1}' (Find Webflow token location without printing it)
+- Edit: /tmp/dora-connector-lp/prompt.md
+
+## Assistant
+
+The first test ran. It did **not** write to Webflow. It did **not** publish.
+
+**Result**
+
+| Check | Result |
+|---|---|
+| `WEBFLOW_API_TOKEN` | missing in this run |
+| Catalog | 378 slugs from the public docs |
+| CMS list | skipped |
+| Missing slugs | not computed |
+| Create / publish | none |
+
+The Agent Gateway **does** list `webflowmcp`. That connection is **not** ACTIVE. We still do not need it. The repo uses the API token.
+
+**What you do next**
+
+In a real terminal, set the token. Do not paste it here.
+
+```bash
+export WEBFLOW_API_TOKEN='…'
+```
+
+Then say **run the CMS diff again**.
+
+After that pass works, pick a slug. I will not invent one. A readable option is `connector-lp-sync`. Say that name, or give another.
+
+The routine folder is not saved yet. The loop is not booted.
+
+### 🔴 Turn 36
+
+## User
+
+also at the same time make sure it's in draft state; you point me at file I wil lopen it up in editor and put api key there
+
+## Tools
+
+- Lifecycle event
+- Read: /Users/saif/.grok/plugin-data/turn-index/CURRENT
+- Execute: cat /tmp/dora-connector-lp/repo/.gitignore 2>/dev/null; echo '===='; rg -n "no-publish|isDraft|WEBFLOW_API_TOKEN" /tmp/dora-connector-lp/repo/create_connector.py | head -40 (Check gitignore and draft/token flags in script)
+- Edit: /tmp/dora-connector-lp/webflow.env
+- Read: /tmp/dora-connector-lp/prompt.md
+- Edit: /tmp/dora-connector-lp/prompt.md
+
+## Assistant
+
+Draft is locked. Any later Webflow write must stay a draft. No publish.
+
+Open this file. Put the key on the `WEBFLOW_API_TOKEN=` line.
+
+`/tmp/dora-connector-lp/webflow.env`
+
+That file is outside the git clone. Do not commit it. Do not paste the key here.
+
+When the key is saved, say **run the CMS diff again**.
+
+### 🔴 Turn 37 ( recent one is still wip)
