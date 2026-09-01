@@ -86,6 +86,7 @@ Offer `dora review --quick` on each copy. The teammate can skip.
    Login without that add fails: server not found.
    After the add, the teammate runs `hermes mcp login scalekit` in a real terminal.
    Done-when: login is the next line only after boot or that add.
+   Dora prints Runtime watch commands after boot, list, pause, and resume. Do not invent a Dora logs verb.
    Dora does not run login. Dora does not edit `~/.hermes/config.yaml`.
    If a refresh token dies, run that login again. If the Scalekit connected account is dead, open the provider link again.
 

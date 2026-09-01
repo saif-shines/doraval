@@ -20,7 +20,11 @@ Missing Hermes prints official install steps and stops. Dora does not fake a tes
 dora harness new
 ```
 
-Bare `new` starts `ask-dora`, which loads `grilling-for-routine`. That grill loads `writing-for-routine` for the night prompt. Collect skills to run, skills to refer to, and the MCP URL. Then print or run one live pass. Write the folder only after that pass, or after you accept the printed command:
+Bare `new` starts `ask-dora`, which loads `grilling-for-routine`. That grill loads `writing-for-routine` for the night prompt. Collect skills to run, skills to refer to, and the MCP URL. Then print or run one live pass.
+
+After one good one-pass, the grill may freeze a deterministic step as a Fixed step. That step lives in a Skill. `prompt.md` names that Skill. It keeps the steps that need a new decision. A small loop-able job can ship with `prompt.md` only.
+
+Write the folder only after that pass, or after you accept the printed command:
 
 ```bash
 dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url>
@@ -52,11 +56,15 @@ hermes mcp login scalekit
 
 If a later run cannot reach Scalekit, run that login again. If the Scalekit account itself is dead, open the provider link again.
 
-To see that the background service is up:
+## Runtime watch
+
+After `boot`, `list`, `pause`, and `resume`, Dora prints Runtime watch commands. Today those are Hermes commands. Folder-only `new` and `open` do not print them. On token or MCP fail, login is the required next command. Dora still prints the watch list.
 
 ```bash
-hermes gateway status
-hermes cron status
+hermes cron list
+hermes cron runs
+hermes logs
+hermes dashboard
 ```
 
 ## Pause, resume, list, open
@@ -87,6 +95,7 @@ You can change the interval and the one-pass limit per routine. A busy night job
 - Treating laptop close as `dora harness pause`. Sleep stops the clock. It does not pause the job.
 - Expecting Dora to finish `hermes mcp login scalekit`. You run that in a real terminal.
 - Re-running `--accept` on the same slug. Dora refuses to overwrite the folder.
+- Expecting a Dora logs verb. Use the Runtime watch commands Dora prints.
 - Expecting a chat app in the harness. Connectors live on a use case, not in this group.
 
 ## Related

@@ -55,11 +55,11 @@ dora conflicts --dry-run
 dora session
 dora session show <id>       # short table id is enough if unique
 dora harness                 # list routines
-dora harness new             # start ask-dora / grilling-for-routine
-dora harness boot <slug>     # start Hermes gateway + one cron job; then hermes mcp login scalekit
-dora harness pause <slug>
-dora harness resume <slug>
-dora harness list
+dora harness new             # start ask-dora / grilling-for-routine; optional Fixed step
+dora harness boot <slug>     # Hermes gateway + cron; then hermes mcp login scalekit; Runtime watch
+dora harness pause <slug>    # Runtime watch
+dora harness resume <slug>   # Runtime watch
+dora harness list            # Runtime watch: hermes cron list, hermes cron runs, hermes logs, hermes dashboard
 dora harness open <slug>     # open the routine folder
 dora config setup
 dora probe --yes             # hello / ack with doraval.dev

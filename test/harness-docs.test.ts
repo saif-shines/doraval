@@ -73,6 +73,51 @@ describe("dora harness docs lockstep", () => {
     expect(harness).not.toMatch(/Discord|Webflow|OOO calendar/i);
   });
 
+  const WATCH = ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"] as const;
+
+  test("README, website, and the two craft skills name Fixed step", () => {
+    const readme = read("README.md");
+    const harness = read("apps/website/content/commands/harness.mdx");
+    const site = read("apps/website/content/commands/index.mdx");
+    const skills = read("apps/website/content/get-started/skills.mdx");
+    const grill = read("skills/grilling-for-routine/SKILL.md");
+    const writer = read("skills/writing-for-routine/SKILL.md");
+    for (const text of [readme, harness, site, skills, grill, writer]) {
+      expect(text).toMatch(/Fixed[- ]step/);
+    }
+    expect(read("skills/ask-dora/SKILL.md")).not.toContain("Fixed step");
+    expect(read("skills/review-with-dora/SKILL.md")).not.toContain("Fixed step");
+  });
+
+  test("README, website, and catalog name Runtime watch; no new page", () => {
+    const readme = read("README.md");
+    const harness = read("apps/website/content/commands/harness.mdx");
+    const site = read("apps/website/content/commands/index.mdx");
+    const catalog = read("skills/review-with-dora/references/commands.md");
+    const skill = read("skills/review-with-dora/SKILL.md");
+    const grill = read("skills/grilling-for-routine/SKILL.md");
+    const meta = read("apps/website/content/commands/meta.ts");
+    for (const text of [readme, harness, site, catalog, skill, grill]) {
+      expect(text).toMatch(/Runtime watch/i);
+    }
+    for (const verb of ["boot", "list", "pause", "resume"] as const) {
+      const line = readme.split("\n").find((l) => l.includes(`dora harness ${verb}`));
+      expect(line).toBeDefined();
+      expect(line).toMatch(/Runtime watch/);
+    }
+    expect(harness).toMatch(/After `boot`, `list`, `pause`, and `resume`/);
+    expect(grill).toMatch(/after boot, list, pause, and resume/);
+    expect(harness).toMatch(/token or MCP fail/i);
+    for (const cmd of WATCH) {
+      expect(readme).toContain(cmd);
+      expect(harness).toContain(cmd);
+      expect(catalog).toContain(cmd);
+    }
+    expect(harness).not.toContain("hermes gateway status");
+    expect(harness).not.toContain("hermes cron status");
+    expect(meta).toMatch(/pages:\s*\[\s*"index",\s*"harness"\s*\]/);
+  });
+
   test("help and the JSON map name harness and the verbs", () => {
     const help = runDoraval(["--help"]);
     expect(help.exitCode).toBe(0);

@@ -26,11 +26,11 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora plugin bump` | Plugin and marketplace semver |
 | `dora harness` | List routines at `~/.dora/harness/<slug>/`. |
 | `dora harness new` | Start `ask-dora` / `grilling-for-routine`. `--accept --yes` writes the folder after the printed one-pass command. |
-| `dora harness boot <slug>` | Start the Hermes gateway and one cron job. Then run `hermes mcp login scalekit`. Dora exits. |
-| `dora harness pause <slug>` | Pause that job only. Gateway stays up. |
-| `dora harness resume <slug>` | Start later ticks again. |
-| `dora harness list` | Name slugs. Show running or paused. |
-| `dora harness open <slug>` | Open that routine folder. |
+| `dora harness boot <slug>` | Start the Hermes gateway and one cron job. Then run `hermes mcp login scalekit`. Dora prints Runtime watch commands: `hermes cron list`, `hermes cron runs`, `hermes logs`, `hermes dashboard`. Dora exits. |
+| `dora harness pause <slug>` | Pause that job only. Gateway stays up. Dora prints Runtime watch commands. |
+| `dora harness resume <slug>` | Start later ticks again. Dora prints Runtime watch commands. |
+| `dora harness list` | Name slugs. Show running or paused. Dora prints Runtime watch commands. |
+| `dora harness open <slug>` | Open that routine folder. No Runtime watch. |
 | `dora update` | Update doraval |
 | `dora probe` | POST hello; poll until ack or 60s timeout. Needs `identity.api_key`. Human clicks ack on `/account`. `--json` is `{status,id}`. |
 
