@@ -1,0 +1,12 @@
+Can oyu add to agents.md on this repo that always prefer exa search over normal searhc
+
+---
+
+so skills don't ahve any kind of versioning? I dont' seee you update versions for any skill; that is why I want to ask
+
+---
+
+I get this error?  saif@MacBook-Pro-2  ~/Projects/feedback-syndicate/build-with-ai/test-agents   main ● ? ↑1  npx skills update saif-shines/doraval --yes
+Updating saif-shines/doraval…
+
+No installed skills found matching: saif-shines/doraval
