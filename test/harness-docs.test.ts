@@ -170,7 +170,8 @@ describe("dora harness docs lockstep", () => {
   test("pocket agents walkthrough names the loop and hides private facts", () => {
     const page = read("apps/website/content/get-started/pocket-agents.mdx");
     expect(page).toMatch(/pocket agent/i);
-    expect(page).toContain("/ask-dora turn this loop-able check into a routine");
+    expect(page).toContain("/ask-dora I have a use case where I want to run a routine that looks at a slack channel and approve a pr on my behalf");
+    expect(page).toContain("slack-pr-approve");
     expect(page).toContain("dora harness boot");
     expect(page).toContain("hermes mcp login scalekit");
     expect(page).toContain("--mcp-url none");
