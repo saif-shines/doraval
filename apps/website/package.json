@@ -1,6 +1,6 @@
 {
   "name": "@doraval/website",
-  "version": "0.6.34",
+  "version": "0.6.35",
   "dependencies": {
     "@scalekit-sdk/node": "^2.12.0",
     "blume": "^1.0.3"

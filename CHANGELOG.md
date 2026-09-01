@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-### Docs
+## 0.6.35
 
-- Harness Reader page names Skill script, Tick never writes, and
-  Runtime as the product word.
+### Features
+
 - `grilling-for-routine` names the size check **pocket**. One job,
   one machine, one user. Not a new object.
 - Before a Fixed-step freeze, the grill names a seam and an expected
@@ -19,8 +19,13 @@
   authstack install and stop.
 - MCP URL may be `none`. A Skill script plus local creds can loop
   without Agent Gateway. Secrets stay in the routine folder.
-- Get-started page for pocket agents walks grill, one-pass, boot,
-  and watch.
+
+### Docs
+
+- Harness Reader page names Skill script, Tick never writes, and
+  Runtime as the product word.
+- Get-started page for pocket agents walks the Slack PR approve
+  example: grill, one-pass, boot, and watch.
 
 ## 0.6.34
 
