@@ -217,14 +217,18 @@ _Avoid_: calling a login a Session; treating “dora is installed” as Connecte
 
 ## Harness (shipped)
 
-`dora harness` is the front desk. Hermes is the agent. 2026-08-31.
+`dora harness` is the front desk. The Runtime ticks the Loop. Today the Runtime is Hermes. 2026-08-31.
 
 | Term | Meaning |
 |------|---------|
 | **Routine** | Saved folder at `~/.dora/harness/<slug>/`. The only product object. _Avoid_: pack. |
-| **Loop** | The same unattended prompt on an interval. Hermes cron. Default 1 hour. |
-| **Max tick** | One-pass wall clock via `hermes chat --run-budget`. Default 10 minutes. Night idle cap is Hermes `HERMES_CRON_TIMEOUT` (default 600s). |
+| **Loop** | The same unattended prompt on an interval. The Runtime's timer. Default 1 hour. |
+| **Tick** | One unattended run of a Loop. The Runtime starts it on the interval. Not the one-pass test. _Avoid_: night tick as a second object. |
+| **Runtime** | The background agent that ticks a Loop. Today that agent is Hermes. _Avoid_: calling Hermes the product; a second Runtime in this pass. |
+| **Max tick** | One-pass wall clock via the Runtime. Default 10 minutes. Night idle cap is the Runtime's idle timeout (Hermes: `HERMES_CRON_TIMEOUT`, default 600s). |
 | **Harness** | Verbs: `new`, `boot`, `pause`, `resume`, `list`, `open`. |
+| **Skill script** | A helper file inside a Skill folder. The Skill names the path. The routine has no top-level scripts directory. _Avoid_: routine script; Hermes `--script`. |
+| **Fixed step** | A deterministic routine step stored in a Skill. `prompt.md` names that Skill. It does not repeat the step. _Avoid_: programmatize as a noun; Judgment (that word is a Dora Finding). |
 
 _Avoid_: Dora on the OAuth / magic-link path; Slack, Discord, or Webflow in the harness; writing loop terms into kit CONTEXT.md.
 

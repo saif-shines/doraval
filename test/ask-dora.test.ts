@@ -64,4 +64,48 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).not.toContain("—");
     expect(text).not.toMatch(/matt|pocock|writing-for-agents/i);
   });
+
+  test("grilling-for-routine names Fixed step after loop-able, with freeze rules", () => {
+    const text = skill("grilling-for-routine");
+    const loopIdx = text.indexOf("## Loop-able");
+    const fixedIdx = text.indexOf("## Fixed step");
+    expect(loopIdx).toBeGreaterThan(-1);
+    expect(fixedIdx).toBeGreaterThan(loopIdx);
+    expect(text).toMatch(/optional/i);
+    expect(text).toMatch(/deterministic/i);
+    expect(text).toMatch(/one good one-pass|after one good/i);
+    expect(text).toMatch(/The human accepts/);
+    expect(text).toMatch(/Tick never writes/);
+    expect(text).toMatch(/does not author files/);
+    expect(text).toMatch(/temp folder/);
+    expect(text).toMatch(/before the first save/);
+    expect(text).toMatch(/Skill copy/);
+    expect(text).toMatch(/--skills-run/);
+    expect(text).toMatch(/--script/);
+    expect(text).toMatch(/--no-agent/);
+    expect(text).not.toMatch(/programmatize/i);
+    expect(text).not.toMatch(/You are/);
+    expect(text).not.toContain("—");
+  });
+
+  test("writing-for-routine writes prompt.md and the Fixed-step Skill", () => {
+    const text = skill("writing-for-routine");
+    expect(text).toMatch(/prompt\.md/);
+    expect(text).toMatch(/Fixed-step Skill|Fixed step/);
+    expect(text).toMatch(/Skill script/);
+    expect(text).toMatch(/inside that Skill|inside the Skill/);
+    expect(text).toMatch(/no top-level scripts directory/);
+    expect(text).toMatch(/does not repeat|Do not repeat/);
+    expect(text).toMatch(/Judgment/);
+    expect(text).toMatch(/Dora Finding/);
+    expect(text).toMatch(/--script/);
+    expect(text).not.toMatch(/programmatize/i);
+    expect(text).not.toMatch(/You are/);
+    expect(text).not.toContain("—");
+  });
+
+  test("ask-dora and review-with-dora do not gain a Fixed-step job", () => {
+    expect(skill("ask-dora")).not.toMatch(/Fixed step/);
+    expect(skill("review-with-dora")).not.toMatch(/Fixed step/);
+  });
 });
