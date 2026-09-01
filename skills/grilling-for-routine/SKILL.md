@@ -57,9 +57,11 @@ Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill.
 
 ## Connectors
 
-Load `discover-connectors` (Scalekit). Look up the live catalog. Say what exists. Say if a needed connector is missing. Do not vendor that catalog here.
+Load `discover-connectors` (Scalekit) only to look up the live public catalog. Say what exists. That skill does not configure the dashboard.
 
-If `discover-connectors` is not on disk: print official install, then stop. Do not invent a catalog.
+If the teammate needs to add or configure a **connection** in the Scalekit dashboard: load `setup-agentkit` when it is on disk.
+
+If `discover-connectors` or `setup-agentkit` is missing: print official install, then stop. Do not invent a catalog. Do not invent dashboard steps.
 
 ```
 https://docs.scalekit.com/dev-kit/build-with-ai/
@@ -140,7 +142,7 @@ MUST copy named skills into the routine.
 MUST NOT require a skill because a connector exists.
 MUST NOT write the original skill directory.
 MUST NOT invent a registry, a slug, a connector, a connector catalog, or a loop interval.
-MUST print the official authstack install when `discover-connectors` is missing.
+MUST print the official authstack install when `discover-connectors` or `setup-agentkit` is missing.
 MUST register scalekit with boot or `hermes mcp add` before `hermes mcp login scalekit`.
 MUST NOT run or tell login before that add.
 MUST NOT edit Hermes config.
