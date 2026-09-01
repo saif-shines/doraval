@@ -1,0 +1,57 @@
+what is happening in this sesison?
+
+---
+
+Meanhing we are identifying the bugs and expreience in the dora cli and fixing it
+
+---
+
+I am using the cli adn work you've done in a seperate terminal and reporting the bugs and friction logs to you, and you will be fixing them
+
+---
+
+I will also refer to the docs parallely, can you run the docs server locally so that I can refer to it as necessary?
+
+---
+
+what is running at 4321? kill it for now
+
+---
+
+Spawn a subagent to update all the pages to have a example prmpt that starts with `/ask-dora <example prmpt`
+
+---
+
+<system-reminder>
+Background subagent "01a05d63-509a-7e81-bb78-9695e64d6ee3" (general-purpose: "Add /ask-dora examples") completed successfully.
+Duration: 160.1s | Tool calls: 35 | Turns: 1
+Use get_task_output("01a05d63-509a-7e81-bb78-9695e64d6ee3") to see the full output.
+</system-reminder>
+
+---
+
+If you want the check in grilling-for-routine, say so. I  - don't we arleady do this check? we just did not give it a lable
+
+---
+
+cool add it
+
+---
+
+I see in our instructions there is a way to convery, try to find the programmating heads as much as possible so that agents can use it in subsequent runs; do you find it?
+
+---
+
+now I am wondering if it will efficiently verify the deterministic step
+
+---
+
+should we borrom few lins form matt's implement and code review setp so taht when routine is int eh process of execution it can use those skill lines to make the attempt to deterministic bit well
+
+---
+
+add that to it
+
+---
+
+commit and push, if someone runs npx skills update saif-shines/doaraval --yes will they get these skills updaed ones automatically?
