@@ -1,12 +1,12 @@
 ---
 title: dora harness
-description: Grill a routine, test it once, then boot it on Hermes.
+description: Grill a routine, freeze a Fixed step, then boot it. Dora prints Runtime watch.
 sidebar:
   label: Harness
   order: 2
 ---
 
-`dora harness` is the front desk for an internal teammate. Hermes is the agent that runs the night pass. A **routine** is the saved folder at `~/.dora/harness/<slug>/`. Dora does not install Hermes and does not run the MCP login.
+`dora harness` is the front desk for an internal teammate. The Runtime ticks the Loop. Today that Runtime is Hermes. A **routine** is the saved folder at `~/.dora/harness/<slug>/`. Dora does not install Hermes and does not run the MCP login.
 
 ## Before you start
 
@@ -22,8 +22,6 @@ dora harness new
 
 Bare `new` starts `ask-dora`, which loads `grilling-for-routine`. That grill loads `writing-for-routine` for the night prompt. Collect skills to run, skills to refer to, and the MCP URL. Then print or run one live pass.
 
-After one good one-pass, the grill may freeze a deterministic step as a Fixed step. That step lives in a Skill. `prompt.md` names that Skill. It keeps the steps that need a new decision. A small loop-able job can ship with `prompt.md` only.
-
 Write the folder only after that pass, or after you accept the printed command:
 
 ```bash
@@ -37,6 +35,16 @@ hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
 ```
 
 `--run-budget` is the one-pass time limit (default 10 minutes). Skills to run are passed as `--skills`. Dora refuses to overwrite an existing slug.
+
+## Fixed step
+
+A Fixed step is optional. Loop-able stays first. A small loop-able job can ship with `prompt.md` only.
+
+After one good one-pass, the grill may freeze a deterministic step into a Skill. The grill drafts. You accept. A Tick never writes files. The one-pass does not author files.
+
+`prompt.md` names that Skill. It keeps the steps that need a new decision. It does not repeat the frozen steps.
+
+A Skill script is optional. If one exists, it lives inside that Skill. The routine has no top-level scripts directory. Do not use Hermes `--script` or `--no-agent`. Those flags cannot call Scalekit MCP tools.
 
 ## Boot the night job
 
@@ -96,9 +104,12 @@ You can change the interval and the one-pass limit per routine. A busy night job
 - Expecting Dora to finish `hermes mcp login scalekit`. You run that in a real terminal.
 - Re-running `--accept` on the same slug. Dora refuses to overwrite the folder.
 - Expecting a Dora logs verb. Use the Runtime watch commands Dora prints.
+- Using Hermes `--script` as the freeze path. A Skill script is local work inside the Skill.
+- Putting a `scripts/` folder next to `prompt.md`.
 - Expecting a chat app in the harness. Connectors live on a use case, not in this group.
 
 ## Related
 
 - [Commands](/commands/)
+- [Skills](/get-started/skills/)
 - [Hermes Agent docs](https://hermes-agent.nousresearch.com/docs/)

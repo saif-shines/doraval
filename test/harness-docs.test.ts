@@ -152,4 +152,17 @@ describe("dora harness docs lockstep", () => {
     expect(harness).not.toMatch(/buy|pricing|for customers|sign up today/i);
     expect(harness).not.toMatch(/Discord|Webflow|OOO calendar/i);
   });
+
+  test("Reader page names Skill script, Tick never writes, and Runtime", () => {
+    const harness = read("apps/website/content/commands/harness.mdx");
+    const skills = read("apps/website/content/get-started/skills.mdx");
+    expect(harness).toMatch(/## Fixed step/);
+    expect(harness).toMatch(/Skill script/);
+    expect(harness).toMatch(/Tick never writes/);
+    expect(harness).toMatch(/The Runtime ticks the Loop/);
+    expect(harness).toMatch(/--script/);
+    expect(harness).toMatch(/no top-level scripts directory/);
+    expect(skills).toMatch(/Skill script/);
+    expect(skills).toContain("/commands/harness/");
+  });
 });

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Docs
+
+- Harness Reader page names Skill script, Tick never writes, and
+  Runtime as the product word.
+
 ## 0.6.34
 
 ### Features

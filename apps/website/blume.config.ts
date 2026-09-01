@@ -34,6 +34,7 @@ export default defineConfig({
           label: "Reference",
           items: [
             "/commands",
+            "/commands/harness",
             "/concepts/memory",
             "/concepts/review-tiers",
             "/reference/scenarios",
