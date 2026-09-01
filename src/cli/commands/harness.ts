@@ -22,6 +22,7 @@ import {
   onePassCommand,
   pauseArgs,
   resumeArgs,
+  watchCommands,
 } from "../../core/hermes.js";
 import { ui, resolveOutputMode, outJson, summaryLine, guidedError, nextAction } from "../out.js";
 import { exit } from "../render/exit.js";
@@ -85,6 +86,11 @@ function printMcpNext(): void {
   nextAction(loginCommand());
   ui.dim("  If a refresh token dies, run that login again.");
   ui.dim("  If the Scalekit connected account is dead, open the provider link again.");
+  printWatch();
+}
+
+function printWatch(): void {
+  for (const cmd of watchCommands()) nextAction(cmd);
 }
 
 function mcpNotReady(detail?: string): Error {
@@ -369,6 +375,7 @@ export const harnessPause = defineCommand({
       return;
     }
     ui.info(`  Paused ${slug}. Later ticks skip. A pass that already started may finish.`);
+    printWatch();
     ui.blank();
     await exit(0);
   },
@@ -389,6 +396,7 @@ export const harnessResume = defineCommand({
       return;
     }
     ui.info(`  Resumed ${slug}.`);
+    printWatch();
     ui.blank();
     await exit(0);
   },
@@ -428,6 +436,7 @@ export const harnessList = defineCommand({
       ui.blank();
       summaryLine(`${rows.length} routine${rows.length === 1 ? "" : "s"}`);
     }
+    printWatch();
     ui.blank();
     await exit(0);
   },

@@ -224,7 +224,7 @@ _Avoid_: calling a login a Session; treating “dora is installed” as Connecte
 | **Routine** | Saved folder at `~/.dora/harness/<slug>/`. The only product object. _Avoid_: pack. |
 | **Loop** | The same unattended prompt on an interval. The Runtime's timer. Default 1 hour. |
 | **Tick** | One unattended run of a Loop. The Runtime starts it on the interval. Not the one-pass test. _Avoid_: night tick as a second object. |
-| **Runtime** | The background agent that ticks a Loop. Today that agent is Hermes. _Avoid_: calling Hermes the product; a second Runtime in this pass. |
+| **Runtime** | The background agent that ticks a Loop. Today that agent is Hermes. Dora prints that Runtime's watch commands. _Avoid_: calling Hermes the product; a second Runtime in this pass. |
 | **Max tick** | One-pass wall clock via the Runtime. Default 10 minutes. Night idle cap is the Runtime's idle timeout (Hermes: `HERMES_CRON_TIMEOUT`, default 600s). |
 | **Harness** | Verbs: `new`, `boot`, `pause`, `resume`, `list`, `open`. |
 | **Skill script** | A helper file inside a Skill folder. The Skill names the path. The routine has no top-level scripts directory. _Avoid_: routine script; Hermes `--script`. |

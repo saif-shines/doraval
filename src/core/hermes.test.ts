@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { bootArgs, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCronList, pauseArgs, resumeArgs } from "./hermes.js";
+import { bootArgs, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCronList, pauseArgs, resumeArgs, watchCommands } from "./hermes.js";
 import type { Routine } from "./routine.js";
 
 const routine: Routine = {
@@ -64,5 +64,16 @@ describe("parseCronList", () => {
     const states = parseCronList("[active] night-pass\n[paused] other-job\n");
     expect(states.get("night-pass")).toBe("running");
     expect(states.get("other-job")).toBe("paused");
+  });
+});
+
+describe("watchCommands", () => {
+  test("returns today's Hermes watch strings", () => {
+    expect(watchCommands()).toEqual([
+      "hermes cron list",
+      "hermes cron runs",
+      "hermes logs",
+      "hermes dashboard",
+    ]);
   });
 });

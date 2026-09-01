@@ -46,6 +46,7 @@ describe("dora harness", () => {
     });
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toMatch(/no routines/i);
+    expect(stdout + stderr).toContain("hermes logs");
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -91,6 +92,9 @@ describe("dora harness", () => {
     });
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toContain(dir);
+    expect(stdout + stderr).not.toContain("hermes cron list");
+    expect(stdout + stderr).not.toContain("hermes logs");
+    expect(stdout + stderr).not.toContain("hermes dashboard");
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
   });
@@ -210,6 +214,9 @@ describe("dora harness", () => {
     expect(out.toLowerCase()).not.toMatch(/test run (passed|succeeded)|faked/);
     expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
     expect(readFileSync(join(home, ".dora", "default-mcp-url"), "utf8").trim()).toBe("https://gw.example/mcp");
+    expect(out).not.toContain("hermes cron list");
+    expect(out).not.toContain("hermes logs");
+    expect(out).not.toContain("hermes dashboard");
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -297,6 +304,34 @@ describe("dora harness", () => {
     rmSync(home, { recursive: true, force: true });
   });
 
+  test("new --run-one-pass MCP fail prints login and watch, writes nothing", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-newmcp-"));
+    const { bin } = fakeHermes(home, "", { failMcp: true });
+    const { exitCode, stdout, stderr } = runDoraval(
+      [
+        "harness",
+        "new",
+        "--run-one-pass",
+        "--slug",
+        "night-pass",
+        "--prompt",
+        "Check the inbox.",
+        "--mcp-url",
+        "https://gw.example/mcp",
+      ],
+      { env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` } },
+    );
+    const out = stdout + stderr;
+    expect(exitCode).not.toBe(0);
+    expect(out).toContain("hermes mcp login scalekit");
+    for (const cmd of ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"]) {
+      expect(out).toContain(cmd);
+    }
+    expect(existsSync(join(home, ".dora", "harness", "night-pass"))).toBe(false);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
   test("boot with Hermes present runs gateway install and cron create, then exits", () => {
     const home = mkdtempSync(join(tmpdir(), "dora-harness-boot-"));
     writeRoutine(home, {
@@ -321,6 +356,9 @@ describe("dora harness", () => {
     expect(stdout + stderr).toMatch(/booted/i);
     expect(stdout + stderr).toContain("hermes mcp login scalekit");
     expect(stdout + stderr).toMatch(/fire on wake/i);
+    for (const cmd of ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"]) {
+      expect(stdout + stderr).toContain(cmd);
+    }
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
   });
@@ -343,6 +381,9 @@ describe("dora harness", () => {
     expect(out).toContain("hermes mcp login scalekit");
     expect(out).toMatch(/provider link/i);
     expect(out.toLowerCase()).not.toMatch(/booted/);
+    for (const cmd of ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"]) {
+      expect(out).toContain(cmd);
+    }
     const logText = readFileSync(log, "utf8");
     expect(logText).not.toContain("cron create");
     rmSync(home, { recursive: true, force: true });
@@ -401,6 +442,10 @@ describe("dora harness", () => {
     expect(logText).toContain("cron pause night-pass");
     expect(logText).toContain("cron resume night-pass");
     expect(logText).not.toContain("gateway stop");
+    for (const cmd of ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"]) {
+      expect(pause.stdout + pause.stderr).toContain(cmd);
+      expect(resume.stdout + resume.stderr).toContain(cmd);
+    }
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
   });
@@ -420,6 +465,9 @@ describe("dora harness", () => {
     });
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toMatch(/night-pass\s+paused/);
+    for (const cmd of ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"]) {
+      expect(stdout + stderr).toContain(cmd);
+    }
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
   });

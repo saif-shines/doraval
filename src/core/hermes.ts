@@ -58,6 +58,10 @@ export function loginCommand(): string {
   return `hermes ${loginArgs().join(" ")}`;
 }
 
+export function watchCommands(): string[] {
+  return ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"];
+}
+
 export function bootArgs(routine: Routine): string[][] {
   const create = [
     "cron",
