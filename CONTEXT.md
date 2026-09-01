@@ -229,6 +229,7 @@ _Avoid_: calling a login a Session; treating “dora is installed” as Connecte
 | **Harness** | Verbs: `new`, `boot`, `pause`, `resume`, `list`, `open`. |
 | **Skill script** | A helper file inside a Skill folder. The Skill names the path. The routine has no top-level scripts directory. _Avoid_: routine script; Hermes `--script`. |
 | **Fixed step** | A deterministic routine step stored in a Skill. `prompt.md` names that Skill. It does not repeat the step. _Avoid_: programmatize as a noun; Judgment (that word is a Dora Finding). |
+| **Pocket** | Size check on a Routine idea. One job, one machine, one user. The night prompt must be specific. _Avoid_: a second product object; pocket agent as a type. |
 
 _Avoid_: Dora on the OAuth / magic-link path; Slack, Discord, or Webflow in the harness; writing loop terms into kit CONTEXT.md.
 

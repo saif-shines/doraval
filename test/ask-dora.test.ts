@@ -68,12 +68,21 @@ describe("ask-dora skill family (tickets 85-87)", () => {
   test("grilling-for-routine names Fixed step after loop-able, with freeze rules", () => {
     const text = skill("grilling-for-routine");
     const loopIdx = text.indexOf("## Loop-able");
+    const pocketIdx = text.indexOf("## Pocket");
     const fixedIdx = text.indexOf("## Fixed step");
     expect(loopIdx).toBeGreaterThan(-1);
-    expect(fixedIdx).toBeGreaterThan(loopIdx);
+    expect(pocketIdx).toBeGreaterThan(loopIdx);
+    expect(fixedIdx).toBeGreaterThan(pocketIdx);
+    expect(text).toMatch(/one job, one machine, one user/);
+    expect(text).toMatch(/Not a new object/);
     expect(text).toMatch(/optional/i);
     expect(text).toMatch(/deterministic/i);
     expect(text).toMatch(/one good one-pass|after one good/i);
+    expect(text).toMatch(/Name one seam/);
+    expect(text).toMatch(/expected result from that one-pass/);
+    expect(text).toMatch(/did the agent invent/);
+    expect(text).toMatch(/do not freeze/i);
+    expect(text).toMatch(/Do not load implement or code-review/);
     expect(text).toMatch(/The human accepts/);
     expect(text).toMatch(/Tick never writes/);
     expect(text).toMatch(/does not author files/);

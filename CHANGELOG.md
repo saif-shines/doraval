@@ -6,6 +6,10 @@
 
 - Harness Reader page names Skill script, Tick never writes, and
   Runtime as the product word.
+- `grilling-for-routine` names the size check **pocket**. One job,
+  one machine, one user. Not a new object.
+- Before a Fixed-step freeze, the grill names a seam and an expected
+  result from the one-pass. A Tick does not run that check.
 
 ## 0.6.34
 

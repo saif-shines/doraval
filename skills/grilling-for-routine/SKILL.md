@@ -22,11 +22,28 @@ Not loop-able: a webhook, a push listener, a one-off, or a job that needs a huma
 
 If not loop-able: say why. Do not write a routine folder. If it is a Dora job, load review-with-dora. Stop.
 
+## Pocket
+
+Size check. Not a new object. The saved thing is still a Routine.
+
+Pocket: one job, one machine, one user. The night prompt is specific enough to Tick.
+
+Not pocket: a fleet, a general assistant, or a vague idea.
+
+If not pocket: say why. Keep asking until the night prompt is one specific job. If it cannot be one job: do not write a routine folder.
+
 ## Fixed step
 
 Second preference. Optional. A small loop-able job can ship with `prompt.md` only.
 
 After one good one-pass, offer to freeze a deterministic step into a Skill. A decision step stays in `prompt.md`. The grill may also change `prompt.md` with no new Skill.
+
+Before a freeze, check the one-pass. Do this in the grill only. Do not load implement or code-review. A Tick never runs this check.
+
+- Name one seam you can see: output, a file, or a list.
+- State an expected result from that one-pass, not from the draft Skill.
+- If you cannot name that result, the step is not deterministic. Leave it in `prompt.md`.
+- Spec check: did the one-pass do what `prompt.md` said, or did the agent invent? If it invented, do not freeze.
 
 The grill drafts. The human accepts. A Tick never writes. The one-pass does not author files.
 
@@ -72,12 +89,12 @@ Offer `dora review --quick` on each copy. The teammate can skip.
 ## Order
 
 1. Run the loop-able check.
-2. Ask what the routine idea does until the night prompt is specific.
+2. Run the pocket check. Ask until the night prompt is one specific job.
 3. Collect the gate. Offer a readable slug. The teammate picks or renames it.
 4. Run the connector check.
 5. Load `writing-for-routine`. Write `prompt.md`.
 6. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass. The one-pass does not author files.
-7. After one good one-pass, load `writing-for-routine` again. Update `prompt.md`. Offer a Fixed step if a step is deterministic. Draft that Skill in a temp folder. The human accepts. Another one-pass is allowed.
+7. After one good one-pass, run the freeze check. Load `writing-for-routine` again. Update `prompt.md`. Offer a Fixed step only if the seam, the expected result, and the spec check pass. Draft that Skill in a temp folder. The human accepts. Another one-pass is allowed.
 8. Write the routine folder only after that pass, or after the teammate accepts the printed command. Save copies the skills into the routine. Then offer `dora review --quick` on each copy. The teammate can skip.
 9. After save, update only `prompt.md` and the Skill copy. Do not add a new Skill.
 10. Register Scalekit on Hermes, then login.
@@ -97,8 +114,12 @@ dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-ur
 ```
 
 MUST run the loop-able check first.
+MUST run the pocket check. One job, one machine, one user. Night prompt specific.
 MUST treat Fixed step as optional and second.
 MUST freeze only after one good one-pass, and only if the step is deterministic.
+MUST name a visible seam and an expected result from the one-pass before a freeze.
+MUST NOT freeze when the one-pass invented a step.
+MUST NOT load implement or code-review on a Tick.
 MUST draft. MUST wait for human accept. A Tick never writes.
 MUST NOT let the one-pass author files.
 MUST add a new Skill only before the first save, in a temp folder.
@@ -114,4 +135,5 @@ MUST register scalekit with boot or `hermes mcp add` before `hermes mcp login sc
 MUST NOT run or tell login before that add.
 MUST NOT edit Hermes config.
 MUST NOT write the folder when the idea is not loop-able.
+MUST NOT write the folder when the idea is not pocket.
 MUST NOT write the folder before the one pass or an accepted printed command.
