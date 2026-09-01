@@ -1,0 +1,170 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1EQ5EKJTWPYDBBDPPSG78YK",
+  "session_id": "01a05c74-3b07-7891-8ef7-7045c9e40c93",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-01T14:49:57.283329Z",
+  "branch": "main",
+  "checkpoints_count": 14,
+  "save_step_count": 8,
+  "files_touched": [
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "skills/grilling-for-routine/SKILL.md",
+    "test/ask-dora.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "1c758ea9f06c",
+  "checkpoint_transcript_start": 663,
+  "transcript_lines_at_start": 663,
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-09-01T10:12:00.859568Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "d8c36e4fc954",
+      "timestamp": "2026-09-01T10:12:00.859568Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-09-01T10:25:06.465442Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "da25fccaea53",
+      "timestamp": "2026-09-01T10:25:06.465442Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-09-01T10:40:01.607421Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "37a6f2575c57",
+      "timestamp": "2026-09-01T10:40:01.607421Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 20
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-01T14:49:57.040265Z",
+    "agent_lines": 39,
+    "agent_removed": 3,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 39,
+    "total_lines_changed": 42,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 42,
+      "agent_lines_removed": 2
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 42,
+      "agent_lines_removed": 2
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 42,
+      "agent_lines_removed": 2
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 63,
+      "agent_lines_removed": 4
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 63,
+      "agent_lines_removed": 4
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 63,
+      "agent_lines_removed": 4
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 63,
+      "agent_lines_removed": 4
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 81,
+      "agent_lines_removed": 5
+    }
+  ]
+}
