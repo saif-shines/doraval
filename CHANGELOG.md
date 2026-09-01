@@ -17,6 +17,8 @@
   connection asks load `setup-agentkit`. Connected-account asks load
   `integrate-agentkit`. Missing AgentKit skills print the official
   authstack install and stop.
+- MCP URL may be `none`. A Skill script plus local creds can loop
+  without Agent Gateway. Secrets stay in the routine folder.
 
 ## 0.6.34
 

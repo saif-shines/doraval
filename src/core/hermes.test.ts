@@ -48,6 +48,16 @@ describe("hermes command builders", () => {
     expect(cmd).not.toContain("cron");
     expect(cmd).not.toContain("--timeout");
   });
+
+  test("no MCP omits the toolset and skips mcp add on boot", () => {
+    const local: Routine = { ...routine, mcpUrl: "" };
+    const cmd = onePassCommand(local);
+    expect(cmd).toContain("hermes chat --oneshot --run-budget 600");
+    expect(cmd).not.toContain("--toolsets");
+    const cmds = bootArgs(local);
+    expect(cmds.map((c) => c[0])).toEqual(["gateway", "gateway", "cron"]);
+    expect(JSON.stringify(cmds)).not.toContain("mcp");
+  });
 });
 
 describe("schedule and timeout", () => {

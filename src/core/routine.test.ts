@@ -347,6 +347,20 @@ describe("routine copy", () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
+  test("mcp none writes an empty mcp_url", () => {
+    const home = tmpHome();
+    const dir = writeRoutine(home, {
+      slug: "local-script",
+      prompt: "Run the script.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "none",
+    });
+    expect(readFileSync(join(dir, "routine.yml"), "utf8")).toContain('mcp_url: ""');
+    expect(readRoutine(home, "local-script").mcpUrl).toBe("");
+    rmSync(home, { recursive: true, force: true });
+  });
+
   test("does not copy secrets into the routine", () => {
     const home = tmpHome();
     const cwd = mkdtempSync(join(tmpdir(), "dora-copy-secret-"));
@@ -375,6 +389,7 @@ describe("routine copy", () => {
     expect(names).not.toContain("api.secret");
     expect(names).not.toContain("id_rsa");
     expect(readFileSync(join(src, ".env"), "utf8")).toBe("TOKEN=secret\n");
+    expect(existsSync(join(dir, ".env"))).toBe(false);
 
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });

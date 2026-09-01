@@ -77,13 +77,20 @@ An interval job cannot do a push, a webhook, or a human in the loop every tick. 
 Collect all three before you write the unattended prompt:
 
 1. Skills to **run** (optional extra SKILL.md folders the night pass loads).
-   Say **none** if the MCP tools are enough.
+   Say **none** if no extra Skill is needed.
 2. Skills to **refer to** (optional folders the prompt may cite).
    Say **none** if none.
-3. Scalekit Agent Gateway **MCP URL** (required).
-   Slack, GitHub, and other connectors live here. A connector is not a skill.
+3. Scalekit Agent Gateway **MCP URL**.
+   Most jobs need this. Say **none** if the job is a Skill script plus local creds only.
+   Slack, GitHub, and other MCP connectors live here. A connector is not a skill.
 
 A default shared MCP URL may already be saved. Reuse it. Ask before you override it for this routine.
+`--mcp-url none` writes a routine with no Agent Gateway.
+
+If MCP is **none**: skip the connector check and skip Hermes MCP login.
+After save, the teammate puts secrets in `~/.dora/harness/<slug>/.env`.
+Dora does not copy `.env` from the original skill. Dora does not print secrets.
+A Skill script stays inside the copied Skill. The routine has no top-level scripts directory.
 
 If no matching skill is on disk, do not invent one. Offer **none**, a local path, or a GitHub URL. Do not treat a missing Slack or GitHub skill as a blocker.
 
@@ -102,13 +109,14 @@ Offer `dora review --quick` on each copy. The teammate can skip.
 1. Run the loop-able check.
 2. Run the pocket check. Ask until the night prompt is one specific job.
 3. Collect the gate. Offer a readable slug. The teammate picks or renames it.
-4. Run the connector check.
+4. If MCP is not none: run the connector check. If MCP is none: skip it.
 5. Load `writing-for-routine`. Write `prompt.md`.
 6. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass. The one-pass does not author files.
 7. After one good one-pass, run the freeze check. Load `writing-for-routine` again. Update `prompt.md`. Offer a Fixed step only if the seam, the expected result, and the spec check pass. Draft that Skill in a temp folder. The human accepts. Another one-pass is allowed.
 8. Write the routine folder only after that pass, or after the teammate accepts the printed command. Save copies the skills into the routine. Then offer `dora review --quick` on each copy. The teammate can skip.
 9. After save, update only `prompt.md` and the Skill copy. Do not add a new Skill.
-10. Register Scalekit on Hermes, then login.
+10. If MCP is none: skip login. Creds stay in the routine folder.
+    If MCP is set: register Scalekit on Hermes, then login.
    Boot registers it: `dora harness boot <slug>`.
    The same add is `hermes mcp add scalekit --url <mcp-url> --auth oauth` in a real terminal.
    Login without that add fails: server not found.
@@ -138,6 +146,10 @@ MUST update only `prompt.md` and the Skill copy after save.
 MUST NOT use Hermes `--script` or `--no-agent` as the freeze path.
 MUST collect the gate before save.
 MUST accept none for skills to run and skills to refer.
+MUST accept none for MCP URL.
+MUST skip Hermes MCP login when MCP is none.
+MUST NOT copy `.env` or secrets from the original skill.
+MUST tell the teammate to put secrets in the routine folder when MCP is none.
 MUST copy named skills into the routine.
 MUST NOT require a skill because a connector exists.
 MUST NOT write the original skill directory.

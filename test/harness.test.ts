@@ -161,7 +161,7 @@ describe("dora harness", () => {
     expect(text).toMatch(/copies each skill folder into the routine/i);
     expect(text).toMatch(/dora review --quick/);
     expect(text).toMatch(/skip/i);
-    expect(text).toMatch(/Say \*\*none\*\* if the MCP tools are enough/);
+    expect(text).toMatch(/Say \*\*none\*\* if no extra Skill is needed/);
     expect(text).toMatch(/A connector is not a skill/);
     expect(text).toMatch(/MUST accept none for skills to run and skills to refer/);
     expect(text).toMatch(/MUST NOT require a skill because a connector exists/);
@@ -217,6 +217,32 @@ describe("dora harness", () => {
     expect(out).not.toContain("hermes cron list");
     expect(out).not.toContain("hermes logs");
     expect(out).not.toContain("hermes dashboard");
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("new --accept --mcp-url none writes a routine and omits mcp-scalekit", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-nomcp-"));
+    const { exitCode, stdout, stderr } = runDoraval(
+      [
+        "harness",
+        "new",
+        "--accept",
+        "--yes",
+        "--slug",
+        "lp-copy",
+        "--prompt",
+        "Author one connector page.",
+        "--mcp-url",
+        "none",
+      ],
+      { env: { HOME: home, PATH: pathWithoutHermes() } },
+    );
+    const out = stdout + stderr;
+    expect(exitCode).toBe(0);
+    expect(out).not.toContain("--toolsets mcp-scalekit");
+    expect(existsSync(join(home, ".dora", "harness", "lp-copy", "prompt.md"))).toBe(true);
+    expect(readFileSync(join(home, ".dora", "harness", "lp-copy", "routine.yml"), "utf8")).toContain('mcp_url: ""');
+    expect(existsSync(join(home, ".dora", "default-mcp-url"))).toBe(false);
     rmSync(home, { recursive: true, force: true });
   });
 

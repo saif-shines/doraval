@@ -1,5 +1,5 @@
 import { spawnSync } from "bun";
-import type { Routine } from "./routine.js";
+import { usesMcp, type Routine } from "./routine.js";
 
 export const MCP_SERVER = "scalekit";
 
@@ -26,16 +26,11 @@ export function hermesTimeoutSec(maxTick: string): number {
 }
 
 export function onePassArgs(
-  routine: Pick<Routine, "prompt"> & Partial<Pick<Routine, "maxTick" | "skillsRun">>,
+  routine: Pick<Routine, "prompt"> & Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl">>,
 ): string[] {
-  const args = [
-    "chat",
-    "--toolsets",
-    `mcp-${MCP_SERVER}`,
-    "--oneshot",
-    "--run-budget",
-    String(hermesTimeoutSec(routine.maxTick ?? "10m")),
-  ];
+  const args = ["chat"];
+  if (usesMcp(routine.mcpUrl ?? "")) args.push("--toolsets", `mcp-${MCP_SERVER}`);
+  args.push("--oneshot", "--run-budget", String(hermesTimeoutSec(routine.maxTick ?? "10m")));
   for (const skill of routine.skillsRun ?? []) {
     args.push("--skills", skill);
   }
@@ -74,14 +69,19 @@ export function bootArgs(routine: Routine): string[][] {
   for (const skill of routine.skillsRun) {
     create.push("--skill", skill);
   }
-  return [
+  const cmds: string[][] = [
     ["gateway", "install"],
     ["gateway", "start"],
-    ["mcp", "add", MCP_SERVER, "--url", routine.mcpUrl, "--auth", "oauth"],
-    ["mcp", "test", MCP_SERVER],
-    ["tools", "enable", `mcp-${MCP_SERVER}`, "--platform", "cron"],
-    create,
   ];
+  if (usesMcp(routine.mcpUrl)) {
+    cmds.push(
+      ["mcp", "add", MCP_SERVER, "--url", routine.mcpUrl, "--auth", "oauth"],
+      ["mcp", "test", MCP_SERVER],
+      ["tools", "enable", `mcp-${MCP_SERVER}`, "--platform", "cron"],
+    );
+  }
+  cmds.push(create);
+  return cmds;
 }
 
 export function pauseArgs(slug: string): string[] {

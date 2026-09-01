@@ -104,6 +104,7 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).toMatch(/--skills-run/);
     expect(text).toMatch(/--script/);
     expect(text).toMatch(/--no-agent/);
+    expect(text).toMatch(/MUST accept none for MCP URL/);
     expect(text).not.toMatch(/programmatize/i);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");
@@ -116,6 +117,8 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).toMatch(/Skill script/);
     expect(text).toMatch(/inside that Skill|inside the Skill/);
     expect(text).toMatch(/no top-level scripts directory/);
+    expect(text).toMatch(/\.env/);
+    expect(text).toMatch(/Do not put secrets/);
     expect(text).toMatch(/does not repeat|Do not repeat/);
     expect(text).toMatch(/Judgment/);
     expect(text).toMatch(/Dora Finding/);

@@ -36,6 +36,8 @@ Write the folder only after that pass, or after you accept the printed command:
 dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url>
 ```
 
+Most jobs need a Scalekit Agent Gateway MCP URL. Pass `--mcp-url none` when the job is a Skill script plus local creds only. After save, put secrets in `~/.dora/harness/<slug>/.env`. Dora does not copy `.env` from the original skill.
+
 The printed one-pass command looks like this:
 
 ```bash

@@ -38,6 +38,8 @@ Same craft: steps and a done-when. No second-person identity. No em dashes.
 
 A Skill script is optional. If one exists, it lives inside that Skill. Name the helper file in `SKILL.md`. Local work only. The routine has no top-level scripts directory. Do not use Hermes `--script` or `--no-agent`.
 
+Secrets live in the routine folder (`~/.dora/harness/<slug>/.env`). Do not put secrets in `SKILL.md` or `prompt.md`.
+
 ## Steps
 
 1. Read the grill answers. Use the gate. Do not invent a slug, a connector, or a skill.

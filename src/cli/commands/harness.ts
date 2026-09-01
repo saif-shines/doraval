@@ -10,6 +10,7 @@ import {
   readDefaultMcpUrl,
   readRoutine,
   writeDefaultMcpUrl,
+  usesMcp,
   writeRoutine,
 } from "../../core/routine.js";
 import {
@@ -161,17 +162,18 @@ export const harnessNew = defineCommand({
 
     const promptFile = typeof args["prompt-file"] === "string" ? args["prompt-file"] : "";
     const promptText = typeof args.prompt === "string" ? args.prompt : promptFile ? readFileSync(promptFile, "utf8") : "";
-    const mcpUrl = (typeof args["mcp-url"] === "string" ? args["mcp-url"] : readDefaultMcpUrl(home) ?? "").trim();
+    const mcpUrlRaw = (typeof args["mcp-url"] === "string" ? args["mcp-url"] : readDefaultMcpUrl(home) ?? "").trim();
+    const mcpUrl = mcpUrlRaw.toLowerCase() === "none" ? "" : mcpUrlRaw;
     const skillsRun = splitDirs(args["skills-run"] as string | undefined);
     const skillsRefer = splitDirs(args["skills-refer"] as string | undefined);
 
-    if (!slug || !promptText.trim() || !mcpUrl) {
+    if (!slug || !promptText.trim()) {
       guidedError({
         context: "dora harness new writes a routine only after the grill gate",
-        problem: "Missing slug, prompt, or MCP URL",
+        problem: "Missing slug or prompt",
         solutions: [
-          "Finish the grill. Collect skills to run, skills to refer to, and the MCP URL.",
-          "Then pass --slug, --prompt-file, and --mcp-url.",
+          "Finish the grill. Collect skills to run, skills to refer to, and the MCP URL or none.",
+          "Then pass --slug, --prompt-file, and --mcp-url (or --mcp-url none).",
         ],
         next: "dora harness new",
       });
@@ -213,20 +215,23 @@ export const harnessNew = defineCommand({
         shouldRun = ans === "yes";
       }
       if (shouldRun) {
-        const added = defaultHermesRun(["mcp", "add", MCP_SERVER, "--url", mcpUrl, "--auth", "oauth"]);
-        if (added.exitCode !== 0) {
-          const tested = defaultHermesRun(["mcp", "test", MCP_SERVER]);
-          if (tested.exitCode !== 0) {
-            ui.fail(mcpNotReady(added.stderr.trim()).message);
-            printMcpNext();
-            await exit(2);
-            return;
+        if (usesMcp(mcpUrl)) {
+          const added = defaultHermesRun(["mcp", "add", MCP_SERVER, "--url", mcpUrl, "--auth", "oauth"]);
+          if (added.exitCode !== 0) {
+            const tested = defaultHermesRun(["mcp", "test", MCP_SERVER]);
+            if (tested.exitCode !== 0) {
+              ui.fail(mcpNotReady(added.stderr.trim()).message);
+              printMcpNext();
+              await exit(2);
+              return;
+            }
           }
         }
         const r = defaultHermesRun(onePassArgs(draft));
         if (r.exitCode !== 0) {
           ui.fail(r.stderr.trim() || "One-pass command failed.");
-          printMcpNext();
+          if (usesMcp(mcpUrl)) printMcpNext();
+          else printWatch();
           await exit(2);
           return;
         }
@@ -248,7 +253,7 @@ export const harnessNew = defineCommand({
 
     try {
       const dir = writeRoutine(home, draft, { cwd: process.cwd() });
-      if (!readDefaultMcpUrl(home)) writeDefaultMcpUrl(home, mcpUrl);
+      if (usesMcp(mcpUrl) && !readDefaultMcpUrl(home)) writeDefaultMcpUrl(home, mcpUrl);
       ui.info(`  Wrote ${dir}`);
       ui.blank();
       await exit(0);
@@ -340,12 +345,22 @@ export const harnessBoot = defineCommand({
       runBoot(slug);
       ui.info(`  Booted ${slug}. Dora does not own the timer.`);
       ui.dim("  Laptop close is host sleep, not pause. Due jobs can fire on wake if the job is not paused.");
-      printMcpNext();
+      const booted = readRoutine(homedir(), slug);
+      if (usesMcp(booted.mcpUrl)) printMcpNext();
+      else printWatch();
       ui.blank();
       await exit(0);
     } catch (e) {
       ui.fail(e instanceof Error ? e.message : String(e));
-      printMcpNext();
+      const booted = (() => {
+        try {
+          return readRoutine(homedir(), slug);
+        } catch {
+          return undefined;
+        }
+      })();
+      if (!booted || usesMcp(booted.mcpUrl)) printMcpNext();
+      else printWatch();
       nextAction("dora harness list");
       await exit(2);
     }

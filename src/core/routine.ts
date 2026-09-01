@@ -20,6 +20,17 @@ export type RoutineInput = {
   maxTick?: string;
 };
 
+/** Empty or `none` means no Agent Gateway. Most jobs still use MCP. */
+export function normalizeMcpUrl(url: string): string {
+  const t = url.trim();
+  if (!t || t.toLowerCase() === "none") return "";
+  return t;
+}
+
+export function usesMcp(url: string): boolean {
+  return normalizeMcpUrl(url) !== "";
+}
+
 function harnessRoot(home: string): string {
   return join(home, ".dora", "harness");
 }
@@ -175,7 +186,7 @@ export function writeRoutine(home: string, input: RoutineInput, opts: WriteRouti
       [
         yamlList("skills_run", skillsRun),
         yamlList("skills_refer", skillsRefer),
-        `mcp_url: ${yamlScalar(input.mcpUrl)}`,
+        `mcp_url: ${yamlScalar(normalizeMcpUrl(input.mcpUrl))}`,
         `interval: ${yamlScalar(input.interval ?? DEFAULT_INTERVAL)}`,
         `max_tick: ${yamlScalar(input.maxTick ?? DEFAULT_MAX_TICK)}`,
         "",
