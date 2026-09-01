@@ -10,6 +10,9 @@
   one machine, one user. Not a new object.
 - Before a Fixed-step freeze, the grill names a seam and an expected
   result from the one-pass. A Tick does not run that check.
+- `ask-dora` routes a pocket job and `dora harness new` to the grill.
+  Existing-routine verbs do not load the grill. Missing Hermes prints
+  install steps.
 
 ## 0.6.34
 

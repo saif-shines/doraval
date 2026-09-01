@@ -32,6 +32,10 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).toMatch(/routine idea/i);
     expect(text).toMatch(/\bloop\b/i);
     expect(text).toMatch(/recurring/i);
+    expect(text).toMatch(/pocket/i);
+    expect(text).toContain("dora harness new");
+    expect(text).toMatch(/Hermes is missing/);
+    expect(text).toMatch(/Do not load the grill/);
     expect(text).toMatch(/internal teammate/i);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");
