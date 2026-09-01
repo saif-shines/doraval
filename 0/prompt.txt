@@ -1,0 +1,37 @@
+I want to add one more thing, when a pocket agent sets up a routine, and setups up the skill, doe if hte skill is global or local does it actually add symlink?
+
+---
+
+is it intentional?
+
+---
+
+makes sense
+
+---
+
+so when scalekit's connecte-account is selected what happens? how odoes dora identify the user?
+
+---
+
+I mean when pocket agent tries to reply to slack user, does it take care in identifying the right conencted account?
+
+---
+
+got it
+
+---
+
+is our ask-dora skill upto date?
+
+---
+
+so my quesiton is are you sure all teh routing elements are covered?
+
+---
+
+for example what if user doesn't not have heremes installed? what will you do in taht case?
+
+---
+
+can you fix what can be missed? adn push it to main
