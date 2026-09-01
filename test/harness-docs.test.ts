@@ -167,6 +167,18 @@ describe("dora harness docs lockstep", () => {
     }
   });
 
+  test("pocket agents walkthrough names the loop and hides private facts", () => {
+    const page = read("apps/website/content/get-started/pocket-agents.mdx");
+    expect(page).toMatch(/pocket agent/i);
+    expect(page).toContain("/ask-dora turn this loop-able check into a routine");
+    expect(page).toContain("dora harness boot");
+    expect(page).toContain("hermes mcp login scalekit");
+    expect(page).toContain("--mcp-url none");
+    expect(page).toContain("hermes cron list");
+    expect(page).not.toMatch(/akshay|scalekitforecosystem|@saif\b/i);
+    expect(page).not.toMatch(/WEBFLOW_API_TOKEN/);
+  });
+
   test("Reader page names Skill script, Tick never writes, and Runtime", () => {
     const harness = read("apps/website/content/commands/harness.mdx");
     const skills = read("apps/website/content/get-started/skills.mdx");

@@ -19,6 +19,8 @@
   authstack install and stop.
 - MCP URL may be `none`. A Skill script plus local creds can loop
   without Agent Gateway. Secrets stay in the routine folder.
+- Get-started page for pocket agents walks grill, one-pass, boot,
+  and watch.
 
 ## 0.6.34
 

@@ -1,0 +1,126 @@
+---
+title: Run a pocket agent
+description: Grill a small loop, test one pass, then boot it. The folder is a Routine.
+sidebar:
+  label: Pocket agents
+  order: 5
+---
+
+A **pocket agent** is a small unattended loop: one job, one machine, one user. The saved folder is still a **Routine** at `~/.dora/harness/<slug>/`.
+
+You type `/ask-dora`. The grill checks loop-able and pocket. Then you test one pass. Then you boot. This page walks that loop.
+
+## Before you start
+
+Install the four skills. Install [Hermes](https://hermes-agent.nousresearch.com/docs/). Reload the shell so `hermes` is on `PATH`.
+
+```bash
+npx skills add saif-shines/doraval --yes
+```
+
+If Hermes is missing, Dora prints official install steps. Dora does not install Hermes.
+
+## Start the grill
+
+In the agent, type:
+
+```text
+/ask-dora turn this loop-able check into a routine
+```
+
+An empty `/ask-dora` or “what can you help with” prints the map. Name a routine idea. The agent loads `grilling-for-routine`.
+
+Example idea: poll a Slack channel. When a message mentions you, says `approve`, and has a PR link, approve that PR. Do not merge.
+
+## Loop-able and pocket
+
+The grill asks if the same prompt can run on a timer with no human on each Tick.
+
+Loop-able: poll Slack, then approve. Not loop-able: wait for a Slack webhook, or confirm every PR yourself.
+
+Pocket: one job, one machine, one user. The night prompt is specific. Not pocket: a fleet, or a vague “handle Slack.”
+
+Do not pick the loop interval yet. Default is 1 hour. Change it after one good run.
+
+## Gate
+
+The grill collects three things.
+
+1. Skills to **run**. Say **none** if MCP tools are enough.
+2. Skills to **refer to**. Say **none** if none.
+3. Scalekit Agent Gateway **MCP URL**. Most jobs need this. Say **none** if the job is a Skill script plus local creds only.
+
+Paste the MCP URL. Do not invent one. Reuse a saved URL only if it is the real Gateway for this job.
+
+Also lock the facts the prompt needs: channel, mention, trigger words, and the action.
+
+## One pass
+
+The grill writes `prompt.md`. It prints a command like this:
+
+```bash
+dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url>
+```
+
+Hermes is quiet (`-q`). The terminal can look empty. That pass is the first test. It is not the loop.
+
+If the pass sits with no output, stop it with Ctrl+C. Then run:
+
+```bash
+hermes mcp login scalekit
+```
+
+Dora does not run that login. If Scalekit MCP is not ready, login first, then run the one-pass again.
+
+The folder is written only after that pass, or after you accept the printed command.
+
+## Boot the loop
+
+```bash
+dora harness boot <slug>
+```
+
+Then login if you have not:
+
+```bash
+hermes mcp login scalekit
+```
+
+Dora prints Runtime watch commands:
+
+```bash
+hermes cron list
+hermes cron runs
+hermes logs
+hermes dashboard
+```
+
+`list` shows running or paused. `pause` and `resume` change later ticks. `open` opens the folder.
+
+## Check without waiting an hour
+
+Edit `interval` in `~/.dora/harness/<slug>/routine.yml` after a good run. A 1 minute interval is fine for a check.
+
+A faster check: post the trigger message, then run one pass of the same prompt. You do not need a 1 minute loop for that.
+
+Laptop close is sleep. That is not `pause`.
+
+## Skill script, no Gateway
+
+Some jobs use a Skill script and an API key. They do not use Agent Gateway.
+
+Pass `--mcp-url none`. After save, put the key in `~/.dora/harness/<slug>/.env`. Open that file in an editor. Do not paste the key into chat.
+
+Dora does not copy `.env` from the original skill. The script stays inside the copied Skill folder.
+
+## Common mistakes
+
+- Treating a quiet one-pass as a hang. Wait, or Ctrl+C and run `hermes mcp login scalekit`.
+- Booting before login. The first pass talks to Scalekit. Login first.
+- Setting a 1 minute interval during the grill. Default is 1 hour. Change it after a good run.
+- Expecting a Dora logs verb. Use the Runtime watch commands.
+- Putting secrets in `prompt.md`. Use the routine `.env`.
+
+## Next
+
+[dora harness](/commands/harness/)

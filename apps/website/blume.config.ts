@@ -29,6 +29,7 @@ export default defineConfig({
         "/get-started/installation",
         "/get-started/quickstart",
         "/get-started/skills",
+        "/get-started/pocket-agents",
         "/get-started/connect",
         {
           label: "Reference",
