@@ -1,0 +1,9 @@
+can you run and refresh teh copy
+
+---
+
+I think there is a possiblity that users will ask connectors related questions; but it doesn not make sense to add full scalekit-inc/authstack into this doara ask-dora router; what should we do?
+
+---
+
+why not detect and tell the user please install scalekit-inc/authstack (see it's isntructions on the web) and tell to resume (restart session) or reload skills to try agian?
