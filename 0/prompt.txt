@@ -1,0 +1,25 @@
+search https://www.effect.website/docs/v4/getting-started/installation#bun and share you opinoin about this in fitmet of our project
+
+---
+
+first of all what does effect help with?
+
+---
+
+who uses it usually?
+
+---
+
+can you partly look up developer-docs codebase on this repo, and share your opinion?
+
+---
+
+When a message is sent form a pocket agent that dora spawns, it acts on behalf of hte user becuase user atuhenticates, should there be a subtle footer by "over scalekit" or something?
+
+---
+
+I like your good exampels, but with call it pocket agent - then the slug?
+
+---
+
+/mattpocock-skills:implement it
