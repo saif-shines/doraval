@@ -120,8 +120,9 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).toMatch(/\.env/);
     expect(text).toMatch(/Do not put secrets/);
     expect(text).toContain("Sent by pocket agent");
-    expect(text).toMatch(/Repeat-safe|skip step/i);
-    expect(text).toContain("last_ts");
+    expect(text).toMatch(/tick handoff/i);
+    expect(text).toContain("handoff.md");
+    expect(text).toMatch(/Overwrite|overwrite/);
     expect(text).toMatch(/does not repeat|Do not repeat/);
     expect(text).toMatch(/Judgment/);
     expect(text).toMatch(/Dora Finding/);

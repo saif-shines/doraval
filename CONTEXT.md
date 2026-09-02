@@ -231,6 +231,7 @@ _Avoid_: calling a login a Session; treating “dora is installed” as Connecte
 | **Fixed step** | A deterministic routine step stored in a Skill. `prompt.md` names that Skill. It does not repeat the step. _Avoid_: programmatize as a noun; Judgment (that word is a Dora Finding). |
 | **Pocket** | Size check on a Routine idea. One job, one machine, one user. The night prompt must be specific. |
 | **Pocket agent** | Reader name for that small loop. The saved folder is still a Routine. _Avoid_: a second folder type. |
+| **Tick handoff** | File `handoff.md` in the routine folder. Next Tick reads it. This Tick overwrites it. Missing file means first Tick. Prefer the destination as the store. _Avoid_: Hermes notepad-with-slug; MEMORY.md as a cursor. |
 
 _Avoid_: Dora on the OAuth / magic-link path; Slack, Discord, or Webflow in the harness; writing loop terms into kit CONTEXT.md.
 

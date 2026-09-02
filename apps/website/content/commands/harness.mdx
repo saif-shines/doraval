@@ -48,7 +48,7 @@ hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
 
 Dora appends a pocket-agent footer to the prompt Hermes runs. Human-visible messages end with `Sent by pocket agent <slug>`. `prompt.md` does not contain that line.
 
-A Tick has no last chat. The grill tells the night prompt to search the destination before a create, or to write `last_ts` in the routine folder. Dora does not write that file itself.
+A Tick has no last chat. The grill tells the night prompt to search the destination before a create, or to use a tick handoff: read `handoff.md` at the start, overwrite it at the end. Missing file means first Tick. Dora does not write that file.
 
 ## Fixed step
 

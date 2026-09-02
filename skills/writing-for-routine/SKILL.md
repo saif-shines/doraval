@@ -34,13 +34,19 @@ Keep the steps that need a new decision. Name the Fixed-step Skill. Do not repea
 
 Dora appends the pocket-agent footer when Hermes runs. Do not write it in `prompt.md`. Human-visible messages end with `Sent by pocket agent <slug>`.
 
-## Repeat-safe
+## Tick handoff
 
-A Tick has no last chat. Hermes starts a new session.
+A Tick has no last chat. Hermes starts a new session. The next Tick reads what this Tick wrote.
 
 Prefer the destination as the store. Search it before a create. Skip when the thing already exists (calendar event, issue, post). GitHub approve is already safe.
 
-If the destination cannot tell, write one file in the routine folder after save: `~/.dora/harness/<slug>/last_ts`. Missing file means start empty. End of run: write the file.
+If the destination cannot tell, use one file after save: `~/.dora/harness/<slug>/handoff.md`. Start: read it. Missing file means first Tick. End: overwrite it. Do not append.
+
+```
+last_ts: 1722614400.000100
+did: calendar:abc123 OOO Aug 2-9
+next: after last_ts
+```
 
 Do not use Hermes notepad with the slug. Do not put a cursor in MEMORY.md.
 
@@ -74,6 +80,8 @@ Secrets live in the routine folder (`~/.dora/harness/<slug>/.env`). Do not put s
    Done-when: each item is handled or skipped with a reason.
 ```
 
+When the destination cannot tell, add a first step that reads `handoff.md` and a last step that overwrites it.
+
 MUST write steps and a done-when.
 MUST write `prompt.md` and the Fixed-step Skill when a step is frozen.
 MUST NOT put a Skill script next to `prompt.md`.
@@ -84,4 +92,6 @@ MUST NOT use em dashes.
 MUST NOT name a prompt step Judgment.
 MUST NOT write the pocket-agent footer in `prompt.md`.
 MUST write a skip step when the action creates something.
+MUST start the night prompt by reading `handoff.md` only when the destination cannot tell.
+MUST end that night prompt by overwriting `handoff.md`. Do not append.
 MUST NOT rely on Hermes chat memory between ticks.

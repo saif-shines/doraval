@@ -173,7 +173,7 @@ describe("dora harness docs lockstep", () => {
     expect(page).toContain("/ask-dora I have a use case where I want to run a routine that looks at a slack channel and approve a pr on my behalf");
     expect(page).toContain("slack-pr-approve");
     expect(page).toContain("Sent by pocket agent slack-pr-approve");
-    expect(page).toContain("last_ts");
+    expect(page).toContain("handoff.md");
     expect(page).toContain("dora harness boot");
     expect(page).toContain("hermes mcp login scalekit");
     expect(page).toContain("--mcp-url none");
@@ -192,7 +192,8 @@ describe("dora harness docs lockstep", () => {
     expect(harness).toMatch(/--script/);
     expect(harness).toMatch(/no top-level scripts directory/);
     expect(harness).toContain("Sent by pocket agent");
-    expect(harness).toContain("last_ts");
+    expect(harness).toContain("handoff.md");
+    expect(harness).toMatch(/Missing file means first Tick/);
     expect(skills).toMatch(/Skill script/);
     expect(skills).toContain("/commands/harness/");
   });
