@@ -1,0 +1,72 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1GXVS1TBHHTQWVN092WB3S4",
+  "session_id": "01a060b5-064c-7261-8aa9-05e690598b96",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-02T11:25:29.068046Z",
+  "branch": "main",
+  "checkpoints_count": 9,
+  "files_touched": [
+    "CHANGELOG.md",
+    "apps/website/content/commands/harness.mdx",
+    "apps/website/content/get-started/pocket-agents.mdx",
+    "skills/grilling-for-routine/SKILL.md",
+    "skills/writing-for-routine/SKILL.md",
+    "test/ask-dora.test.ts",
+    "test/harness-docs.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "92bca5a55798",
+  "checkpoint_transcript_start": 284,
+  "transcript_lines_at_start": 284,
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-09-02T10:06:17.134164Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "7246e1cede8e",
+      "timestamp": "2026-09-02T10:06:17.134164Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 10
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-02T11:25:28.884146Z",
+    "agent_lines": 27,
+    "agent_removed": 2,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 27,
+    "total_lines_changed": 29,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

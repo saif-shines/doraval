@@ -1,0 +1,54 @@
+<system-reminder>
+Background task "call-5011c699-bb56-4c4d-9c0d-ef8dd23c5077-69" completed (exit code: 2).
+Command: bunx tsc --noEmit --skipLibCheck && bun test src/core/hermes.test.ts test/harness.test.ts test/harness-docs.test.ts test/ask-dora.test.ts | Duration: 16.6s
+Use get_command_or_subagent_output("call-5011c699-bb56-4c4d-9c0d-ef8dd23c5077-69") to see the full output.
+</system-reminder>
+
+---
+
+got it
+
+---
+
+one more thing I want to enquire is how is state mangement hapening? for example a pocket agent might be on 3 hr routine; and is capturing what if it has to remmber I've already checke d this message and I should continue from here?
+
+---
+
+can you search into hermes and tell me if that is handled?
+
+---
+
+please /research more about how dora enableds and see if this is capability we can input or leverage into pocket agents setup by dora
+
+---
+
+a simple thing is for example a ooo-holidays agent has already created an event on calendar because someone posted they are off from aug 2-9; but then in the next tick if it sees the same aug 2-9 will the hermes agent create the calendar event again?
+
+---
+
+I found thsi No, by default Hermes cron jobs do not remember state or conversation history between runs. [1, 2] 
+Every scheduled execution fires up a completely fresh agent session with zero memory of the last run, no previous conversation context, and no carryover from your interactive chat sessions. [2] 
+------------------------------
+## 🛠️ How to pass state or build continuity
+If your workflow requires data to persist or pass from one run to the next, you must use one of Hermes' native workarounds:
+
+* 
+* The context_from Parameter (Job Chaining): You can configure a job to pull context directly from a previous job's final output. When the second job fires, Hermes looks up the markdown file from the first job's last run (~/.hermes/cron/output/{job_id}/*.md) and prepends it to the new prompt. [1] 
+* File-Based Memory: Since Hermes has access to local files and tools, you can explicitly prompt the agent to read and write its state to a tracking file on disk (such as a local JSON or Markdown file) at the end of each run. [1, 3] 
+* Continuable Jobs: If the cron job outputs to a messaging platform (like Slack, Discord, or Telegram), you can configure the job as continuable. This seeds the brief into a dedicated thread so that if a human replies, the agent can continue that specific conversation inline with the correct context. [1] 
+* 
+
+Would you like help setting up a context_from chain or structuring a prompt that saves its state to a local file?
+
+[1] [https://github.com](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/cron.md)
+[2] [https://evomap.ai](https://evomap.ai/blog/hermes-agent-cron-jobs-scheduling)
+[3] [https://userorbit.com](https://userorbit.com/blog/getting-started-with-hermes-agent)
+ on web
+
+---
+
+so if any one is building pocket agents with dora the file on disk approach happens automatically?
+
+---
+
+can that be something dora recommend? in some way
