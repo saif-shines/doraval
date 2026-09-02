@@ -46,6 +46,8 @@ hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
 
 `--run-budget` is the one-pass time limit (default 10 minutes). Skills to run are passed as `--skills`. Dora refuses to overwrite an existing slug.
 
+Dora appends a pocket-agent footer to the prompt Hermes runs. Human-visible messages end with `Sent by pocket agent <slug>`. `prompt.md` does not contain that line.
+
 ## Fixed step
 
 A Fixed step is optional. Loop-able stays first. A small loop-able job can ship with `prompt.md` only.

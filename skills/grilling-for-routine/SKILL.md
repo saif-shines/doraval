@@ -53,7 +53,7 @@ After save, update only `prompt.md` and the Skill copy. Do not add a new Skill a
 
 Refuse Hermes `--script` and `--no-agent` as the freeze path. Those flags cannot call Scalekit MCP tools. A Skill script is local work only.
 
-Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill.
+Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill. Dora appends the pocket-agent footer at run. Do not put it in `prompt.md`.
 
 ## Connectors
 

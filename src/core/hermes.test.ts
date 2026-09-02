@@ -25,7 +25,7 @@ describe("hermes command builders", () => {
       "cron",
       "create",
       "every 1h",
-      "Check the inbox.",
+      "Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass",
       "--name",
       "night-pass",
       "--skill",
@@ -45,6 +45,7 @@ describe("hermes command builders", () => {
     expect(cmd).toContain("hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600");
     expect(cmd).toContain("--skills /skills/run");
     expect(cmd).toContain("-q");
+    expect(cmd).toContain(JSON.stringify("Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass"));
     expect(cmd).not.toContain("cron");
     expect(cmd).not.toContain("--timeout");
   });

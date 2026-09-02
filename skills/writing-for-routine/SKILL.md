@@ -32,6 +32,8 @@ The prompt is for an unattended pass. It is not a human chat.
 
 Keep the steps that need a new decision. Name the Fixed-step Skill. Do not repeat the frozen steps.
 
+Dora appends the pocket-agent footer when Hermes runs. Do not write it in `prompt.md`. Human-visible messages end with `Sent by pocket agent <slug>`.
+
 ## Fixed-step Skill
 
 Same craft: steps and a done-when. No second-person identity. No em dashes.
@@ -68,3 +70,4 @@ MUST NOT use Hermes `--script` or `--no-agent`.
 MUST NOT assign a second-person identity.
 MUST NOT use em dashes.
 MUST NOT name a prompt step Judgment.
+MUST NOT write the pocket-agent footer in `prompt.md`.

@@ -75,6 +75,14 @@ The grill writes `prompt.md`. It looks like this:
    Done-when: each kept PR is approved or skipped with a reason.
 ```
 
+When Hermes runs that prompt, Dora appends:
+
+```text
+Human-visible messages end with: Sent by pocket agent slack-pr-approve
+```
+
+Do not put that line in `prompt.md`. A Slack post then ends with `Sent by pocket agent slack-pr-approve`.
+
 ### 6. One pass
 
 The grill prints:

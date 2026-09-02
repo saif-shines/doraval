@@ -25,8 +25,12 @@ export function hermesTimeoutSec(maxTick: string): number {
   return n;
 }
 
+function hermesPrompt(prompt: string, slug: string): string {
+  return `${prompt.trim()}\n\nHuman-visible messages end with: Sent by pocket agent ${slug}`;
+}
+
 export function onePassArgs(
-  routine: Pick<Routine, "prompt"> & Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl">>,
+  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl">>,
 ): string[] {
   const args = ["chat"];
   if (usesMcp(routine.mcpUrl ?? "")) args.push("--toolsets", `mcp-${MCP_SERVER}`);
@@ -34,12 +38,12 @@ export function onePassArgs(
   for (const skill of routine.skillsRun ?? []) {
     args.push("--skills", skill);
   }
-  args.push("-q", routine.prompt.trim());
+  args.push("-q", hermesPrompt(routine.prompt, routine.slug));
   return args;
 }
 
 export function onePassCommand(
-  routine: Pick<Routine, "prompt"> & Partial<Pick<Routine, "maxTick" | "skillsRun">>,
+  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun">>,
 ): string {
   const args = onePassArgs(routine);
   return ["hermes", ...args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))].join(" ");
@@ -62,7 +66,7 @@ export function bootArgs(routine: Routine): string[][] {
     "cron",
     "create",
     hermesSchedule(routine.interval ?? "1h"),
-    routine.prompt.trim(),
+    hermesPrompt(routine.prompt, routine.slug),
     "--name",
     routine.slug,
   ];

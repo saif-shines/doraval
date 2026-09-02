@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Features
+
+- One-pass and boot append a pocket-agent footer to the Hermes
+  prompt. Human-visible messages end with
+  `Sent by pocket agent <slug>`. `prompt.md` stays clean.
+
 ## 0.6.35
 
 ### Features
