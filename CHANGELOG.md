@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.36
+
 ### Features
 
 - One-pass and boot append a pocket-agent footer to the Hermes
@@ -11,6 +13,11 @@
   destination first, or read `handoff.md` at the start and
   overwrite it at the end. Missing file means first Tick.
   Dora does not write that file.
+
+### Docs
+
+- Pocket-agents and harness pages name the footer and the
+  tick handoff. Catalog and `writing-for-routine` match.
 
 ## 0.6.35
 
