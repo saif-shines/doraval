@@ -1,0 +1,24 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1GZF01JV2GJP53BH2BZPDZE",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "CHANGELOG.md",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/get-started/skills.mdx",
+    "apps/website/package.json",
+    "jsr.json",
+    "package.json",
+    "skills/review-with-dora/references/commands.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
