@@ -7,6 +7,9 @@
 - One-pass and boot append a pocket-agent footer to the Hermes
   prompt. Human-visible messages end with
   `Sent by pocket agent <slug>`. `prompt.md` stays clean.
+- The grill recommends a skip store: search the destination
+  before a create, or write `last_ts` in the routine folder.
+  A Tick has no last chat. Dora does not write that file.
 
 ## 0.6.35
 

@@ -34,6 +34,16 @@ Keep the steps that need a new decision. Name the Fixed-step Skill. Do not repea
 
 Dora appends the pocket-agent footer when Hermes runs. Do not write it in `prompt.md`. Human-visible messages end with `Sent by pocket agent <slug>`.
 
+## Repeat-safe
+
+A Tick has no last chat. Hermes starts a new session.
+
+Prefer the destination as the store. Search it before a create. Skip when the thing already exists (calendar event, issue, post). GitHub approve is already safe.
+
+If the destination cannot tell, write one file in the routine folder after save: `~/.dora/harness/<slug>/last_ts`. Missing file means start empty. End of run: write the file.
+
+Do not use Hermes notepad with the slug. Do not put a cursor in MEMORY.md.
+
 ## Fixed-step Skill
 
 Same craft: steps and a done-when. No second-person identity. No em dashes.
@@ -58,7 +68,9 @@ Secrets live in the routine folder (`~/.dora/harness/<slug>/.env`). Do not put s
 ```
 1. Poll the source named in the gate.
    Done-when: new items since the last tick are listed, or the list is empty.
-2. Apply the action named in the gate to each new item.
+2. Skip an item when the action is already true in the destination.
+   Done-when: each item is new or skipped with a reason.
+3. Apply the action named in the gate to each new item.
    Done-when: each item is handled or skipped with a reason.
 ```
 
@@ -71,3 +83,5 @@ MUST NOT assign a second-person identity.
 MUST NOT use em dashes.
 MUST NOT name a prompt step Judgment.
 MUST NOT write the pocket-agent footer in `prompt.md`.
+MUST write a skip step when the action creates something.
+MUST NOT rely on Hermes chat memory between ticks.
