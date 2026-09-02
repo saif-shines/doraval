@@ -1,0 +1,13 @@
+I think we should borry from matt's handoff skill so that we effective log for last_ts; what do you think?
+
+---
+
+I was thinking just to borrow how it comes up with handoff between sessions, it could be handoff between ticks
+
+---
+
+/ask-matt what is the best way to implement this tiny task?
+
+---
+
+/mattpocock-skills:implement

@@ -1,0 +1,25 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1GZ7JD8123VSMD3GCZ3WCRD",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "apps/website/content/commands/harness.mdx",
+    "apps/website/content/get-started/pocket-agents.mdx",
+    "skills/grilling-for-routine/SKILL.md",
+    "skills/writing-for-routine/SKILL.md",
+    "test/ask-dora.test.ts",
+    "test/harness-docs.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
