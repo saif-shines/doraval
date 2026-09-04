@@ -17,13 +17,16 @@ import {
 import {
   bootArgs,
   defaultHermesRun,
+  editArgs,
   listCronJobs,
   loginCommand,
   MCP_SERVER,
   onePassArgs,
   onePassCommand,
+  parseCreatedJobId,
   pauseArgs,
   resumeArgs,
+  runsArgs,
   watchCommands,
   type CronJob,
 } from "../../core/hermes.js";
@@ -54,7 +57,7 @@ function splitDirs(raw: string | undefined): string[] {
 
 function printHermesInstall(): void {
   guidedError({
-    context: "dora harness needs Hermes to boot, pause, or resume a routine",
+    context: "dora harness needs Hermes to apply, pause, resume, or print logs",
     problem: "Hermes is not installed",
     solutions: [
       "Linux / macOS / WSL2: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash",
@@ -359,10 +362,15 @@ export const harnessNew = defineCommand({
   },
 });
 
-function runBoot(slug: string): void {
-  const routine = readRoutine(homedir(), slug);
-  for (const args of bootArgs(routine)) {
+function formatHermesCmd(args: string[]): string {
+  return ["hermes", ...args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))].join(" ");
+}
+
+function runHermesCmds(cmds: string[][]): string {
+  let lastOut = "";
+  for (const args of cmds) {
     const r = defaultHermesRun(args);
+    lastOut = r.stdout + r.stderr;
     if (args[0] === "mcp" && args[1] === "add" && r.exitCode !== 0) {
       const tested = defaultHermesRun(["mcp", "test", MCP_SERVER]);
       if (tested.exitCode !== 0) throw mcpNotReady(r.stderr.trim());
@@ -375,89 +383,129 @@ function runBoot(slug: string): void {
       throw new Error(r.stderr.trim() || `hermes ${args.join(" ")} failed`);
     }
   }
+  return lastOut;
 }
+
+const WRITE_ARGS = {
+  slug: { type: "positional" as const, description: "Routine slug", required: false },
+  yes: { type: "boolean" as const, description: "Write without prompting (agents)", default: false, alias: "y" },
+  "dry-run": { type: "boolean" as const, description: "Print the Runtime commands, write nothing", default: false },
+  format: { type: "string" as const, description: "Output format: table | json", default: "table" },
+  json: { type: "boolean" as const, description: "Alias for --format json", default: false },
+  ci: { type: "boolean" as const, description: "Machine mode (implies --format json)", default: false },
+};
+
+async function runApply(slug: string, args: { yes?: boolean; "dry-run"?: boolean; format?: string; json?: boolean; ci?: boolean }): Promise<void> {
+  if (!hermesInstalled()) {
+    printHermesInstall();
+    await exit(2);
+    return;
+  }
+  const dryRun = Boolean(args["dry-run"]);
+  const yes = Boolean(args.yes);
+  if (shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun })) {
+    refuseAgentWrite("dora harness apply <slug> --yes");
+    await exit(2);
+    return;
+  }
+  const home = homedir();
+  const mode = resolveOutputMode(args);
+  let routine;
+  try {
+    routine = readRoutine(home, slug);
+  } catch (e) {
+    ui.fail(e instanceof Error ? e.message : String(e));
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  const jobs = listCronJobs();
+  let action: "create" | "edit" = "create";
+  let jobId: string | undefined;
+  const live = routine.jobId && jobs?.some((j) => j.id === routine.jobId) ? routine.jobId : undefined;
+  const named = jobs?.find((j) => j.name === slug);
+  if (live) {
+    action = "edit";
+    jobId = live;
+  } else if (named) {
+    action = "edit";
+    jobId = named.id;
+    if (!dryRun) writeRoutineJobId(home, slug, named.id);
+  } else if (routine.jobId && jobs === null) {
+    action = "edit";
+    jobId = routine.jobId;
+  }
+  const cmds = action === "edit" && jobId ? [editArgs(routine, jobId)] : bootArgs(routine);
+  if (dryRun) {
+    for (const c of cmds) ui.info(`  ${formatHermesCmd(c)}`);
+    if (mode.format === "json") outJson({ slug, action, dryRun: true });
+    nextAction(`dora harness apply ${slug} --yes`);
+    ui.blank();
+    await exit(0);
+    return;
+  }
+  try {
+    const out = runHermesCmds(cmds);
+    if (action === "create") {
+      const created = parseCreatedJobId(out);
+      if (!created) throw new Error("Hermes did not print a job id.");
+      writeRoutineJobId(home, slug, created);
+      jobId = created;
+    }
+    if (mode.format === "json") {
+      outJson({ slug, action, jobId: jobId ?? null });
+      await exit(0);
+      return;
+    }
+    ui.info(`  Applied ${slug}. Dora does not own the timer.`);
+    ui.dim("  Laptop close is host sleep, not pause. Due jobs can fire on wake if the job is not paused.");
+    if (usesMcp(routine.mcpUrl)) printMcpNext();
+    else printWatch();
+    nextAction(`dora harness show ${slug}`);
+    ui.blank();
+    await exit(0);
+  } catch (e) {
+    ui.fail(e instanceof Error ? e.message : String(e));
+    if (usesMcp(routine.mcpUrl)) printMcpNext();
+    else printWatch();
+    nextAction("dora harness list");
+    await exit(1);
+  }
+}
+
+export const harnessApply = defineCommand({
+  meta: {
+    name: "apply",
+    description: [
+      "Push the routine folder onto the Runtime job",
+      "",
+      "Creates the job on first apply. Later apply edits that job.",
+      "boot is the same command. There is no set verb.",
+    ].join("\n"),
+  },
+  args: WRITE_ARGS,
+  async run({ args }) {
+    const slug = await pickSlug(args.slug, "apply");
+    if (!slug) return;
+    await runApply(slug, args);
+  },
+});
 
 export const harnessBoot = defineCommand({
   meta: {
     name: "boot",
     description: [
-      "Start a routine on Hermes",
+      "Alias of apply",
       "",
-      "Starts the Hermes gateway as a machine service, writes one cron job, then exits.",
-      "Laptop close is host sleep, not pause. Cron does not run while the host sleeps.",
-      "Due jobs can fire on wake if the job is not paused.",
+      "Starts the Hermes gateway if needed, then creates or edits the Runtime job.",
+      "Laptop close is host sleep, not pause. Due jobs can fire on wake if the job is not paused.",
     ].join("\n"),
   },
-  args: {
-    slug: { type: "positional", description: "Routine slug", required: false },
-  },
+  args: WRITE_ARGS,
   async run({ args }) {
-    let slug = String(args.slug ?? "").trim();
-    const home = homedir();
-    if (!slug) {
-      const slugs = listRoutineSlugs(home);
-      ui.blank();
-      ui.heading("dora harness boot");
-      ui.blank();
-      if (slugs.length === 0) {
-        summaryLine("No routines.");
-        nextAction("dora harness new");
-        ui.blank();
-        await exit(0);
-        return;
-      }
-      for (const s of slugs) ui.info(`  ${s}`);
-      ui.blank();
-      if (!process.stdin.isTTY || !process.stderr.isTTY) {
-        nextAction("dora harness boot <slug>");
-        nextAction("dora harness new");
-        ui.blank();
-        await exit(2);
-        return;
-      }
-      const picked = await promptSelect(
-        "Boot which routine?",
-        [
-          ...slugs.map((s) => ({ value: s, label: s })),
-          { value: "__new__", label: "Create a new routine" },
-        ],
-        slugs[0]!,
-      );
-      if (picked === "__new__") {
-        printGrill(home);
-        await exit(0);
-        return;
-      }
-      slug = picked;
-    }
-    if (!hermesInstalled()) {
-      printHermesInstall();
-      await exit(2);
-      return;
-    }
-    try {
-      runBoot(slug);
-      ui.info(`  Booted ${slug}. Dora does not own the timer.`);
-      ui.dim("  Laptop close is host sleep, not pause. Due jobs can fire on wake if the job is not paused.");
-      const booted = readRoutine(homedir(), slug);
-      if (usesMcp(booted.mcpUrl)) printMcpNext();
-      else printWatch();
-      ui.blank();
-      await exit(0);
-    } catch (e) {
-      ui.fail(e instanceof Error ? e.message : String(e));
-      const booted = (() => {
-        try {
-          return readRoutine(homedir(), slug);
-        } catch {
-          return undefined;
-        }
-      })();
-      if (!booted || usesMcp(booted.mcpUrl)) printMcpNext();
-      else printWatch();
-      nextAction("dora harness list");
-      await exit(2);
-    }
+    const slug = await pickSlug(args.slug, "boot");
+    if (!slug) return;
+    await runApply(slug, args);
   },
 });
 
@@ -557,6 +605,89 @@ export const harnessResume = defineCommand({
     const slug = await pickSlug(args.slug, "resume");
     if (!slug) return;
     await runPauseResume("resume", slug, resolveOutputMode(args));
+  },
+});
+
+function liveJobId(home: string, slug: string): string | undefined {
+  const routine = readRoutine(home, slug);
+  const jobs = listCronJobs();
+  if (routine.jobId) {
+    if (jobs && !jobs.some((j) => j.id === routine.jobId)) return undefined;
+    return routine.jobId;
+  }
+  const hit = jobs?.find((j) => j.name === slug);
+  if (!hit) return undefined;
+  writeRoutineJobId(home, slug, hit.id);
+  return hit.id;
+}
+
+async function runLogs(slug: string, mode: OutputMode): Promise<void> {
+  if (!hermesInstalled()) {
+    printHermesInstall();
+    await exit(2);
+    return;
+  }
+  const home = homedir();
+  let jobId: string | undefined;
+  try {
+    jobId = liveJobId(home, slug);
+  } catch (e) {
+    ui.fail(e instanceof Error ? e.message : String(e));
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  if (!jobId) {
+    ui.fail("That job is gone.");
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  const r = defaultHermesRun(runsArgs(jobId));
+  if (r.exitCode !== 0) {
+    ui.fail(r.stderr.trim() || "Logs failed.");
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  if (mode.format === "json") {
+    outJson({ slug, jobId, output: r.stdout });
+    await exit(0);
+    return;
+  }
+  ui.blank();
+  ui.heading("dora harness logs");
+  ui.blank();
+  const text = r.stdout.replace(/\n$/, "");
+  if (text) {
+    for (const line of text.split("\n")) ui.info(line);
+  } else {
+    summaryLine("No runs.");
+  }
+  ui.blank();
+  nextAction(`dora harness show ${slug}`);
+  ui.blank();
+  await exit(0);
+}
+
+export const harnessLogs = defineCommand({
+  meta: {
+    name: "logs",
+    description: [
+      "Print run history for one routine",
+      "",
+      "Uses the Runtime per-job runs command for the stored id.",
+      "Does not dump the global Runtime agent log.",
+    ].join("\n"),
+  },
+  args: {
+    slug: { type: "positional", description: "Routine slug", required: false },
+    ...READ_ARGS,
+  },
+  async run({ args }) {
+    const slug = await pickSlug(args.slug, "logs");
+    if (!slug) return;
+    await runLogs(slug, resolveOutputMode(args));
   },
 });
 

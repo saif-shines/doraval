@@ -88,12 +88,35 @@ export function bootArgs(routine: Routine): string[][] {
   return cmds;
 }
 
+export function editArgs(routine: Routine, jobId: string): string[] {
+  const args = [
+    "cron",
+    "edit",
+    jobId,
+    "--schedule",
+    hermesSchedule(routine.interval ?? "1h"),
+    "--prompt",
+    hermesPrompt(routine.prompt, routine.slug),
+  ];
+  if (routine.skillsRun.length === 0) args.push("--clear-skills");
+  else for (const skill of routine.skillsRun) args.push("--skill", skill);
+  return args;
+}
+
+export function parseCreatedJobId(text: string): string | undefined {
+  return text.match(/Created job:\s*([0-9a-f]{12})/i)?.[1];
+}
+
 export function pauseArgs(jobId: string): string[] {
   return ["cron", "pause", jobId];
 }
 
 export function resumeArgs(jobId: string): string[] {
   return ["cron", "resume", jobId];
+}
+
+export function runsArgs(jobId: string): string[] {
+  return ["cron", "runs", jobId];
 }
 
 export type CronJob = {

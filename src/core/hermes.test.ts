@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { bootArgs, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCronList, pauseArgs, resumeArgs, watchCommands } from "./hermes.js";
+import { bootArgs, editArgs, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCreatedJobId, parseCronList, pauseArgs, resumeArgs, runsArgs, watchCommands } from "./hermes.js";
 import type { Routine } from "./routine.js";
 
 const routine: Routine = {
@@ -38,6 +38,30 @@ describe("hermes command builders", () => {
   test("pause and resume target that job id only", () => {
     expect(pauseArgs("abcdef123456")).toEqual(["cron", "pause", "abcdef123456"]);
     expect(resumeArgs("abcdef123456")).toEqual(["cron", "resume", "abcdef123456"]);
+  });
+
+  test("runs asks the Runtime for that job id only", () => {
+    expect(runsArgs("abcdef123456")).toEqual(["cron", "runs", "abcdef123456"]);
+  });
+
+  test("edit pushes schedule, prompt, and skills onto that job id", () => {
+    expect(editArgs(routine, "abcdef123456")).toEqual([
+      "cron",
+      "edit",
+      "abcdef123456",
+      "--schedule",
+      "every 1h",
+      "--prompt",
+      "Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass",
+      "--skill",
+      "/skills/run",
+    ]);
+    expect(editArgs({ ...routine, skillsRun: [] }, "abcdef123456")).toContain("--clear-skills");
+  });
+
+  test("parseCreatedJobId reads the hex id from create output", () => {
+    expect(parseCreatedJobId("Created job: fedcba654321\n  Schedule: every 1h\n")).toBe("fedcba654321");
+    expect(parseCreatedJobId("nope")).toBeUndefined();
   });
 
   test("one-pass command uses the MCP toolset, skills, and run-budget", () => {

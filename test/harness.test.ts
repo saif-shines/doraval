@@ -21,7 +21,7 @@ describe("dora harness", () => {
     const { exitCode, stdout, stderr } = runDoraval(["harness", "--help"]);
     const out = stdout + stderr;
     expect(exitCode).toBe(0);
-    for (const verb of ["new", "boot", "pause", "resume", "list", "show", "open"]) {
+    for (const verb of ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "open"]) {
       expect(out).toContain(verb);
     }
   });
@@ -114,7 +114,7 @@ describe("dora harness", () => {
     rmSync(home, { recursive: true, force: true });
   });
 
-  for (const verb of ["boot", "pause", "resume"] as const) {
+  for (const verb of ["apply", "boot", "pause", "resume", "logs"] as const) {
     test(`missing Hermes: ${verb} prints official install steps and stops`, () => {
       const home = mkdtempSync(join(tmpdir(), "dora-harness-nohermes-"));
       writeRoutine(home, {
@@ -371,8 +371,8 @@ describe("dora harness", () => {
       skillsRefer: [],
       mcpUrl: "https://gw.example/mcp",
     });
-    const { bin, log } = fakeHermes(home);
-    const { exitCode, stdout, stderr } = runDoraval(["harness", "boot", "night-pass"], {
+    const { bin, log } = fakeHermes(home, "");
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "boot", "night-pass", "--yes"], {
       env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
     });
     expect(exitCode).toBe(0);
@@ -383,7 +383,10 @@ describe("dora harness", () => {
     expect(logText).toContain("mcp add scalekit");
     expect(logText).toContain("mcp test scalekit");
     expect(logText).toContain("tools enable mcp-scalekit --platform cron");
-    expect(stdout + stderr).toMatch(/booted/i);
+    expect(stdout + stderr).toMatch(/applied/i);
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).toContain(
+      'job_id: "fedcba654321"',
+    );
     expect(stdout + stderr).toContain("hermes mcp login scalekit");
     expect(stdout + stderr).toMatch(/fire on wake/i);
     for (const cmd of ["hermes cron list", "hermes cron runs", "hermes logs", "hermes dashboard"]) {
@@ -402,8 +405,8 @@ describe("dora harness", () => {
       skillsRefer: [],
       mcpUrl: "https://gw.example/mcp",
     });
-    const { bin, log } = fakeHermes(home, "[active] night-pass\n", { failMcp: true });
-    const { exitCode, stdout, stderr } = runDoraval(["harness", "boot", "night-pass"], {
+    const { bin, log } = fakeHermes(home, "", { failMcp: true });
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "boot", "night-pass", "--yes"], {
       env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
     });
     expect(exitCode).not.toBe(0);
@@ -637,7 +640,7 @@ describe("dora harness", () => {
       skillsRefer: [],
       mcpUrl: "https://gw.example/mcp",
     });
-    for (const verb of ["show", "pause", "resume"] as const) {
+    for (const verb of ["show", "pause", "resume", "logs"] as const) {
       const { exitCode, stdout, stderr } = runDoraval(["harness", verb], {
         env: { HOME: home, PATH: pathWithoutHermes() },
       });
@@ -694,6 +697,109 @@ describe("dora harness", () => {
     expect(blob).toContain("dora harness list --json");
     expect(blob).toContain("dora harness pause <slug> --json");
     expect(blob).toContain("dora harness resume <slug> --json");
+    expect(blob).toContain("dora harness logs <slug>");
+    expect(blob).toContain("dora harness logs <slug> --json");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("logs <slug> prints that job's run history via the Runtime runs command", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-logs-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "SECRET PROMPT TEXT",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const runsOut =
+      "9a1dbe9fc3d84b048233ee05388db4d4  completed  job=abcdef123456  source=builtin  2026-09-04T23:22:14+05:30\n";
+    const { bin, log } = fakeHermes(home, cronListBlock("abcdef123456", "night-pass", "active"), { runsOut });
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "logs", "night-pass"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    const logText = readFileSync(log, "utf8");
+    expect(logText).toContain("cron runs abcdef123456");
+    expect(logText).not.toMatch(/^logs(?: |$)/m);
+    const out = stdout + stderr;
+    expect(out).toContain("9a1dbe9fc3d84b048233ee05388db4d4");
+    expect(out).toContain("dora harness show night-pass");
+    expect(out).not.toContain("SECRET PROMPT TEXT");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("logs with a dead stored id says the job is gone", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-logdead-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "deaddeaddead"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home);
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "logs", "night-pass"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(1);
+    expect(stdout + stderr).toMatch(/gone/i);
+    expect(stdout + stderr).not.toMatch(/^logs(?: |$)/m);
+    expect(readFileSync(log, "utf8")).not.toContain("cron runs");
+    expect(readFileSync(log, "utf8")).not.toMatch(/^logs(?: |$)/m);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("logs --json is one object on stdout", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-logjson-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "SECRET PROMPT TEXT",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const runsOut =
+      "9a1dbe9fc3d84b048233ee05388db4d4  completed  job=abcdef123456  source=builtin  2026-09-04T23:22:14+05:30\n";
+    const { bin } = fakeHermes(home, cronListBlock("abcdef123456", "night-pass", "active"), { runsOut });
+    const { exitCode, stdout } = runDoraval(["harness", "logs", "night-pass", "--json"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout)).toEqual({
+      slug: "night-pass",
+      jobId: "abcdef123456",
+      output: runsOut,
+    });
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
   });
@@ -712,9 +818,208 @@ describe("dora harness", () => {
     });
     expect(exitCode).toBe(2);
     expect(stdout + stderr).toContain("night-pass");
-    expect(stdout + stderr).toContain("dora harness boot");
-    expect(stdout + stderr).toContain("dora harness new");
+    expect(stdout + stderr).toContain("dora harness boot night-pass");
     rmSync(home, { recursive: true, force: true });
+  });
+
+  test("apply creates on first push and stores the job id", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-apply-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check the inbox.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { bin, log } = fakeHermes(home, "");
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    const logText = readFileSync(log, "utf8");
+    expect(logText).toContain("cron create");
+    expect(logText).not.toContain("cron edit");
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).toContain(
+      'job_id: "fedcba654321"',
+    );
+    expect(stdout + stderr).toContain("dora harness show night-pass");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("later apply edits the stored id and does not create", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-edit-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check the inbox.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+      interval: "15m",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "15m"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home);
+    const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    const logText = readFileSync(log, "utf8");
+    expect(logText).toContain("cron edit abcdef123456");
+    expect(logText).toContain("--schedule");
+    expect(logText).not.toContain("cron create");
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).toContain(
+      'job_id: "abcdef123456"',
+    );
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("apply with no stored id edits a Runtime job whose name matches the slug", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-name-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { bin, log } = fakeHermes(home);
+    const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(readFileSync(log, "utf8")).toContain("cron edit abcdef123456");
+    expect(readFileSync(log, "utf8")).not.toContain("cron create");
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).toContain(
+      'job_id: "abcdef123456"',
+    );
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("dead stored id with a name match edits that job, does not create", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-deadname-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "deaddeaddead"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home);
+    const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    const logText = readFileSync(log, "utf8");
+    expect(logText).toContain("cron edit abcdef123456");
+    expect(logText).not.toContain("cron create");
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).toContain(
+      'job_id: "abcdef123456"',
+    );
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("dead stored id creates again and stores the new id", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-deadapply-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "deaddeaddead"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home, "");
+    const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(readFileSync(log, "utf8")).toContain("cron create");
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).toContain(
+      'job_id: "fedcba654321"',
+    );
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("apply --dry-run prints Runtime commands and writes nothing", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-dry-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { bin, log } = fakeHermes(home, "");
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass", "--dry-run"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}`, CLAUDECODE: "1" },
+    });
+    expect(exitCode).toBe(0);
+    const out = stdout + stderr;
+    expect(out).toContain("hermes gateway install");
+    expect(out).toContain("hermes cron create");
+    expect(readFileSync(log, "utf8")).not.toContain("cron create");
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).not.toContain("job_id");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("apply without --yes refuses a detected agent", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-agent-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { bin, log } = fakeHermes(home, "");
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}`, CLAUDECODE: "1", CI: "1" },
+    });
+    expect(exitCode).toBe(2);
+    expect(stdout + stderr).toMatch(/--yes|--dry-run/);
+    if (existsSync(log)) expect(readFileSync(log, "utf8")).not.toContain("cron create");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("help --json leads with apply and still names boot", () => {
+    const { exitCode, stdout } = runDoraval(["--help", "--json"]);
+    expect(exitCode).toBe(0);
+    const blob = JSON.stringify(JSON.parse(stdout).commands.find((c: { name: string }) => c.name === "harness"));
+    expect(blob.indexOf("dora harness apply")).toBeGreaterThan(-1);
+    expect(blob.indexOf("dora harness apply")).toBeLessThan(blob.indexOf("dora harness boot"));
+    expect(blob).toContain("dora harness apply <slug> --yes");
+    expect(blob).toContain("dora harness apply <slug> --dry-run");
   });
 });
 
@@ -725,7 +1030,7 @@ function cronListBlock(id: string, name: string, state: "active" | "paused", las
 function fakeHermes(
   home: string,
   listOut = cronListBlock("abcdef123456", "night-pass", "active", "2026-09-04T21:30:19+05:30"),
-  opts: { failMcp?: boolean; failList?: boolean } = {},
+  opts: { failMcp?: boolean; failList?: boolean; runsOut?: string } = {},
 ): { bin: string; log: string } {
   const bin = mkdtempSync(join(tmpdir(), "dora-hermes-bin-"));
   const log = join(home, "hermes-log");
@@ -753,6 +1058,12 @@ echo "$@" >> "${log}"
 ${failList}
 if [ "$1" = cron ] && [ "$2" = list ]; then
   printf '%s' '${listOut.replace(/'/g, "")}'
+fi
+if [ "$1" = cron ] && [ "$2" = create ]; then
+  echo "Created job: fedcba654321"
+fi
+if [ "$1" = cron ] && [ "$2" = runs ]; then
+  printf '%s' '${(opts.runsOut ?? "").replace(/'/g, "")}'
 fi
 ${failMcp}
 exit 0

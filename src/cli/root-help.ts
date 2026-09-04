@@ -14,7 +14,7 @@ export const ROOT_VERBS: [string, string][] = [
   ["config", "List, get, or set config"],
   ["agent", "List Subagents; new"],
   ["plugin", "List Plugins; new; bump semver"],
-  ["harness", "List routines; new, boot, pause, resume, show, open"],
+  ["harness", "List routines; new, apply, boot, pause, resume, show, logs, open"],
   ["update", "Update doraval"],
   ["probe", "Send hello to doraval.dev and wait for ack"],
 ];
