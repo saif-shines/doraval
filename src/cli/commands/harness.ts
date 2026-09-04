@@ -522,34 +522,20 @@ async function runPauseResume(verb: "pause" | "resume", slug: string, mode: Outp
     return;
   }
   const home = homedir();
-  let routine;
+  let jobId: string | undefined;
   try {
-    routine = readRoutine(home, slug);
+    jobId = liveJobId(home, slug);
   } catch (e) {
     ui.fail(e instanceof Error ? e.message : String(e));
     nextAction("dora harness list");
     await exit(1);
     return;
   }
-  const jobs = listCronJobs();
-  let jobId = routine.jobId;
-  if (jobId) {
-    if (jobs && !jobs.some((j) => j.id === jobId)) {
-      ui.fail("That job is gone.");
-      nextAction("dora harness list");
-      await exit(1);
-      return;
-    }
-  } else {
-    const hit = jobs?.find((j) => j.name === slug);
-    if (!hit) {
-      ui.fail("That job is gone.");
-      nextAction("dora harness list");
-      await exit(1);
-      return;
-    }
-    writeRoutineJobId(home, slug, hit.id);
-    jobId = hit.id;
+  if (!jobId) {
+    ui.fail("That job is gone.");
+    nextAction("dora harness list");
+    await exit(1);
+    return;
   }
   const r = defaultHermesRun(verb === "pause" ? pauseArgs(jobId) : resumeArgs(jobId));
   if (r.exitCode !== 0) {

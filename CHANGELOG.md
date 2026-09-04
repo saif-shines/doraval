@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Features
+
+- `dora harness logs <slug>` prints that job's run history via
+  the Runtime `cron runs` command. Bare `logs` picks a slug on
+  a TTY. No TTY prints slugs and exits 2. A dead job id says
+  the job is gone.
+
 ### Docs
 
 - Product word for one unattended Loop pass is **Run**, not Tick.
