@@ -1,0 +1,21 @@
+using /sublime-api can you tell me a link or repo I saved that helps us make sure not to guess if skills would wokr or not; it was form netlify git rpeo
+
+---
+
+can you updat ethe skilsl in such a way or docs in such a way, intead of referring it to a "tick" can it refer to a "run" ;
+
+---
+
+please continue on previous task itself
+
+---
+
+yes please I thought I already saved
+
+---
+
+by the way using the sublime api, do you have a way to organize my sublime library better with necessary notes added using show-me skill used (it's not installed yet too)
+
+---
+
+but in genreal the library is all messaged up and not very well organized, how do I sovle this probrlem

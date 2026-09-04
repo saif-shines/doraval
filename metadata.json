@@ -3,9 +3,18 @@
   "checkpoint_id": "01M1PRYBXBCCEG8WEN7SXZ09SY",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 18,
+  "checkpoints_count": 20,
   "files_touched": [
-    "CONTEXT.md"
+    "CONTEXT.md",
+    "src/cli/capabilities.ts",
+    "src/cli/command-tree.ts",
+    "src/cli/commands/harness.ts",
+    "src/cli/root-help.ts",
+    "src/core/hermes.test.ts",
+    "src/core/hermes.ts",
+    "src/core/routine.test.ts",
+    "src/core/routine.ts",
+    "test/harness.test.ts"
   ],
   "sessions": [
     {
@@ -19,6 +28,12 @@
       "transcript": "/1/full.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": "/2/prompt.txt"
     }
   ]
 }

@@ -1,0 +1,56 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1PRYBXBCCEG8WEN7SXZ09SY",
+  "session_id": "01a06d80-6825-7d33-a1c3-0b46a3e9013d",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-04T17:54:58.095281Z",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "save_step_count": 3,
+  "files_touched": [
+    "CONTEXT.md",
+    "src/cli/capabilities.ts",
+    "src/cli/command-tree.ts",
+    "src/cli/commands/harness.ts",
+    "src/cli/root-help.ts",
+    "src/core/hermes.test.ts",
+    "src/core/hermes.ts",
+    "src/core/routine.test.ts",
+    "src/core/routine.ts",
+    "test/harness.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "d92c33f4fefe",
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-04T17:54:58.026096Z",
+    "agent_lines": 485,
+    "agent_removed": 89,
+    "human_added": 5,
+    "human_modified": 11,
+    "human_removed": 0,
+    "total_committed": 501,
+    "total_lines_changed": 590,
+    "agent_percentage": 97.28813559322033,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 497,
+      "agent_lines_removed": 89
+    }
+  ]
+}
