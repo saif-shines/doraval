@@ -1,0 +1,17 @@
+can you updat ethe skilsl in such a way or docs in such a way, intead of referring it to a "tick" can it refer to a "run" ;
+
+---
+
+can you commit it
+
+---
+
+also looking at the documntation should thab e updated too?
+
+---
+
+commit for now
+
+---
+
+/mattpocock-skills:implement 97
