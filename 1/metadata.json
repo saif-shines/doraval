@@ -1,0 +1,101 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1PRM710RDQ17TGECYGV12XE",
+  "session_id": "01a06d7c-318d-7c62-9de9-b9634fe88cfd",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-04T17:49:25.126107Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "CONTEXT.md"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "5da5bcf7b55b",
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-09-04T17:34:30.038249Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "6363fbe78e71",
+      "timestamp": "2026-09-04T17:34:30.038249Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    },
+    {
+      "id": "prompt-skill-grok-mattpocock-skills:implement-2026-09-04T17:37:10.116674Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "mattpocock-skills:implement"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "5da5bcf7b55b",
+      "timestamp": "2026-09-04T17:37:10.116674Z",
+      "native": {
+        "command": "/mattpocock-skills:implement"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/mattpocock-skills:implement",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-04T17:49:25.022672Z",
+    "agent_lines": 5,
+    "agent_removed": 4,
+    "human_added": 29,
+    "human_modified": 5,
+    "human_removed": 0,
+    "total_committed": 35,
+    "total_lines_changed": 76,
+    "agent_percentage": 11.842105263157894,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 5,
+      "user_lines_removed": 1,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "AGENTS.md": 1,
+        "CONTEXT.md": 4
+      },
+      "user_removed_per_file": {
+        "CONTEXT.md": 1
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 5,
+      "agent_lines_removed": 1
+    }
+  ]
+}
