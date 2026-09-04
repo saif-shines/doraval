@@ -32,7 +32,7 @@ The grill asks if Slack is a poll or a webhook, and if you must confirm every PR
 
 You say: someone mentions you, writes `approve`, and pastes the PR link. The job approves that PR. You want a short loop later.
 
-That is **loop-able**. Same prompt on a timer. No human on that Tick.
+That is **loop-able**. Same prompt on a timer. No human on that run.
 
 That is **pocket**. One job. One machine. One user.
 
@@ -68,14 +68,14 @@ The grill writes `prompt.md`. It looks like this:
 
 ```text
 1. Poll Slack channel #pr-review for new messages.
-   Done-when: new items since the last tick are listed, or the list is empty.
+   Done-when: new items since the last run are listed, or the list is empty.
 2. Keep a message only if it mentions @you, contains the word approve, and has a pull request URL.
    Done-when: each new message is kept or skipped with a reason.
 3. For each kept message, approve that pull request. Do not merge.
    Done-when: each kept PR is approved or skipped with a reason.
 ```
 
-A Tick has no last chat. Prefer a search before a create. GitHub approve is already safe. A calendar create is not. Search first, or use a **tick handoff**: read `handoff.md` at the start, overwrite it at the end. Missing file means first Tick. Dora does not write that file.
+A Run has no last chat. Prefer a search before a create. GitHub approve is already safe. A calendar create is not. Search first, or use a **run handoff**: read `handoff.md` at the start, overwrite it at the end. Missing file means first Run. Dora does not write that file.
 
 When Hermes runs that prompt, Dora appends:
 
@@ -125,7 +125,7 @@ hermes dashboard
 
 Post in `#pr-review`: `@you approve` and the PR link.
 
-To avoid waiting an hour, edit `interval` in `~/.dora/harness/slack-pr-approve/routine.yml` to `1m` after a good run. Or say **run one tick** and fire one pass now.
+To avoid waiting an hour, edit `interval` in `~/.dora/harness/slack-pr-approve/routine.yml` to `1m` after a good run. Or say **run once** and fire one pass now.
 
 Laptop close is sleep. That is not `pause`.
 

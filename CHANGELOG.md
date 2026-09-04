@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Docs
+
+- Product word for one unattended Loop pass is **Run**, not Tick.
+  Skills, Reader pages, and the glossary match.
+
 ## 0.6.36
 
 ### Features

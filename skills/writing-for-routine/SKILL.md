@@ -34,13 +34,13 @@ Keep the steps that need a new decision. Name the Fixed-step Skill. Do not repea
 
 Dora appends the pocket-agent footer when Hermes runs. Do not write it in `prompt.md`. Human-visible messages end with `Sent by pocket agent <slug>`.
 
-## Tick handoff
+## Run handoff
 
-A Tick has no last chat. Hermes starts a new session. The next Tick reads what this Tick wrote.
+A Run has no last chat. Hermes starts a new session. The next Run reads what this Run wrote.
 
 Prefer the destination as the store. Search it before a create. Skip when the thing already exists (calendar event, issue, post). GitHub approve is already safe.
 
-If the destination cannot tell, use one file after save: `~/.dora/harness/<slug>/handoff.md`. Start: read it. Missing file means first Tick. End: overwrite it. Do not append.
+If the destination cannot tell, use one file after save: `~/.dora/harness/<slug>/handoff.md`. Start: read it. Missing file means first Run. End: overwrite it. Do not append.
 
 ```
 last_ts: 1722614400.000100
@@ -73,7 +73,7 @@ Secrets live in the routine folder (`~/.dora/harness/<slug>/.env`). Do not put s
 
 ```
 1. Poll the source named in the gate.
-   Done-when: new items since the last tick are listed, or the list is empty.
+   Done-when: new items since the last run are listed, or the list is empty.
 2. Skip an item when the action is already true in the destination.
    Done-when: each item is new or skipped with a reason.
 3. Apply the action named in the gate to each new item.
@@ -94,4 +94,4 @@ MUST NOT write the pocket-agent footer in `prompt.md`.
 MUST write a skip step when the action creates something.
 MUST start the night prompt by reading `handoff.md` only when the destination cannot tell.
 MUST end that night prompt by overwriting `handoff.md`. Do not append.
-MUST NOT rely on Hermes chat memory between ticks.
+MUST NOT rely on Hermes chat memory between runs.

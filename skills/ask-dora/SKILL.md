@@ -42,7 +42,7 @@ If a Scalekit AgentKit skill is missing: install scalekit-inc/authstack, then re
 8. Else: name the matching `dora` verb from `dora --help --json`. Done: the teammate has the next command.
 
 Look up facts (skill on disk, Hermes present, AgentKit skills present). Leave slug, connector, and interval to the human.
-If Hermes is missing and the ask needs a Tick or boot: print official install steps. Do not fake a pass.
+If Hermes is missing and the ask needs a run or boot: print official install steps. Do not fake a pass.
 
 `discover-connectors` is the public catalog only. It does not configure the dashboard.
 

@@ -96,7 +96,7 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).toMatch(/do not freeze/i);
     expect(text).toMatch(/Do not load implement or code-review/);
     expect(text).toMatch(/The human accepts/);
-    expect(text).toMatch(/Tick never writes/);
+    expect(text).toMatch(/Run never writes/);
     expect(text).toMatch(/does not author files/);
     expect(text).toMatch(/temp folder/);
     expect(text).toMatch(/before the first save/);
@@ -120,7 +120,7 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     expect(text).toMatch(/\.env/);
     expect(text).toMatch(/Do not put secrets/);
     expect(text).toContain("Sent by pocket agent");
-    expect(text).toMatch(/tick handoff/i);
+    expect(text).toMatch(/run handoff/i);
     expect(text).toContain("handoff.md");
     expect(text).toMatch(/Overwrite|overwrite/);
     expect(text).toMatch(/does not repeat|Do not repeat/);

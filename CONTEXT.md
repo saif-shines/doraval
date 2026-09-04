@@ -217,21 +217,21 @@ _Avoid_: calling a login a Session; treating “dora is installed” as Connecte
 
 ## Harness (shipped)
 
-`dora harness` is the front desk. The Runtime ticks the Loop. Today the Runtime is Hermes. 2026-08-31.
+`dora harness` is the front desk. The Runtime runs the Loop. Today the Runtime is Hermes. 2026-08-31.
 
 | Term | Meaning |
 |------|---------|
 | **Routine** | Saved folder at `~/.dora/harness/<slug>/`. The only product object. _Avoid_: pack. |
 | **Loop** | The same unattended prompt on an interval. The Runtime's timer. Default 1 hour. |
-| **Tick** | One unattended run of a Loop. The Runtime starts it on the interval. Not the one-pass test. _Avoid_: night tick as a second object. |
-| **Runtime** | The background agent that ticks a Loop. Today that agent is Hermes. Dora prints that Runtime's watch commands. _Avoid_: calling Hermes the product; a second Runtime in this pass. |
-| **Max tick** | One-pass wall clock via the Runtime. Default 10 minutes. Night idle cap is the Runtime's idle timeout (Hermes: `HERMES_CRON_TIMEOUT`, default 600s). |
+| **Run** | One unattended pass of a Loop. The Runtime starts it on the interval. Not the one-pass test. _Avoid_: tick; night tick as a second object. |
+| **Runtime** | The background agent that runs a Loop. Today that agent is Hermes. Dora prints that Runtime's watch commands. _Avoid_: calling Hermes the product; a second Runtime in this pass. |
+| **Max run** | One-pass wall clock via the Runtime. Default 10 minutes. Night idle cap is the Runtime's idle timeout (Hermes: `HERMES_CRON_TIMEOUT`, default 600s). Flag is still `--max-tick`. |
 | **Harness** | Verbs: `new`, `boot`, `pause`, `resume`, `list`, `open`. |
 | **Skill script** | A helper file inside a Skill folder. The Skill names the path. The routine has no top-level scripts directory. _Avoid_: routine script; Hermes `--script`. |
 | **Fixed step** | A deterministic routine step stored in a Skill. `prompt.md` names that Skill. It does not repeat the step. _Avoid_: programmatize as a noun; Judgment (that word is a Dora Finding). |
 | **Pocket** | Size check on a Routine idea. One job, one machine, one user. The night prompt must be specific. |
 | **Pocket agent** | Reader name for that small loop. The saved folder is still a Routine. _Avoid_: a second folder type. |
-| **Tick handoff** | File `handoff.md` in the routine folder. Next Tick reads it. This Tick overwrites it. Missing file means first Tick. Prefer the destination as the store. _Avoid_: Hermes notepad-with-slug; MEMORY.md as a cursor. |
+| **Run handoff** | File `handoff.md` in the routine folder. Next Run reads it. This Run overwrites it. Missing file means first Run. Prefer the destination as the store. _Avoid_: Hermes notepad-with-slug; MEMORY.md as a cursor. |
 
 _Avoid_: Dora on the OAuth / magic-link path; Slack, Discord, or Webflow in the harness; writing loop terms into kit CONTEXT.md.
 
@@ -240,6 +240,7 @@ _Avoid_: Dora on the OAuth / magic-link path; Slack, Discord, or Webflow in the 
 - **`JournalConfig` / `journal:`** — historical. Prefer saying **config** in docs and new code comments. Full rename is not required for correctness.
 - **`E-VAL-*` / `E-SCAN-*`** — older scan/error codes. New mechanical skill issues should stamp **rule codes** (`R0xx`) where a binding exists.
 - **`agent-invoke`** — CLI agent spawn for skill exercise / prompt-gen. **Not** the judge path (judge is API or delegate only).
+- **`--max-tick` / `max_tick` / `maxTick`** — product word is **Run**. Flag and YAML stay.
 
 ## Architecture vocabulary
 

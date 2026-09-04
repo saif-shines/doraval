@@ -10,15 +10,15 @@ description: >-
 # grilling-for-routine
 
 Use this grill with an internal teammate. Turn a routine idea into a routine.
-The Runtime ticks the Loop. Today the Runtime is Hermes. Do not pick a sample product.
+The Runtime runs the Loop. Today the Runtime is Hermes. Do not pick a sample product.
 
 ## Loop-able
 
 First check: can the same prompt run on an interval?
 
-Loop-able: a poll, a scan, or a check that can repeat with no human on each Tick.
+Loop-able: a poll, a scan, or a check that can repeat with no human on each run.
 
-Not loop-able: a webhook, a push listener, a one-off, or a job that needs a human every Tick.
+Not loop-able: a webhook, a push listener, a one-off, or a job that needs a human every run.
 
 If not loop-able: say why. Do not write a routine folder. If it is a Dora job, load review-with-dora. Stop.
 
@@ -26,7 +26,7 @@ If not loop-able: say why. Do not write a routine folder. If it is a Dora job, l
 
 Size check. Not a new object. The saved thing is still a Routine.
 
-Pocket: one job, one machine, one user. The night prompt is specific enough to Tick.
+Pocket: one job, one machine, one user. The night prompt is specific enough to run.
 
 Not pocket: a fleet, a general assistant, or a vague idea.
 
@@ -38,14 +38,14 @@ Second preference. Optional. A small loop-able job can ship with `prompt.md` onl
 
 After one good one-pass, offer to freeze a deterministic step into a Skill. A decision step stays in `prompt.md`. The grill may also change `prompt.md` with no new Skill.
 
-Before a freeze, check the one-pass. Do this in the grill only. Do not load implement or code-review. A Tick never runs this check.
+Before a freeze, check the one-pass. Do this in the grill only. Do not load implement or code-review. A Run never runs this check.
 
 - Name one seam you can see: output, a file, or a list.
 - State an expected result from that one-pass, not from the draft Skill.
 - If you cannot name that result, the step is not deterministic. Leave it in `prompt.md`.
 - Spec check: did the one-pass do what `prompt.md` said, or did the agent invent? If it invented, do not freeze.
 
-The grill drafts. The human accepts. A Tick never writes. The one-pass does not author files.
+The grill drafts. The human accepts. A Run never writes. The one-pass does not author files.
 
 Add a new Skill only before the first save. Draft it in a temp folder. Pass that temp path as `--skills-run` so the folder writer copies it.
 
@@ -53,7 +53,7 @@ After save, update only `prompt.md` and the Skill copy. Do not add a new Skill a
 
 Refuse Hermes `--script` and `--no-agent` as the freeze path. Those flags cannot call Scalekit MCP tools. A Skill script is local work only.
 
-Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill. Dora appends the pocket-agent footer at run. Do not put it in `prompt.md`. A Tick has no last chat. That skill names the tick handoff.
+Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill. Dora appends the pocket-agent footer at run. Do not put it in `prompt.md`. A Run has no last chat. That skill names the run handoff.
 
 ## Connectors
 
@@ -70,7 +70,7 @@ npx skills add scalekit-inc/authstack
 
 Then tell the teammate to reload skills or restart the session and try again. Dora does not install authstack.
 
-An interval job cannot do a push, a webhook, or a human in the loop every tick. Say so when the idea needs one of those.
+An interval job cannot do a push, a webhook, or a human in the loop every run. Say so when the idea needs one of those.
 
 ## Gate
 
@@ -138,8 +138,8 @@ MUST treat Fixed step as optional and second.
 MUST freeze only after one good one-pass, and only if the step is deterministic.
 MUST name a visible seam and an expected result from the one-pass before a freeze.
 MUST NOT freeze when the one-pass invented a step.
-MUST NOT load implement or code-review on a Tick.
-MUST draft. MUST wait for human accept. A Tick never writes.
+MUST NOT load implement or code-review on a Run.
+MUST draft. MUST wait for human accept. A Run never writes.
 MUST NOT let the one-pass author files.
 MUST add a new Skill only before the first save, in a temp folder.
 MUST update only `prompt.md` and the Skill copy after save.

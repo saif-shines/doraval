@@ -182,18 +182,18 @@ describe("dora harness docs lockstep", () => {
     expect(page).not.toMatch(/WEBFLOW_API_TOKEN/);
   });
 
-  test("Reader page names Skill script, Tick never writes, and Runtime", () => {
+  test("Reader page names Skill script, Run never writes, and Runtime", () => {
     const harness = read("apps/website/content/commands/harness.mdx");
     const skills = read("apps/website/content/get-started/skills.mdx");
     expect(harness).toMatch(/## Fixed step/);
     expect(harness).toMatch(/Skill script/);
-    expect(harness).toMatch(/Tick never writes/);
-    expect(harness).toMatch(/The Runtime ticks the Loop/);
+    expect(harness).toMatch(/Run never writes/);
+    expect(harness).toMatch(/The Runtime runs the Loop/);
     expect(harness).toMatch(/--script/);
     expect(harness).toMatch(/no top-level scripts directory/);
     expect(harness).toContain("Sent by pocket agent");
     expect(harness).toContain("handoff.md");
-    expect(harness).toMatch(/Missing file means first Tick/);
+    expect(harness).toMatch(/Missing file means first Run/);
     expect(skills).toMatch(/Skill script/);
     expect(skills).toContain("/commands/harness/");
   });
