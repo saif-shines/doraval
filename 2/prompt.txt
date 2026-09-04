@@ -11,3 +11,7 @@ please continue on previous task itself
 ---
 
 yes please I thought I already saved
+
+---
+
+by the way using the sublime api, do you have a way to organize my sublime library better with necessary notes added using show-me skill used (it's not installed yet too)
