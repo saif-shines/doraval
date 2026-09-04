@@ -35,9 +35,9 @@ describe("hermes command builders", () => {
     expect(JSON.stringify(cmds)).not.toContain("--toolsets");
   });
 
-  test("pause and resume target that job name only", () => {
-    expect(pauseArgs("night-pass")).toEqual(["cron", "pause", "night-pass"]);
-    expect(resumeArgs("night-pass")).toEqual(["cron", "resume", "night-pass"]);
+  test("pause and resume target that job id only", () => {
+    expect(pauseArgs("abcdef123456")).toEqual(["cron", "pause", "abcdef123456"]);
+    expect(resumeArgs("abcdef123456")).toEqual(["cron", "resume", "abcdef123456"]);
   });
 
   test("one-pass command uses the MCP toolset, skills, and run-budget", () => {
@@ -71,10 +71,26 @@ describe("schedule and timeout", () => {
 });
 
 describe("parseCronList", () => {
-  test("reads paused and active names", () => {
-    const states = parseCronList("[active] night-pass\n[paused] other-job\n");
-    expect(states.get("night-pass")).toBe("running");
-    expect(states.get("other-job")).toBe("paused");
+  test("reads hex id, name, state, and last run from live Runtime list", () => {
+    const jobs = parseCronList(`
+  efcc4a8048dd [active]
+    Name:      night-pass
+    Schedule:  every 1h
+    Last run:  2026-09-04T21:30:19.973770+05:30  ok
+
+  06c08aa2062c [paused]
+    Name:      other-job
+    Last run:  never
+`);
+    expect(jobs).toEqual([
+      {
+        id: "efcc4a8048dd",
+        name: "night-pass",
+        state: "running",
+        lastRun: "2026-09-04T21:30:19.973770+05:30",
+      },
+      { id: "06c08aa2062c", name: "other-job", state: "paused" },
+    ]);
   });
 });
 

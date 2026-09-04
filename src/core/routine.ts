@@ -234,7 +234,7 @@ export function openRoutine(home: string, slug: string, openDir: (dir: string) =
   return dir;
 }
 
-export type Routine = RoutineInput & { dir: string };
+export type Routine = RoutineInput & { dir: string; jobId?: string };
 
 function defaultMcpUrlPath(home: string): string {
   return join(home, ".dora", "default-mcp-url");
@@ -272,5 +272,22 @@ export function readRoutine(home: string, slug: string): Routine {
     mcpUrl: String(data.mcp_url ?? ""),
     interval: String(data.interval ?? DEFAULT_INTERVAL),
     maxTick: String(data.max_tick ?? DEFAULT_MAX_TICK),
+    jobId: typeof data.job_id === "string" && data.job_id ? data.job_id : undefined,
   };
+}
+
+export function writeRoutineJobId(home: string, slug: string, jobId: string): void {
+  const routine = readRoutine(home, slug);
+  writeFileSync(
+    join(routine.dir, "routine.yml"),
+    [
+      yamlList("skills_run", routine.skillsRun),
+      yamlList("skills_refer", routine.skillsRefer),
+      `mcp_url: ${yamlScalar(normalizeMcpUrl(routine.mcpUrl))}`,
+      `interval: ${yamlScalar(routine.interval ?? DEFAULT_INTERVAL)}`,
+      `max_tick: ${yamlScalar(routine.maxTick ?? DEFAULT_MAX_TICK)}`,
+      `job_id: ${yamlScalar(jobId)}`,
+      "",
+    ].join("\n"),
+  );
 }

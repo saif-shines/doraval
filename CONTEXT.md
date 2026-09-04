@@ -226,7 +226,10 @@ _Avoid_: calling a login a Session; treating “dora is installed” as Connecte
 | **Run** | One unattended pass of a Loop. The Runtime starts it on the interval. Not the one-pass test. _Avoid_: tick; night tick as a second object. |
 | **Runtime** | The background agent that runs a Loop. Today that agent is Hermes. Dora prints that Runtime's watch commands. _Avoid_: calling Hermes the product; a second Runtime in this pass. |
 | **Max run** | One-pass wall clock via the Runtime. Default 10 minutes. Night idle cap is the Runtime's idle timeout (Hermes: `HERMES_CRON_TIMEOUT`, default 600s). Flag is still `--max-tick`. |
-| **Harness** | Verbs: `new`, `boot`, `pause`, `resume`, `list`, `open`. |
+| **Harness** | Verbs: `new`, `apply`, `pause`, `resume`, `list`, `show`, `logs`, `open`, `rm`. `boot` is an alias of `apply`. |
+| **Apply** | Push the Routine folder onto the Runtime job. Create or edit. _Avoid_: set; sync; upsert as a user word. |
+| **Show** | The card for one Routine. `list <slug>` is the same command. _Avoid_: inspect; status as a second verb. |
+| **Remove** | Stop the Runtime job, then delete the Routine folder. Verb: `rm`. |
 | **Skill script** | A helper file inside a Skill folder. The Skill names the path. The routine has no top-level scripts directory. _Avoid_: routine script; Hermes `--script`. |
 | **Fixed step** | A deterministic routine step stored in a Skill. `prompt.md` names that Skill. It does not repeat the step. _Avoid_: programmatize as a noun; Judgment (that word is a Dora Finding). |
 | **Pocket** | Size check on a Routine idea. One job, one machine, one user. The night prompt must be specific. |

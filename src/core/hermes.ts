@@ -88,28 +88,50 @@ export function bootArgs(routine: Routine): string[][] {
   return cmds;
 }
 
-export function pauseArgs(slug: string): string[] {
-  return ["cron", "pause", slug];
+export function pauseArgs(jobId: string): string[] {
+  return ["cron", "pause", jobId];
 }
 
-export function resumeArgs(slug: string): string[] {
-  return ["cron", "resume", slug];
+export function resumeArgs(jobId: string): string[] {
+  return ["cron", "resume", jobId];
 }
 
-export function parseCronList(stdout: string): Map<string, "running" | "paused"> {
-  const out = new Map<string, "running" | "paused">();
+export type CronJob = {
+  id: string;
+  name: string;
+  state: "running" | "paused";
+  lastRun?: string;
+};
+
+export function parseCronList(stdout: string): CronJob[] {
+  const jobs: CronJob[] = [];
+  let cur: CronJob | undefined;
+  const flush = () => {
+    if (cur?.name) jobs.push(cur);
+    cur = undefined;
+  };
   for (const line of stdout.split("\n")) {
-    const paused = /\[paused\]/i.test(line);
-    const active = /\[active\]/i.test(line);
-    if (!paused && !active) continue;
-    const m = line.match(/\[(?:paused|active)\]\s+(\S+)/i);
-    if (m) out.set(m[1]!, paused ? "paused" : "running");
+    const head = line.match(/^\s*([0-9a-f]{12})\s+\[(active|paused)\]/i);
+    if (head) {
+      flush();
+      cur = { id: head[1]!, name: "", state: head[2]!.toLowerCase() === "paused" ? "paused" : "running" };
+      continue;
+    }
+    if (!cur) continue;
+    const name = line.match(/^\s*Name:\s+(\S+)/i);
+    if (name) {
+      cur.name = name[1]!;
+      continue;
+    }
+    const last = line.match(/^\s*Last run:\s+(\S+)/i);
+    if (last && last[1] && !/^(never|—|-)$/i.test(last[1])) cur.lastRun = last[1];
   }
-  return out;
+  flush();
+  return jobs;
 }
 
-export function listJobStates(run: HermesRun = defaultHermesRun): Map<string, "running" | "paused"> {
+export function listCronJobs(run: HermesRun = defaultHermesRun): CronJob[] | null {
   const r = run(["cron", "list"]);
-  if (r.exitCode !== 0) return new Map();
+  if (r.exitCode !== 0) return null;
   return parseCronList(r.stdout);
 }

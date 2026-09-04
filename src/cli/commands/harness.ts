@@ -12,11 +12,12 @@ import {
   writeDefaultMcpUrl,
   usesMcp,
   writeRoutine,
+  writeRoutineJobId,
 } from "../../core/routine.js";
 import {
   bootArgs,
   defaultHermesRun,
-  listJobStates,
+  listCronJobs,
   loginCommand,
   MCP_SERVER,
   onePassArgs,
@@ -24,8 +25,9 @@ import {
   pauseArgs,
   resumeArgs,
   watchCommands,
+  type CronJob,
 } from "../../core/hermes.js";
-import { ui, resolveOutputMode, outJson, summaryLine, guidedError, nextAction } from "../out.js";
+import { ui, resolveOutputMode, outJson, summaryLine, guidedError, nextAction, type OutputMode } from "../out.js";
 import { exit } from "../render/exit.js";
 import { promptSelect } from "../prompt.js";
 
@@ -102,24 +104,118 @@ function mcpNotReady(detail?: string): Error {
   );
 }
 
-async function requireHermesSlug(raw: unknown, context: string): Promise<string | undefined> {
-  if (!hermesInstalled()) {
-    printHermesInstall();
+function readJobs(): CronJob[] {
+  return hermesInstalled() ? listCronJobs() : [];
+}
+
+function resolveJob(home: string, slug: string, jobs: CronJob[]): CronJob | undefined {
+  const routine = readRoutine(home, slug);
+  if (routine.jobId) return jobs.find((j) => j.id === routine.jobId);
+  const hit = jobs.find((j) => j.name === slug);
+  if (hit) writeRoutineJobId(home, slug, hit.id);
+  return hit;
+}
+
+type ListRow = { slug: string; state: "running" | "paused" | "none"; interval: string; lastRun: string | null };
+
+function listRow(home: string, slug: string, jobs: CronJob[]): ListRow {
+  const routine = readRoutine(home, slug);
+  const job = resolveJob(home, slug, jobs);
+  return { slug, state: job?.state ?? "none", interval: routine.interval ?? "1h", lastRun: job?.lastRun ?? null };
+}
+
+type ShowCard = ListRow & { maxTick: string; mcp: "yes" | "none"; folder: string; jobId: string | null };
+
+function showCard(home: string, slug: string, jobs: CronJob[]): ShowCard {
+  const job = resolveJob(home, slug, jobs);
+  const routine = readRoutine(home, slug);
+  return {
+    slug,
+    state: job?.state ?? "none",
+    interval: routine.interval ?? "1h",
+    lastRun: job?.lastRun ?? null,
+    maxTick: routine.maxTick ?? "10m",
+    mcp: usesMcp(routine.mcpUrl) ? "yes" : "none",
+    folder: routine.dir,
+    jobId: routine.jobId ?? job?.id ?? null,
+  };
+}
+
+function printTable(rows: ListRow[]): void {
+  const data = rows.map((r) => [r.slug, r.state, r.interval, r.lastRun ?? "—"]);
+  const headers = ["slug", "state", "interval", "last run"];
+  const widths = headers.map((h, i) => Math.max(h.length, ...data.map((row) => row[i]!.length)));
+  const fmt = (row: string[]) => "  " + row.map((c, i) => c.padEnd(widths[i]!)).join("  ");
+  ui.info(fmt(headers));
+  for (const row of data) ui.info(fmt(row));
+}
+
+function printCard(card: ShowCard): void {
+  const lines: [string, string][] = [
+    ["slug", card.slug],
+    ["state", card.state],
+    ["interval", card.interval],
+    ["max tick", card.maxTick],
+    ["mcp", card.mcp],
+    ["last run", card.lastRun ?? "—"],
+    ["folder", card.folder],
+  ];
+  const w = Math.max(...lines.map(([k]) => k.length));
+  for (const [k, v] of lines) ui.info(`  ${k.padEnd(w)}  ${v}`);
+}
+
+async function pickSlug(raw: unknown, verb: string): Promise<string | undefined> {
+  const given = String(raw ?? "").trim();
+  if (given) return given;
+  const slugs = listRoutineSlugs(homedir());
+  ui.blank();
+  ui.heading(`dora harness ${verb}`);
+  ui.blank();
+  if (slugs.length === 0) {
+    summaryLine("No routines.");
+    nextAction("dora harness new");
+    ui.blank();
     await exit(2);
     return;
   }
-  const slug = String(raw ?? "").trim();
-  if (!slug) {
-    guidedError({
-      context,
-      problem: "Missing slug",
-      solutions: ["Pass the slug from `dora harness list`."],
-      next: "dora harness list",
-    });
+  for (const s of slugs) ui.info(`  ${s}`);
+  ui.blank();
+  if (!process.stdin.isTTY || !process.stderr.isTTY) {
+    nextAction(`dora harness ${verb} <slug>`);
+    ui.blank();
     await exit(2);
     return;
   }
-  return slug;
+  return promptSelect(
+    "Which routine?",
+    slugs.map((s) => ({ value: s, label: s })),
+    slugs[0]!,
+  );
+}
+
+async function runShow(home: string, slug: string, mode: OutputMode): Promise<void> {
+  let card: ShowCard;
+  try {
+    card = showCard(home, slug, readJobs());
+  } catch (e) {
+    ui.fail(e instanceof Error ? e.message : String(e));
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  if (mode.format === "json") {
+    outJson(card);
+    await exit(0);
+    return;
+  }
+  ui.blank();
+  ui.heading("dora harness show");
+  ui.blank();
+  printCard(card);
+  ui.blank();
+  nextAction("dora harness list");
+  ui.blank();
+  await exit(0);
 }
 
 export const harnessNew = defineCommand({
@@ -367,6 +463,56 @@ export const harnessBoot = defineCommand({
   },
 });
 
+const READ_ARGS = {
+  format: { type: "string" as const, description: "Output format: table | json", default: "table" },
+  json: { type: "boolean" as const, description: "Alias for --format json", default: false },
+  ci: { type: "boolean" as const, description: "Machine mode (implies --format json)", default: false },
+};
+
+async function runPauseResume(verb: "pause" | "resume", slug: string, mode: OutputMode): Promise<void> {
+  if (!hermesInstalled()) {
+    printHermesInstall();
+    await exit(2);
+    return;
+  }
+  const home = homedir();
+  try {
+    readRoutine(home, slug);
+  } catch (e) {
+    ui.fail(e instanceof Error ? e.message : String(e));
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  const job = resolveJob(home, slug, listCronJobs());
+  if (!job) {
+    ui.fail("That job is gone.");
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  const r = defaultHermesRun(verb === "pause" ? pauseArgs(job.id) : resumeArgs(job.id));
+  if (r.exitCode !== 0) {
+    ui.fail(r.stderr.trim() || `${verb === "pause" ? "Pause" : "Resume"} failed.`);
+    await exit(1);
+    return;
+  }
+  if (mode.format === "json") {
+    outJson({ slug, state: verb === "pause" ? "paused" : "running", jobId: job.id });
+    await exit(0);
+    return;
+  }
+  ui.info(
+    verb === "pause"
+      ? `  Paused ${slug}. Later ticks skip. A pass that already started may finish.`
+      : `  Resumed ${slug}.`,
+  );
+  printWatch();
+  nextAction(verb === "pause" ? `dora harness resume ${slug}` : "dora harness list");
+  ui.blank();
+  await exit(0);
+}
+
 export const harnessPause = defineCommand({
   meta: {
     name: "pause",
@@ -378,61 +524,67 @@ export const harnessPause = defineCommand({
     ].join("\n"),
   },
   args: {
-    slug: { type: "positional", description: "Routine slug", required: true },
+    slug: { type: "positional", description: "Routine slug", required: false },
+    ...READ_ARGS,
   },
   async run({ args }) {
-    const slug = await requireHermesSlug(args.slug, "dora harness pause needs a routine slug");
+    const slug = await pickSlug(args.slug, "pause");
     if (!slug) return;
-    const r = defaultHermesRun(pauseArgs(slug));
-    if (r.exitCode !== 0) {
-      ui.fail(r.stderr.trim() || "Pause failed.");
-      await exit(2);
-      return;
-    }
-    ui.info(`  Paused ${slug}. Later ticks skip. A pass that already started may finish.`);
-    printWatch();
-    ui.blank();
-    await exit(0);
+    await runPauseResume("pause", slug, resolveOutputMode(args));
   },
 });
 
 export const harnessResume = defineCommand({
   meta: { name: "resume", description: "Resume a paused routine" },
   args: {
-    slug: { type: "positional", description: "Routine slug", required: true },
+    slug: { type: "positional", description: "Routine slug", required: false },
+    ...READ_ARGS,
   },
   async run({ args }) {
-    const slug = await requireHermesSlug(args.slug, "dora harness resume needs a routine slug");
+    const slug = await pickSlug(args.slug, "resume");
     if (!slug) return;
-    const r = defaultHermesRun(resumeArgs(slug));
-    if (r.exitCode !== 0) {
-      ui.fail(r.stderr.trim() || "Resume failed.");
-      await exit(2);
-      return;
-    }
-    ui.info(`  Resumed ${slug}.`);
-    printWatch();
-    ui.blank();
-    await exit(0);
+    await runPauseResume("resume", slug, resolveOutputMode(args));
+  },
+});
+
+export const harnessShow = defineCommand({
+  meta: {
+    name: "show",
+    description: [
+      "Show one routine card",
+      "",
+      "Prints slug, state, interval, max tick, MCP, last run, and folder.",
+      "Hex job id only in --json. Use open to read files.",
+    ].join("\n"),
+  },
+  args: {
+    slug: { type: "positional", description: "Routine slug", required: false },
+    ...READ_ARGS,
+  },
+  async run({ args }) {
+    const slug = await pickSlug(args.slug, "show");
+    if (!slug) return;
+    await runShow(homedir(), slug, resolveOutputMode(args));
   },
 });
 
 export const harnessList = defineCommand({
   meta: { name: "list", description: "List routines" },
   args: {
-    format: { type: "string", description: "Output format: table | json", default: "table" },
-    json: { type: "boolean", description: "Alias for --format json", default: false },
-    ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
+    slug: { type: "positional", description: "Routine slug (same as show)", required: false },
+    ...READ_ARGS,
   },
   async run({ args }) {
-    const mode = resolveOutputMode({
-      format: args.format as string,
-      ci: args.ci as boolean,
-      json: args.json as boolean,
-    });
-    const slugs = listRoutineSlugs(homedir());
-    const jobs = hermesInstalled() ? listJobStates() : new Map();
-    const rows = slugs.map((slug) => ({ slug, state: jobs.get(slug) ?? "none" }));
+    const mode = resolveOutputMode(args);
+    const slug = String(args.slug ?? "").trim();
+    if (slug) {
+      await runShow(homedir(), slug, mode);
+      return;
+    }
+    const home = homedir();
+    const slugs = listRoutineSlugs(home);
+    const jobs = readJobs();
+    const rows = slugs.map((s) => listRow(home, s, jobs));
     if (mode.format === "json") {
       outJson(rows);
       await exit(0);
@@ -443,13 +595,12 @@ export const harnessList = defineCommand({
     ui.blank();
     if (rows.length === 0) {
       summaryLine("No routines.");
+      nextAction("dora harness new");
     } else {
-      for (const r of rows) {
-        const state = r.state === "none" ? "—" : r.state;
-        ui.info(`  ${r.slug}  ${state}`);
-      }
+      printTable(rows);
       ui.blank();
       summaryLine(`${rows.length} routine${rows.length === 1 ? "" : "s"}`);
+      nextAction(`dora harness show ${rows[0]!.slug}`);
     }
     printWatch();
     ui.blank();

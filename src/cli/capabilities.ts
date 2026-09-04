@@ -132,13 +132,18 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora plugin new --for claude --yes",
         "dora plugin bump",
       ], COMMON_FLAGS),
-      cmd("harness", "writes", "List routines; new, boot, pause, resume, open.", [
+      cmd("harness", "writes", "List routines; new, boot, pause, resume, show, open.", [
         "dora harness",
         "dora harness list",
+        "dora harness list --json",
+        "dora harness show <slug>",
+        "dora harness show <slug> --json",
         "dora harness new",
         "dora harness boot <slug>",
         "dora harness pause <slug>",
+        "dora harness pause <slug> --json",
         "dora harness resume <slug>",
+        "dora harness resume <slug> --json",
         "dora harness open <slug>",
       ], {
         ...COMMON_FLAGS,

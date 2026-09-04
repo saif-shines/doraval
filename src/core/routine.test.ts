@@ -10,6 +10,7 @@ import {
   resolveSkillRef,
   writeDefaultMcpUrl,
   writeRoutine,
+  writeRoutineJobId,
 } from "./routine.js";
 
 function tmpHome(): string {
@@ -65,7 +66,7 @@ describe("writeRoutine", () => {
     rmSync(home, { recursive: true, force: true });
   });
 
-  test("interval and max tick can be set per routine", () => {
+  test("interval and max run can be set per routine", () => {
     const home = tmpHome();
     const dir = writeRoutine(home, {
       slug: "tight-job",
@@ -134,6 +135,26 @@ describe("readRoutine", () => {
     expect(r.mcpUrl).toBe("https://gw.example/mcp");
     expect(r.interval).toBe("1h");
     expect(r.maxTick).toBe("10m");
+    expect(r.jobId).toBeUndefined();
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("writeRoutineJobId stores the hex id on the folder", () => {
+    const home = tmpHome();
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeRoutineJobId(home, "night-pass", "abcdef123456");
+    const yaml = readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8");
+    expect(yaml).toContain('job_id: "abcdef123456"');
+    expect(readRoutine(home, "night-pass").jobId).toBe("abcdef123456");
+    writeRoutineJobId(home, "night-pass", "ffffffffffff");
+    expect(readRoutine(home, "night-pass").jobId).toBe("ffffffffffff");
+    expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).not.toContain("abcdef123456");
     rmSync(home, { recursive: true, force: true });
   });
 });
