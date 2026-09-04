@@ -3,7 +3,7 @@
   "checkpoint_id": "01M1PS12W57S4EGKJZ3ZXZCSWN",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 1,
+  "checkpoints_count": 3,
   "files_touched": null,
   "sessions": [
     {
@@ -11,6 +11,12 @@
       "transcript": "/0/full.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ]
 }
