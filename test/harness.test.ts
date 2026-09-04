@@ -600,6 +600,34 @@ describe("dora harness", () => {
     rmSync(bin, { recursive: true, force: true });
   });
 
+  test("pause with a stored id still hits that id when cron list fails", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-listfail-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home, "", { failList: true });
+    const { exitCode } = runDoraval(["harness", "pause", "night-pass"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(readFileSync(log, "utf8")).toContain("cron pause abcdef123456");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
   test("bare show, pause, and resume print slugs and exit 2 without a TTY", () => {
     const home = mkdtempSync(join(tmpdir(), "dora-harness-pick-"));
     writeRoutine(home, {
@@ -615,7 +643,7 @@ describe("dora harness", () => {
       });
       expect(exitCode).toBe(2);
       expect(stdout + stderr).toContain("night-pass");
-      expect(stdout + stderr).toContain(`dora harness ${verb} <slug>`);
+      expect(stdout + stderr).toContain(`dora harness ${verb} night-pass`);
     }
     rmSync(home, { recursive: true, force: true });
   });
@@ -697,7 +725,7 @@ function cronListBlock(id: string, name: string, state: "active" | "paused", las
 function fakeHermes(
   home: string,
   listOut = cronListBlock("abcdef123456", "night-pass", "active", "2026-09-04T21:30:19+05:30"),
-  opts: { failMcp?: boolean } = {},
+  opts: { failMcp?: boolean; failList?: boolean } = {},
 ): { bin: string; log: string } {
   const bin = mkdtempSync(join(tmpdir(), "dora-hermes-bin-"));
   const log = join(home, "hermes-log");
@@ -710,10 +738,19 @@ if [ "$1" = mcp ]; then
 fi
 `
     : "";
+  const failList = opts.failList
+    ? `
+if [ "$1" = cron ] && [ "$2" = list ]; then
+  echo "list failed" >&2
+  exit 1
+fi
+`
+    : "";
   writeFileSync(
     join(bin, "hermes"),
     `#!/bin/sh
 echo "$@" >> "${log}"
+${failList}
 if [ "$1" = cron ] && [ "$2" = list ]; then
   printf '%s' '${listOut.replace(/'/g, "")}'
 fi

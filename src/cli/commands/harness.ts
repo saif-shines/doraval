@@ -105,7 +105,8 @@ function mcpNotReady(detail?: string): Error {
 }
 
 function readJobs(): CronJob[] {
-  return hermesInstalled() ? listCronJobs() : [];
+  if (!hermesInstalled()) return [];
+  return listCronJobs() ?? [];
 }
 
 function resolveJob(home: string, slug: string, jobs: CronJob[]): CronJob | undefined {
@@ -127,17 +128,14 @@ function listRow(home: string, slug: string, jobs: CronJob[]): ListRow {
 type ShowCard = ListRow & { maxTick: string; mcp: "yes" | "none"; folder: string; jobId: string | null };
 
 function showCard(home: string, slug: string, jobs: CronJob[]): ShowCard {
-  const job = resolveJob(home, slug, jobs);
+  const row = listRow(home, slug, jobs);
   const routine = readRoutine(home, slug);
   return {
-    slug,
-    state: job?.state ?? "none",
-    interval: routine.interval ?? "1h",
-    lastRun: job?.lastRun ?? null,
+    ...row,
     maxTick: routine.maxTick ?? "10m",
     mcp: usesMcp(routine.mcpUrl) ? "yes" : "none",
     folder: routine.dir,
-    jobId: routine.jobId ?? job?.id ?? null,
+    jobId: routine.jobId ?? null,
   };
 }
 
@@ -181,7 +179,7 @@ async function pickSlug(raw: unknown, verb: string): Promise<string | undefined>
   for (const s of slugs) ui.info(`  ${s}`);
   ui.blank();
   if (!process.stdin.isTTY || !process.stderr.isTTY) {
-    nextAction(`dora harness ${verb} <slug>`);
+    nextAction(`dora harness ${verb} ${slugs[0]}`);
     ui.blank();
     await exit(2);
     return;
@@ -476,29 +474,44 @@ async function runPauseResume(verb: "pause" | "resume", slug: string, mode: Outp
     return;
   }
   const home = homedir();
+  let routine;
   try {
-    readRoutine(home, slug);
+    routine = readRoutine(home, slug);
   } catch (e) {
     ui.fail(e instanceof Error ? e.message : String(e));
     nextAction("dora harness list");
     await exit(1);
     return;
   }
-  const job = resolveJob(home, slug, listCronJobs());
-  if (!job) {
-    ui.fail("That job is gone.");
+  const jobs = listCronJobs();
+  let jobId = routine.jobId;
+  if (jobId) {
+    if (jobs && !jobs.some((j) => j.id === jobId)) {
+      ui.fail("That job is gone.");
+      nextAction("dora harness list");
+      await exit(1);
+      return;
+    }
+  } else {
+    const hit = jobs?.find((j) => j.name === slug);
+    if (!hit) {
+      ui.fail("That job is gone.");
+      nextAction("dora harness list");
+      await exit(1);
+      return;
+    }
+    writeRoutineJobId(home, slug, hit.id);
+    jobId = hit.id;
+  }
+  const r = defaultHermesRun(verb === "pause" ? pauseArgs(jobId) : resumeArgs(jobId));
+  if (r.exitCode !== 0) {
+    ui.fail(r.stderr.trim() || `${verb === "pause" ? "Pause" : "Resume"} failed.`);
     nextAction("dora harness list");
     await exit(1);
     return;
   }
-  const r = defaultHermesRun(verb === "pause" ? pauseArgs(job.id) : resumeArgs(job.id));
-  if (r.exitCode !== 0) {
-    ui.fail(r.stderr.trim() || `${verb === "pause" ? "Pause" : "Resume"} failed.`);
-    await exit(1);
-    return;
-  }
   if (mode.format === "json") {
-    outJson({ slug, state: verb === "pause" ? "paused" : "running", jobId: job.id });
+    outJson({ slug, state: verb === "pause" ? "paused" : "running" });
     await exit(0);
     return;
   }
