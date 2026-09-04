@@ -3,7 +3,7 @@
   "checkpoint_id": "01M1PRM710RDQ17TGECYGV12XE",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 20,
+  "checkpoints_count": 21,
   "files_touched": [
     "CHANGELOG.md",
     "CONTEXT.md",
@@ -36,6 +36,12 @@
       "transcript": "/2/full.jsonl",
       "content_hash": "/2/content_hash.txt",
       "prompt": "/2/prompt.txt"
+    },
+    {
+      "metadata": "/3/metadata.json",
+      "transcript": "/3/full.jsonl",
+      "content_hash": "/3/content_hash.txt",
+      "prompt": "/3/prompt.txt"
     }
   ]
 }
