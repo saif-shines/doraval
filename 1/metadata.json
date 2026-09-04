@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1PTGXCPWEGTV8Y297GN82DA",
+  "session_id": "01a06d80-6825-7d33-a1c3-0b46a3e9013d",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-04T18:22:34.083007Z",
+  "branch": "main",
+  "checkpoints_count": 6,
+  "save_step_count": 1,
+  "files_touched": [
+    "CHANGELOG.md"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "faaaa0951ff6",
+  "session_metrics": {
+    "turn_count": 10
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-04T18:22:33.983146Z",
+    "agent_lines": 7,
+    "agent_removed": 0,
+    "human_added": 7,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 14,
+    "total_lines_changed": 35,
+    "agent_percentage": 20,
+    "metric_version": 2
+  }
+}
