@@ -1,0 +1,59 @@
+what is the auth situation in the current repo
+
+---
+
+I want to improve more on the harness management side of things
+
+---
+
+all of those are more improtnatn ones; should we contineu on them?
+
+---
+
+also this time I dont' want try a different approach fo implementation rather than matt's skills' can you use /sublime-api to find alternatives to matt pocock and see what's better to devleopment the rest of these thigns? or do you recomment to something else?
+
+---
+
+I don't want to skip it just becasue I feel lke skipping it; if matt pocock's work is genuinely right for the job. we an use it' do you want to suggest me in here?
+
+---
+
+yes start the grill
+
+---
+
+q1 - a, q2 - A, q3 - a, q4 - a, q5 - b, q6 - b (because wrapping is simple), q7 - a
+
+---
+
+q6 - dora shoud ask the right job and explain with slug so that user selects and then behind the seens you run hermes cron runs jobid mapyousrself
+
+q8 - A but not on the assumtipn that teammate already knows boot; pick or suggest opitons without that fact as bias; what would be suggestino then? q9 - as of today a lot of them are doing ask-dora slash command and gtting stuff done, so my instict is to make sure we tha vecommadn structure easy for codinga gnets like we researched with agent-browser cli; q9 -  same asnwer as q8, q10 - a, q11 - b (if show and list are confsuing, then any ideas on making it simpler?), qq12 - A, q13 - a, q14 - a, q15 - a
+
+---
+
+q8/q9 - a, q16 - a
+
+---
+
+id di not see any ontes about cli commands is for agent to act
+
+---
+
+A
+
+---
+
+yes
+
+---
+
+/to-tickets
+
+---
+
+bfore approving just remind me what is our stance about making commands agents friendly?
+
+---
+
+cool continue
