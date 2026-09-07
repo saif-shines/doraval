@@ -1235,6 +1235,43 @@ describe("dora harness", () => {
     expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
     rmSync(home, { recursive: true, force: true });
   });
+
+  test("rm keeps the folder when list fails and there is no stored id", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmlistfail-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { bin, log } = fakeHermes(home, undefined, { failList: true });
+    const { exitCode } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(2);
+    expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
+    expect(readFileSync(log, "utf8")).not.toContain("cron remove");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("rm deletes the folder when Hermes is missing and there is no stored id", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmgone-nohermes-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { exitCode } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: pathWithoutHermes() },
+    });
+    expect(exitCode).toBe(0);
+    expect(existsSync(join(home, ".dora", "harness", "night-pass"))).toBe(false);
+    rmSync(home, { recursive: true, force: true });
+  });
 });
 
 function cronListBlock(id: string, name: string, state: "active" | "paused", lastRun?: string): string {

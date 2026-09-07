@@ -780,16 +780,13 @@ async function runRm(slug: string, args: { yes?: boolean; "dry-run"?: boolean; f
     return;
   }
   const jobs = hermesInstalled() ? listCronJobs() : null;
-  let jobId: string | undefined;
-  if (routine.jobId && !(jobs && !jobs.some((j) => j.id === routine.jobId))) {
-    jobId = routine.jobId;
-  } else {
-    jobId = jobs?.find((j) => j.name === slug)?.id;
-  }
+  const live = routine.jobId && jobs?.some((j) => j.id === routine.jobId) ? routine.jobId : undefined;
+  const named = jobs?.find((j) => j.name === slug);
+  const jobId = live ?? named?.id ?? (routine.jobId && jobs === null ? routine.jobId : undefined);
   if (hermesInstalled() && jobs === null && !jobId) {
     ui.fail("Could not list Runtime jobs.");
     nextAction("dora harness list");
-    await exit(1);
+    await exit(2);
     return;
   }
   if (jobId && !hermesInstalled()) {
