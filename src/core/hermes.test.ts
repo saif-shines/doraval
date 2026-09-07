@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { bootArgs, editArgs, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCreatedJobId, parseCronList, pauseArgs, resumeArgs, runsArgs, watchCommands } from "./hermes.js";
+import { bootArgs, editArgs, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCreatedJobId, parseCronList, pauseArgs, removeArgs, resumeArgs, runsArgs, watchCommands } from "./hermes.js";
 import type { Routine } from "./routine.js";
 
 const routine: Routine = {
@@ -42,6 +42,10 @@ describe("hermes command builders", () => {
 
   test("runs asks the Runtime for that job id only", () => {
     expect(runsArgs("abcdef123456")).toEqual(["cron", "runs", "abcdef123456"]);
+  });
+
+  test("remove targets that job id only", () => {
+    expect(removeArgs("abcdef123456")).toEqual(["cron", "remove", "abcdef123456"]);
   });
 
   test("edit pushes schedule, prompt, and skills onto that job id", () => {

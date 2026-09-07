@@ -11,6 +11,7 @@ import {
   writeDefaultMcpUrl,
   writeRoutine,
   writeRoutineJobId,
+  deleteRoutine,
 } from "./routine.js";
 
 function tmpHome(): string {
@@ -155,6 +156,21 @@ describe("readRoutine", () => {
     writeRoutineJobId(home, "night-pass", "ffffffffffff");
     expect(readRoutine(home, "night-pass").jobId).toBe("ffffffffffff");
     expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).not.toContain("abcdef123456");
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("deleteRoutine removes the folder", () => {
+    const home = tmpHome();
+    const dir = writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    expect(deleteRoutine(home, "night-pass")).toBe(dir);
+    expect(existsSync(dir)).toBe(false);
+    expect(() => deleteRoutine(home, "night-pass")).toThrow(/no routine/i);
     rmSync(home, { recursive: true, force: true });
   });
 });

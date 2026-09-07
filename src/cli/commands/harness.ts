@@ -13,6 +13,7 @@ import {
   usesMcp,
   writeRoutine,
   writeRoutineJobId,
+  deleteRoutine,
 } from "../../core/routine.js";
 import {
   bootArgs,
@@ -25,6 +26,7 @@ import {
   onePassCommand,
   parseCreatedJobId,
   pauseArgs,
+  removeArgs,
   resumeArgs,
   runsArgs,
   watchCommands,
@@ -57,7 +59,7 @@ function splitDirs(raw: string | undefined): string[] {
 
 function printHermesInstall(): void {
   guidedError({
-    context: "dora harness needs Hermes to apply, pause, resume, or print logs",
+    context: "dora harness needs Hermes to apply, pause, resume, print logs, or remove a job",
     problem: "Hermes is not installed",
     solutions: [
       "Linux / macOS / WSL2: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash",
@@ -165,7 +167,7 @@ function printCard(card: ShowCard): void {
   for (const [k, v] of lines) ui.info(`  ${k.padEnd(w)}  ${v}`);
 }
 
-async function pickSlug(raw: unknown, verb: string): Promise<string | undefined> {
+async function pickSlug(raw: unknown, verb: string, nextSuffix = ""): Promise<string | undefined> {
   const given = String(raw ?? "").trim();
   if (given) return given;
   const slugs = listRoutineSlugs(homedir());
@@ -182,7 +184,7 @@ async function pickSlug(raw: unknown, verb: string): Promise<string | undefined>
   for (const s of slugs) ui.info(`  ${s}`);
   ui.blank();
   if (!process.stdin.isTTY || !process.stderr.isTTY) {
-    nextAction(`dora harness ${verb} ${slugs[0]}`);
+    nextAction(`dora harness ${verb} ${slugs[0]}${nextSuffix}`);
     ui.blank();
     await exit(2);
     return;
@@ -735,6 +737,124 @@ export const harnessList = defineCommand({
     printWatch();
     ui.blank();
     await exit(0);
+  },
+});
+
+async function runRm(slug: string, args: { yes?: boolean; "dry-run"?: boolean; format?: string; json?: boolean; ci?: boolean }): Promise<void> {
+  const dryRun = Boolean(args["dry-run"]);
+  const yes = Boolean(args.yes);
+  if (shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun })) {
+    refuseAgentWrite("dora harness rm <slug> --yes");
+    await exit(2);
+    return;
+  }
+  if (!yes && !dryRun) {
+    if (!process.stdin.isTTY || !process.stderr.isTTY) {
+      nextAction(`dora harness rm ${slug} --yes`);
+      await exit(2);
+      return;
+    }
+    const ans = await promptSelect(
+      `Remove ${slug}?`,
+      [
+        { value: "no", label: "Keep" },
+        { value: "yes", label: "Remove" },
+      ],
+      "no",
+    );
+    if (ans !== "yes") {
+      summaryLine("Nothing removed.");
+      await exit(0);
+      return;
+    }
+  }
+  const home = homedir();
+  const mode = resolveOutputMode(args);
+  let routine;
+  try {
+    routine = readRoutine(home, slug);
+  } catch (e) {
+    ui.fail(e instanceof Error ? e.message : String(e));
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  const jobs = hermesInstalled() ? listCronJobs() : null;
+  let jobId: string | undefined;
+  if (routine.jobId && !(jobs && !jobs.some((j) => j.id === routine.jobId))) {
+    jobId = routine.jobId;
+  } else {
+    jobId = jobs?.find((j) => j.name === slug)?.id;
+  }
+  if (hermesInstalled() && jobs === null && !jobId) {
+    ui.fail("Could not list Runtime jobs.");
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  if (jobId && !hermesInstalled()) {
+    printHermesInstall();
+    await exit(2);
+    return;
+  }
+  if (dryRun) {
+    if (jobId) ui.info(`  ${formatHermesCmd(removeArgs(jobId))}`);
+    ui.info(`  delete ${routine.dir}`);
+    if (mode.format === "json") outJson({ slug, dryRun: true, job: jobId ? "remove" : "gone" });
+    nextAction(`dora harness rm ${slug} --yes`);
+    ui.blank();
+    await exit(0);
+    return;
+  }
+  let job: "removed" | "gone" = "gone";
+  if (jobId) {
+    const r = defaultHermesRun(removeArgs(jobId));
+    if (r.exitCode !== 0) {
+      const still = listCronJobs();
+      if (still === null || still.some((j) => j.id === jobId)) {
+        ui.fail(r.stderr.trim() || "Remove failed.");
+        nextAction("dora harness list");
+        await exit(1);
+        return;
+      }
+    } else {
+      job = "removed";
+    }
+  }
+  try {
+    deleteRoutine(home, slug);
+  } catch (e) {
+    ui.fail(e instanceof Error ? e.message : String(e));
+    nextAction("dora harness list");
+    await exit(1);
+    return;
+  }
+  if (mode.format === "json") {
+    outJson({ slug, removed: true, job });
+    await exit(0);
+    return;
+  }
+  ui.info(`  Removed ${slug}.`);
+  nextAction("dora harness list");
+  ui.blank();
+  await exit(0);
+}
+
+export const harnessRm = defineCommand({
+  meta: {
+    name: "rm",
+    description: [
+      "Stop the Runtime job and delete the routine folder",
+      "",
+      "If remove fails and the job is still there, the folder stays.",
+      "If the job is already gone, the folder is deleted.",
+    ].join("\n"),
+  },
+  args: WRITE_ARGS,
+  async run({ args }) {
+    const slug = await pickSlug(args.slug, "rm", " --yes");
+    if (!slug) return;
+    await runRm(slug, args);
   },
 });
 

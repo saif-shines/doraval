@@ -89,7 +89,7 @@ export const plugin = defineGroup(
 
 export const harness = defineGroup(
   "harness",
-  "List routines; new, apply, boot, pause, resume, show, logs, open",
+  "List routines; new, apply, boot, pause, resume, show, logs, rm, open",
   {
     new: () => import("./commands/harness.js").then((m) => m.harnessNew),
     apply: () => import("./commands/harness.js").then((m) => m.harnessApply),
@@ -99,6 +99,7 @@ export const harness = defineGroup(
     list: () => import("./commands/harness.js").then((m) => m.harnessList),
     show: () => import("./commands/harness.js").then((m) => m.harnessShow),
     logs: () => import("./commands/harness.js").then((m) => m.harnessLogs),
+    rm: () => import("./commands/harness.js").then((m) => m.harnessRm),
     open: () => import("./commands/harness.js").then((m) => m.harnessOpen),
   },
   () => import("./commands/harness.js"),

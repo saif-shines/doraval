@@ -119,6 +119,10 @@ export function runsArgs(jobId: string): string[] {
   return ["cron", "runs", jobId];
 }
 
+export function removeArgs(jobId: string): string[] {
+  return ["cron", "remove", jobId];
+}
+
 export type CronJob = {
   id: string;
   name: string;

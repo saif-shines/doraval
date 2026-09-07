@@ -21,7 +21,7 @@ describe("dora harness", () => {
     const { exitCode, stdout, stderr } = runDoraval(["harness", "--help"]);
     const out = stdout + stderr;
     expect(exitCode).toBe(0);
-    for (const verb of ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "open"]) {
+    for (const verb of ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "rm", "open"]) {
       expect(out).toContain(verb);
     }
   });
@@ -1020,6 +1020,220 @@ describe("dora harness", () => {
     expect(blob.indexOf("dora harness apply")).toBeLessThan(blob.indexOf("dora harness boot"));
     expect(blob).toContain("dora harness apply <slug> --yes");
     expect(blob).toContain("dora harness apply <slug> --dry-run");
+    expect(blob).toContain("dora harness rm <slug> --yes");
+    expect(blob).toContain("dora harness rm <slug> --dry-run");
+  });
+
+  test("rm --yes stops the job then deletes the folder", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rm-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home);
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(readFileSync(log, "utf8")).toContain("cron remove abcdef123456");
+    expect(existsSync(join(home, ".dora", "harness", "night-pass"))).toBe(false);
+    expect(stdout + stderr).toContain("dora harness list");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("rm with a dead stored id still removes a same-name Runtime job", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmname-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "deaddeaddead"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home);
+    const { exitCode, stdout } = runDoraval(["harness", "rm", "night-pass", "--yes", "--json"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(readFileSync(log, "utf8")).toContain("cron remove abcdef123456");
+    expect(existsSync(join(home, ".dora", "harness", "night-pass"))).toBe(false);
+    expect(JSON.parse(stdout)).toEqual({ slug: "night-pass", removed: true, job: "removed" });
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("rm deletes the folder when the job is already gone", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmgone-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "deaddeaddead"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home, "");
+    const { exitCode } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(readFileSync(log, "utf8")).not.toContain("cron remove");
+    expect(existsSync(join(home, ".dora", "harness", "night-pass"))).toBe(false);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("rm keeps the folder when remove fails and the job is still there", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmfail-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const { bin } = fakeHermes(home, undefined, { failRemove: true });
+    const { exitCode } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(1);
+    expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("rm --dry-run prints the plan and deletes nothing", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmdry-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const { bin, log } = fakeHermes(home);
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "rm", "night-pass", "--dry-run"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}`, CLAUDECODE: "1" },
+    });
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toContain("hermes cron remove abcdef123456");
+    expect(stdout + stderr).toMatch(/delete /);
+    expect(readFileSync(log, "utf8")).not.toContain("cron remove");
+    expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("rm without --yes refuses a detected agent", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmagent-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "rm", "night-pass"], {
+      env: { HOME: home, PATH: pathWithoutHermes(), CLAUDECODE: "1", CI: "1" },
+    });
+    expect(exitCode).toBe(2);
+    expect(stdout + stderr).toMatch(/--yes|--dry-run/);
+    expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("bare rm prints slugs and the next command with --yes", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmbare-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "rm"], {
+      env: { HOME: home, PATH: pathWithoutHermes() },
+    });
+    expect(exitCode).toBe(2);
+    expect(stdout + stderr).toContain("night-pass");
+    expect(stdout + stderr).toContain("dora harness rm night-pass --yes");
+    expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("rm with a stored id and no Hermes prints install steps and keeps the folder", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-rmnohermes-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    writeFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), [
+      "skills_run: []",
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      'job_id: "abcdef123456"',
+      "",
+    ].join("\n"));
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: pathWithoutHermes() },
+    });
+    expect(exitCode).toBe(2);
+    expect(stdout + stderr).toContain("https://hermes-agent.nousresearch.com/install.sh");
+    expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
+    rmSync(home, { recursive: true, force: true });
   });
 });
 
@@ -1030,7 +1244,7 @@ function cronListBlock(id: string, name: string, state: "active" | "paused", las
 function fakeHermes(
   home: string,
   listOut = cronListBlock("abcdef123456", "night-pass", "active", "2026-09-04T21:30:19+05:30"),
-  opts: { failMcp?: boolean; failList?: boolean; runsOut?: string } = {},
+  opts: { failMcp?: boolean; failList?: boolean; failRemove?: boolean; runsOut?: string } = {},
 ): { bin: string; log: string } {
   const bin = mkdtempSync(join(tmpdir(), "dora-hermes-bin-"));
   const log = join(home, "hermes-log");
@@ -1051,6 +1265,14 @@ if [ "$1" = cron ] && [ "$2" = list ]; then
 fi
 `
     : "";
+  const failRemove = opts.failRemove
+    ? `
+if [ "$1" = cron ] && [ "$2" = remove ]; then
+  echo "remove failed" >&2
+  exit 1
+fi
+`
+    : "";
   writeFileSync(
     join(bin, "hermes"),
     `#!/bin/sh
@@ -1065,6 +1287,7 @@ fi
 if [ "$1" = cron ] && [ "$2" = runs ]; then
   printf '%s' '${(opts.runsOut ?? "").replace(/'/g, "")}'
 fi
+${failRemove}
 ${failMcp}
 exit 0
 `,

@@ -224,6 +224,16 @@ function defaultOpenDir(dir: string): void {
   if (r.exitCode !== 0) throw new Error(`Could not open ${dir}`);
 }
 
+export function deleteRoutine(home: string, slug: string): string {
+  assertSlug(slug);
+  const dir = routineDir(home, slug);
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+    throw new Error(`No routine named "${slug}".`);
+  }
+  rmSync(dir, { recursive: true, force: true });
+  return dir;
+}
+
 export function openRoutine(home: string, slug: string, openDir: (dir: string) => void = defaultOpenDir): string {
   assertSlug(slug);
   const dir = routineDir(home, slug);
