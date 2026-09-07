@@ -2,17 +2,36 @@
 
 ## Unreleased
 
+## 0.6.37
+
 ### Features
 
+- `dora harness show <slug>` prints one card: slug, state,
+  interval, max tick, MCP, last run, folder. Hex job id only
+  in `--json`. `list <slug>` is the same as `show`.
+- `dora harness apply <slug>` pushes the folder onto the Runtime
+  job. First apply creates. Later apply edits. `boot` is the
+  same command.
 - `dora harness logs <slug>` prints that job's run history via
   the Runtime `cron runs` command. Bare `logs` picks a slug on
   a TTY. No TTY prints slugs and exits 2. A dead job id says
   the job is gone.
+- `dora harness rm <slug>` stops the Runtime job, then deletes
+  the folder. If remove fails and the job is still there, the
+  folder stays. If the job is already gone, the folder is deleted.
+
+### Fixes
+
+- Pause still targets the stored job id when `cron list` fails.
+- `rm` keeps the folder when list fails and there is no stored
+  id. A dead stored id still removes a same-name Runtime job.
 
 ### Docs
 
+- README, website `/commands/harness`, pocket-agents, `ask-dora`,
+  `review-with-dora`, and `grilling-for-routine` name `apply`,
+  `show`, `logs`, and `rm`. `boot` stays the apply alias.
 - Product word for one unattended Loop pass is **Run**, not Tick.
-  Skills, Reader pages, and the glossary match.
 
 ## 0.6.36
 
