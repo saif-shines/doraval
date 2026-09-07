@@ -146,7 +146,7 @@ The table shortens the id. `show` accepts that short id when it is unique. `--js
 
 ## Harness
 
-A **routine** is a saved use case at `~/.dora/harness/<slug>/`. `dora harness` is the front desk. The Runtime runs the Loop. Today that Runtime is Hermes. Full flow: [dora harness](/commands/harness/). `dora harness new` starts `ask-dora` / `grilling-for-routine`. After one good one-pass the grill may add a Fixed step. Human-visible messages end with `Sent by pocket agent <slug>`. A Run has no last chat. When the destination cannot tell, the night prompt uses a run handoff (`handoff.md`). After `boot`, `list`, `pause`, and `resume`, Dora prints Runtime watch commands. The family is `ask-dora`, `review-with-dora`, `grilling-for-routine`, and `writing-for-routine`.
+A **routine** is a saved use case at `~/.dora/harness/<slug>/`. `dora harness` is the front desk. The Runtime runs the Loop. Today that Runtime is Hermes. Full flow: [dora harness](/commands/harness/). `dora harness new` starts `ask-dora` / `grilling-for-routine`. After one good one-pass the grill may add a Fixed step. Human-visible messages end with `Sent by pocket agent <slug>`. A Run has no last chat. When the destination cannot tell, the night prompt uses a run handoff (`handoff.md`). `boot` is the apply alias. After `apply`, `boot`, `list`, `pause`, and `resume`, Dora prints Runtime watch commands. The family is `ask-dora`, `review-with-dora`, `grilling-for-routine`, and `writing-for-routine`.
 
 Type this in the agent:
 
@@ -160,9 +160,13 @@ Then use the CLI verbs:
 dora harness
 dora harness list
 dora harness new
+dora harness apply <slug>
 dora harness boot <slug>
+dora harness show <slug>
+dora harness logs <slug>
 dora harness pause <slug>
 dora harness resume <slug>
+dora harness rm <slug>
 dora harness open <slug>
 ```
 

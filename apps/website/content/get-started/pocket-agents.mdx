@@ -1,6 +1,6 @@
 ---
 title: Run a pocket agent
-description: Grill a small loop, test one pass, then boot it. The folder is a Routine.
+description: Grill a small loop, test one pass, then apply it. The folder is a Routine.
 sidebar:
   label: Pocket agents
   order: 5
@@ -105,12 +105,14 @@ Dora does not run that login. Then run the one-pass again.
 
 Folder after accept: `~/.dora/harness/slack-pr-approve/`.
 
-### 7. Boot and watch
+### 7. Apply and watch
 
 ```bash
-dora harness boot slack-pr-approve
+dora harness apply slack-pr-approve
 hermes mcp login scalekit
 ```
+
+`dora harness boot slack-pr-approve` is the same command.
 
 Dora prints Runtime watch commands:
 
@@ -140,9 +142,9 @@ Dora does not copy `.env` from the original skill.
 ## Common mistakes
 
 - Treating a quiet one-pass as a hang. Wait, or Ctrl+C and run `hermes mcp login scalekit`.
-- Booting before login.
+- Applying before login.
 - Setting a 1 minute interval during the grill.
-- Expecting a Dora logs verb. Use the Runtime watch commands.
+- Using `hermes logs` for one routine. Use `dora harness logs slack-pr-approve`.
 - Putting secrets in `prompt.md`.
 
 ## Next

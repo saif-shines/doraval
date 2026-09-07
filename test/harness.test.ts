@@ -170,7 +170,7 @@ describe("dora harness", () => {
     expect(text).toMatch(/MUST accept none for skills to run and skills to refer/);
     expect(text).toMatch(/MUST NOT require a skill because a connector exists/);
     expect(text).toMatch(/hermes mcp add scalekit/);
-    expect(text).toMatch(/MUST register scalekit with boot or `hermes mcp add` before `hermes mcp login scalekit`/);
+    expect(text).toMatch(/MUST register scalekit with apply, boot, or `hermes mcp add` before `hermes mcp login scalekit`/);
     expect(text).toMatch(/MUST NOT edit Hermes config/);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");

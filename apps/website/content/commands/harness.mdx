@@ -1,6 +1,6 @@
 ---
 title: dora harness
-description: Grill a routine, freeze a Fixed step, then boot it. Dora prints Runtime watch.
+description: Grill a routine, freeze a Fixed step, then apply it. Dora prints Runtime watch.
 sidebar:
   label: Harness
   order: 2
@@ -60,17 +60,19 @@ After one good one-pass, the grill may freeze a deterministic step into a Skill.
 
 A Skill script is optional. If one exists, it lives inside that Skill. The routine has no top-level scripts directory. Do not use Hermes `--script` or `--no-agent`. Those flags cannot call Scalekit MCP tools.
 
-## Boot the night job
+## Apply the night job
+
+`apply` pushes the folder onto the Runtime job. First apply creates the job. Later apply edits that job. `dora harness boot <slug>` is the same command.
 
 ```bash
-dora harness boot <slug>
+dora harness apply <slug>
 ```
 
-Boot tells Hermes to run this routine on a schedule. Then Dora exits. You can close that terminal.
+Then Dora exits. You can close that terminal.
 
 Hermes keeps a background service on this Mac. That service starts the job again when the interval is due. You do not leave a chat window open.
 
-After boot, log in once in a real terminal. Dora does not open the browser:
+After apply, log in once in a real terminal. Dora does not open the browser:
 
 ```bash
 hermes mcp login scalekit
@@ -80,7 +82,7 @@ If a later run cannot reach Scalekit, run that login again. If the Scalekit acco
 
 ## Runtime watch
 
-After `boot`, `list`, `pause`, and `resume`, Dora prints Runtime watch commands. Today those are Hermes commands. Folder-only `new` and `open` do not print them. On token or MCP fail, login is the required next command. Dora still prints the watch list.
+After `apply`, `boot`, `list`, `pause`, and `resume`, Dora prints Runtime watch commands. Today those are Hermes commands. Folder-only `new` and `open` do not print them. On token or MCP fail, login is the required next command. Dora still prints the watch list.
 
 ```bash
 hermes cron list
@@ -89,16 +91,26 @@ hermes logs
 hermes dashboard
 ```
 
-## Pause, resume, list, open
+## See a routine
+
+`show` prints one card. `logs` prints that job's run history. It is not the global Runtime agent log.
+
+```bash
+dora harness show <slug>
+dora harness logs <slug>
+```
+
+## Pause, resume, remove, open
+
+`pause` skips later runs of that routine only. Other routines keep going. A run that already started may finish. `resume` starts later runs again. `list` shows each slug as running, paused, or none. `rm` stops the Runtime job, then deletes the folder. Pass `--yes` or `--dry-run` to skip the confirm. `open` opens the routine folder.
 
 ```bash
 dora harness list
 dora harness pause <slug>
 dora harness resume <slug>
+dora harness rm <slug>
 dora harness open <slug>
 ```
-
-`pause` skips later runs of that routine only. Other routines keep going. A run that already started may finish. `resume` starts later runs again. `list` shows each slug as running, paused, or none. `open` opens the routine folder.
 
 Close the laptop and the Mac sleeps. Jobs do not run while the Mac sleeps. That is not pause. Due jobs can fire on wake if the job is not paused.
 
@@ -117,7 +129,7 @@ You can change the interval and the one-pass limit per routine. A busy night job
 - Treating laptop close as `dora harness pause`. Sleep stops the clock. It does not pause the job.
 - Expecting Dora to finish `hermes mcp login scalekit`. You run that in a real terminal.
 - Re-running `--accept` on the same slug. Dora refuses to overwrite the folder.
-- Expecting a Dora logs verb. Use the Runtime watch commands Dora prints.
+- Using `hermes logs` for one routine. Use `dora harness logs <slug>` for that job.
 - Using Hermes `--script` as the freeze path. A Skill script is local work inside the Skill.
 - Putting a `scripts/` folder next to `prompt.md`.
 - Expecting a chat app in the harness. Connectors live on a use case, not in this group.

@@ -117,12 +117,13 @@ Offer `dora review --quick` on each copy. The teammate can skip.
 9. After save, update only `prompt.md` and the Skill copy. Do not add a new Skill.
 10. If MCP is none: skip login. Creds stay in the routine folder.
     If MCP is set: register Scalekit on Hermes, then login.
-   Boot registers it: `dora harness boot <slug>`.
+   Apply registers it: `dora harness apply <slug>`. `dora harness boot <slug>` is the same command.
    The same add is `hermes mcp add scalekit --url <mcp-url> --auth oauth` in a real terminal.
    Login without that add fails: server not found.
    After the add, the teammate runs `hermes mcp login scalekit` in a real terminal.
-   Done-when: login is the next line only after boot or that add.
-   Dora prints Runtime watch commands after boot, list, pause, and resume. Do not invent a Dora logs verb.
+   Done-when: login is the next line only after apply, boot, or that add.
+   After save: `dora harness show <slug>`, `dora harness logs <slug>` for that job's runs, `dora harness rm <slug> --yes` to stop the job and delete the folder.
+   Dora prints Runtime watch commands after apply, boot, list, pause, and resume.
    Dora does not run login. Dora does not edit `~/.hermes/config.yaml`.
    If a refresh token dies, run that login again. If the Scalekit connected account is dead, open the provider link again.
 
@@ -155,7 +156,7 @@ MUST NOT require a skill because a connector exists.
 MUST NOT write the original skill directory.
 MUST NOT invent a registry, a slug, a connector, a connector catalog, or a loop interval.
 MUST print the official authstack install when `discover-connectors` or `setup-agentkit` is missing.
-MUST register scalekit with boot or `hermes mcp add` before `hermes mcp login scalekit`.
+MUST register scalekit with apply, boot, or `hermes mcp add` before `hermes mcp login scalekit`.
 MUST NOT run or tell login before that add.
 MUST NOT edit Hermes config.
 MUST NOT write the folder when the idea is not loop-able.

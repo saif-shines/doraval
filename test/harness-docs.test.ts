@@ -3,7 +3,8 @@ import { join } from "path";
 import { describe, expect, test } from "bun:test";
 import { repoRoot, runDoraval } from "./helpers/spawn-cli.js";
 
-const VERBS = ["new", "boot", "pause", "resume", "list", "open"] as const;
+const VERBS = ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "rm", "open"] as const;
+const EXISTING = ["apply", "show", "logs", "rm"] as const;
 const FAMILY = ["ask-dora", "review-with-dora", "grilling-for-routine", "writing-for-routine"] as const;
 
 function read(rel: string): string {
@@ -62,6 +63,16 @@ describe("dora harness docs lockstep", () => {
     expect(skill).toContain("grilling-for-routine");
     expect(catalog).toContain("ask-dora");
     expect(catalog).toContain("grilling-for-routine");
+    expect(catalog).toMatch(/boot is (the )?(same|alias)|alias of apply/i);
+    const ask = read("skills/ask-dora/SKILL.md");
+    const grill = read("skills/grilling-for-routine/SKILL.md");
+    for (const verb of EXISTING) {
+      expect(ask).toContain(verb);
+      expect(grill).toMatch(new RegExp(`dora harness ${verb}`));
+    }
+    expect(ask).toContain("boot");
+    expect(ask).toMatch(/Do not load the grill/);
+    expect(grill).toContain("dora harness boot");
     expect(site.toLowerCase()).toContain("routine");
     expect(catalog.toLowerCase()).toContain("routine");
     expect(harness).toContain("hermes mcp login scalekit");
@@ -100,13 +111,13 @@ describe("dora harness docs lockstep", () => {
     for (const text of [readme, harness, site, catalog, skill, grill]) {
       expect(text).toMatch(/Runtime watch/i);
     }
-    for (const verb of ["boot", "list", "pause", "resume"] as const) {
+    for (const verb of ["apply", "list", "pause", "resume"] as const) {
       const line = readme.split("\n").find((l) => l.includes(`dora harness ${verb}`));
       expect(line).toBeDefined();
       expect(line).toMatch(/Runtime watch/);
     }
-    expect(harness).toMatch(/After `boot`, `list`, `pause`, and `resume`/);
-    expect(grill).toMatch(/after boot, list, pause, and resume/);
+    expect(harness).toMatch(/After `apply`, `boot`, `list`, `pause`, and `resume`/);
+    expect(grill).toMatch(/after apply, boot, list, pause, and resume/);
     expect(harness).toMatch(/token or MCP fail/i);
     for (const cmd of WATCH) {
       expect(readme).toContain(cmd);
