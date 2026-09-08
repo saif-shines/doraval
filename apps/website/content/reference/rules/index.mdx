@@ -22,7 +22,7 @@ This table is generated from the rule registry. Edit the registry, not the rows.
 | R008 ([docs](/reference/rules/R008)) | `allowed-tools-portability` | structure | warning | recommended, strict | allowed-tools is portable |
 | R009 ([docs](/reference/rules/R009)) | `advanced-fields` | structure | FYI | strict | Advanced frontmatter fields used correctly |
 | R010 ([docs](/reference/rules/R010)) | `unknown-fields` | structure | warning | recommended, strict | No unknown frontmatter fields |
-| R011 ([docs](/reference/rules/R011)) | `supporting-dirs` | structure | FYI | strict | Supporting directories recognized |
+| R011 ([docs](/reference/rules/R011)) | `supporting-dirs` | structure | FYI | recommended, strict | Supporting dirs and referenced files stay in-skill |
 | R012 ([docs](/reference/rules/R012)) | `dynamic-injection` | structure | warning | recommended, strict | Dynamic injection markers valid |
 | R013 ([docs](/reference/rules/R013)) | `scenario-file-valid` | structure | error | recommended, strict | scenarios.yaml is valid |
 | R014 ([docs](/reference/rules/R014)) | `drift-trigger` | heuristic | warning | recommended, strict | Trigger clarity (heuristic) |
@@ -31,7 +31,7 @@ This table is generated from the rule registry. Edit the registry, not the rows.
 | R017 ([docs](/reference/rules/R017)) | `drift-example` | heuristic | warning | recommended, strict | Example presence (heuristic) |
 | R018 ([docs](/reference/rules/R018)) | `drift-guardrail` | heuristic | warning | recommended, strict | Guardrail presence (heuristic) |
 | R019 ([docs](/reference/rules/R019)) | `drift-clarity` | heuristic | warning | recommended, strict | Clarity (heuristic) |
-| R020 🔒 ([docs](/reference/rules/R020)) | `script-security` | heuristic | warning | minimal, recommended, strict | Bundled scripts free of dangerous patterns |
+| R020 🔒 ([docs](/reference/rules/R020)) | `script-security` | heuristic | warning | minimal, recommended, strict | Skill text and scripts free of dangerous patterns |
 | R021 ([docs](/reference/rules/R021)) | `principle-adherence` | heuristic | warning | recommended, strict | Content honors recorded principles |
 | R022 ([docs](/reference/rules/R022)) | `llm-clarity` | llm | warning | recommended, strict | LLM: instructions unambiguous |
 | R023 ([docs](/reference/rules/R023)) | `llm-actionability` | llm | warning | recommended, strict | LLM: instructions executable |

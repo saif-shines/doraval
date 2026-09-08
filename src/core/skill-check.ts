@@ -1,5 +1,6 @@
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { loadSkillFromDir, validateSkillModelTagged, type SkillModel } from "./skill-validate.js";
+import { checkLevel3References } from "./agentskills-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
 import { stampRule } from "./rules/apply.js";
 import type { EffectiveRule } from "./rules/resolve.js";
@@ -63,6 +64,21 @@ export async function checkSkill(
       }, code, effective);
       if (finding) findings.push(finding);
     }
+  }
+
+  const level3 = checkLevel3References(model, { skillDir: dir, existingDirs });
+  for (const item of [
+    ...(level3.warnings ?? []).map((w) => ({ severity: "warning" as const, text: w.text })),
+    ...(level3.passes ?? []).map((p) => ({ severity: "pass" as const, text: p.text })),
+  ]) {
+    const finding = stampRule({
+      id: `struct-${padIdx(sIdx++)}`,
+      tier: "structure" as const,
+      severity: item.severity,
+      message: item.text,
+      fixable: false,
+    }, "R011", effective);
+    if (finding) findings.push(finding);
   }
 
   let hIdx = 1;

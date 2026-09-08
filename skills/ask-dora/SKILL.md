@@ -59,16 +59,7 @@ Then reload skills or restart the session and try again.
 
 Dora does not install authstack. Dora does not teach the dashboard.
 
-MUST print the map when the ask is empty.
-MUST load `review-with-dora` for a Dora job.
-MUST load `grilling-for-routine` for a routine, a loop, recurring, a routine idea, a pocket job, or harness new.
-MUST name `dora harness` apply/show/logs/rm/pause/resume/list/open when a routine already exists. boot is the apply alias.
-MUST name `dora harness apply <slug> --yes` after a skillkit or authstack merge, or when the ask is refresh pocket skills.
 MUST NOT name `claude plugin marketplace update` for a pocket job.
-MUST NOT load the grill for those existing-routine verbs.
-MUST load `discover-connectors` only for a public catalog ask, when that skill is on disk.
-MUST load `setup-agentkit` for a dashboard connection ask, when that skill is on disk.
-MUST load `integrate-agentkit` for a connected-account ask, when that skill is on disk.
-MUST print the official authstack install and stop when the needed AgentKit skill is missing.
+MUST NOT load the grill for existing-routine verbs.
 MUST NOT invent a connector catalog or dashboard steps.
 MUST NOT hold the review loop, the grill, the pocket check, or the night-prompt craft.

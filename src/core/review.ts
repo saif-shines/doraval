@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import { resolve as resolvePath, relative, basename } from "path";
-import { scanScriptSecurity, type ScriptFile } from "./static-skill-checks.js";
+import { scanScriptSecurity, scanSkillSecurity, type ScriptFile } from "./static-skill-checks.js";
 import { checkSkill } from "./skill-check.js";
 import { buildLintPrompt, LintSchema, LINT_SYSTEM, type LintOutput } from "./skill-lint.js";
 import { judge, type JudgeOutcome, type JudgeRequest } from "./judge.js";
@@ -157,9 +157,23 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
   const heurFindings: ReviewFinding[] = checked.findings.filter((f) => f.tier === "heuristics");
   let hIdx = heurFindings.length + 1;
 
-  // Tier 2a: scripts/ security scan — outbound network calls, secret prompts.
-  // Only runs when a scripts/ dir exists; a clean scan still records a pass so
-  // "no scripts/" and "scripts/ reviewed clean" stay distinguishable in output.
+  // Tier 2a: R020 — Skill body always; scripts/ when present.
+  if (checked.model) {
+    const textHits = scanSkillSecurity({
+      description: String(checked.model.data.description ?? ""),
+      content: checked.model.content,
+    });
+    for (const hit of textHits) {
+      const finding = stampRule({
+        id: `heur-${pad(hIdx++)}`,
+        tier: "heuristics" as const,
+        severity: "warning" as const,
+        message: hit.detail,
+        fixable: false,
+      }, SCRIPT_SECURITY_CODE, effective);
+      if (finding) heurFindings.push(finding);
+    }
+  }
   if (existingDirs.includes("scripts")) {
     const scriptFiles = readScriptFiles(resolvePath(dir, "scripts"));
     const scriptHits = scanScriptSecurity(scriptFiles);

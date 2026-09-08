@@ -1,6 +1,6 @@
 ---
 title: R020 · script-security
-description: "Bundled scripts free of dangerous patterns"
+description: "Skill text and scripts free of dangerous patterns"
 sidebar:
   label: R020 script-security
   hidden: true
@@ -18,8 +18,8 @@ sidebar:
 
 | | |
 | --- | --- |
-| **What** | Scans bundled `scripts/` for dangerous network and secret-prompt patterns. **Locked** (safety). |
-| **Why** | Scripts run with the user’s permissions. Locked so a package cannot suppress security warnings. |
+| **What** | Scans Skill description, body, and bundled `scripts/` for injection phrases, disable-safety orders, and secret + outbound patterns. Heuristic, not a sandbox. **Locked** (safety). |
+| **Why** | Untrusted Skill text is a supply-chain surface. Locked so a package cannot suppress security warnings. A public `curl` with no secrets is not a hit. |
 
 ## How to fix
 

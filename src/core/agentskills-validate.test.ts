@@ -191,6 +191,14 @@ describe("checkLevel3References", () => {
     );
     expect(result.warnings?.some((w) => w.text.includes("scripts/extract.py") && w.text.includes("does not exist"))).toBe(true);
   });
+
+  test("warns when a reference resolves outside the skill root", () => {
+    const result = checkLevel3References(
+      { data: {}, content: "See [x](../escape.md)." },
+      ctx,
+    );
+    expect(result.warnings?.some((w) => /outside|skill root|leaves/i.test(w.text))).toBe(true);
+  });
 });
 
 describe("validateAgentSkill", () => {

@@ -143,6 +143,46 @@ export interface ScriptFile {
   content: string;
 }
 
+export type SkillSecurityInput = {
+  description: string;
+  content: string;
+  scripts?: ScriptFile[];
+};
+
+const INJECTION_PHRASE = /ignore (all )?previous( instructions)?|disregard your system prompt/i;
+const DISABLE_SAFETY = /--dangerously-skip-permissions|--yolo|skip (hooks|approval)/i;
+const SECRET_IN_TEXT = /api[-_ ]?key|~\/\.ssh|(^|[^\w.])\.env\b|env\s*\|\s*base64|paste (your )?(api[-_ ]?key|token|password|secret|credential)|enter (your )?(api[-_ ]?key|token|password|secret|credential)/i;
+const OUTBOUND_IN_TEXT = /\bcurl\b|\bwget\b|\bfetch\(/i;
+
+/** Description + body (+ optional scripts/). Does not read product source. */
+export function scanSkillSecurity(input: SkillSecurityInput): DriftItem[] {
+  const items: DriftItem[] = [];
+  const text = `${input.description}\n${input.content}`;
+  if (INJECTION_PHRASE.test(text)) {
+    items.push({
+      drifted: true,
+      category: "Script security",
+      detail: "Skill text: ignore previous instructions — review before trusting this skill",
+    });
+  }
+  if (DISABLE_SAFETY.test(text)) {
+    items.push({
+      drifted: true,
+      category: "Script security",
+      detail: "Skill text: disable-safety order (--dangerously-skip-permissions) — review before trusting this skill",
+    });
+  }
+  if (SECRET_IN_TEXT.test(text) && OUTBOUND_IN_TEXT.test(text)) {
+    items.push({
+      drifted: true,
+      category: "Script security",
+      detail: "Skill text: secret or credential path plus outbound — review before trusting this skill",
+    });
+  }
+  if (input.scripts?.length) items.push(...scanScriptSecurity(input.scripts));
+  return items;
+}
+
 export function scanScriptSecurity(scripts: ScriptFile[]): DriftItem[] {
   const items: DriftItem[] = [];
   for (const s of scripts) {

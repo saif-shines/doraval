@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "path";
+import { join, resolve } from "path";
+import { mkdirSync, mkdtempSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { checkSkill } from "./skill-check.js";
 import { resolveEffectiveRules } from "./rules/resolve.js";
 
@@ -29,5 +31,25 @@ describe("checkSkill", () => {
       code: "R002",
       slug: "frontmatter-parse",
     });
+  });
+
+  test("broken local reference is R011; real references/ file passes", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "dora-l3-"));
+    mkdirSync(join(dir, "references"));
+    writeFileSync(join(dir, "SKILL.md"), [
+      "---", "name: link-check", "description: Use when testing local links.", "---",
+      "", "# link-check", "", "See [missing](references/MISSING.md).", "",
+    ].join("\n"));
+    const missing = await checkSkill(dir, rules());
+    expect(missing.findings.some((f) => f.code === "R011" && /MISSING/.test(f.message) && f.severity !== "pass")).toBe(true);
+
+    writeFileSync(join(dir, "references", "output.md"), "# ok\n");
+    writeFileSync(join(dir, "SKILL.md"), [
+      "---", "name: link-check", "description: Use when testing local links.", "---",
+      "", "# link-check", "", "See [out](references/output.md).", "",
+    ].join("\n"));
+    const ok = await checkSkill(dir, rules());
+    expect(ok.findings.some((f) => /MISSING/.test(f.message))).toBe(false);
+    expect(ok.findings.some((f) => /does not exist/.test(f.message))).toBe(false);
   });
 });
