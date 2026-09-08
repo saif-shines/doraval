@@ -1,0 +1,14 @@
+Clarification from Saif (wR). Apply this to SK-1918. Do not wait.
+
+Re-copy from a local path is not enough.
+
+If origin is `/Users/saif/Projects/skillkit/...`, apply/boot only copies that disk folder. A merge on github.com/scalekit-inc/skillkit does nothing until someone git-pulls that clone. A dirty or wrong-branch clone can also ship stale or uncommitted files.
+
+What we want after a kit merge:
+
+1. For kit skills (skillkit, authstack), record the **GitHub URL** as origin, not the local clone. Example: `https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs-engineering/skills/ask-saif`
+2. On apply/boot, fetch that URL (you already have `fetchSkillRemote`: clone --depth 1, optional branch) and copy from the fetched tree. That is latest `main` after merge.
+3. If the human passed a local path on purpose, keep that as origin. Re-copy is local only. Say so. Do not git-pull their working tree.
+4. Do not `git pull` inside someone else's clone. Fetch to a temp dir, then copy into the routine.
+
+Done-when: a remote merge on skillkit main is what apply/boot picks up, without requiring a local pull.
