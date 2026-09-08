@@ -77,3 +77,7 @@ Do not add a skill named skill-doctor. Do not add a 0–100 score. Do not add ev
 Pull origin/main first so plans target current main. Update WIP.md frontier to: SK-1918 landed; plans in docs/superpowers/plans/; waiting for Saif to /implement.
 
 Reply with the three plan paths and stop.
+
+---
+
+yes implement
