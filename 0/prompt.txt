@@ -1,0 +1,45 @@
+I remember you were adidng features on improving the skill doctor related items can you expand on it
+
+---
+
+so doe sthe same command also bring sin the skill alsong with command to cover and improve?
+
+---
+
+my imaginenation is if user is running dora cli thorugh thei coding agent both the mechanical command and the skill should come into play if needed lets ask matt if this needs implementation
+
+---
+
+Saif asked you (doraval Grok) to handle this next. Finish SK-1918 if it is still in flight, then do SK-1922. Do not wait for more confirmation.
+
+Ticket: https://linear.app/scalekit/issue/SK-1922/stamp-pocket-agent-footer-on-githubslack-via-hermes-tool-hook
+Related: SK-1919 (queue), SK-1918 (skill refresh — separate).
+
+Do not edit pocket-agents or skillkit.
+
+## Problem
+
+Reviews from `saif-waiting-review` sometimes omit `Sent by pocket agent saif-waiting-review`.
+
+Dora already appends this to the Hermes **prompt**:
+
+`Human-visible messages end with: Sent by pocket agent <slug>`
+
+That is an instruction. The model can skip it. `writing-for-routine` now says do not put the footer in `prompt.md`. Append is still not a stamp on `gh pr review`.
+
+## What to ship
+
+Force the last line on the **tool call** that posts the GitHub review and the Slack notify.
+
+1. On `dora harness apply` / `boot`, install or point at a Hermes plugin or shell `pre_tool_call` / `transform_tool_call` hook for that job.
+2. When the tool is GitHub create-review / `gh pr review` / Slack post for this job, append `Sent by pocket agent <slug>` if missing.
+3. Do **not** use Hermes `transform_footer` (chat UI only).
+4. Do **not** use cron `wrap_response` (gateway delivery only).
+5. Fail open if the hook errors. Do not block the review.
+6. Existing routines without this hook keep the prompt line.
+
+Docs: https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks
+
+Done-when: a forced tick posts a GitHub APPROVE whose last line is the footer even if `prompt.md` does not mention it.
+
+When done: say the commit/PR. Reply in this pane.
