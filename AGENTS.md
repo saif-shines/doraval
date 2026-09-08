@@ -23,6 +23,7 @@ Look up project/system skills when deciding. Mention 1–2 options to the user w
 - Lean code: `ponytail`, `karpathy-guidelines`, `pragmatic-fp`
 - Audits: `improve` (plans only — does not implement)
 - Website docs: `docs-writing-style` + `apps/website/.devex-kit/style-prompt-block.md` (canonical user docs are `apps/website/content/`, not local journey notes)
+- Sublime library (`sublime.app`): `sublime-api`. Use `/sublime-api` or load `~/.grok/skills/sublime-api/SKILL.md`. Auth is `SUBLIME_API_TOKEN`. Do not scrape `sublime.app/developers`. Source: https://github.com/saif-shines/sublime-skill
 
 ## Search
 
