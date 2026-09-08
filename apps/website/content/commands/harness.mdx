@@ -48,6 +48,8 @@ hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
 
 Dora appends a pocket-agent footer to the prompt Hermes runs. Human-visible messages end with `Sent by pocket agent <slug>`. `prompt.md` does not contain that line.
 
+Apply also installs a Hermes `pre_tool_call` hook. That hook stamps the same last line on the GitHub review and Slack post if the model skips it. A hook error does not block the post. A routine that has not been applied keeps the prompt line only. Restart a running Hermes gateway so the hook loads (`hermes gateway restart`).
+
 A Run has no last chat. The grill tells the night prompt to search the destination before a create, or to use a run handoff: read `handoff.md` at the start, overwrite it at the end. Missing file means first Run. Dora does not write that file.
 
 ## Fixed step

@@ -83,7 +83,7 @@ When Hermes runs that prompt, Dora appends:
 Human-visible messages end with: Sent by pocket agent slack-pr-approve
 ```
 
-Do not put that line in `prompt.md`. A Slack post then ends with `Sent by pocket agent slack-pr-approve`.
+Do not put that line in `prompt.md`. Apply also installs a Hermes hook. That hook stamps `Sent by pocket agent slack-pr-approve` on the GitHub review and Slack post if the model skips it.
 
 ### 6. One pass
 
@@ -112,7 +112,7 @@ dora harness apply slack-pr-approve
 hermes mcp login scalekit
 ```
 
-`dora harness boot slack-pr-approve` is the same command. Apply fetches kit skills from GitHub `main`. Pass `--keep-copies` to skip. After a skillkit or authstack merge, run apply again. A tick does not refresh.
+`dora harness boot slack-pr-approve` is the same command. Apply fetches kit skills from GitHub `main`. Pass `--keep-copies` to skip. After a skillkit or authstack merge, run apply again. A tick does not refresh. Apply also installs the hook that stamps the last line on GitHub and Slack.
 
 Dora prints Runtime watch commands:
 

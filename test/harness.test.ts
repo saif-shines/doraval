@@ -842,6 +842,9 @@ describe("dora harness", () => {
     expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).toContain(
       'job_id: "fedcba654321"',
     );
+    expect(existsSync(join(home, ".dora", "hooks", "stamp-pocket-footer.py"))).toBe(true);
+    expect(readFileSync(join(home, ".hermes", "config.yaml"), "utf8")).toContain("pre_tool_call");
+    expect(readFileSync(join(home, ".dora", "hooks", "job-slugs.json"), "utf8")).toContain("night-pass");
     expect(stdout + stderr).toContain("dora harness show night-pass");
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
@@ -969,6 +972,28 @@ describe("dora harness", () => {
     rmSync(bin, { recursive: true, force: true });
   });
 
+  test("apply still succeeds when Hermes config is invalid", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-badyml-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    mkdirSync(join(home, ".hermes"), { recursive: true });
+    writeFileSync(join(home, ".hermes", "config.yaml"), "{\n");
+    const { bin } = fakeHermes(home, "");
+    const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+    });
+    expect(exitCode).toBe(0);
+    expect(readFileSync(join(home, ".hermes", "config.yaml"), "utf8")).toBe("{\n");
+    expect(existsSync(join(home, ".dora", "hooks", "stamp-pocket-footer.py"))).toBe(true);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
   test("apply --dry-run prints Runtime commands and writes nothing", () => {
     const home = mkdtempSync(join(tmpdir(), "dora-harness-dry-"));
     writeRoutine(home, {
@@ -988,6 +1013,7 @@ describe("dora harness", () => {
     expect(out).toContain("hermes cron create");
     expect(readFileSync(log, "utf8")).not.toContain("cron create");
     expect(readFileSync(join(home, ".dora", "harness", "night-pass", "routine.yml"), "utf8")).not.toContain("job_id");
+    expect(existsSync(join(home, ".dora", "hooks", "stamp-pocket-footer.py"))).toBe(false);
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
   });

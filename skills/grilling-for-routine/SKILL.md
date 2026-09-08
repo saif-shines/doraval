@@ -53,7 +53,7 @@ After save, update only `prompt.md` and the Skill copy. Do not add a new Skill a
 
 Refuse Hermes `--script` and `--no-agent` as the freeze path. Those flags cannot call Scalekit MCP tools. A Skill script is local work only.
 
-Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill. Dora appends the pocket-agent footer at run. Do not put it in `prompt.md`. A Run has no last chat. That skill names the run handoff.
+Load `writing-for-routine` for `prompt.md` and the Fixed-step Skill. Apply stamps the pocket-agent footer on the GitHub review and Slack post. Dora also appends that instruction to the Hermes prompt. Do not put the footer in `prompt.md`. A Run has no last chat. That skill names the run handoff.
 
 ## Connectors
 
@@ -132,7 +132,7 @@ Offer `dora review --quick` on each copy. The teammate can skip.
    Done-when: login is the next line only after apply, boot, or that add.
    After save: `dora harness show <slug>`, `dora harness logs <slug>` for that job's runs, `dora harness rm <slug> --yes` to stop the job and delete the folder.
    Dora prints Runtime watch commands after apply, boot, list, pause, and resume.
-   Dora does not run login. Dora does not edit `~/.hermes/config.yaml`.
+   Dora does not run login. The grill does not edit `~/.hermes/config.yaml`. Apply may add the pocket-footer hook there.
    If a refresh token dies, run that login again. If the Scalekit connected account is dead, open the provider link again.
 
 Do not ask for the loop interval during this grill. Default is 1 hour. Ask after a good run.
@@ -175,7 +175,7 @@ MUST NOT invent a registry, a slug, a connector, a connector catalog, or a loop 
 MUST print the official authstack install when `discover-connectors` or `setup-agentkit` is missing.
 MUST register scalekit with apply, boot, or `hermes mcp add` before `hermes mcp login scalekit`.
 MUST NOT run or tell login before that add.
-MUST NOT edit Hermes config.
+MUST NOT edit Hermes config in the grill. Apply may add the pocket-footer hook.
 MUST NOT write the folder when the idea is not loop-able.
 MUST NOT write the folder when the idea is not pocket.
 MUST NOT write the folder before the one pass or an accepted printed command.

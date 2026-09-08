@@ -4,6 +4,10 @@
 
 ### Features
 
+- `dora harness apply` and `boot` install a Hermes `pre_tool_call`
+  hook that stamps `Sent by pocket agent <slug>` on GitHub
+  reviews and Slack posts. A hook error does not block the post.
+  The prompt line stays for routines that have not been applied.
 - `dora harness apply` and `boot` refresh copied skills from the
   origin recorded in `routine.yml`. Kit skills (skillkit,
   authstack) store a GitHub URL on `main` and fetch that into a
