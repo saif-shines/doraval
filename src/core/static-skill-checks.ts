@@ -149,9 +149,9 @@ export type SkillSecurityInput = {
   scripts?: ScriptFile[];
 };
 
-const INJECTION_PHRASE = /ignore (all )?previous instructions|disregard your system prompt/i;
+const INJECTION_PHRASE = /ignore (all )?previous( instructions)?|disregard your system prompt/i;
 const DISABLE_SAFETY = /--dangerously-skip-permissions|--yolo|skip (hooks|approval)/i;
-const SECRET_IN_TEXT = /api[- ]?key|~\/\.ssh|\.env\b|env\s*\|\s*base64|paste (your )?(api[- ]?key|token|password|secret|credential)|enter (your )?(api[- ]?key|token|password|secret|credential)/i;
+const SECRET_IN_TEXT = /api[-_ ]?key|~\/\.ssh|(^|[^\w.])\.env\b|env\s*\|\s*base64|paste (your )?(api[-_ ]?key|token|password|secret|credential)|enter (your )?(api[-_ ]?key|token|password|secret|credential)/i;
 const OUTBOUND_IN_TEXT = /\bcurl\b|\bwget\b|\bfetch\(/i;
 
 /** Description + body (+ optional scripts/). Does not read product source. */

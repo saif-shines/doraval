@@ -4,7 +4,7 @@ import { checkLevel3References } from "./agentskills-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
 import { stampRule } from "./rules/apply.js";
 import type { EffectiveRule } from "./rules/resolve.js";
-import { DRIFT_CATEGORY_CODES, PARSE_FAILURE_CODE, STRUCTURE_CHECK_CODES } from "./rules/bindings.js";
+import { DRIFT_CATEGORY_CODES, PARSE_FAILURE_CODE } from "./rules/bindings.js";
 import { padIdx } from "./review-control.js";
 import type { Finding } from "./finding.js";
 
@@ -77,7 +77,7 @@ export async function checkSkill(
       severity: item.severity,
       message: item.text,
       fixable: false,
-    }, STRUCTURE_CHECK_CODES.checkSupportingDirs ?? "R011", effective);
+    }, "R011", effective);
     if (finding) findings.push(finding);
   }
 
