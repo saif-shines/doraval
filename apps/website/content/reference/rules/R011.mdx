@@ -1,6 +1,6 @@
 ---
 title: R011 · supporting-dirs
-description: "Supporting directories recognized"
+description: "Supporting dirs and referenced files stay in-skill"
 sidebar:
   label: R011 supporting-dirs
   hidden: true
@@ -11,15 +11,15 @@ sidebar:
 - **Slug:** `supporting-dirs`
 - **Tier:** structure
 - **Default severity:** FYI
-- **Packages:** strict
+- **Packages:** recommended, strict
 - **Locked:** No
 - **Doc:** https://doraval.dev/reference/rules/R011
 {/* <!-- DORA:GENERATED:END --> */}
 
 | | |
 | --- | --- |
-| **What** | Notes (FYI) which supporting directories exist (`references/`, `scripts/`, `assets/`, `examples/`). Default package: **strict** only. |
-| **Why** | Supporting dirs are progressive-disclosure layers. Knowing they exist helps review whether the skill is using them well. |
+| **What** | Notes which supporting directories exist (`references/`, `scripts/`, `assets/`, `examples/`). Warns when a Skill link is missing or leaves the skill root. |
+| **Why** | Supporting dirs are progressive-disclosure layers. A broken or outside-root link ships a bundle the agent cannot load. |
 
 ## How to fix
 

@@ -1,9 +1,10 @@
 import { classifySkillDir, type SkillOrigin } from "./skill-classify.js";
 import { loadSkillFromDir, validateSkillModelTagged, type SkillModel } from "./skill-validate.js";
+import { checkLevel3References } from "./agentskills-validate.js";
 import { analyzeDrift } from "./static-skill-checks.js";
 import { stampRule } from "./rules/apply.js";
 import type { EffectiveRule } from "./rules/resolve.js";
-import { DRIFT_CATEGORY_CODES, PARSE_FAILURE_CODE } from "./rules/bindings.js";
+import { DRIFT_CATEGORY_CODES, PARSE_FAILURE_CODE, STRUCTURE_CHECK_CODES } from "./rules/bindings.js";
 import { padIdx } from "./review-control.js";
 import type { Finding } from "./finding.js";
 
@@ -63,6 +64,21 @@ export async function checkSkill(
       }, code, effective);
       if (finding) findings.push(finding);
     }
+  }
+
+  const level3 = checkLevel3References(model, { skillDir: dir, existingDirs });
+  for (const item of [
+    ...(level3.warnings ?? []).map((w) => ({ severity: "warning" as const, text: w.text })),
+    ...(level3.passes ?? []).map((p) => ({ severity: "pass" as const, text: p.text })),
+  ]) {
+    const finding = stampRule({
+      id: `struct-${padIdx(sIdx++)}`,
+      tier: "structure" as const,
+      severity: item.severity,
+      message: item.text,
+      fixable: false,
+    }, STRUCTURE_CHECK_CODES.checkSupportingDirs ?? "R011", effective);
+    if (finding) findings.push(finding);
   }
 
   let hIdx = 1;

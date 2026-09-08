@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { basename, resolve } from "path";
+import { basename, isAbsolute, relative, resolve } from "path";
 import type { CheckItem, SkillModel } from "./skill-validate.js";
 import {
   DESCRIPTION_MAX_LENGTH,
@@ -190,6 +190,11 @@ export function checkLevel3References(model: SkillModel, ctx: AgentSkillValidate
       continue;
     }
     const target = resolve(ctx.skillDir, ref.split("#")[0]!);
+    const rel = relative(ctx.skillDir, target);
+    if (rel.startsWith("..") || isAbsolute(rel)) {
+      warnings.push({ text: `Reference "${ref}" leaves the skill root` });
+      continue;
+    }
     if (!existsSync(target)) {
       warnings.push({ text: `Reference "${ref}" points to a file that does not exist` });
     }
