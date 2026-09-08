@@ -1,0 +1,69 @@
+are you able to access sublime mcp
+
+---
+
+I've restarted, can we trya gain?
+
+---
+
+are you able to see https://sublime.app/developers#description/introduction and all teh apis here?
+
+---
+
+you've been running exa serach for 14m !
+
+---
+
+it's publisc, see sublime.app/devleopers or use agent-browser instead?
+
+---
+
+is there anyway I can login and you can continue the exa search?
+
+---
+
+go
+
+---
+
+I don't see any login windo
+
+---
+
+logged in
+
+---
+
+Now run exa search and see ifyou can find stuff you need
+
+---
+
+I want you wrap up soemthing so that coding agnetsa can use and publish on saif-shiens github
+
+---
+
+IsI have the api key; how do I invoke a skill so that it has access this api key?
+
+---
+
+I did, now, can you check if it'sw orking
+
+---
+
+try again
+
+---
+
+add to use this in the agents.md of this repo
+
+---
+
+continue
+
+---
+
+/research the same to make sure all teh APIs are covered?
+
+---
+
+did you also test them?

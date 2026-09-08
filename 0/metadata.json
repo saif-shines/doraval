@@ -1,0 +1,89 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2033FWQK1E6SNMD2PCBGAXB",
+  "session_id": "01a0659c-d5ce-7831-af29-39877a837f9c",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-08T08:45:40.031973Z",
+  "branch": "main",
+  "checkpoints_count": 6,
+  "save_step_count": 4,
+  "files_touched": [
+    "AGENTS.md"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "af096f8911f1",
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "prompt-skill-grok-research-2026-09-03T10:29:58.538379Z",
+      "event_type": "prompt_invocation",
+      "skill": {
+        "name": "research"
+      },
+      "source": {
+        "agent": "grok",
+        "signal": "prompt_slash_command",
+        "confidence": "explicit"
+      },
+      "turn_id": "75c293ca2613",
+      "timestamp": "2026-09-03T10:29:58.538379Z",
+      "native": {
+        "command": "/research"
+      },
+      "collapse": {
+        "target": "user_message",
+        "label": "/research",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 6
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-08T08:45:39.960344Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 0,
+    "total_lines_changed": 0,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "AGENTS.md": 1
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
