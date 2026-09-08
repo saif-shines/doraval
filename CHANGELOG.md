@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Features
+
+- `dora harness apply` and `boot` refresh copied skills from the
+  origin recorded in `routine.yml`. `--keep-copies` skips that.
+  Fixed-step and other routine-owned copies stay. A routine with
+  no origin is not refreshed unless you pass `--from`.
+
 ## 0.6.37
 
 ### Features

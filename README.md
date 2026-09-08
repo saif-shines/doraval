@@ -60,7 +60,7 @@ dora session
 dora session show <id>       # short table id is enough if unique
 dora harness                 # list routines
 dora harness new             # start ask-dora / grilling-for-routine; optional Fixed step
-dora harness apply <slug>    # push the folder onto the Runtime job; Runtime watch
+dora harness apply <slug>    # refresh upstream copies, then push; Runtime watch
 dora harness boot <slug>     # alias of apply
 dora harness show <slug>     # one card
 dora harness logs <slug>     # that job's run history

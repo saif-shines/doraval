@@ -992,6 +992,46 @@ describe("dora harness", () => {
     rmSync(bin, { recursive: true, force: true });
   });
 
+  test("apply refreshes an upstream copy and keep-copies skips it", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-refresh-"));
+    const cwd = mkdtempSync(join(tmpdir(), "dora-harness-refresh-cwd-"));
+    const src = join(cwd, "vendor", "skillkit", "plugins", "docs", "skills", "api-reference");
+    mkdirSync(src, { recursive: true });
+    writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: v1\n---\n\nv1\n");
+    writeRoutine(
+      home,
+      {
+        slug: "docs-job",
+        prompt: "Review.",
+        skillsRun: [src],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    const copy = join(home, ".dora", "harness", "docs-job", "skills", "api-reference", "SKILL.md");
+    writeFileSync(copy, "stale\n");
+    writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: v2\n---\n\nv2\n");
+    const { bin, log } = fakeHermes(home, "");
+    const keep = runDoraval(["harness", "apply", "docs-job", "--keep-copies", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      cwd,
+    });
+    expect(keep.exitCode).toBe(0);
+    expect(readFileSync(copy, "utf8")).toBe("stale\n");
+    const applied = runDoraval(["harness", "apply", "docs-job", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      cwd,
+    });
+    expect(applied.exitCode).toBe(0);
+    expect(readFileSync(copy, "utf8")).toContain("v2");
+    expect(applied.stdout + applied.stderr).toMatch(/refreshed api-reference/i);
+    expect(readFileSync(log, "utf8")).toContain("cron create");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
   test("apply without --yes refuses a detected agent", () => {
     const home = mkdtempSync(join(tmpdir(), "dora-harness-agent-"));
     writeRoutine(home, {
@@ -1020,6 +1060,8 @@ describe("dora harness", () => {
     expect(blob.indexOf("dora harness apply")).toBeLessThan(blob.indexOf("dora harness boot"));
     expect(blob).toContain("dora harness apply <slug> --yes");
     expect(blob).toContain("dora harness apply <slug> --dry-run");
+    expect(blob).toContain("dora harness apply <slug> --keep-copies --yes");
+    expect(blob).toContain("dora harness apply <slug> --from <path|url> --yes");
     expect(blob).toContain("dora harness rm <slug> --yes");
     expect(blob).toContain("dora harness rm <slug> --dry-run");
   });

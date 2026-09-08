@@ -100,7 +100,11 @@ A skill source is a name, a local path, or a GitHub URL.
 
 Name lookup: project `skills/`, then home skills, then ask for a path or a GitHub URL. Do not invent a registry.
 
-Dora copies each skill folder into the routine. Night-pass edits land on the copy. Do not write the original.
+Dora copies each skill folder into the routine. Night-pass edits land on the copy. Do not write the original. `routine.yml` records each origin (local path or GitHub URL).
+
+Apply and boot refresh a copy when that origin is an upstream kit (skillkit, authstack, or a GitHub URL). Pass `--keep-copies` to skip. A Fixed-step copy is routine-owned. Apply does not overwrite it.
+
+An existing routine with no origin is not refreshed. Pass `--from <path|url>` to backfill and refresh by skill name.
 
 Offer `dora review --quick` on each copy. The teammate can skip.
 
@@ -152,6 +156,10 @@ MUST skip Hermes MCP login when MCP is none.
 MUST NOT copy `.env` or secrets from the original skill.
 MUST tell the teammate to put secrets in the routine folder when MCP is none.
 MUST copy named skills into the routine.
+MUST record each skill origin in routine.yml.
+MUST refresh upstream origins on apply/boot unless --keep-copies.
+MUST NOT overwrite a Fixed-step or other routine-owned copy on apply.
+MUST NOT guess an origin when routine.yml has none. Pass --from to backfill.
 MUST NOT require a skill because a connector exists.
 MUST NOT write the original skill directory.
 MUST NOT invent a registry, a slug, a connector, a connector catalog, or a loop interval.

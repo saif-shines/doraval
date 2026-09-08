@@ -64,8 +64,12 @@ A Skill script is optional. If one exists, it lives inside that Skill. The routi
 
 `apply` pushes the folder onto the Runtime job. First apply creates the job. Later apply edits that job. `dora harness boot <slug>` is the same command.
 
+Apply also re-copies a skill when `routine.yml` records an upstream origin (skillkit, authstack, or a GitHub URL). A 15 minute tick does not do this. Pass `--keep-copies` to skip. A Fixed-step copy has no upstream origin, so apply leaves it. An older routine with no origin field is not refreshed unless you pass `--from <path|url>`.
+
 ```bash
 dora harness apply <slug>
+dora harness apply <slug> --keep-copies
+dora harness apply <slug> --from <path-or-url>
 ```
 
 Then Dora exits. You can close that terminal.

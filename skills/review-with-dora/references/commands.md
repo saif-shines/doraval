@@ -26,7 +26,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora plugin bump` | Plugin and marketplace semver |
 | `dora harness` | List routines at `~/.dora/harness/<slug>/`. |
 | `dora harness new` | Start `ask-dora` / `grilling-for-routine`. `--accept --yes` writes the folder after the printed one-pass command. Run appends `Sent by pocket agent <slug>`. Night prompt may use a run handoff when the destination cannot tell. |
-| `dora harness apply <slug>` | Push the folder onto the Runtime job. First apply creates. Later apply edits. Detected agents need `--yes` or `--dry-run`. |
+| `dora harness apply <slug>` | Push the folder onto the Runtime job. First apply creates. Later apply edits. Re-copies upstream skills from origin unless `--keep-copies`. `--from` backfills a routine with no origin. Detected agents need `--yes` or `--dry-run`. |
 | `dora harness boot <slug>` | Alias of apply. Then run `hermes mcp login scalekit`. Dora prints Runtime watch commands: `hermes cron list`, `hermes cron runs`, `hermes logs`, `hermes dashboard`. Dora exits. |
 | `dora harness show <slug>` | One card: slug, state, interval, max tick, MCP, last run, folder. Hex id only in `--json`. |
 | `dora harness logs <slug>` | That job's Runtime run history. Not the global agent log. |

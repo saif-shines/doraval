@@ -144,6 +144,8 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora harness apply <slug> --yes",
         "dora harness apply <slug> --dry-run",
         "dora harness apply <slug> --json --yes",
+        "dora harness apply <slug> --keep-copies --yes",
+        "dora harness apply <slug> --from <path|url> --yes",
         "dora harness boot <slug> --yes",
         "dora harness pause <slug>",
         "dora harness pause <slug> --json",
@@ -158,6 +160,8 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--accept": { description: "Write the routine folder after the printed one-pass command" },
         "--yes": { description: "Write without prompting" },
         "--dry-run": { description: "Print the Runtime commands, write nothing" },
+        "--keep-copies": { description: "Do not refresh copied skills from origin" },
+        "--from": { description: "Backfill origin and refresh skills that have none" },
       }),
       cmd("update", "writes", "Update doraval to the latest version.", ["dora update"]),
       cmd("probe", "writes", "Send hello to doraval.dev and wait for ack.", [
