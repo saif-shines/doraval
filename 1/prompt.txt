@@ -1,0 +1,95 @@
+Clarification from Saif (wR). Apply this to SK-1918. Do not wait.
+
+Re-copy from a local path is not enough.
+
+If origin is `/Users/saif/Projects/skillkit/...`, apply/boot only copies that disk folder. A merge on github.com/scalekit-inc/skillkit does nothing until someone git-pulls that clone. A dirty or wrong-branch clone can also ship stale or uncommitted files.
+
+What we want after a kit merge:
+
+1. For kit skills (skillkit, authstack), record the **GitHub URL** as origin, not the local clone. Example: `https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs-engineering/skills/ask-saif`
+2. On apply/boot, fetch that URL (you already have `fetchSkillRemote`: clone --depth 1, optional branch) and copy from the fetched tree. That is latest `main` after merge.
+3. If the human passed a local path on purpose, keep that as origin. Re-copy is local only. Say so. Do not git-pull their working tree.
+4. Do not `git pull` inside someone else's clone. Fetch to a temp dir, then copy into the routine.
+
+Done-when: a remote merge on skillkit main is what apply/boot picks up, without requiring a local pull.
+
+---
+
+is there nothing pending on your list of work?
+
+---
+
+Do not start new product work. Do not change SK-1918. Do not implement these items now.
+
+A research note is already on disk from this chat (wW:p1). Read it:
+
+  docs/research-notes/56-skill-doctor-learnings-for-dora.md
+
+Then add a **Queued after SK-1918** block to WIP.md (the only progress pin). Keep SK-1918 as the frontier. Confirm the three items below are on that pin, then stop.
+
+There are learnings. Do not add a skill named skill-doctor. Do not add a 0–100 score. Do not add evals/evals.json.
+
+Queued items (after SK-1918 lands):
+
+1. writing-for-agents (skill text). Run the deletion test on skills/review-with-dora and skills/ask-dora only. Keep Review / Brief / Judgment / exit 0. Move Side paths behind references/ only if the loop is buried. Do not restore skills/doraval/. Do not edit grilling-for-routine or writing-for-routine in that item.
+
+2. implement (code + tests). Wire unused checkLevel3References into Review. Flag a broken local link and a link that leaves the skill root. Prefer an existing code (R011 or R015). New R-code only if that stamp is a lie. One test: references/MISSING.md warns; a real references/output.md passes.
+
+3. implement (code + tests). Widen locked R020 to the Skill body (injection phrases, disable-safety orders, secret + outbound). Do not add R035. Do not flag Dora’s own Judge spawn in agent-invoke.ts. A Skill that documents curl to a public URL without secrets must not fail.
+
+When you later execute:
+- Item 1: load writing-for-agents.
+- Items 2–3: load implement and use TDD.
+
+Reply with: (a) WIP.md section added yes/no, (b) the three titles as pinned, (c) you will not start them until SK-1918 is done.
+
+---
+
+sk1918 i sstil not done?
+
+---
+
+Plan only. Do not implement. Do not open a PR. Do not start the three queued items as code or skill edits.
+
+Saif will come to this pane and run Matt implement himself.
+
+Write implement-ready plans for ALL three queued items in WIP.md § Queued after SK-1918. Source of truth: docs/research-notes/56-skill-doctor-learnings-for-dora.md.
+
+Load Matt implement as the execution contract the plans must satisfy:
+- each plan is a spec /implement can consume later
+- TDD at pre-agreed seams
+- typecheck + targeted tests named in the plan
+- full suite only at the end
+- /code-review after implement
+- commit on a fresh branch off origin/main (SK-1918 PRs 100 and 101 are merged)
+
+Also load writing-for-agents for item 1 (skill text). Items 2–3 are code.
+
+Write three plan files under docs/superpowers/plans/ (repo convention). One file per item. Each plan must have: goal, files to touch, TDD seams / test commands, out of scope, STOP conditions, ordered steps Saif can run with /implement.
+
+Items:
+1. Deletion test on skills/review-with-dora and skills/ask-dora only.
+2. Wire checkLevel3References into Review (broken local link + outside-root). Prefer R011 or R015.
+3. Widen locked R020 to the Skill body. No R035. Do not flag Judge spawn.
+
+Do not add a skill named skill-doctor. Do not add a 0–100 score. Do not add evals/evals.json.
+
+Pull origin/main first so plans target current main. Update WIP.md frontier to: SK-1918 landed; plans in docs/superpowers/plans/; waiting for Saif to /implement.
+
+Reply with the three plan paths and stop.
+
+---
+
+yes implement
+
+---
+
+<system-reminder>
+Background task "call-a26a4d35-f5d0-4161-b36a-439cf3d0e438-255" completed (exit code: 2).
+Command: bun run scripts/gen-rule-docs.ts && bun test src/core/static-skill-checks.test.ts src/core/rules/docs.test.ts src/core/agentskills-validate.test.ts src/core/skill-check.test.ts src/core/review.test.ts && bun run typecheck | Duration: 17.0s
+Use get_command_or_subagent_output("call-a26a4d35-f5d0-4161-b36a-439cf3d0e438-255") to see the full output.
+</system-reminder>
+
+---
+
+you can merge them using matt's review and implement ways
