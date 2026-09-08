@@ -65,16 +65,14 @@ Pass `--yes` or `--dry-run` on `fix`, `conflicts`, `memory promote`, `skill remo
 ## Side paths
 
 Verbs: [commands.md](references/commands.md). Exit codes and JSON: [output.md](references/output.md).
-Flags: `dora <command> --help`. Map: `dora --help --json`.
+Flags: `dora <command> --help`.
 
-- User states a durable rule → `dora memory add "<rule>" --weight <1-10>` (`≥ 7` is hard). Promote only when the user asks.
-- Review or Scan reports a conflict → `dora conflicts --dry-run`, then ask the user.
-- R034 / unused Authored Skill → `dora skill unused`, then `dora skill remove <name> --dry-run` for a standalone Remove candidate. Home Skills: `dora skill unused --global`. Unused-but-recent is named (`never invoked`). It is not a Remove candidate. A Plugin row or a Plugin-owned Skill → `dora review --quick <plugin-root>` (not `$HOME`). Named Remove of an Owned child still works. Unused writes nothing.
-- Teammate wants a use case to keep running after chat → `dora harness new` (starts `ask-dora` / `grilling-for-routine`). After the printed command: `dora harness new --accept --yes`. Then `dora harness apply <slug>` (adds the Scalekit server; fetches kit skills from GitHub `main` unless `--keep-copies`). `dora harness boot <slug>` is the same command. Then `hermes mcp login scalekit` in a real terminal. Login before that add fails. Dora prints Runtime watch commands after `apply`, `boot`, `list`, `pause`, and `resume`. Also `dora harness show <slug>`, `dora harness logs <slug>`, `dora harness rm <slug> --yes`, `dora harness pause`, `dora harness resume`, `dora harness list`, `dora harness open`. A **routine** is `~/.dora/harness/<slug>/`. Laptop close is sleep. Due jobs can fire on wake if the job is not paused.
-- Workspace map (not the first job) → `dora scan --yes`.
-- Prove the CLI can talk to doraval.dev → the user mints a key on `/account`, then `dora config set identity.api_key <token> --yes`, then `dora probe --yes`. You do not automate Sign-up. Never echo the token. Branch on `--json`: [output.md](references/output.md).
-
-Empty `dora` is `--help`. Scan is `dora scan`.
+- Durable rule → `dora memory add "<rule>" --weight <1-10>` (`≥ 7` is hard). Promote only when the user asks.
+- Conflict Finding → `dora conflicts --dry-run`, then ask the user.
+- Unused Authored Skill → `dora skill unused`, then `dora skill remove <name> --dry-run`. Home: `dora skill unused --global`.
+- Recurring use case → `dora harness new` (starts `ask-dora` / `grilling-for-routine`). Then `dora harness apply <slug>`. `dora harness boot <slug>` is the apply alias. Then `hermes mcp login scalekit`. Runtime watch after apply, boot, list, pause, and resume. Also `dora harness show <slug>`, `dora harness logs <slug>`, `dora harness rm <slug> --yes`, `dora harness pause`, `dora harness resume`, `dora harness list`, `dora harness open`.
+- Workspace map → `dora scan --yes`.
+- Prove doraval.dev → `dora config set identity.api_key <token> --yes`, then `dora probe --yes`. Never echo the token.
 
 MUST report done only on **exit 0**.
 MUST NOT skip Brief for Judgment items.
