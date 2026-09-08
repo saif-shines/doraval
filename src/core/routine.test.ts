@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { basename, join } from "path";
+import { spawnSync } from "bun";
 import { describe, expect, test } from "bun:test";
 import {
   listRoutineSlugs,
@@ -11,6 +12,7 @@ import {
   writeDefaultMcpUrl,
   writeRoutine,
   writeRoutineJobId,
+  refreshRoutineSkills,
   deleteRoutine,
 } from "./routine.js";
 
@@ -133,6 +135,7 @@ describe("readRoutine", () => {
     expect(r.prompt).toBe("Check the OOO calendar.\n");
     expect(r.skillsRun).toEqual([]);
     expect(r.skillsRefer).toEqual([]);
+    expect(r.skillOrigins).toEqual({});
     expect(r.mcpUrl).toBe("https://gw.example/mcp");
     expect(r.interval).toBe("1h");
     expect(r.maxTick).toBe("10m");
@@ -277,6 +280,7 @@ describe("routine copy", () => {
     const copy = join(dir, "skills", "inbox");
     expect(readFileSync(join(copy, "SKILL.md"), "utf8")).toBe(original);
     expect(readRoutine(home, "night-inbox").skillsRun).toEqual([copy]);
+    expect(readRoutine(home, "night-inbox").skillOrigins).toEqual({ inbox: src });
     writeFileSync(join(copy, "SKILL.md"), "tuned copy\n");
     expect(readFileSync(join(src, "SKILL.md"), "utf8")).toBe(original);
 
@@ -379,6 +383,9 @@ describe("routine copy", () => {
     );
 
     expect(readFileSync(join(dir, "skills", "remote-cal", "SKILL.md"), "utf8")).toContain("remote cal");
+    expect(readRoutine(home, "from-url").skillOrigins).toEqual({
+      "remote-cal": "https://github.com/acme/remote-cal",
+    });
 
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
@@ -428,6 +435,191 @@ describe("routine copy", () => {
     expect(readFileSync(join(src, ".env"), "utf8")).toBe("TOKEN=secret\n");
     expect(existsSync(join(dir, ".env"))).toBe(false);
 
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+});
+
+describe("routine refresh", () => {
+  const kitUrl =
+    "https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs/skills/api-reference";
+
+  test("records a GitHub URL for a kit path and fetches it on refresh", () => {
+    const home = tmpHome();
+    const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-kit-"));
+    const src = writeSkill(cwd, "vendor/skillkit/plugins/docs/skills/api-reference", "v1");
+    const fetched = writeSkill(cwd, "fetched/api-reference", "v2");
+    const dir = writeRoutine(
+      home,
+      {
+        slug: "docs-job",
+        prompt: "Review.",
+        skillsRun: [src],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    const copy = join(dir, "skills", "api-reference", "SKILL.md");
+    expect(readRoutine(home, "docs-job").skillOrigins["api-reference"]).toBe(kitUrl);
+    expect(readFileSync(copy, "utf8")).toContain("v1");
+    writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: dirty clone\n---\n\ndirty clone\n");
+    writeFileSync(copy, "stale copy\n");
+    const result = refreshRoutineSkills(home, "docs-job", {
+      fetchRemote: (url) => {
+        expect(url).toBe(kitUrl);
+        return fetched;
+      },
+    });
+    expect(result.refreshed).toEqual(["api-reference"]);
+    expect(result.localOnly).toEqual([]);
+    expect(readFileSync(copy, "utf8")).toContain("v2");
+    expect(readFileSync(join(src, "SKILL.md"), "utf8")).toContain("dirty clone");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("records tree/main from a kit git remote, not the clone branch", () => {
+    const home = tmpHome();
+    const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-git-"));
+    const root = join(cwd, "skillkit");
+    const src = writeSkill(root, "plugins/docs-engineering/skills/ask-saif", "wip");
+    expect(spawnSync(["git", "init"], { cwd: root, stdout: "pipe", stderr: "pipe" }).exitCode).toBe(0);
+    expect(
+      spawnSync(["git", "remote", "add", "origin", "https://github.com/scalekit-inc/skillkit.git"], {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+      }).exitCode,
+    ).toBe(0);
+    spawnSync(["git", "checkout", "-b", "wip"], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    writeRoutine(
+      home,
+      {
+        slug: "review-job",
+        prompt: "Review.",
+        skillsRun: [src],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    expect(readRoutine(home, "review-job").skillOrigins["ask-saif"]).toBe(
+      "https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs-engineering/skills/ask-saif",
+    );
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("does not refresh a Fixed-step or local copy", () => {
+    const home = tmpHome();
+    const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-owned-"));
+    const src = writeSkill(cwd, "skills/inbox", "owned");
+    const dir = writeRoutine(
+      home,
+      {
+        slug: "local-job",
+        prompt: "Poll.",
+        skillsRun: ["inbox"],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    const copy = join(dir, "skills", "inbox", "SKILL.md");
+    writeFileSync(copy, "night-pass edit\n");
+    writeFileSync(join(src, "SKILL.md"), "---\nname: inbox\ndescription: upstream\n---\n\n# inbox\n\nupstream\n");
+    const result = refreshRoutineSkills(home, "local-job");
+    expect(result.skipped).toEqual(["inbox"]);
+    expect(readFileSync(copy, "utf8")).toBe("night-pass edit\n");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("keepCopies skips refresh", () => {
+    const home = tmpHome();
+    const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-keep-"));
+    const src = writeSkill(cwd, "vendor/authstack/skills/discover-connectors", "v1");
+    const dir = writeRoutine(
+      home,
+      {
+        slug: "conn-job",
+        prompt: "Scan.",
+        skillsRun: [src],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    const copy = join(dir, "skills", "discover-connectors", "SKILL.md");
+    writeFileSync(join(src, "SKILL.md"), "---\nname: discover-connectors\ndescription: v2\n---\n\nv2\n");
+    const result = refreshRoutineSkills(home, "conn-job", { keepCopies: true });
+    expect(result.refreshed).toEqual([]);
+    expect(result.skipped).toEqual(["discover-connectors"]);
+    expect(readFileSync(copy, "utf8")).toContain("v1");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("missing origin is not guessed unless --from", () => {
+    const home = tmpHome();
+    const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-from-"));
+    const kit = writeSkill(cwd, "vendor/skillkit/plugins/docs/skills/api-reference", "v2");
+    const dir = writeRoutine(
+      home,
+      {
+        slug: "old-job",
+        prompt: "Review.",
+        skillsRun: [kit],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    const copy = join(dir, "skills", "api-reference", "SKILL.md");
+    writeFileSync(join(dir, "routine.yml"), [
+      `skills_run:\n  - ${JSON.stringify(join(dir, "skills", "api-reference"))}`,
+      "skills_refer: []",
+      'mcp_url: "https://gw.example/mcp"',
+      'interval: "1h"',
+      'max_tick: "10m"',
+      "",
+    ].join("\n"));
+    writeFileSync(copy, "frozen\n");
+    expect(refreshRoutineSkills(home, "old-job").skipped).toEqual(["api-reference"]);
+    expect(readFileSync(copy, "utf8")).toBe("frozen\n");
+    const result = refreshRoutineSkills(home, "old-job", { from: join(cwd, "vendor/skillkit") });
+    expect(result.refreshed).toEqual(["api-reference"]);
+    expect(readFileSync(copy, "utf8")).toContain("v2");
+    expect(readRoutine(home, "old-job").skillOrigins["api-reference"]).toBe(kitUrl);
+    writeRoutineJobId(home, "old-job", "abcdef123456");
+    expect(readRoutine(home, "old-job").skillOrigins["api-reference"]).toBe(kitUrl);
+    expect(readRoutine(home, "old-job").jobId).toBe("abcdef123456");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("re-copies a recorded GitHub URL origin", () => {
+    const home = tmpHome();
+    const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-url-"));
+    const fixture = writeSkill(cwd, "fetched/remote-cal", "v1");
+    const dir = writeRoutine(
+      home,
+      {
+        slug: "from-url",
+        prompt: "Scan.",
+        skillsRun: ["https://github.com/acme/remote-cal"],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd, fetchRemote: () => fixture },
+    );
+    const copy = join(dir, "skills", "remote-cal", "SKILL.md");
+    writeFileSync(copy, "stale\n");
+    writeFileSync(join(fixture, "SKILL.md"), "---\nname: remote-cal\ndescription: v2\n---\n\nv2\n");
+    const result = refreshRoutineSkills(home, "from-url", { cwd, fetchRemote: () => fixture });
+    expect(result.refreshed).toEqual(["remote-cal"]);
+    expect(readFileSync(copy, "utf8")).toContain("v2");
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
   });

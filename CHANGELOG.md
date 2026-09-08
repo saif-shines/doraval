@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Features
+
+- `dora harness apply` and `boot` refresh copied skills from the
+  origin recorded in `routine.yml`. Kit skills (skillkit,
+  authstack) store a GitHub URL on `main` and fetch that into a
+  temp dir. A local path you passed on purpose stays local.
+  `--keep-copies` skips the refresh. Fixed-step copies stay. A
+  routine with no origin is not refreshed unless you pass
+  `--from`.
+
 ## 0.6.37
 
 ### Features

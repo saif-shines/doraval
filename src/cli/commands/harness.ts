@@ -13,6 +13,7 @@ import {
   usesMcp,
   writeRoutine,
   writeRoutineJobId,
+  refreshRoutineSkills,
   deleteRoutine,
 } from "../../core/routine.js";
 import {
@@ -397,7 +398,24 @@ const WRITE_ARGS = {
   ci: { type: "boolean" as const, description: "Machine mode (implies --format json)", default: false },
 };
 
-async function runApply(slug: string, args: { yes?: boolean; "dry-run"?: boolean; format?: string; json?: boolean; ci?: boolean }): Promise<void> {
+const APPLY_ARGS = {
+  ...WRITE_ARGS,
+  "keep-copies": { type: "boolean" as const, description: "Do not refresh copied skills from origin", default: false },
+  from: { type: "string" as const, description: "Backfill origin and refresh skills that have none" },
+};
+
+async function runApply(
+  slug: string,
+  args: {
+    yes?: boolean;
+    "dry-run"?: boolean;
+    format?: string;
+    json?: boolean;
+    ci?: boolean;
+    "keep-copies"?: boolean;
+    from?: string;
+  },
+): Promise<void> {
   if (!hermesInstalled()) {
     printHermesInstall();
     await exit(2);
@@ -420,6 +438,24 @@ async function runApply(slug: string, args: { yes?: boolean; "dry-run"?: boolean
     nextAction("dora harness list");
     await exit(1);
     return;
+  }
+  if (!dryRun) {
+    try {
+      const result = refreshRoutineSkills(home, slug, {
+        cwd: process.cwd(),
+        keepCopies: Boolean(args["keep-copies"]),
+        from: typeof args.from === "string" ? args.from.trim() || undefined : undefined,
+      });
+      if (result.refreshed.length) ui.dim(`  Refreshed ${result.refreshed.join(", ")}.`);
+      if (result.localOnly.length) {
+        ui.dim(`  Local origin (disk only, not fetched): ${result.localOnly.join(", ")}.`);
+      }
+    } catch (e) {
+      ui.fail(e instanceof Error ? e.message : String(e));
+      nextAction("dora harness list");
+      await exit(1);
+      return;
+    }
   }
   const jobs = listCronJobs();
   let action: "create" | "edit" = "create";
@@ -482,10 +518,11 @@ export const harnessApply = defineCommand({
       "Push the routine folder onto the Runtime job",
       "",
       "Creates the job on first apply. Later apply edits that job.",
+      "Re-copies upstream skills from origin unless --keep-copies.",
       "boot is the same command. There is no set verb.",
     ].join("\n"),
   },
-  args: WRITE_ARGS,
+  args: APPLY_ARGS,
   async run({ args }) {
     const slug = await pickSlug(args.slug, "apply");
     if (!slug) return;
@@ -500,10 +537,11 @@ export const harnessBoot = defineCommand({
       "Alias of apply",
       "",
       "Starts the Hermes gateway if needed, then creates or edits the Runtime job.",
+      "Re-copies upstream skills from origin unless --keep-copies.",
       "Laptop close is host sleep, not pause. Due jobs can fire on wake if the job is not paused.",
     ].join("\n"),
   },
-  args: WRITE_ARGS,
+  args: APPLY_ARGS,
   async run({ args }) {
     const slug = await pickSlug(args.slug, "boot");
     if (!slug) return;

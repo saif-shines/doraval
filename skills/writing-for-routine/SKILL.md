@@ -54,7 +54,7 @@ Do not use Hermes notepad with the slug. Do not put a cursor in MEMORY.md.
 
 Same craft: steps and a done-when. No second-person identity. No em dashes.
 
-A Skill script is optional. If one exists, it lives inside that Skill. Name the helper file in `SKILL.md`. Local work only. The routine has no top-level scripts directory. Do not use Hermes `--script` or `--no-agent`.
+A Skill script is optional. If one exists, it lives inside that Skill. Name the helper file in `SKILL.md`. Local work only. The routine has no top-level scripts directory. Do not use Hermes `--script` or `--no-agent`. Apply does not overwrite this copy.
 
 Secrets live in the routine folder (`~/.dora/harness/<slug>/.env`). Do not put secrets in `SKILL.md` or `prompt.md`.
 

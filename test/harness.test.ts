@@ -992,6 +992,83 @@ describe("dora harness", () => {
     rmSync(bin, { recursive: true, force: true });
   });
 
+  test("apply refreshes an upstream copy and keep-copies skips it", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-refresh-"));
+    const cwd = mkdtempSync(join(tmpdir(), "dora-harness-refresh-cwd-"));
+    const src = join(cwd, "vendor", "skillkit", "plugins", "docs", "skills", "api-reference");
+    mkdirSync(src, { recursive: true });
+    writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: v1\n---\n\nv1\n");
+    writeRoutine(
+      home,
+      {
+        slug: "docs-job",
+        prompt: "Review.",
+        skillsRun: [src],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    const copy = join(home, ".dora", "harness", "docs-job", "skills", "api-reference", "SKILL.md");
+    writeFileSync(copy, "stale\n");
+    writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: dirty clone\n---\n\ndirty clone\n");
+    const fetched = join(cwd, "fetched-kit", "plugins", "docs", "skills", "api-reference");
+    mkdirSync(fetched, { recursive: true });
+    writeFileSync(join(fetched, "SKILL.md"), "---\nname: api-reference\ndescription: v2\n---\n\nv2\n");
+    const { bin, log } = fakeHermes(home, "");
+    writeFakeGit(bin, join(cwd, "fetched-kit"));
+    const keep = runDoraval(["harness", "apply", "docs-job", "--keep-copies", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      cwd,
+    });
+    expect(keep.exitCode).toBe(0);
+    expect(readFileSync(copy, "utf8")).toBe("stale\n");
+    const applied = runDoraval(["harness", "apply", "docs-job", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      cwd,
+    });
+    expect(applied.exitCode).toBe(0);
+    expect(readFileSync(copy, "utf8")).toContain("v2");
+    expect(readFileSync(join(src, "SKILL.md"), "utf8")).toContain("dirty clone");
+    expect(applied.stdout + applied.stderr).toMatch(/refreshed api-reference/i);
+    expect(readFileSync(log, "utf8")).toContain("cron create");
+    expect(readFileSync(join(home, ".dora", "harness", "docs-job", "routine.yml"), "utf8")).toContain(
+      "https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs/skills/api-reference",
+    );
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("apply says a local origin is disk only", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-localorig-"));
+    const cwd = mkdtempSync(join(tmpdir(), "dora-harness-localorig-cwd-"));
+    const src = join(cwd, "skills", "inbox");
+    mkdirSync(src, { recursive: true });
+    writeFileSync(join(src, "SKILL.md"), "---\nname: inbox\ndescription: poll\n---\n\npoll\n");
+    writeRoutine(
+      home,
+      {
+        slug: "local-job",
+        prompt: "Poll.",
+        skillsRun: ["inbox"],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    const { bin } = fakeHermes(home, "");
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "local-job", "--yes"], {
+      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      cwd,
+    });
+    expect(exitCode).toBe(0);
+    expect(stdout + stderr).toMatch(/local origin \(disk only, not fetched\): inbox/i);
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  });
+
   test("apply without --yes refuses a detected agent", () => {
     const home = mkdtempSync(join(tmpdir(), "dora-harness-agent-"));
     writeRoutine(home, {
@@ -1020,6 +1097,8 @@ describe("dora harness", () => {
     expect(blob.indexOf("dora harness apply")).toBeLessThan(blob.indexOf("dora harness boot"));
     expect(blob).toContain("dora harness apply <slug> --yes");
     expect(blob).toContain("dora harness apply <slug> --dry-run");
+    expect(blob).toContain("dora harness apply <slug> --keep-copies --yes");
+    expect(blob).toContain("dora harness apply <slug> --from <path|url> --yes");
     expect(blob).toContain("dora harness rm <slug> --yes");
     expect(blob).toContain("dora harness rm <slug> --dry-run");
   });
@@ -1273,6 +1352,23 @@ describe("dora harness", () => {
     rmSync(home, { recursive: true, force: true });
   });
 });
+
+function writeFakeGit(bin: string, fixtureRepo: string): void {
+  writeFileSync(
+    join(bin, "git"),
+    `#!/bin/sh
+if [ "$1" = clone ]; then
+  dest=""
+  for a in "$@"; do dest="$a"; done
+  mkdir -p "$dest"
+  cp -R "${fixtureRepo}/." "$dest/"
+  exit 0
+fi
+exit 0
+`,
+  );
+  chmodSync(join(bin, "git"), 0o755);
+}
 
 function cronListBlock(id: string, name: string, state: "active" | "paused", lastRun?: string): string {
   return `  ${id} [${state}]\n    Name:      ${name}\n    Last run:  ${lastRun ?? "never"}\n`;

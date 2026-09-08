@@ -1,10 +1,10 @@
 import { spawnSync } from "bun";
 import { YAML } from "bun";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { basename, isAbsolute, join, resolve } from "path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "path";
 import { parseRemoteUrl } from "./remote.js";
-import { isSkillDir, normalizeSkillPath } from "./skill-discovery.js";
+import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery.js";
 
 const DEFAULT_INTERVAL = "1h";
 const DEFAULT_MAX_TICK = "10m";
@@ -19,6 +19,70 @@ export type RoutineInput = {
   interval?: string;
   maxTick?: string;
 };
+
+const KIT_REPOS: Record<string, string> = {
+  skillkit: "scalekit-inc/skillkit",
+  authstack: "scalekit-inc/authstack",
+};
+
+/** GitHub URL, or a local path that names skillkit / authstack. */
+export function isUpstreamOrigin(origin: string): boolean {
+  const t = origin.trim();
+  if (!t) return false;
+  if (parseRemoteUrl(t)) return true;
+  return /skillkit|authstack/i.test(t.replace(/\\/g, "/"));
+}
+
+function kitNameFromRemote(remote: string): string | undefined {
+  const m = remote
+    .trim()
+    .replace(/\.git$/, "")
+    .match(/github\.com[:/][^/]+\/(skillkit|authstack)$/i);
+  return m?.[1]?.toLowerCase();
+}
+
+function gitRootAndRemote(dir: string): { root: string; remote: string } | undefined {
+  let cur = resolve(dir);
+  for (let i = 0; i < 16; i++) {
+    if (existsSync(join(cur, ".git"))) {
+      const r = spawnSync(["git", "-C", cur, "remote", "get-url", "origin"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      if ((r.exitCode ?? 1) !== 0) return undefined;
+      const remote = String(r.stdout ?? "").trim();
+      if (!remote) return undefined;
+      return { root: cur, remote };
+    }
+    const parent = dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+}
+
+/** Map a skillkit / authstack folder to github.com/scalekit-inc/…/tree/main/…. */
+export function kitOriginUrl(dir: string): string | undefined {
+  const git = gitRootAndRemote(dir);
+  if (git) {
+    const kit = kitNameFromRemote(git.remote);
+    if (kit) {
+      const rel = relative(git.root, dir).replace(/\\/g, "/");
+      if (!rel || rel.startsWith("..")) return undefined;
+      return `https://github.com/${KIT_REPOS[kit]}/tree/main/${rel}`;
+    }
+  }
+  const parts = resolve(dir).replace(/\\/g, "/").split("/");
+  const i = parts.findIndex((p) => p === "skillkit" || p === "authstack");
+  if (i < 0) return undefined;
+  const rel = parts.slice(i + 1).join("/");
+  if (!rel || (!rel.startsWith("plugins/") && !rel.startsWith("skills/"))) return undefined;
+  return `https://github.com/${KIT_REPOS[parts[i]!]}/tree/main/${rel}`;
+}
+
+function recordOrigin(ref: string, dir: string): string {
+  if (parseRemoteUrl(ref.trim())) return ref.trim();
+  return kitOriginUrl(dir) ?? dir;
+}
 
 /** Empty or `none` means no Agent Gateway. Most jobs still use MCP. */
 export function normalizeMcpUrl(url: string): string {
@@ -46,6 +110,45 @@ function yamlScalar(value: string): string {
 function yamlList(key: string, items: string[]): string {
   if (items.length === 0) return `${key}: []`;
   return `${key}:\n${items.map((s) => `  - ${yamlScalar(s)}`).join("\n")}`;
+}
+
+function yamlMap(key: string, rec: Record<string, string>): string {
+  const keys = Object.keys(rec).sort();
+  if (keys.length === 0) return `${key}: {}`;
+  return `${key}:\n${keys.map((k) => `  ${k}: ${yamlScalar(rec[k]!)}`).join("\n")}`;
+}
+
+function parseOrigins(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim()) out[k] = v.trim();
+  }
+  return out;
+}
+
+function writeRoutineYml(
+  dir: string,
+  r: {
+    skillsRun: string[];
+    skillsRefer: string[];
+    skillOrigins: Record<string, string>;
+    mcpUrl: string;
+    interval?: string;
+    maxTick?: string;
+    jobId?: string;
+  },
+): void {
+  const lines = [yamlList("skills_run", r.skillsRun), yamlList("skills_refer", r.skillsRefer)];
+  if (Object.keys(r.skillOrigins).length) lines.push(yamlMap("skill_origins", r.skillOrigins));
+  lines.push(
+    `mcp_url: ${yamlScalar(normalizeMcpUrl(r.mcpUrl))}`,
+    `interval: ${yamlScalar(r.interval ?? DEFAULT_INTERVAL)}`,
+    `max_tick: ${yamlScalar(r.maxTick ?? DEFAULT_MAX_TICK)}`,
+  );
+  if (r.jobId) lines.push(`job_id: ${yamlScalar(r.jobId)}`);
+  lines.push("");
+  writeFileSync(join(dir, "routine.yml"), lines.join("\n"));
 }
 
 function assertSlug(slug: string): void {
@@ -109,8 +212,8 @@ function askError(ref: string): Error {
   return new Error(`Skill "${ref}" not found. Give a local path or a GitHub URL.`);
 }
 
-/** Clone a GitHub URL to a temp skill dir. Tests inject `fetchRemote` so CI stays offline. */
-function fetchSkillRemote(url: string): { dir: string; cleanup: () => void } {
+/** Clone a GitHub URL. `--from` may point at a kit root, not a skill. */
+function fetchRemoteDir(url: string): { dir: string; cleanup: () => void } {
   const parsed = parseRemoteUrl(url);
   if (!parsed?.ghRepo) throw askError(url);
   const tmp = mkdtempSync(join(tmpdir(), "dora-skill-"));
@@ -124,12 +227,18 @@ function fetchSkillRemote(url: string): { dir: string; cleanup: () => void } {
     throw new Error(`Could not fetch ${url}`);
   }
   const root = parsed.subpath ? join(tmp, parsed.subpath) : tmp;
-  const dir = normalizeSkillPath(root);
+  return { dir: root, cleanup };
+}
+
+/** Clone a GitHub URL to a temp skill dir. Tests inject `fetchRemote` so CI stays offline. */
+function fetchSkillRemote(url: string): { dir: string; cleanup: () => void } {
+  const fetched = fetchRemoteDir(url);
+  const dir = normalizeSkillPath(fetched.dir);
   if (!isSkillDir(dir)) {
-    cleanup();
+    fetched.cleanup();
     throw askError(url);
   }
-  return { dir, cleanup };
+  return { dir, cleanup: fetched.cleanup };
 }
 
 function materializeSkill(
@@ -160,6 +269,7 @@ export function writeRoutine(home: string, input: RoutineInput, opts: WriteRouti
   mkdirSync(dir, { recursive: true });
   try {
     const copies = new Map<string, string>();
+    const origins: Record<string, string> = {};
     const destOf = (ref: string): string => {
       const hit = materializeSkill(ref, home, opts);
       try {
@@ -171,6 +281,7 @@ export function writeRoutine(home: string, input: RoutineInput, opts: WriteRouti
         if (!prev) {
           copySkillDir(hit.dir, dest);
           copies.set(hit.name, hit.dir);
+          origins[hit.name] = recordOrigin(ref, hit.dir);
         }
         return dest;
       } finally {
@@ -181,17 +292,14 @@ export function writeRoutine(home: string, input: RoutineInput, opts: WriteRouti
     const skillsRefer = input.skillsRefer.map(destOf);
     const prompt = input.prompt.endsWith("\n") ? input.prompt : input.prompt + "\n";
     writeFileSync(join(dir, "prompt.md"), prompt);
-    writeFileSync(
-      join(dir, "routine.yml"),
-      [
-        yamlList("skills_run", skillsRun),
-        yamlList("skills_refer", skillsRefer),
-        `mcp_url: ${yamlScalar(normalizeMcpUrl(input.mcpUrl))}`,
-        `interval: ${yamlScalar(input.interval ?? DEFAULT_INTERVAL)}`,
-        `max_tick: ${yamlScalar(input.maxTick ?? DEFAULT_MAX_TICK)}`,
-        "",
-      ].join("\n"),
-    );
+    writeRoutineYml(dir, {
+      skillsRun,
+      skillsRefer,
+      skillOrigins: origins,
+      mcpUrl: input.mcpUrl,
+      interval: input.interval,
+      maxTick: input.maxTick,
+    });
     return dir;
   } catch (e) {
     if (!existed) rmSync(dir, { recursive: true, force: true });
@@ -244,7 +352,7 @@ export function openRoutine(home: string, slug: string, openDir: (dir: string) =
   return dir;
 }
 
-export type Routine = RoutineInput & { dir: string; jobId?: string };
+export type Routine = RoutineInput & { dir: string; jobId?: string; skillOrigins: Record<string, string> };
 
 function defaultMcpUrlPath(home: string): string {
   return join(home, ".dora", "default-mcp-url");
@@ -279,6 +387,7 @@ export function readRoutine(home: string, slug: string): Routine {
     prompt: readFileSync(promptPath, "utf8"),
     skillsRun,
     skillsRefer,
+    skillOrigins: parseOrigins(data.skill_origins),
     mcpUrl: String(data.mcp_url ?? ""),
     interval: String(data.interval ?? DEFAULT_INTERVAL),
     maxTick: String(data.max_tick ?? DEFAULT_MAX_TICK),
@@ -288,16 +397,159 @@ export function readRoutine(home: string, slug: string): Routine {
 
 export function writeRoutineJobId(home: string, slug: string, jobId: string): void {
   const routine = readRoutine(home, slug);
-  writeFileSync(
-    join(routine.dir, "routine.yml"),
-    [
-      yamlList("skills_run", routine.skillsRun),
-      yamlList("skills_refer", routine.skillsRefer),
-      `mcp_url: ${yamlScalar(normalizeMcpUrl(routine.mcpUrl))}`,
-      `interval: ${yamlScalar(routine.interval ?? DEFAULT_INTERVAL)}`,
-      `max_tick: ${yamlScalar(routine.maxTick ?? DEFAULT_MAX_TICK)}`,
-      `job_id: ${yamlScalar(jobId)}`,
-      "",
-    ].join("\n"),
-  );
+  writeRoutineYml(routine.dir, { ...routine, jobId });
+}
+
+export type RefreshRoutineOpts = WriteRoutineOpts & {
+  keepCopies?: boolean;
+  from?: string;
+};
+
+export type RefreshResult = { refreshed: string[]; skipped: string[]; localOnly: string[] };
+
+function githubSkillUrl(fromRef: string, found: string, root: string): string {
+  const remote = parseRemoteUrl(fromRef);
+  if (!remote?.ghRepo) return fromRef;
+  const rel = relative(root, found).replace(/\\/g, "/");
+  if (!rel || rel === "." || rel.startsWith("..")) return fromRef;
+  const sub = remote.subpath ? `${remote.subpath}/${rel}` : rel;
+  return `https://github.com/${remote.ghRepo}/tree/${remote.ref ?? "main"}/${sub}`;
+}
+
+function destSkillNames(routine: Routine): { name: string; dest: string }[] {
+  const seen = new Set<string>();
+  const out: { name: string; dest: string }[] = [];
+  for (const dest of [...routine.skillsRun, ...routine.skillsRefer]) {
+    const name = basename(dest);
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    out.push({ name, dest });
+  }
+  return out;
+}
+
+function findNamedSkill(root: string, name: string): string | undefined {
+  const direct = normalizeSkillPath(root);
+  if (isSkillDir(direct) && basename(direct) === name) return direct;
+  return findSkillDirs(root).find((d) => basename(d) === name);
+}
+
+function materializeFromRoot(
+  ref: string,
+  opts: WriteRoutineOpts,
+): { dir: string; cleanup?: () => void } {
+  const trimmed = ref.trim();
+  const remote = parseRemoteUrl(trimmed);
+  if (remote) {
+    if (opts.fetchRemote) return { dir: opts.fetchRemote(trimmed) };
+    return fetchRemoteDir(trimmed);
+  }
+  const asPath = isAbsolute(trimmed) ? trimmed : resolve(opts.cwd ?? process.cwd(), trimmed);
+  if (!existsSync(asPath)) throw new Error(`--from not found: ${trimmed}`);
+  return { dir: asPath };
+}
+
+function replaceSkillDir(src: string, dest: string): void {
+  const tmp = `${dest}.refresh`;
+  rmSync(tmp, { recursive: true, force: true });
+  copySkillDir(src, tmp);
+  rmSync(dest, { recursive: true, force: true });
+  renameSync(tmp, dest);
+}
+
+function tryMaterialize(
+  origin: string,
+  home: string,
+  opts: WriteRoutineOpts,
+): { dir: string; name: string; cleanup?: () => void } | undefined {
+  try {
+    return materializeSkill(origin, home, opts);
+  } catch (e) {
+    if (!parseRemoteUrl(origin) && !existsSync(origin)) return undefined;
+    throw e;
+  }
+}
+
+/** Re-copy upstream skills from recorded origin. Missing origin is left alone unless `--from`. */
+export function refreshRoutineSkills(home: string, slug: string, opts: RefreshRoutineOpts = {}): RefreshResult {
+  const routine = readRoutine(home, slug);
+  const skills = destSkillNames(routine);
+  const refreshed: string[] = [];
+  const skipped: string[] = [];
+  const localOnly: string[] = [];
+  const origins = { ...routine.skillOrigins };
+  if (opts.keepCopies) {
+    return {
+      refreshed,
+      skipped: skills.map((s) => s.name),
+      localOnly: skills.filter((s) => origins[s.name] && !parseRemoteUrl(origins[s.name]!)).map((s) => s.name),
+    };
+  }
+
+  let dirty = false;
+  const fromRef = opts.from?.trim() || "";
+  const needsFrom = Boolean(fromRef) && skills.some((s) => !origins[s.name]);
+  const fromRoot = needsFrom ? materializeFromRoot(fromRef, opts) : undefined;
+  try {
+    for (const { name, dest } of skills) {
+      let origin = origins[name];
+      if (!origin && fromRoot) {
+        const found = findNamedSkill(fromRoot.dir, name);
+        if (found) {
+          origin = parseRemoteUrl(fromRef) ? githubSkillUrl(fromRef, found, fromRoot.dir) : recordOrigin(found, found);
+          origins[name] = origin;
+          dirty = true;
+          replaceSkillDir(found, dest);
+          refreshed.push(name);
+          if (!parseRemoteUrl(origin)) localOnly.push(name);
+          continue;
+        }
+      }
+      if (!origin) {
+        skipped.push(name);
+        continue;
+      }
+      if (!parseRemoteUrl(origin)) {
+        const url = kitOriginUrl(origin);
+        if (url) {
+          origin = url;
+          origins[name] = url;
+          dirty = true;
+        }
+      }
+      const fromBackfill = Boolean(fromRef) && !routine.skillOrigins[name];
+      if (!isUpstreamOrigin(origin) && !fromBackfill) {
+        skipped.push(name);
+        if (!parseRemoteUrl(origin)) localOnly.push(name);
+        continue;
+      }
+      if (!parseRemoteUrl(origin) && resolve(origin) === resolve(dest)) {
+        skipped.push(name);
+        localOnly.push(name);
+        continue;
+      }
+      const hit = tryMaterialize(origin, home, opts);
+      if (!hit) {
+        skipped.push(name);
+        if (!parseRemoteUrl(origin)) localOnly.push(name);
+        continue;
+      }
+      try {
+        if (resolve(hit.dir) === resolve(dest)) {
+          skipped.push(name);
+          if (!parseRemoteUrl(origin)) localOnly.push(name);
+          continue;
+        }
+        replaceSkillDir(hit.dir, dest);
+        refreshed.push(name);
+        if (!parseRemoteUrl(origin)) localOnly.push(name);
+      } finally {
+        hit.cleanup?.();
+      }
+    }
+  } finally {
+    fromRoot?.cleanup?.();
+  }
+  if (dirty) writeRoutineYml(routine.dir, { ...routine, skillOrigins: origins });
+  return { refreshed, skipped, localOnly };
 }
