@@ -68,7 +68,7 @@ Apply also refreshes a skill when `routine.yml` records an upstream origin. For 
 
 A local path you passed on purpose stays a local origin. Apply re-copies that disk folder only, and it says so.
 
-A 15 minute tick does not refresh. Pass `--keep-copies` to skip. A Fixed-step copy has no upstream origin, so apply leaves it. An older routine with no origin field is not refreshed unless you pass `--from <path|url>`.
+A 15 minute tick does not refresh. After a skillkit or authstack merge, run apply again so the next tick reads `main`. Pass `--keep-copies` to skip. A Fixed-step copy has no upstream origin, so apply leaves it. An older routine with no origin field is not refreshed unless you pass `--from <path|url>`.
 
 ```bash
 dora harness apply <slug>

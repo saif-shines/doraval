@@ -104,6 +104,8 @@ Dora copies each skill folder into the routine. Night-pass edits land on the cop
 
 A skillkit or authstack skill records the GitHub URL on `main`, not the local clone. Example: `https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs-engineering/skills/ask-saif`. Apply and boot fetch that URL into a temp folder, then copy. A merge on GitHub is what you get. Do not `git pull` the teammate's clone.
 
+After a skillkit or authstack merge: run `dora harness apply <slug> --yes`. A tick does not refresh. Do not run `claude plugin marketplace update` for a pocket job.
+
 A local path the teammate passed on purpose stays a local origin. Apply re-copies that disk folder only. Say so. A Fixed-step copy is routine-owned. Apply does not overwrite it.
 
 Pass `--keep-copies` to skip refresh. An existing routine with no origin is not refreshed. Pass `--from <path|url>` to backfill and refresh by skill name.
@@ -161,6 +163,8 @@ MUST copy named skills into the routine.
 MUST record each skill origin in routine.yml.
 MUST record a GitHub URL on main for skillkit and authstack, not the local clone.
 MUST fetch that URL to a temp dir on apply/boot unless --keep-copies.
+MUST tell the teammate to apply after a skillkit or authstack merge. A tick does not refresh.
+MUST NOT send a pocket job through `claude plugin marketplace update`.
 MUST NOT git pull the teammate's clone.
 MUST keep a local path the teammate passed on purpose. Say it is disk only.
 MUST NOT overwrite a Fixed-step or other routine-owned copy on apply.

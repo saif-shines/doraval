@@ -20,6 +20,7 @@ Dora jobs: review, fix, unused, scan. Load review-with-dora.
 Routine flow: a routine, a loop, recurring, a routine idea, a pocket job, or harness new.
   Load grilling-for-routine. Night prompt: writing-for-routine.
 After a routine exists: dora harness apply, show, logs, rm, pause, resume, list, open. boot is the apply alias.
+After a skillkit or authstack merge: dora harness apply <slug> --yes. A tick does not refresh.
 If Hermes is missing: print official install steps. Dora does not install Hermes.
 If a Scalekit AgentKit skill is missing: install scalekit-inc/authstack, then reload skills.
 ```
@@ -28,6 +29,7 @@ If a Scalekit AgentKit skill is missing: install scalekit-inc/authstack, then re
 
 1. Read the ask.
 2. If a routine already exists and the ask is apply, boot, show, logs, rm, pause, resume, list, open, or watch: name that `dora harness` verb. Do not load the grill.
+   If a skillkit or authstack merge just landed, or the ask is refresh pocket skills: name `dora harness apply <slug> --yes`. Do not name `claude plugin marketplace update`.
 3. If it is a routine, a loop, recurring, a routine idea, a pocket job, or `dora harness new`: load `grilling-for-routine`. Done: that skill is loaded.
 4. If it is a Dora job (review, fix, unused, scan): load `review-with-dora`. Done: that skill is loaded.
 5. If the ask is only the public connector catalog (what exists, tool names):
@@ -61,6 +63,8 @@ MUST print the map when the ask is empty.
 MUST load `review-with-dora` for a Dora job.
 MUST load `grilling-for-routine` for a routine, a loop, recurring, a routine idea, a pocket job, or harness new.
 MUST name `dora harness` apply/show/logs/rm/pause/resume/list/open when a routine already exists. boot is the apply alias.
+MUST name `dora harness apply <slug> --yes` after a skillkit or authstack merge, or when the ask is refresh pocket skills.
+MUST NOT name `claude plugin marketplace update` for a pocket job.
 MUST NOT load the grill for those existing-routine verbs.
 MUST load `discover-connectors` only for a public catalog ask, when that skill is on disk.
 MUST load `setup-agentkit` for a dashboard connection ask, when that skill is on disk.
