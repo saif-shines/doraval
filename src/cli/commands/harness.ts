@@ -447,6 +447,9 @@ async function runApply(
         from: typeof args.from === "string" ? args.from.trim() || undefined : undefined,
       });
       if (result.refreshed.length) ui.dim(`  Refreshed ${result.refreshed.join(", ")}.`);
+      if (result.localOnly.length) {
+        ui.dim(`  Local origin (disk only, not fetched): ${result.localOnly.join(", ")}.`);
+      }
     } catch (e) {
       ui.fail(e instanceof Error ? e.message : String(e));
       nextAction("dora harness list");

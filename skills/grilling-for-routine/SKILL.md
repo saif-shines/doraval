@@ -100,11 +100,13 @@ A skill source is a name, a local path, or a GitHub URL.
 
 Name lookup: project `skills/`, then home skills, then ask for a path or a GitHub URL. Do not invent a registry.
 
-Dora copies each skill folder into the routine. Night-pass edits land on the copy. Do not write the original. `routine.yml` records each origin (local path or GitHub URL).
+Dora copies each skill folder into the routine. Night-pass edits land on the copy. Do not write the original. `routine.yml` records each origin.
 
-Apply and boot refresh a copy when that origin is an upstream kit (skillkit, authstack, or a GitHub URL). Pass `--keep-copies` to skip. A Fixed-step copy is routine-owned. Apply does not overwrite it.
+A skillkit or authstack skill records the GitHub URL on `main`, not the local clone. Example: `https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs-engineering/skills/ask-saif`. Apply and boot fetch that URL into a temp folder, then copy. A merge on GitHub is what you get. Do not `git pull` the teammate's clone.
 
-An existing routine with no origin is not refreshed. Pass `--from <path|url>` to backfill and refresh by skill name.
+A local path the teammate passed on purpose stays a local origin. Apply re-copies that disk folder only. Say so. A Fixed-step copy is routine-owned. Apply does not overwrite it.
+
+Pass `--keep-copies` to skip refresh. An existing routine with no origin is not refreshed. Pass `--from <path|url>` to backfill and refresh by skill name.
 
 Offer `dora review --quick` on each copy. The teammate can skip.
 
@@ -157,7 +159,10 @@ MUST NOT copy `.env` or secrets from the original skill.
 MUST tell the teammate to put secrets in the routine folder when MCP is none.
 MUST copy named skills into the routine.
 MUST record each skill origin in routine.yml.
-MUST refresh upstream origins on apply/boot unless --keep-copies.
+MUST record a GitHub URL on main for skillkit and authstack, not the local clone.
+MUST fetch that URL to a temp dir on apply/boot unless --keep-copies.
+MUST NOT git pull the teammate's clone.
+MUST keep a local path the teammate passed on purpose. Say it is disk only.
 MUST NOT overwrite a Fixed-step or other routine-owned copy on apply.
 MUST NOT guess an origin when routine.yml has none. Pass --from to backfill.
 MUST NOT require a skill because a connector exists.

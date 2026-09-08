@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { basename, join } from "path";
+import { spawnSync } from "bun";
 import { describe, expect, test } from "bun:test";
 import {
   listRoutineSlugs,
@@ -440,10 +441,14 @@ describe("routine copy", () => {
 });
 
 describe("routine refresh", () => {
-  test("records a kit origin and re-copies it", () => {
+  const kitUrl =
+    "https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs/skills/api-reference";
+
+  test("records a GitHub URL for a kit path and fetches it on refresh", () => {
     const home = tmpHome();
     const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-kit-"));
     const src = writeSkill(cwd, "vendor/skillkit/plugins/docs/skills/api-reference", "v1");
+    const fetched = writeSkill(cwd, "fetched/api-reference", "v2");
     const dir = writeRoutine(
       home,
       {
@@ -456,13 +461,52 @@ describe("routine refresh", () => {
       { cwd },
     );
     const copy = join(dir, "skills", "api-reference", "SKILL.md");
-    expect(readRoutine(home, "docs-job").skillOrigins["api-reference"]).toBe(src);
+    expect(readRoutine(home, "docs-job").skillOrigins["api-reference"]).toBe(kitUrl);
     expect(readFileSync(copy, "utf8")).toContain("v1");
-    writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: v2\n---\n\n# api-reference\n\nv2\n");
+    writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: dirty clone\n---\n\ndirty clone\n");
     writeFileSync(copy, "stale copy\n");
-    const result = refreshRoutineSkills(home, "docs-job");
+    const result = refreshRoutineSkills(home, "docs-job", {
+      fetchRemote: (url) => {
+        expect(url).toBe(kitUrl);
+        return fetched;
+      },
+    });
     expect(result.refreshed).toEqual(["api-reference"]);
+    expect(result.localOnly).toEqual([]);
     expect(readFileSync(copy, "utf8")).toContain("v2");
+    expect(readFileSync(join(src, "SKILL.md"), "utf8")).toContain("dirty clone");
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("records tree/main from a kit git remote, not the clone branch", () => {
+    const home = tmpHome();
+    const cwd = mkdtempSync(join(tmpdir(), "dora-refresh-git-"));
+    const root = join(cwd, "skillkit");
+    const src = writeSkill(root, "plugins/docs-engineering/skills/ask-saif", "wip");
+    expect(spawnSync(["git", "init"], { cwd: root, stdout: "pipe", stderr: "pipe" }).exitCode).toBe(0);
+    expect(
+      spawnSync(["git", "remote", "add", "origin", "https://github.com/scalekit-inc/skillkit.git"], {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+      }).exitCode,
+    ).toBe(0);
+    spawnSync(["git", "checkout", "-b", "wip"], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    writeRoutine(
+      home,
+      {
+        slug: "review-job",
+        prompt: "Review.",
+        skillsRun: [src],
+        skillsRefer: [],
+        mcpUrl: "https://gw.example/mcp",
+      },
+      { cwd },
+    );
+    expect(readRoutine(home, "review-job").skillOrigins["ask-saif"]).toBe(
+      "https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs-engineering/skills/ask-saif",
+    );
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
   });
@@ -547,9 +591,9 @@ describe("routine refresh", () => {
     const result = refreshRoutineSkills(home, "old-job", { from: join(cwd, "vendor/skillkit") });
     expect(result.refreshed).toEqual(["api-reference"]);
     expect(readFileSync(copy, "utf8")).toContain("v2");
-    expect(readRoutine(home, "old-job").skillOrigins["api-reference"]).toBe(kit);
+    expect(readRoutine(home, "old-job").skillOrigins["api-reference"]).toBe(kitUrl);
     writeRoutineJobId(home, "old-job", "abcdef123456");
-    expect(readRoutine(home, "old-job").skillOrigins["api-reference"]).toBe(kit);
+    expect(readRoutine(home, "old-job").skillOrigins["api-reference"]).toBe(kitUrl);
     expect(readRoutine(home, "old-job").jobId).toBe("abcdef123456");
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
