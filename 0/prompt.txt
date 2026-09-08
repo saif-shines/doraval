@@ -1,0 +1,55 @@
+Saif asked you (doraval Grok) to handle this. Do not wait for more confirmation.
+
+Ticket: https://linear.app/scalekit/issue/SK-1918/dora-harness-refresh-copied-skills-from-origin-on-applyboot
+Related: SK-1915, skillkit#36.
+
+Context from the pocket-agents session (wR). Do not edit pocket-agents. Do not edit skillkit.
+
+## Problem
+
+`dora harness new` copies skill folders into `~/.dora/harness/<slug>/skills/` and then drops the origin. `routine.yml` only stores destination paths.
+
+A merge on skillkit (or authstack) does not update a running Hermes job. The tick reads the frozen copy.
+
+We had to hand-copy `ask-saif` v0.2.4 + `api-reference` into `saif-waiting-review` after skillkit#36.
+
+## What to ship
+
+Refresh copied skills on **apply / boot**. Not on every tick.
+
+A 15m tick must keep a stable skill set.
+
+### 1. Record origin
+
+On `harness new` / `writeRoutine`, store the origin for each copied skill in `routine.yml` (local path or GitHub URL).
+
+Today `src/core/routine.ts` `writeRoutine` copies then writes only dest paths in `skills_run` / `skills_refer`.
+
+### 2. Re-copy on apply / boot
+
+`dora harness apply` and `boot` re-copy from that origin unless `--keep-copies`.
+
+### 3. Do not overwrite routine-owned copies
+
+Fixed-step / night-pass edits land on the copy (grilling-for-routine). Do not refresh those.
+
+Only refresh skills whose origin is an upstream kit (skillkit, authstack, a GitHub URL, or a recorded local kit path).
+
+Existing routines have no origin field. Do not guess. Refresh those only when the human passes `--from`, or after a backfill.
+
+## Today (for your mental model, do not edit these folders unless a test fixture needs it)
+
+- `saif-waiting-review` — skillkit docs-engineering skills
+- `ooo-holidays-timeoff`, `slack-pr-approve` — authstack copies (`discover-connectors`, `integrate-agentkit`)
+- `connectors-webflow-sync` — local connector skills
+
+## Done when
+
+- Origins persist in `routine.yml`
+- apply/boot re-copies upstream skills
+- `--keep-copies` skips the refresh
+- Fixed-step copies stay
+- Tests cover write + apply refresh
+- You say what changed and the commit/PR
+
+Reply in this pane.
