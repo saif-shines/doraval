@@ -33,6 +33,7 @@ import {
   watchCommands,
   type CronJob,
 } from "../../core/hermes.js";
+import { installPocketFooterHook } from "../../core/pocket-footer.js";
 import { ui, resolveOutputMode, outJson, summaryLine, guidedError, nextAction, type OutputMode } from "../out.js";
 import { exit } from "../render/exit.js";
 import { promptSelect } from "../prompt.js";
@@ -490,6 +491,11 @@ async function runApply(
       writeRoutineJobId(home, slug, created);
       jobId = created;
     }
+    try {
+      installPocketFooterHook(home, slug, jobId);
+    } catch {
+      // Fail open. The prompt line still asks the model for the footer.
+    }
     if (mode.format === "json") {
       outJson({ slug, action, jobId: jobId ?? null });
       await exit(0);
@@ -519,6 +525,7 @@ export const harnessApply = defineCommand({
       "",
       "Creates the job on first apply. Later apply edits that job.",
       "Re-copies upstream skills from origin unless --keep-copies.",
+      "Stamps Sent by pocket agent <slug> on GitHub reviews and Slack posts.",
       "boot is the same command. There is no set verb.",
     ].join("\n"),
   },

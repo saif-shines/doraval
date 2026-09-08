@@ -32,7 +32,7 @@ The prompt is for an unattended pass. It is not a human chat.
 
 Keep the steps that need a new decision. Name the Fixed-step Skill. Do not repeat the frozen steps.
 
-Dora appends the pocket-agent footer when Hermes runs. Do not write it in `prompt.md`. Human-visible messages end with `Sent by pocket agent <slug>`.
+Apply stamps `Sent by pocket agent <slug>` on the GitHub review and Slack post. Dora also appends that instruction to the Hermes prompt. Do not write the footer in `prompt.md`.
 
 ## Run handoff
 
