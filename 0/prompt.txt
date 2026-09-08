@@ -89,3 +89,7 @@ Background task "call-a26a4d35-f5d0-4161-b36a-439cf3d0e438-255" completed (exit 
 Command: bun run scripts/gen-rule-docs.ts && bun test src/core/static-skill-checks.test.ts src/core/rules/docs.test.ts src/core/agentskills-validate.test.ts src/core/skill-check.test.ts src/core/review.test.ts && bun run typecheck | Duration: 17.0s
 Use get_command_or_subagent_output("call-a26a4d35-f5d0-4161-b36a-439cf3d0e438-255") to see the full output.
 </system-reminder>
+
+---
+
+you can merge them using matt's review and implement ways
