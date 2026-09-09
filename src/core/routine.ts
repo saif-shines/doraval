@@ -8,6 +8,7 @@ import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery
 
 const DEFAULT_INTERVAL = "1h";
 const DEFAULT_MAX_TICK = "10m";
+const DEFAULT_REASONING_EFFORT = "xhigh";
 const HOME_SKILL_ROOTS = [".claude/skills", ".grok/skills", ".agents/skills"] as const;
 
 export type RoutineInput = {
@@ -18,6 +19,7 @@ export type RoutineInput = {
   mcpUrl: string;
   interval?: string;
   maxTick?: string;
+  reasoningEffort?: string;
 };
 
 const KIT_REPOS: Record<string, string> = {
@@ -136,6 +138,7 @@ function writeRoutineYml(
     mcpUrl: string;
     interval?: string;
     maxTick?: string;
+    reasoningEffort?: string;
     jobId?: string;
   },
 ): void {
@@ -145,6 +148,7 @@ function writeRoutineYml(
     `mcp_url: ${yamlScalar(normalizeMcpUrl(r.mcpUrl))}`,
     `interval: ${yamlScalar(r.interval ?? DEFAULT_INTERVAL)}`,
     `max_tick: ${yamlScalar(r.maxTick ?? DEFAULT_MAX_TICK)}`,
+    `reasoning_effort: ${yamlScalar(r.reasoningEffort ?? DEFAULT_REASONING_EFFORT)}`,
   );
   if (r.jobId) lines.push(`job_id: ${yamlScalar(r.jobId)}`);
   lines.push("");
@@ -299,6 +303,7 @@ export function writeRoutine(home: string, input: RoutineInput, opts: WriteRouti
       mcpUrl: input.mcpUrl,
       interval: input.interval,
       maxTick: input.maxTick,
+      reasoningEffort: input.reasoningEffort,
     });
     return dir;
   } catch (e) {
@@ -391,6 +396,7 @@ export function readRoutine(home: string, slug: string): Routine {
     mcpUrl: String(data.mcp_url ?? ""),
     interval: String(data.interval ?? DEFAULT_INTERVAL),
     maxTick: String(data.max_tick ?? DEFAULT_MAX_TICK),
+    reasoningEffort: String(data.reasoning_effort ?? DEFAULT_REASONING_EFFORT),
     jobId: typeof data.job_id === "string" && data.job_id ? data.job_id : undefined,
   };
 }

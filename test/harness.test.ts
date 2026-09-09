@@ -684,6 +684,7 @@ describe("dora harness", () => {
       state: "running",
       interval: "1h",
       maxTick: "10m",
+      reasoningEffort: "xhigh",
       mcp: "yes",
       lastRun: "2026-09-04T21:30:19+05:30",
       folder: dir,

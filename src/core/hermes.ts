@@ -30,11 +30,18 @@ function hermesPrompt(prompt: string, slug: string): string {
 }
 
 export function onePassArgs(
-  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl">>,
+  routine: Pick<Routine, "prompt" | "slug"> &
+    Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl" | "reasoningEffort">>,
 ): string[] {
   const args = ["chat"];
   if (usesMcp(routine.mcpUrl ?? "")) args.push("--toolsets", `mcp-${MCP_SERVER}`);
-  args.push("--oneshot", "--run-budget", String(hermesTimeoutSec(routine.maxTick ?? "10m")));
+  args.push(
+    "--oneshot",
+    "--run-budget",
+    String(hermesTimeoutSec(routine.maxTick ?? "10m")),
+    "--reasoning",
+    routine.reasoningEffort ?? "xhigh",
+  );
   for (const skill of routine.skillsRun ?? []) {
     args.push("--skills", skill);
   }
@@ -43,7 +50,7 @@ export function onePassArgs(
 }
 
 export function onePassCommand(
-  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun">>,
+  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun" | "reasoningEffort">>,
 ): string {
   const args = onePassArgs(routine);
   return ["hermes", ...args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))].join(" ");
@@ -69,6 +76,8 @@ export function bootArgs(routine: Routine): string[][] {
     hermesPrompt(routine.prompt, routine.slug),
     "--name",
     routine.slug,
+    "--reasoning-effort",
+    routine.reasoningEffort ?? "xhigh",
   ];
   for (const skill of routine.skillsRun) {
     create.push("--skill", skill);
@@ -97,6 +106,8 @@ export function editArgs(routine: Routine, jobId: string): string[] {
     hermesSchedule(routine.interval ?? "1h"),
     "--prompt",
     hermesPrompt(routine.prompt, routine.slug),
+    "--reasoning-effort",
+    routine.reasoningEffort ?? "xhigh",
   ];
   if (routine.skillsRun.length === 0) args.push("--clear-skills");
   else for (const skill of routine.skillsRun) args.push("--skill", skill);

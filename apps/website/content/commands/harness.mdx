@@ -130,9 +130,12 @@ Close the laptop and the Mac sleeps. Jobs do not run while the Mac sleeps. That 
 | --- | --- |
 | How often it runs | every 1 hour |
 | One-pass time limit | 10 minutes |
+| Reasoning effort | xhigh |
 | Night stop if the job sits idle | 10 minutes (Hermes default) |
 
 You can change the interval and the one-pass limit per routine. A busy night job can keep going past 10 minutes if it is still working.
+
+`apply` and `boot` pin `reasoning_effort` from `routine.yml` onto the Runtime job. Default is `xhigh`. Edit that field, then apply again, to change it. A missing field still pins `xhigh`, so an old folder does not fall back to medium.
 
 ## Common mistakes
 

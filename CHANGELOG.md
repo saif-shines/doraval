@@ -4,6 +4,9 @@
 
 ### Features
 
+- `dora harness` writes `reasoning_effort: xhigh` in `routine.yml`.
+  `apply`, `boot`, and one-pass pin that level on the Runtime job
+  so a tick does not fall back to medium. `show` prints the field.
 - `dora harness apply` and `boot` install a Hermes `pre_tool_call`
   hook that stamps `Sent by pocket agent <slug>` on GitHub
   reviews and Slack posts. A hook error does not block the post.

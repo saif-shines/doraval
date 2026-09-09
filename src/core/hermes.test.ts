@@ -28,6 +28,8 @@ describe("hermes command builders", () => {
       "Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass",
       "--name",
       "night-pass",
+      "--reasoning-effort",
+      "xhigh",
       "--skill",
       "/skills/run",
     ]);
@@ -57,10 +59,19 @@ describe("hermes command builders", () => {
       "every 1h",
       "--prompt",
       "Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass",
+      "--reasoning-effort",
+      "xhigh",
       "--skill",
       "/skills/run",
     ]);
     expect(editArgs({ ...routine, skillsRun: [] }, "abcdef123456")).toContain("--clear-skills");
+  });
+
+  test("create, edit, and one-pass pin reasoning from the folder", () => {
+    const low = { ...routine, reasoningEffort: "low" };
+    expect(bootArgs(low).at(-1)).toContain("low");
+    expect(editArgs(low, "abcdef123456")).toEqual(expect.arrayContaining(["--reasoning-effort", "low"]));
+    expect(onePassCommand(low)).toContain("--reasoning low");
   });
 
   test("parseCreatedJobId reads the hex id from create output", () => {
@@ -70,7 +81,7 @@ describe("hermes command builders", () => {
 
   test("one-pass command uses the MCP toolset, skills, and run-budget", () => {
     const cmd = onePassCommand(routine);
-    expect(cmd).toContain("hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600");
+    expect(cmd).toContain("hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 --reasoning xhigh");
     expect(cmd).toContain("--skills /skills/run");
     expect(cmd).toContain("-q");
     expect(cmd).toContain(JSON.stringify("Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass"));

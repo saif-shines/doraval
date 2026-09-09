@@ -132,7 +132,13 @@ function listRow(home: string, slug: string, jobs: CronJob[]): ListRow {
   return { slug, state: job?.state ?? "none", interval: routine.interval ?? "1h", lastRun: job?.lastRun ?? null };
 }
 
-type ShowCard = ListRow & { maxTick: string; mcp: "yes" | "none"; folder: string; jobId: string | null };
+type ShowCard = ListRow & {
+  maxTick: string;
+  reasoningEffort: string;
+  mcp: "yes" | "none";
+  folder: string;
+  jobId: string | null;
+};
 
 function showCard(home: string, slug: string, jobs: CronJob[]): ShowCard {
   const row = listRow(home, slug, jobs);
@@ -140,6 +146,7 @@ function showCard(home: string, slug: string, jobs: CronJob[]): ShowCard {
   return {
     ...row,
     maxTick: routine.maxTick ?? "10m",
+    reasoningEffort: routine.reasoningEffort ?? "xhigh",
     mcp: usesMcp(routine.mcpUrl) ? "yes" : "none",
     folder: routine.dir,
     jobId: routine.jobId ?? null,
@@ -161,6 +168,7 @@ function printCard(card: ShowCard): void {
     ["state", card.state],
     ["interval", card.interval],
     ["max tick", card.maxTick],
+    ["reasoning", card.reasoningEffort],
     ["mcp", card.mcp],
     ["last run", card.lastRun ?? "—"],
     ["folder", card.folder],
@@ -730,7 +738,7 @@ export const harnessShow = defineCommand({
     description: [
       "Show one routine card",
       "",
-      "Prints slug, state, interval, max tick, MCP, last run, and folder.",
+      "Prints slug, state, interval, max tick, reasoning, MCP, last run, and folder.",
       "Hex job id only in --json. Use open to read files.",
     ].join("\n"),
   },
