@@ -1,0 +1,48 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M22AH35A7R6WVF0CACC0XZSP",
+  "session_id": "01a08487-5b19-7571-9543-0c2a7d1f23f0",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-09T05:33:54.261273Z",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    "skills/ask-dora/SKILL.md",
+    "test/ask-dora.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "ce8f91d7969d",
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-09T05:33:54.236129Z",
+    "agent_lines": 3,
+    "agent_removed": 4,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 3,
+    "total_lines_changed": 7,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3,
+      "agent_lines_removed": 4
+    }
+  ]
+}

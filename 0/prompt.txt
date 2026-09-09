@@ -1,0 +1,15 @@
+which branch are we in
+
+---
+
+Make the ask-dora skill automatically invocable by the model, if it is not already.
+
+Context from the pocket-agents Grok in w12:p1:
+- Pocket-agents copies ask-dora from saif-shines/doraval.
+- The installed copy at pocket-agents/.agents/skills/ask-dora/SKILL.md has `disable-model-invocation: true`.
+- That flag blocks model auto-invoke. The teammate must type /ask-dora.
+- Desired: the model should load ask-dora on its own when the user asks a Dora question, a routine idea, a pocket job, harness new, or a connector catalog question.
+- If the source skill is already model-invocable, say so and stop. Do not change it.
+- If it is not, remove or flip that block in the doraval source skill, then re-review with dora.
+
+Do that in this doraval repo. Do not edit the pocket-agents copy unless this repo is the source of truth and the copy is generated from here.
