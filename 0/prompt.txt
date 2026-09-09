@@ -1,0 +1,25 @@
+as there a way in the doraval behind that herms in the context of pocket agents, when they are running it's possibele to have a fallback model for example if grok is not working well fall back opencode or something?
+
+---
+
+ask dora - what is the state of current pocket agents?
+
+---
+
+is there a way where I can see the pocket agent status all teh time, some easy way?
+
+---
+
+should we add that feature into dora a(ask matt)
+
+---
+
+I was thinking can it show something on the top bar or somwehre?
+
+---
+
+ask-dora I noticed that when hermes starts each pocket agent the reasonging level is medium, can you make it xhigh always (i'm using grok)
+
+---
+
+can dora have this instruciton set somwehre to make and keep them high

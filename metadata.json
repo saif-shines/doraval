@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M23TJE1CW32CZ2BSF6SXCN9V",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 8,
+  "files_touched": [
+    "CHANGELOG.md",
+    "apps/website/content/commands/harness.mdx",
+    "apps/website/content/get-started/pocket-agents.mdx",
+    "skills/review-with-dora/references/commands.md",
+    "src/cli/commands/harness.ts",
+    "src/core/hermes.test.ts",
+    "src/core/hermes.ts",
+    "src/core/routine.test.ts",
+    "src/core/routine.ts",
+    "test/harness.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}
