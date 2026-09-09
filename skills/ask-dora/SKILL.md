@@ -4,12 +4,11 @@ description: >-
   Use when the teammate types /ask-dora, or asks any Dora question, a
   routine idea, a pocket job, dora harness new, or a connector catalog
   question.
-disable-model-invocation: true
 ---
 
 # ask-dora
 
-User-invoked router for an internal teammate. One name. Use a primitive. Do not hold that primitive's craft here.
+Router for an internal teammate. One name. Use a primitive. Do not hold that primitive's craft here.
 
 ## Empty
 

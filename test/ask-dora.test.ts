@@ -19,9 +19,9 @@ describe("ask-dora skill family (tickets 85-87)", () => {
     }
   });
 
-  test("ask-dora is a user-invoked router that names the other three", () => {
+  test("ask-dora is a model-invocable router that names the other three", () => {
     const text = skill("ask-dora");
-    expect(text).toMatch(/disable-model-invocation:\s*true/);
+    expect(text).not.toMatch(/disable-model-invocation:\s*true/);
     expect(text).toContain("review-with-dora");
     expect(text).toContain("grilling-for-routine");
     expect(text).toContain("writing-for-routine");
