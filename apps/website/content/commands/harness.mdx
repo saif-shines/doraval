@@ -44,7 +44,7 @@ The printed one-pass command looks like this:
 hermes chat --oneshot --run-budget 600 --reasoning xhigh -q "…"
 ```
 
-`--run-budget` is the one-pass time limit (default 10 minutes). Skills to run are passed as `--skills`. A pinned model adds `-m` and `--provider`. Dora refuses to overwrite an existing slug.
+`--run-budget` is the one-pass time limit (default 10 minutes). Local skills are copied into `.agents/skills` in a trusted workdir. The one-pass uses `--in` on that folder. Apply sets cron `--workdir` to the routine folder. Dora does not pass Hermes `--skills` names. A pinned model adds `-m` and `--provider`. Dora refuses to overwrite an existing slug.
 
 If the night job needs Hermes `delegate_task`, the grill checks `delegation.subagent_auto_approve`. When that key is not `true`, it prints `hermes config set delegation.subagent_auto_approve true` for you to run. The grill does not run that set. The key is machine-wide. It is not a routine field.
 

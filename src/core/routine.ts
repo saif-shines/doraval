@@ -1,6 +1,6 @@
 import { spawnSync } from "bun";
 import { YAML } from "bun";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "path";
 import { parseRemoteUrl } from "./remote.js";
@@ -101,6 +101,24 @@ export function usesMcp(url: string): boolean {
 
 function harnessRoot(home: string): string {
   return join(home, ".dora", "harness");
+}
+
+/** Hermes project-skill layout inside a routine folder. */
+export function projectSkillDest(root: string, name: string): string {
+  return join(root, ".agents", "skills", name);
+}
+
+export function onePassRoot(home: string, slug: string): string {
+  return join(harnessRoot(home), ".one-pass", slug);
+}
+
+/** Old routines copied into skills/. Hermes only scans .agents/skills. */
+export function ensureProjectSkillLayout(dir: string): void {
+  const old = join(dir, "skills");
+  const neu = join(dir, ".agents", "skills");
+  if (existsSync(neu) || !existsSync(old)) return;
+  mkdirSync(join(dir, ".agents"), { recursive: true });
+  symlinkSync(old, neu);
 }
 
 function routineDir(home: string, slug: string): string {
@@ -269,6 +287,21 @@ function materializeSkill(
   return { dir: fetched.dir, name: basename(fetched.dir), cleanup: fetched.cleanup };
 }
 
+/** Copy named skills into destRoot/.agents/skills for a Hermes project session. */
+export function copySkillsInto(destRoot: string, refs: string[], home: string, opts: WriteRoutineOpts = {}): void {
+  const copies = new Set<string>();
+  for (const ref of refs) {
+    const hit = materializeSkill(ref, home, opts);
+    try {
+      if (copies.has(hit.name)) continue;
+      copySkillDir(hit.dir, projectSkillDest(destRoot, hit.name));
+      copies.add(hit.name);
+    } finally {
+      hit.cleanup?.();
+    }
+  }
+}
+
 export function writeRoutine(home: string, input: RoutineInput, opts: WriteRoutineOpts = {}): string {
   assertSlug(input.slug);
   const dir = routineDir(home, input.slug);
@@ -287,7 +320,7 @@ export function writeRoutine(home: string, input: RoutineInput, opts: WriteRouti
         if (prev && prev !== hit.dir) {
           throw new Error(`Two skills named "${hit.name}". Give one path or rename one.`);
         }
-        const dest = join(dir, "skills", hit.name);
+        const dest = projectSkillDest(dir, hit.name);
         if (!prev) {
           copySkillDir(hit.dir, dest);
           copies.set(hit.name, hit.dir);

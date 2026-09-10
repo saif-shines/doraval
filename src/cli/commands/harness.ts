@@ -11,6 +11,9 @@ import {
   readRoutine,
   writeDefaultMcpUrl,
   usesMcp,
+  copySkillsInto,
+  ensureProjectSkillLayout,
+  onePassRoot,
   writeRoutine,
   writeRoutineJobId,
   refreshRoutineSkills,
@@ -19,13 +22,14 @@ import {
 import {
   bootArgs,
   defaultHermesRun,
-  editArgs,
+  editCmds,
   listCronJobs,
   loginCommand,
   MCP_SERVER,
   formatHermesCatalog,
   onePassArgs,
   onePassCommand,
+  trustArgs,
   parseCreatedJobId,
   pauseArgs,
   readHermesCatalog,
@@ -324,7 +328,20 @@ export const harnessNew = defineCommand({
           ? args["reasoning-effort"].trim()
           : undefined,
     };
-    const cmd = onePassCommand(draft);
+    const skillRefs = [...skillsRun, ...skillsRefer];
+    let workdir: string | undefined;
+    if (skillRefs.length) {
+      workdir = onePassRoot(home, slug);
+      try {
+        copySkillsInto(workdir, skillRefs, home, { cwd: process.cwd() });
+      } catch (e) {
+        ui.fail(e instanceof Error ? e.message : String(e));
+        nextAction("dora harness new");
+        await exit(2);
+        return;
+      }
+    }
+    const cmd = onePassCommand(draft, workdir);
     ui.blank();
     ui.heading("One-pass command");
     ui.blank();
@@ -361,7 +378,16 @@ export const harnessNew = defineCommand({
             }
           }
         }
-        const r = defaultHermesRun(onePassArgs(draft));
+        if (workdir) {
+          const trusted = defaultHermesRun(trustArgs(workdir));
+          if (trusted.exitCode !== 0) {
+            ui.fail(trusted.stderr.trim() || "hermes skills trust failed.");
+            printWatch();
+            await exit(2);
+            return;
+          }
+        }
+        const r = defaultHermesRun(onePassArgs(draft, workdir));
         if (r.exitCode !== 0) {
           ui.fail(r.stderr.trim() || "One-pass command failed.");
           if (usesMcp(mcpUrl)) printMcpNext();
@@ -473,6 +499,7 @@ async function runApply(
     await exit(1);
     return;
   }
+  if (!dryRun) ensureProjectSkillLayout(routine.dir);
   if (!dryRun) {
     try {
       const result = refreshRoutineSkills(home, slug, {
@@ -507,7 +534,7 @@ async function runApply(
     action = "edit";
     jobId = routine.jobId;
   }
-  const cmds = action === "edit" && jobId ? [editArgs(routine, jobId)] : bootArgs(routine);
+  const cmds = action === "edit" && jobId ? editCmds(routine, jobId) : bootArgs(routine);
   if (dryRun) {
     for (const c of cmds) ui.info(`  ${formatHermesCmd(c)}`);
     if (mode.format === "json") outJson({ slug, action, dryRun: true });

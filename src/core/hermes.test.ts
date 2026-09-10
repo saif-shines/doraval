@@ -21,7 +21,8 @@ describe("hermes command builders", () => {
     expect(cmds[2]).toEqual(["mcp", "add", "scalekit", "--url", "https://gw.example/mcp", "--auth", "oauth"]);
     expect(cmds[3]).toEqual(["mcp", "test", "scalekit"]);
     expect(cmds[4]).toEqual(["tools", "enable", "mcp-scalekit", "--platform", "cron"]);
-    expect(cmds[5]).toEqual([
+    expect(cmds[5]).toEqual(["skills", "trust", "/tmp/night-pass"]);
+    expect(cmds[6]).toEqual([
       "cron",
       "create",
       "every 1h",
@@ -30,9 +31,10 @@ describe("hermes command builders", () => {
       "night-pass",
       "--reasoning-effort",
       "xhigh",
-      "--skill",
-      "/skills/run",
+      "--workdir",
+      "/tmp/night-pass",
     ]);
+    expect(JSON.stringify(cmds)).not.toContain("--skill");
     expect(JSON.stringify(cmds)).not.toContain("--timeout");
     expect(JSON.stringify(cmds)).not.toContain("--toolsets");
   });
@@ -61,10 +63,14 @@ describe("hermes command builders", () => {
       "Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass",
       "--reasoning-effort",
       "xhigh",
-      "--skill",
-      "/skills/run",
+      "--clear-skills",
+      "--workdir",
+      "/tmp/night-pass",
     ]);
-    expect(editArgs({ ...routine, skillsRun: [] }, "abcdef123456")).toContain("--clear-skills");
+    expect(editArgs({ ...routine, skillsRun: [], skillsRefer: [] }, "abcdef123456")).toContain("--clear-skills");
+    expect(JSON.stringify(editArgs({ ...routine, skillsRun: [], skillsRefer: [] }, "abcdef123456"))).not.toContain(
+      "--workdir",
+    );
   });
 
   test("create, edit, and one-pass pin reasoning from the folder", () => {
@@ -115,10 +121,12 @@ describe("hermes command builders", () => {
   });
 
   test("one-pass command uses the MCP toolset, skills, and run-budget", () => {
-    const cmd = onePassCommand(routine);
+    const cmd = onePassCommand(routine, "/tmp/night-pass");
+    expect(cmd).toContain("hermes skills trust /tmp/night-pass");
     expect(cmd).toContain("hermes chat --oneshot --run-budget 600 --reasoning xhigh");
     expect(cmd).not.toContain("--toolsets");
-    expect(cmd).toContain("--skills /skills/run");
+    expect(cmd).not.toContain("--skills");
+    expect(cmd).toContain("--in /tmp/night-pass");
     expect(cmd).toContain("-q");
     expect(cmd).toContain(JSON.stringify("Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass"));
     expect(cmd).not.toContain("cron");
@@ -131,7 +139,7 @@ describe("hermes command builders", () => {
     expect(cmd).toContain("hermes chat --oneshot --run-budget 600");
     expect(cmd).not.toContain("--toolsets");
     const cmds = bootArgs(local);
-    expect(cmds.map((c) => c[0])).toEqual(["gateway", "gateway", "cron"]);
+    expect(cmds.map((c) => c[0])).toEqual(["gateway", "gateway", "skills", "cron"]);
     expect(JSON.stringify(cmds)).not.toContain("mcp");
   });
 });

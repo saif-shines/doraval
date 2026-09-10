@@ -4,6 +4,11 @@
 
 ### Features
 
+- Local `skills-run` copies land in `.agents/skills` on the
+  routine. One-pass trusts a staging folder and uses `--in`.
+  Apply trusts the routine folder and sets cron `--workdir`.
+  Dora no longer passes Hermes `--skills` names, which only
+  resolve hub skills.
 - The grill checks Hermes `delegation.subagent_auto_approve`
   when a night job needs `delegate_task`. If the key is not
   `true`, it prints `hermes config set

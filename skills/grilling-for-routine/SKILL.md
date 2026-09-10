@@ -129,7 +129,8 @@ A skill source is a name, a local path, or a GitHub URL.
 
 Name lookup: project `skills/`, then home skills, then ask for a path or a GitHub URL. Do not invent a registry.
 
-Dora copies each skill folder into the routine. Night-pass edits land on the copy. Do not write the original. `routine.yml` records each origin.
+Dora copies each skill folder into the routine at `.agents/skills/<name>/`. Night-pass edits land on the copy. Do not write the original. `routine.yml` records each origin.
+Hermes loads those copies only when the session cwd is that routine folder. The one-pass runs `hermes skills trust` and `hermes chat --in` on a staging folder. Apply trusts the routine folder and sets cron `--workdir`. Do not pass `--skills <name>`. That flag only resolves Hermes hub names.
 
 A skillkit or authstack skill records the GitHub URL on `main`, not the local clone. Example: `https://github.com/scalekit-inc/skillkit/tree/main/plugins/docs-engineering/skills/ask-saif`. Apply and boot fetch that URL into a temp folder, then copy. A merge on GitHub is what you get. Do not `git pull` the teammate's clone.
 

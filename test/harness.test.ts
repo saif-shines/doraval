@@ -313,7 +313,7 @@ describe("dora harness", () => {
       { env: { HOME: home, PATH: pathWithoutHermes() }, cwd },
     );
     expect(exitCode).toBe(0);
-    const copy = join(home, ".dora", "harness", "night-inbox", "skills", "inbox", "SKILL.md");
+    const copy = join(home, ".dora", "harness", "night-inbox", ".agents", "skills", "inbox", "SKILL.md");
     expect(readFileSync(copy, "utf8")).toBe(original);
     writeFileSync(copy, "tuned\n");
     expect(readFileSync(join(src, "SKILL.md"), "utf8")).toBe(original);
@@ -1076,7 +1076,7 @@ describe("dora harness", () => {
       },
       { cwd },
     );
-    const copy = join(home, ".dora", "harness", "docs-job", "skills", "api-reference", "SKILL.md");
+    const copy = join(home, ".dora", "harness", "docs-job", ".agents", "skills", "api-reference", "SKILL.md");
     writeFileSync(copy, "stale\n");
     writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: dirty clone\n---\n\ndirty clone\n");
     const fetched = join(cwd, "fetched-kit", "plugins", "docs", "skills", "api-reference");

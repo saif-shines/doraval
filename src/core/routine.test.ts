@@ -14,6 +14,7 @@ import {
   writeRoutineJobId,
   refreshRoutineSkills,
   deleteRoutine,
+  ensureProjectSkillLayout,
 } from "./routine.js";
 
 function tmpHome(): string {
@@ -329,7 +330,7 @@ describe("routine copy", () => {
       { cwd },
     );
 
-    const copy = join(dir, "skills", "inbox");
+    const copy = join(dir, ".agents", "skills", "inbox");
     expect(readFileSync(join(copy, "SKILL.md"), "utf8")).toBe(original);
     expect(readRoutine(home, "night-inbox").skillsRun).toEqual([copy]);
     expect(readRoutine(home, "night-inbox").skillOrigins).toEqual({ inbox: src });
@@ -338,6 +339,22 @@ describe("routine copy", () => {
 
     rmSync(home, { recursive: true, force: true });
     rmSync(cwd, { recursive: true, force: true });
+  });
+
+  test("ensureProjectSkillLayout links an old skills/ folder for Hermes", () => {
+    const home = tmpHome();
+    const dir = writeRoutine(home, {
+      slug: "old-layout",
+      prompt: "Ping.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    mkdirSync(join(dir, "skills", "inbox"), { recursive: true });
+    writeFileSync(join(dir, "skills", "inbox", "SKILL.md"), "old\n");
+    ensureProjectSkillLayout(dir);
+    expect(readFileSync(join(dir, ".agents", "skills", "inbox", "SKILL.md"), "utf8")).toBe("old\n");
+    rmSync(home, { recursive: true, force: true });
   });
 
   test("name lookup uses project skills before home skills", () => {
@@ -407,7 +424,7 @@ describe("routine copy", () => {
       { cwd },
     );
 
-    expect(readFileSync(join(dir, "skills", "holiday", "SKILL.md"), "utf8")).toContain("holiday");
+    expect(readFileSync(join(dir, ".agents", "skills", "holiday", "SKILL.md"), "utf8")).toContain("holiday");
     expect(readFileSync(join(src, "SKILL.md"), "utf8")).toContain("holiday");
 
     rmSync(home, { recursive: true, force: true });
@@ -434,7 +451,7 @@ describe("routine copy", () => {
       } },
     );
 
-    expect(readFileSync(join(dir, "skills", "remote-cal", "SKILL.md"), "utf8")).toContain("remote cal");
+    expect(readFileSync(join(dir, ".agents", "skills", "remote-cal", "SKILL.md"), "utf8")).toContain("remote cal");
     expect(readRoutine(home, "from-url").skillOrigins).toEqual({
       "remote-cal": "https://github.com/acme/remote-cal",
     });
@@ -479,7 +496,7 @@ describe("routine copy", () => {
       { cwd },
     );
 
-    const names = readdirSync(join(dir, "skills", "inbox"));
+    const names = readdirSync(join(dir, ".agents", "skills", "inbox"));
     expect(names).toContain("SKILL.md");
     expect(names).not.toContain(".env");
     expect(names).not.toContain("api.secret");
@@ -512,7 +529,7 @@ describe("routine refresh", () => {
       },
       { cwd },
     );
-    const copy = join(dir, "skills", "api-reference", "SKILL.md");
+    const copy = join(dir, ".agents", "skills", "api-reference", "SKILL.md");
     expect(readRoutine(home, "docs-job").skillOrigins["api-reference"]).toBe(kitUrl);
     expect(readFileSync(copy, "utf8")).toContain("v1");
     writeFileSync(join(src, "SKILL.md"), "---\nname: api-reference\ndescription: dirty clone\n---\n\ndirty clone\n");
@@ -578,7 +595,7 @@ describe("routine refresh", () => {
       },
       { cwd },
     );
-    const copy = join(dir, "skills", "inbox", "SKILL.md");
+    const copy = join(dir, ".agents", "skills", "inbox", "SKILL.md");
     writeFileSync(copy, "night-pass edit\n");
     writeFileSync(join(src, "SKILL.md"), "---\nname: inbox\ndescription: upstream\n---\n\n# inbox\n\nupstream\n");
     const result = refreshRoutineSkills(home, "local-job");
@@ -603,7 +620,7 @@ describe("routine refresh", () => {
       },
       { cwd },
     );
-    const copy = join(dir, "skills", "discover-connectors", "SKILL.md");
+    const copy = join(dir, ".agents", "skills", "discover-connectors", "SKILL.md");
     writeFileSync(join(src, "SKILL.md"), "---\nname: discover-connectors\ndescription: v2\n---\n\nv2\n");
     const result = refreshRoutineSkills(home, "conn-job", { keepCopies: true });
     expect(result.refreshed).toEqual([]);
@@ -628,9 +645,9 @@ describe("routine refresh", () => {
       },
       { cwd },
     );
-    const copy = join(dir, "skills", "api-reference", "SKILL.md");
+    const copy = join(dir, ".agents", "skills", "api-reference", "SKILL.md");
     writeFileSync(join(dir, "routine.yml"), [
-      `skills_run:\n  - ${JSON.stringify(join(dir, "skills", "api-reference"))}`,
+      `skills_run:\n  - ${JSON.stringify(join(dir, ".agents", "skills", "api-reference"))}`,
       "skills_refer: []",
       'mcp_url: "https://gw.example/mcp"',
       'interval: "1h"',
@@ -666,7 +683,7 @@ describe("routine refresh", () => {
       },
       { cwd, fetchRemote: () => fixture },
     );
-    const copy = join(dir, "skills", "remote-cal", "SKILL.md");
+    const copy = join(dir, ".agents", "skills", "remote-cal", "SKILL.md");
     writeFileSync(copy, "stale\n");
     writeFileSync(join(fixture, "SKILL.md"), "---\nname: remote-cal\ndescription: v2\n---\n\nv2\n");
     const result = refreshRoutineSkills(home, "from-url", { cwd, fetchRemote: () => fixture });

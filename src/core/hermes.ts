@@ -42,10 +42,19 @@ function pushPin(args: string[], routine: Inference, modelFlag: string, empty: b
   }
 }
 
+export function trustArgs(dir: string): string[] {
+  return ["skills", "trust", dir];
+}
+
+function hasProjectSkills(routine: { skillsRun?: string[]; skillsRefer?: string[] }): boolean {
+  return Boolean((routine.skillsRun?.length ?? 0) + (routine.skillsRefer?.length ?? 0));
+}
+
 export function onePassArgs(
   routine: Pick<Routine, "prompt" | "slug"> &
-    Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl">> &
+    Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl" | "skillsRefer">> &
     Inference,
+  workdir?: string,
 ): string[] {
   const args = ["chat"];
   args.push(
@@ -56,18 +65,21 @@ export function onePassArgs(
     routine.reasoningEffort ?? "xhigh",
   );
   pushPin(args, routine, "-m", false);
-  for (const skill of routine.skillsRun ?? []) {
-    args.push("--skills", skill);
-  }
+  if (workdir) args.push("--in", workdir);
   args.push("-q", hermesPrompt(routine.prompt, routine.slug));
   return args;
 }
 
 export function onePassCommand(
-  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun">> & Inference,
+  routine: Pick<Routine, "prompt" | "slug"> &
+    Partial<Pick<Routine, "maxTick" | "skillsRun" | "skillsRefer">> &
+    Inference,
+  workdir?: string,
 ): string {
-  const args = onePassArgs(routine);
-  return ["hermes", ...args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))].join(" ");
+  const cmds = [];
+  if (workdir) cmds.push(["hermes", ...trustArgs(workdir)]);
+  cmds.push(["hermes", ...onePassArgs(routine, workdir)]);
+  return cmds.map((c) => c.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(" ")).join(" && ");
 }
 
 export function loginArgs(): string[] {
@@ -94,9 +106,7 @@ export function bootArgs(routine: Routine): string[][] {
     routine.reasoningEffort ?? "xhigh",
   ];
   pushPin(create, routine, "--model", false);
-  for (const skill of routine.skillsRun) {
-    create.push("--skill", skill);
-  }
+  if (hasProjectSkills(routine)) create.push("--workdir", routine.dir);
   const cmds: string[][] = [
     ["gateway", "install"],
     ["gateway", "start"],
@@ -108,6 +118,7 @@ export function bootArgs(routine: Routine): string[][] {
       ["tools", "enable", `mcp-${MCP_SERVER}`, "--platform", "cron"],
     );
   }
+  if (hasProjectSkills(routine)) cmds.push(trustArgs(routine.dir));
   cmds.push(create);
   return cmds;
 }
@@ -125,9 +136,16 @@ export function editArgs(routine: Routine, jobId: string): string[] {
     routine.reasoningEffort ?? "xhigh",
   ];
   pushPin(args, routine, "--model", true);
-  if (routine.skillsRun.length === 0) args.push("--clear-skills");
-  else for (const skill of routine.skillsRun) args.push("--skill", skill);
+  args.push("--clear-skills");
+  if (hasProjectSkills(routine)) args.push("--workdir", routine.dir);
   return args;
+}
+
+export function editCmds(routine: Routine, jobId: string): string[][] {
+  const cmds: string[][] = [];
+  if (hasProjectSkills(routine)) cmds.push(trustArgs(routine.dir));
+  cmds.push(editArgs(routine, jobId));
+  return cmds;
 }
 
 export function parseCreatedJobId(text: string): string | undefined {
