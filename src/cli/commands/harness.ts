@@ -23,10 +23,12 @@ import {
   listCronJobs,
   loginCommand,
   MCP_SERVER,
+  formatHermesCatalog,
   onePassArgs,
   onePassCommand,
   parseCreatedJobId,
   pauseArgs,
+  readHermesCatalog,
   removeArgs,
   resumeArgs,
   runsArgs,
@@ -59,6 +61,13 @@ function splitDirs(raw: string | undefined): string[] {
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+function optionalPin(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const t = raw.trim();
+  if (!t || t.toLowerCase() === "none") return undefined;
+  return t;
+}
+
 function printHermesInstall(): void {
   guidedError({
     context: "dora harness needs Hermes to apply, pause, resume, print logs, or remove a job",
@@ -81,13 +90,14 @@ function printGrill(home: string): void {
   ui.info(`  Grill: ${dir}`);
   ui.info("  Hermes is the agent. Read SKILL.md. Interview the teammate.");
   ui.blank();
-  ui.info("  Gate: skills to run, skills to refer to, MCP URL.");
+  ui.info("  Gate: skills to run, skills to refer to, MCP URL, model, provider, reasoning.");
+  ui.info("  List Hermes models first: dora harness models");
   ui.info("  Order: interview, write the unattended prompt, one pass, then save.");
   const def = readDefaultMcpUrl(home);
   if (def) ui.info(`  Default MCP URL: ${def}`);
   ui.blank();
   nextAction(
-    "dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --skills-run <dir> --skills-refer <dir>",
+    "dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --model <id> --provider <name> --skills-run <dir> --skills-refer <dir>",
   );
   ui.blank();
 }
@@ -135,6 +145,8 @@ function listRow(home: string, slug: string, jobs: CronJob[]): ListRow {
 type ShowCard = ListRow & {
   maxTick: string;
   reasoningEffort: string;
+  model: string | null;
+  provider: string | null;
   mcp: "yes" | "none";
   folder: string;
   jobId: string | null;
@@ -147,6 +159,8 @@ function showCard(home: string, slug: string, jobs: CronJob[]): ShowCard {
     ...row,
     maxTick: routine.maxTick ?? "10m",
     reasoningEffort: routine.reasoningEffort ?? "xhigh",
+    model: routine.model || null,
+    provider: routine.provider || null,
     mcp: usesMcp(routine.mcpUrl) ? "yes" : "none",
     folder: routine.dir,
     jobId: routine.jobId ?? null,
@@ -169,6 +183,8 @@ function printCard(card: ShowCard): void {
     ["interval", card.interval],
     ["max tick", card.maxTick],
     ["reasoning", card.reasoningEffort],
+    ["model", card.model ?? "—"],
+    ["provider", card.provider ?? "—"],
     ["mcp", card.mcp],
     ["last run", card.lastRun ?? "—"],
     ["folder", card.folder],
@@ -250,6 +266,9 @@ export const harnessNew = defineCommand({
     "skills-refer": { type: "string", description: "Comma-separated skill directories to refer to" },
     interval: { type: "string", description: "Schedule interval (default 1h)" },
     "max-tick": { type: "string", description: "Max tick (default 10m)" },
+    model: { type: "string", description: "Hermes model id (omit or none = Hermes default)" },
+    provider: { type: "string", description: "Hermes provider paired with --model" },
+    "reasoning-effort": { type: "string", description: "Hermes reasoning level (default xhigh)" },
     accept: { type: "boolean", description: "Accept the printed one-pass command and write the folder", default: false },
     "run-one-pass": { type: "boolean", description: "Run the one-pass command when Hermes is present", default: false },
     yes: { type: "boolean", description: "Write without prompting (agents)", default: false, alias: "y" },
@@ -298,6 +317,12 @@ export const harnessNew = defineCommand({
       mcpUrl,
       interval: typeof args.interval === "string" ? args.interval : undefined,
       maxTick: typeof args["max-tick"] === "string" ? args["max-tick"] : undefined,
+      model: optionalPin(args.model),
+      provider: optionalPin(args.provider),
+      reasoningEffort:
+        typeof args["reasoning-effort"] === "string" && args["reasoning-effort"].trim()
+          ? args["reasoning-effort"].trim()
+          : undefined,
     };
     const cmd = onePassCommand(draft);
     ui.blank();
@@ -738,7 +763,7 @@ export const harnessShow = defineCommand({
     description: [
       "Show one routine card",
       "",
-      "Prints slug, state, interval, max tick, reasoning, MCP, last run, and folder.",
+      "Prints slug, state, interval, max tick, reasoning, model, provider, MCP, last run, and folder.",
       "Hex job id only in --json. Use open to read files.",
     ].join("\n"),
   },
@@ -905,6 +930,41 @@ export const harnessRm = defineCommand({
     const slug = await pickSlug(args.slug, "rm", " --yes");
     if (!slug) return;
     await runRm(slug, args);
+  },
+});
+
+export const harnessModels = defineCommand({
+  meta: {
+    name: "models",
+    description: [
+      "List Hermes models, providers, and reasoning levels",
+      "",
+      "Reads ~/.hermes (or HERMES_HOME). Does not call a live API.",
+      "Run hermes model once if the provider list is missing.",
+      "Pick from this list in the grill, or edit routine.yml and apply.",
+    ].join("\n"),
+  },
+  args: {
+    format: { type: "string", description: "Output format: table | json", default: "table" },
+    json: { type: "boolean", description: "Alias for --format json", default: false },
+    ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
+  },
+  async run({ args }) {
+    const mode = resolveOutputMode(args);
+    const cat = readHermesCatalog(homedir());
+    if (mode.format === "json") {
+      outJson(cat);
+      await exit(0);
+      return;
+    }
+    ui.blank();
+    ui.heading("dora harness models");
+    ui.blank();
+    for (const line of formatHermesCatalog(cat)) ui.info(`  ${line}`);
+    ui.blank();
+    nextAction("dora harness new");
+    ui.blank();
+    await exit(0);
   },
 });
 

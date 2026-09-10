@@ -1,4 +1,6 @@
-import { spawnSync } from "bun";
+import { spawnSync, YAML } from "bun";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import { usesMcp, type Routine } from "./routine.js";
 
 export const MCP_SERVER = "scalekit";
@@ -29,12 +31,23 @@ function hermesPrompt(prompt: string, slug: string): string {
   return `${prompt.trim()}\n\nHuman-visible messages end with: Sent by pocket agent ${slug}`;
 }
 
+type Inference = Partial<Pick<Routine, "model" | "provider" | "reasoningEffort">>;
+
+function pushPin(args: string[], routine: Inference, modelFlag: string, empty: boolean): void {
+  if (empty ? routine.model !== undefined : Boolean(routine.model)) {
+    args.push(modelFlag, routine.model ?? "");
+  }
+  if (empty ? routine.provider !== undefined : Boolean(routine.provider)) {
+    args.push("--provider", routine.provider ?? "");
+  }
+}
+
 export function onePassArgs(
   routine: Pick<Routine, "prompt" | "slug"> &
-    Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl" | "reasoningEffort">>,
+    Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl">> &
+    Inference,
 ): string[] {
   const args = ["chat"];
-  if (usesMcp(routine.mcpUrl ?? "")) args.push("--toolsets", `mcp-${MCP_SERVER}`);
   args.push(
     "--oneshot",
     "--run-budget",
@@ -42,6 +55,7 @@ export function onePassArgs(
     "--reasoning",
     routine.reasoningEffort ?? "xhigh",
   );
+  pushPin(args, routine, "-m", false);
   for (const skill of routine.skillsRun ?? []) {
     args.push("--skills", skill);
   }
@@ -50,7 +64,7 @@ export function onePassArgs(
 }
 
 export function onePassCommand(
-  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun" | "reasoningEffort">>,
+  routine: Pick<Routine, "prompt" | "slug"> & Partial<Pick<Routine, "maxTick" | "skillsRun">> & Inference,
 ): string {
   const args = onePassArgs(routine);
   return ["hermes", ...args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))].join(" ");
@@ -79,6 +93,7 @@ export function bootArgs(routine: Routine): string[][] {
     "--reasoning-effort",
     routine.reasoningEffort ?? "xhigh",
   ];
+  pushPin(create, routine, "--model", false);
   for (const skill of routine.skillsRun) {
     create.push("--skill", skill);
   }
@@ -109,6 +124,7 @@ export function editArgs(routine: Routine, jobId: string): string[] {
     "--reasoning-effort",
     routine.reasoningEffort ?? "xhigh",
   ];
+  pushPin(args, routine, "--model", true);
   if (routine.skillsRun.length === 0) args.push("--clear-skills");
   else for (const skill of routine.skillsRun) args.push("--skill", skill);
   return args;
@@ -172,4 +188,91 @@ export function listCronJobs(run: HermesRun = defaultHermesRun): CronJob[] | nul
   const r = run(["cron", "list"]);
   if (r.exitCode !== 0) return null;
   return parseCronList(r.stdout);
+}
+
+export const HERMES_REASONING = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"] as const;
+
+export type HermesProviderModels = { name: string; models: string[] };
+
+export type HermesCatalog = {
+  defaultModel: string;
+  defaultProvider: string;
+  reasoning: readonly string[];
+  providers: HermesProviderModels[];
+};
+
+export function hermesDir(home: string): string {
+  const env = process.env.HERMES_HOME?.trim();
+  return env || join(home, ".hermes");
+}
+
+export function parseProviderModelsCache(raw: unknown): HermesProviderModels[] {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+  const out: HermesProviderModels[] = [];
+  for (const [name, rec] of Object.entries(raw as Record<string, unknown>)) {
+    if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
+    const models = (rec as { models?: unknown }).models;
+    if (!Array.isArray(models)) continue;
+    out.push({
+      name,
+      models: models.filter((m): m is string => typeof m === "string" && Boolean(m.trim())),
+    });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function parseHermesModelConfig(raw: unknown): { defaultModel: string; defaultProvider: string } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { defaultModel: "", defaultProvider: "" };
+  const model = (raw as { model?: unknown }).model;
+  if (typeof model === "string") return { defaultModel: model.trim(), defaultProvider: "" };
+  if (!model || typeof model !== "object" || Array.isArray(model)) return { defaultModel: "", defaultProvider: "" };
+  const rec = model as Record<string, unknown>;
+  return {
+    defaultModel: typeof rec.default === "string" ? rec.default.trim() : "",
+    defaultProvider: typeof rec.provider === "string" ? rec.provider.trim() : "",
+  };
+}
+
+export function readHermesCatalog(home: string): HermesCatalog {
+  const dir = hermesDir(home);
+  let defaultModel = "";
+  let defaultProvider = "";
+  let providers: HermesProviderModels[] = [];
+  const cfgPath = join(dir, "config.yaml");
+  if (existsSync(cfgPath)) {
+    try {
+      const parsed = parseHermesModelConfig(YAML.parse(readFileSync(cfgPath, "utf8")));
+      defaultModel = parsed.defaultModel;
+      defaultProvider = parsed.defaultProvider;
+    } catch {
+      // unreadable config stays empty
+    }
+  }
+  const cachePath = join(dir, "provider_models_cache.json");
+  if (existsSync(cachePath)) {
+    try {
+      providers = parseProviderModelsCache(JSON.parse(readFileSync(cachePath, "utf8")));
+    } catch {
+      // unreadable cache stays empty
+    }
+  }
+  return { defaultModel, defaultProvider, reasoning: HERMES_REASONING, providers };
+}
+
+export function formatHermesCatalog(cat: HermesCatalog): string[] {
+  const lines = [
+    `default     ${cat.defaultModel || "—"}`,
+    `provider    ${cat.defaultProvider || "—"}`,
+    `reasoning   ${cat.reasoning.join(", ")}`,
+  ];
+  if (cat.providers.length === 0) {
+    lines.push("", "No provider list on disk. Run hermes model once, then retry.");
+    return lines;
+  }
+  lines.push("");
+  for (const p of cat.providers) {
+    lines.push(p.name);
+    for (const m of p.models) lines.push(`  ${m}`);
+  }
+  return lines;
 }

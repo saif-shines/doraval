@@ -20,6 +20,8 @@ export type RoutineInput = {
   interval?: string;
   maxTick?: string;
   reasoningEffort?: string;
+  model?: string;
+  provider?: string;
 };
 
 const KIT_REPOS: Record<string, string> = {
@@ -139,6 +141,8 @@ function writeRoutineYml(
     interval?: string;
     maxTick?: string;
     reasoningEffort?: string;
+    model?: string;
+    provider?: string;
     jobId?: string;
   },
 ): void {
@@ -150,6 +154,8 @@ function writeRoutineYml(
     `max_tick: ${yamlScalar(r.maxTick ?? DEFAULT_MAX_TICK)}`,
     `reasoning_effort: ${yamlScalar(r.reasoningEffort ?? DEFAULT_REASONING_EFFORT)}`,
   );
+  if (r.model !== undefined) lines.push(`model: ${yamlScalar(r.model)}`);
+  if (r.provider !== undefined) lines.push(`provider: ${yamlScalar(r.provider)}`);
   if (r.jobId) lines.push(`job_id: ${yamlScalar(r.jobId)}`);
   lines.push("");
   writeFileSync(join(dir, "routine.yml"), lines.join("\n"));
@@ -304,6 +310,8 @@ export function writeRoutine(home: string, input: RoutineInput, opts: WriteRouti
       interval: input.interval,
       maxTick: input.maxTick,
       reasoningEffort: input.reasoningEffort,
+      model: input.model,
+      provider: input.provider,
     });
     return dir;
   } catch (e) {
@@ -397,6 +405,8 @@ export function readRoutine(home: string, slug: string): Routine {
     interval: String(data.interval ?? DEFAULT_INTERVAL),
     maxTick: String(data.max_tick ?? DEFAULT_MAX_TICK),
     reasoningEffort: String(data.reasoning_effort ?? DEFAULT_REASONING_EFFORT),
+    model: typeof data.model === "string" ? data.model.trim() : undefined,
+    provider: typeof data.provider === "string" ? data.provider.trim() : undefined,
     jobId: typeof data.job_id === "string" && data.job_id ? data.job_id : undefined,
   };
 }

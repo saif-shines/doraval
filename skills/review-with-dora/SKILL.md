@@ -70,7 +70,7 @@ Flags: `dora <command> --help`.
 - Durable rule → `dora memory add "<rule>" --weight <1-10>` (`≥ 7` is hard). Promote only when the user asks.
 - Conflict Finding → `dora conflicts --dry-run`, then ask the user.
 - Unused Authored Skill → `dora skill unused`, then `dora skill remove <name> --dry-run`. Home: `dora skill unused --global`.
-- Recurring use case → `dora harness new` (starts `ask-dora` / `grilling-for-routine`). Then `dora harness apply <slug>`. `dora harness boot <slug>` is the apply alias. Then `hermes mcp login scalekit`. Runtime watch after apply, boot, list, pause, and resume. Also `dora harness show <slug>`, `dora harness logs <slug>`, `dora harness rm <slug> --yes`, `dora harness pause`, `dora harness resume`, `dora harness list`, `dora harness open`.
+- Recurring use case → `dora harness new` (starts `ask-dora` / `grilling-for-routine`). Then `dora harness apply <slug>`. `dora harness boot <slug>` is the apply alias. Then `hermes mcp login scalekit`. Runtime watch after apply, boot, list, pause, and resume. Also `dora harness show <slug>`, `dora harness models`, `dora harness logs <slug>`, `dora harness rm <slug> --yes`, `dora harness pause`, `dora harness resume`, `dora harness list`, `dora harness open`.
 - Workspace map → `dora scan --yes`.
 - Prove doraval.dev → `dora config set identity.api_key <token> --yes`, then `dora probe --yes`. Never echo the token.
 

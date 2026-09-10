@@ -63,6 +63,7 @@ dora harness new             # start ask-dora / grilling-for-routine; optional F
 dora harness apply <slug>    # refresh copies, stamp footer, push; Runtime watch
 dora harness boot <slug>     # alias of apply
 dora harness show <slug>     # one card
+dora harness models          # Hermes models, providers, reasoning levels
 dora harness logs <slug>     # that job's run history
 dora harness pause <slug>    # Runtime watch
 dora harness resume <slug>   # Runtime watch

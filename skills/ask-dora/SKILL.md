@@ -18,7 +18,7 @@ Print this map. Then stop.
 Dora jobs: review, fix, unused, scan. Load review-with-dora.
 Routine flow: a routine, a loop, recurring, a routine idea, a pocket job, or harness new.
   Load grilling-for-routine. Night prompt: writing-for-routine.
-After a routine exists: dora harness apply, show, logs, rm, pause, resume, list, open. boot is the apply alias.
+After a routine exists: dora harness apply, show, logs, models, rm, pause, resume, list, open. boot is the apply alias.
 After a skillkit or authstack merge: dora harness apply <slug> --yes. A tick does not refresh.
 If Hermes is missing: print official install steps. Dora does not install Hermes.
 If a Scalekit AgentKit skill is missing: install scalekit-inc/authstack, then reload skills.
@@ -27,7 +27,8 @@ If a Scalekit AgentKit skill is missing: install scalekit-inc/authstack, then re
 ## Route
 
 1. Read the ask.
-2. If a routine already exists and the ask is apply, boot, show, logs, rm, pause, resume, list, open, or watch: name that `dora harness` verb. Do not load the grill.
+2. If a routine already exists and the ask is apply, boot, show, logs, models, rm, pause, resume, list, open, or watch: name that `dora harness` verb. Do not load the grill.
+   If the ask is change the model, provider, or reasoning: run `dora harness models`, edit `routine.yml`, then `dora harness apply <slug>`. Do not re-run the grill.
    If a skillkit or authstack merge just landed, or the ask is refresh pocket skills: name `dora harness apply <slug> --yes`. Do not name `claude plugin marketplace update`.
 3. If it is a routine, a loop, recurring, a routine idea, a pocket job, or `dora harness new`: load `grilling-for-routine`. Done: that skill is loaded.
 4. If it is a Dora job (review, fix, unused, scan): load `review-with-dora`. Done: that skill is loaded.

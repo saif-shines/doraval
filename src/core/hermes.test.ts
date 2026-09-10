@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { bootArgs, editArgs, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCreatedJobId, parseCronList, pauseArgs, removeArgs, resumeArgs, runsArgs, watchCommands } from "./hermes.js";
+import { bootArgs, editArgs, formatHermesCatalog, hermesSchedule, hermesTimeoutSec, onePassCommand, parseCreatedJobId, parseCronList, parseHermesModelConfig, parseProviderModelsCache, pauseArgs, removeArgs, resumeArgs, runsArgs, watchCommands } from "./hermes.js";
 import type { Routine } from "./routine.js";
 
 const routine: Routine = {
@@ -74,6 +74,41 @@ describe("hermes command builders", () => {
     expect(onePassCommand(low)).toContain("--reasoning low");
   });
 
+  test("create, edit, and one-pass pin model and provider when set", () => {
+    const pinned = { ...routine, model: "claude-sonnet-4", provider: "anthropic" };
+    expect(bootArgs(pinned).at(-1)).toEqual(expect.arrayContaining(["--model", "claude-sonnet-4", "--provider", "anthropic"]));
+    expect(editArgs(pinned, "abcdef123456")).toEqual(
+      expect.arrayContaining(["--model", "claude-sonnet-4", "--provider", "anthropic"]),
+    );
+    expect(onePassCommand(pinned)).toContain("-m claude-sonnet-4");
+    expect(onePassCommand(pinned)).toContain("--provider anthropic");
+    expect(JSON.stringify(bootArgs(routine))).not.toContain("--model");
+    expect(editArgs({ ...routine, model: "", provider: "" }, "abcdef123456")).toEqual(
+      expect.arrayContaining(["--model", "", "--provider", ""]),
+    );
+  });
+
+  test("catalog parse reads Hermes cache and config shapes", () => {
+    const providers = parseProviderModelsCache({
+      "xai-oauth": { models: ["grok-4.6", "grok-4.5"] },
+      anthropic: { models: ["claude-sonnet-4"] },
+    });
+    expect(providers.map((p) => p.name)).toEqual(["anthropic", "xai-oauth"]);
+    expect(parseHermesModelConfig({ model: { default: "grok-4.6", provider: "xai-oauth" } })).toEqual({
+      defaultModel: "grok-4.6",
+      defaultProvider: "xai-oauth",
+    });
+    const lines = formatHermesCatalog({
+      defaultModel: "grok-4.6",
+      defaultProvider: "xai-oauth",
+      reasoning: ["xhigh"],
+      providers,
+    });
+    expect(lines[0]).toContain("grok-4.6");
+    expect(lines.join("\n")).toContain("anthropic");
+    expect(lines.join("\n")).toContain("claude-sonnet-4");
+  });
+
   test("parseCreatedJobId reads the hex id from create output", () => {
     expect(parseCreatedJobId("Created job: fedcba654321\n  Schedule: every 1h\n")).toBe("fedcba654321");
     expect(parseCreatedJobId("nope")).toBeUndefined();
@@ -81,7 +116,8 @@ describe("hermes command builders", () => {
 
   test("one-pass command uses the MCP toolset, skills, and run-budget", () => {
     const cmd = onePassCommand(routine);
-    expect(cmd).toContain("hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 --reasoning xhigh");
+    expect(cmd).toContain("hermes chat --oneshot --run-budget 600 --reasoning xhigh");
+    expect(cmd).not.toContain("--toolsets");
     expect(cmd).toContain("--skills /skills/run");
     expect(cmd).toContain("-q");
     expect(cmd).toContain(JSON.stringify("Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass"));

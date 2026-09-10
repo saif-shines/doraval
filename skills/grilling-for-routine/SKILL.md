@@ -3,7 +3,8 @@ name: grilling-for-routine
 description: >-
   Use when ask-dora routes a routine idea, when running dora harness new,
   or when grilling a loop-able idea into a routine. Collect skills to run,
-  skills to refer to, and the Scalekit Agent Gateway MCP URL. After one
+  skills to refer to, the Scalekit Agent Gateway MCP URL, and a Hermes
+  model, provider, and reasoning level from `dora harness models`. After one
   good one-pass, may freeze a deterministic step as a Fixed step.
 ---
 
@@ -74,7 +75,7 @@ An interval job cannot do a push, a webhook, or a human in the loop every run. S
 
 ## Gate
 
-Collect all three before you write the unattended prompt:
+Collect all six before you write the unattended prompt:
 
 1. Skills to **run** (optional extra SKILL.md folders the night pass loads).
    Say **none** if no extra Skill is needed.
@@ -83,6 +84,12 @@ Collect all three before you write the unattended prompt:
 3. Scalekit Agent Gateway **MCP URL**.
    Most jobs need this. Say **none** if the job is a Skill script plus local creds only.
    Slack, GitHub, and other MCP connectors live here. A connector is not a skill.
+4. Hermes **model**.
+   Run `dora harness models` first. Offer that list. Do not invent a catalog.
+   Say **none** to follow the Hermes default printed there.
+5. Hermes **provider** paired with that model.
+   Pick it from the same list. Say **none** when the model is none.
+6. **Reasoning** level from that same list (default `xhigh`).
 
 A default shared MCP URL may already be saved. Reuse it. Ask before you override it for this routine.
 `--mcp-url none` writes a routine with no Agent Gateway.
@@ -116,7 +123,7 @@ Offer `dora review --quick` on each copy. The teammate can skip.
 
 1. Run the loop-able check.
 2. Run the pocket check. Ask until the night prompt is one specific job.
-3. Collect the gate. Offer a readable slug. The teammate picks or renames it.
+3. Collect the gate. Run `dora harness models`. Offer a readable slug. The teammate picks or renames it.
 4. If MCP is not none: run the connector check. If MCP is none: skip it.
 5. Load `writing-for-routine`. Write `prompt.md`.
 6. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass. The one-pass does not author files.
@@ -131,6 +138,7 @@ Offer `dora review --quick` on each copy. The teammate can skip.
    After the add, the teammate runs `hermes mcp login scalekit` in a real terminal.
    Done-when: login is the next line only after apply, boot, or that add.
    After save: `dora harness show <slug>`, `dora harness logs <slug>` for that job's runs, `dora harness rm <slug> --yes` to stop the job and delete the folder.
+   To change model, provider, or reasoning later: edit those fields in `routine.yml`, then `dora harness apply <slug>`. Run `dora harness models` if the teammate forgot the ids. Do not re-run the grill.
    Dora prints Runtime watch commands after apply, boot, list, pause, and resume.
    Dora does not run login. The grill does not edit `~/.hermes/config.yaml`. Apply may add the pocket-footer hook there.
    If a refresh token dies, run that login again. If the Scalekit connected account is dead, open the provider link again.
@@ -138,7 +146,7 @@ Offer `dora review --quick` on each copy. The teammate can skip.
 Do not ask for the loop interval during this grill. Default is 1 hour. Ask after a good run.
 
 ```bash
-dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --skills-run <name|path|url> --skills-refer <name|path|url>
+dora harness new --accept --yes --slug <slug> --prompt-file <prompt.md> --mcp-url <url> --model <id> --provider <name> --reasoning-effort <level> --skills-run <name|path|url> --skills-refer <name|path|url>
 ```
 
 MUST run the loop-able check first.
@@ -154,8 +162,12 @@ MUST add a new Skill only before the first save, in a temp folder.
 MUST update only `prompt.md` and the Skill copy after save.
 MUST NOT use Hermes `--script` or `--no-agent` as the freeze path.
 MUST collect the gate before save.
+MUST run `dora harness models` before asking for model, provider, or reasoning.
+MUST offer that list. MUST NOT invent a model catalog.
 MUST accept none for skills to run and skills to refer.
-MUST accept none for MCP URL.
+MUST accept none for MCP URL, model, and provider.
+MUST pass --model, --provider, and --reasoning-effort on accept when the teammate picked them.
+MUST tell the teammate to edit routine.yml and apply to change model, provider, or reasoning later.
 MUST skip Hermes MCP login when MCP is none.
 MUST NOT copy `.env` or secrets from the original skill.
 MUST tell the teammate to put secrets in the routine folder when MCP is none.

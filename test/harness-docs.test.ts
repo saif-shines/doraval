@@ -3,7 +3,7 @@ import { join } from "path";
 import { describe, expect, test } from "bun:test";
 import { repoRoot, runDoraval } from "./helpers/spawn-cli.js";
 
-const VERBS = ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "rm", "open"] as const;
+const VERBS = ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "models", "rm", "open"] as const;
 const EXISTING = ["apply", "show", "logs", "rm"] as const;
 const FAMILY = ["ask-dora", "review-with-dora", "grilling-for-routine", "writing-for-routine"] as const;
 

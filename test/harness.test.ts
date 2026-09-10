@@ -21,7 +21,7 @@ describe("dora harness", () => {
     const { exitCode, stdout, stderr } = runDoraval(["harness", "--help"]);
     const out = stdout + stderr;
     expect(exitCode).toBe(0);
-    for (const verb of ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "rm", "open"]) {
+    for (const verb of ["new", "apply", "boot", "pause", "resume", "list", "show", "logs", "models", "rm", "open"]) {
       expect(out).toContain(verb);
     }
   });
@@ -68,6 +68,40 @@ describe("dora harness", () => {
     expect(out).toMatch(/none/);
     expect(out).toContain("1h");
     expect(out).toContain("dora harness show");
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("dora harness models lists Hermes defaults and providers from disk", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-models-"));
+    mkdirSync(join(home, ".hermes"), { recursive: true });
+    writeFileSync(
+      join(home, ".hermes", "config.yaml"),
+      "model:\n  default: grok-4.6\n  provider: xai-oauth\n",
+    );
+    writeFileSync(
+      join(home, ".hermes", "provider_models_cache.json"),
+      JSON.stringify({
+        "xai-oauth": { models: ["grok-4.6"] },
+        anthropic: { models: ["claude-sonnet-4"] },
+      }),
+    );
+    const { exitCode, stdout } = runDoraval(["harness", "models", "--json"], {
+      env: { HOME: home, PATH: pathWithoutHermes() },
+    });
+    expect(exitCode).toBe(0);
+    const cat = JSON.parse(stdout) as {
+      defaultModel: string;
+      defaultProvider: string;
+      reasoning: string[];
+      providers: { name: string; models: string[] }[];
+    };
+    expect(cat.defaultModel).toBe("grok-4.6");
+    expect(cat.defaultProvider).toBe("xai-oauth");
+    expect(cat.reasoning).toContain("xhigh");
+    expect(cat.providers).toEqual([
+      { name: "anthropic", models: ["claude-sonnet-4"] },
+      { name: "xai-oauth", models: ["grok-4.6"] },
+    ]);
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -214,7 +248,8 @@ describe("dora harness", () => {
     const out = stdout + stderr;
     expect(exitCode).toBe(0);
     expect(out).toContain("https://hermes-agent.nousresearch.com/install.sh");
-    expect(out).toContain("hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600");
+    expect(out).toContain("hermes chat --oneshot --run-budget 600");
+    expect(out).not.toContain("--toolsets");
     expect(out.toLowerCase()).not.toMatch(/test run (passed|succeeded)|faked/);
     expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
     expect(readFileSync(join(home, ".dora", "default-mcp-url"), "utf8").trim()).toBe("https://gw.example/mcp");
@@ -700,6 +735,8 @@ describe("dora harness", () => {
     expect(blob).toContain("dora harness resume <slug> --json");
     expect(blob).toContain("dora harness logs <slug>");
     expect(blob).toContain("dora harness logs <slug> --json");
+    expect(blob).toContain("dora harness models");
+    expect(blob).toContain("dora harness models --json");
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
   });

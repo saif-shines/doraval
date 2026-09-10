@@ -41,10 +41,18 @@ Most jobs need a Scalekit Agent Gateway MCP URL. Pass `--mcp-url none` when the 
 The printed one-pass command looks like this:
 
 ```bash
-hermes chat --toolsets mcp-scalekit --oneshot --run-budget 600 -q "…"
+hermes chat --oneshot --run-budget 600 --reasoning xhigh -q "…"
 ```
 
-`--run-budget` is the one-pass time limit (default 10 minutes). Skills to run are passed as `--skills`. Dora refuses to overwrite an existing slug.
+`--run-budget` is the one-pass time limit (default 10 minutes). Skills to run are passed as `--skills`. A pinned model adds `-m` and `--provider`. Dora refuses to overwrite an existing slug.
+
+List what this machine can run:
+
+```bash
+dora harness models
+```
+
+That command reads `~/.hermes`. It does not invent a catalog. The grill asks for model, provider, and reasoning from that list. Say **none** to follow the Hermes default. Pass `--model`, `--provider`, and `--reasoning-effort` on `--accept`.
 
 Dora appends a pocket-agent footer to the prompt Hermes runs. Human-visible messages end with `Sent by pocket agent <slug>`. `prompt.md` does not contain that line.
 
@@ -131,11 +139,15 @@ Close the laptop and the Mac sleeps. Jobs do not run while the Mac sleeps. That 
 | How often it runs | every 1 hour |
 | One-pass time limit | 10 minutes |
 | Reasoning effort | xhigh |
+| Model | Hermes default (`model.default`) |
+| Provider | Hermes default (`model.provider`) |
 | Night stop if the job sits idle | 10 minutes (Hermes default) |
 
 You can change the interval and the one-pass limit per routine. A busy night job can keep going past 10 minutes if it is still working.
 
 `apply` and `boot` pin `reasoning_effort` from `routine.yml` onto the Runtime job. Default is `xhigh`. Edit that field, then apply again, to change it. A missing field still pins `xhigh`, so an old folder does not fall back to medium.
+
+`apply` and `boot` also pin `model` and `provider` when those fields are set. An empty `model` on apply clears the Hermes pin. A missing field leaves the Hermes job as it is. To change the pin later: run `dora harness models`, edit `routine.yml`, then apply again.
 
 ## Common mistakes
 
@@ -146,6 +158,7 @@ You can change the interval and the one-pass limit per routine. A busy night job
 - Using Hermes `--script` as the freeze path. A Skill script is local work inside the Skill.
 - Putting a `scripts/` folder next to `prompt.md`.
 - Expecting a chat app in the harness. Connectors live on a use case, not in this group.
+- Guessing a model id. Run `dora harness models` first.
 
 ## Related
 

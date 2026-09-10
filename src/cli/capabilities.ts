@@ -132,7 +132,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora plugin new --for claude --yes",
         "dora plugin bump",
       ], COMMON_FLAGS),
-      cmd("harness", "writes", "List routines; new, apply, pause, resume, show, logs, rm, open.", [
+      cmd("harness", "writes", "List routines; new, apply, pause, resume, show, logs, models, rm, open.", [
         "dora harness",
         "dora harness list",
         "dora harness list --json",
@@ -140,6 +140,8 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora harness show <slug> --json",
         "dora harness logs <slug>",
         "dora harness logs <slug> --json",
+        "dora harness models",
+        "dora harness models --json",
         "dora harness new",
         "dora harness apply <slug> --yes",
         "dora harness apply <slug> --dry-run",
@@ -162,6 +164,9 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--dry-run": { description: "Print the Runtime commands, write nothing" },
         "--keep-copies": { description: "Do not refresh copied skills from origin" },
         "--from": { description: "Backfill origin and refresh skills that have none" },
+        "--model": { description: "Hermes model id for this routine (omit or none = Hermes default)" },
+        "--provider": { description: "Hermes provider paired with --model" },
+        "--reasoning-effort": { description: "Hermes reasoning level (default xhigh)" },
       }),
       cmd("update", "writes", "Update doraval to the latest version.", ["dora update"]),
       cmd("probe", "writes", "Send hello to doraval.dev and wait for ack.", [

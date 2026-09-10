@@ -111,6 +111,29 @@ describe("writeRoutine", () => {
       ].join("\n"),
     );
     expect(readRoutine(home, "old-yaml").reasoningEffort).toBe("xhigh");
+    expect(readRoutine(home, "old-yaml").model).toBeUndefined();
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("writes and reads a Hermes model pin", () => {
+    const home = tmpHome();
+    writeRoutine(home, {
+      slug: "pinned",
+      prompt: "Ping.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+      model: "claude-sonnet-4",
+      provider: "anthropic",
+      reasoningEffort: "high",
+    });
+    const yaml = readFileSync(join(home, ".dora", "harness", "pinned", "routine.yml"), "utf8");
+    expect(yaml).toContain('model: "claude-sonnet-4"');
+    expect(yaml).toContain('provider: "anthropic"');
+    const r = readRoutine(home, "pinned");
+    expect(r.model).toBe("claude-sonnet-4");
+    expect(r.provider).toBe("anthropic");
+    expect(r.reasoningEffort).toBe("high");
     rmSync(home, { recursive: true, force: true });
   });
 
@@ -166,6 +189,8 @@ describe("readRoutine", () => {
     expect(r.interval).toBe("1h");
     expect(r.maxTick).toBe("10m");
     expect(r.reasoningEffort).toBe("xhigh");
+    expect(r.model).toBeUndefined();
+    expect(r.provider).toBeUndefined();
     expect(r.jobId).toBeUndefined();
     rmSync(home, { recursive: true, force: true });
   });

@@ -4,6 +4,11 @@
 
 ### Features
 
+- `dora harness models` lists Hermes models, providers, and
+  reasoning levels from `~/.hermes`. The grill asks once from
+  that list. `routine.yml` can pin `model` and `provider`.
+  `apply`, `boot`, and one-pass pass those flags. Change later
+  by editing the folder and applying again.
 - `dora harness` writes `reasoning_effort: xhigh` in `routine.yml`.
   `apply`, `boot`, and one-pass pin that level on the Runtime job
   so a tick does not fall back to medium. `show` prints the field.

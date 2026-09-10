@@ -28,7 +28,8 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora harness new` | Start `ask-dora` / `grilling-for-routine`. `--accept --yes` writes the folder after the printed one-pass command. Run appends `Sent by pocket agent <slug>`. Night prompt may use a run handoff when the destination cannot tell. |
 | `dora harness apply <slug>` | Push the folder onto the Runtime job. First apply creates. Later apply edits. Fetches kit origins (GitHub `main`) unless `--keep-copies`. A local origin is disk only. `--from` backfills a routine with no origin. Installs a Hermes hook that stamps `Sent by pocket agent <slug>` on GitHub reviews and Slack posts. Detected agents need `--yes` or `--dry-run`. |
 | `dora harness boot <slug>` | Alias of apply. Then run `hermes mcp login scalekit`. Dora prints Runtime watch commands: `hermes cron list`, `hermes cron runs`, `hermes logs`, `hermes dashboard`. Dora exits. |
-| `dora harness show <slug>` | One card: slug, state, interval, max tick, reasoning, MCP, last run, folder. Hex id only in `--json`. |
+| `dora harness show <slug>` | One card: slug, state, interval, max tick, reasoning, model, provider, MCP, last run, folder. Hex id only in `--json`. |
+| `dora harness models` | Hermes models, providers, and reasoning levels from `~/.hermes`. Use this list in the grill, or before you edit `routine.yml`. |
 | `dora harness logs <slug>` | That job's Runtime run history. Not the global agent log. |
 | `dora harness pause <slug>` | Pause that job only. Gateway stays up. Dora prints Runtime watch commands. |
 | `dora harness resume <slug>` | Start later runs again. Dora prints Runtime watch commands. |

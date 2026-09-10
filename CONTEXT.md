@@ -225,6 +225,7 @@ _Avoid_: calling a login a Session; treating “dora is installed” as Connecte
 | **Loop** | The same unattended prompt on an interval. The Runtime's timer. Default 1 hour. |
 | **Run** | One unattended pass of a Loop. The Runtime starts it on the interval. Not the one-pass test. _Avoid_: tick; night tick as a second object. |
 | **Runtime** | The background agent that runs a Loop. Today that agent is Hermes. Dora prints that Runtime's watch commands. _Avoid_: calling Hermes the product; a second Runtime in this pass. |
+| **Model pin** | Optional `model` + `provider` on the Routine. Dora lists what Hermes already has (`dora harness models`). Apply passes `--model` / `--provider`. Missing field = leave Hermes as-is. Empty `model` on apply clears the pin. _Avoid_: a second Runtime; a Dora-owned model catalog. |
 | **Max run** | One-pass wall clock via the Runtime. Default 10 minutes. Night idle cap is the Runtime's idle timeout (Hermes: `HERMES_CRON_TIMEOUT`, default 600s). Flag is still `--max-tick`. |
 | **Harness** | Verbs: `new`, `apply`, `pause`, `resume`, `list`, `show`, `logs`, `open`, `rm`. `boot` is an alias of `apply`. |
 | **Apply** | Push the Routine folder onto the Runtime job. Create or edit. _Avoid_: set; sync; upsert as a user word. |
