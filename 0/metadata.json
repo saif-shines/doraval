@@ -1,0 +1,117 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2582TGNTGGEMBBZ07C7VRDH",
+  "session_id": "01a089d2-1799-7850-8d2d-0eddc85ee244",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-10T08:48:53.436872Z",
+  "branch": "main",
+  "checkpoints_count": 7,
+  "save_step_count": 7,
+  "files_touched": [
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "README.md",
+    "apps/website/content/commands/harness.mdx",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/get-started/pocket-agents.mdx",
+    "skills/ask-dora/SKILL.md",
+    "skills/grilling-for-routine/SKILL.md",
+    "skills/review-with-dora/SKILL.md",
+    "skills/review-with-dora/references/commands.md",
+    "src/cli/capabilities.ts",
+    "src/cli/command-tree.ts",
+    "src/cli/commands/harness.ts",
+    "src/cli/root-help.ts",
+    "src/core/hermes.test.ts",
+    "src/core/hermes.ts",
+    "src/core/routine.test.ts",
+    "src/core/routine.ts",
+    "test/harness-docs.test.ts",
+    "test/harness.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "1508c3a28b9d",
+  "session_metrics": {
+    "turn_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-10T08:48:53.334955Z",
+    "agent_lines": 333,
+    "agent_removed": 23,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 3,
+    "total_committed": 333,
+    "total_lines_changed": 359,
+    "agent_percentage": 99.16434540389972,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 4,
+      "user_lines_removed": 3,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "src/core/hermes.test.ts": 2,
+        "test/harness.test.ts": 2
+      },
+      "user_removed_per_file": {
+        "src/core/hermes.test.ts": 1,
+        "src/core/hermes.ts": 1,
+        "test/harness.test.ts": 1
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 4,
+      "agent_lines_removed": 3
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 4,
+      "agent_lines_removed": 3
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 4,
+      "agent_lines_removed": 3
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 4,
+      "agent_lines_removed": 3
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 340,
+      "agent_lines_removed": 26
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 340,
+      "agent_lines_removed": 26
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 340,
+      "agent_lines_removed": 26
+    }
+  ]
+}

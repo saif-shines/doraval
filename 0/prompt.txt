@@ -1,0 +1,25 @@
+does dora through hermes choose the model behind the scenes; current it seems to only use grok
+
+---
+
+ideally I want to tie a pocket agent to a model for example claude opencode or anything
+
+---
+
+do a exa search something like this hsould be possible
+
+---
+
+this means model selection should it not be part of grilling? even if it is, how does a user chagne this mid way
+
+---
+
+let's use mat skill and implement this?  may times users don't remember which models area avalble to provide you the model provider and resaongin effor that is somethign dora should help with to manage hermes
+
+---
+
+ok did you inform the grok agent that may benefit form this information?
+
+---
+
+Give a short status report: is the Hermes-model-pin work (dora harness models command, grill offering that list, --model/--provider/--reasoning-effort on accept) fully implemented, tested, and committed? List exact files changed and whether tests/dora eval pass.
