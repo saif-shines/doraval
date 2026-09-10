@@ -206,6 +206,9 @@ describe("dora harness", () => {
     expect(text).toMatch(/hermes mcp add scalekit/);
     expect(text).toMatch(/MUST register scalekit with apply, boot, or `hermes mcp add` before `hermes mcp login scalekit`/);
     expect(text).toMatch(/MUST NOT edit Hermes config/);
+    expect(text).toContain("hermes config get delegation.subagent_auto_approve");
+    expect(text).toContain("hermes config set delegation.subagent_auto_approve true");
+    expect(text).toMatch(/MUST NOT run that set/);
     expect(text).not.toMatch(/You are/);
     expect(text).not.toContain("—");
     expect(text).not.toMatch(/matt|pocock|writing-for-agents/i);

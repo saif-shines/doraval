@@ -4,6 +4,12 @@
 
 ### Features
 
+- The grill checks Hermes `delegation.subagent_auto_approve`
+  when a night job needs `delegate_task`. If the key is not
+  `true`, it prints `hermes config set
+  delegation.subagent_auto_approve true` for you to run. The
+  grill does not run that set and does not write
+  `~/.hermes/config.yaml`.
 - `dora harness models` lists Hermes models, providers, and
   reasoning levels from `~/.hermes`. The grill asks once from
   that list. `routine.yml` can pin `model` and `provider`.

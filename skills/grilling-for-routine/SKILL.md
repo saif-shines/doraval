@@ -101,6 +101,28 @@ A Skill script stays inside the copied Skill. The routine has no top-level scrip
 
 If no matching skill is on disk, do not invent one. Offer **none**, a local path, or a GitHub URL. Do not treat a missing Slack or GitHub skill as a blocker.
 
+## Delegation
+
+Some night jobs need `delegate_task` (subagent fan-out, or chunked children). Hermes has no per-job override. The switch is a machine-wide key: `delegation.subagent_auto_approve`. Default is false. An unattended run then waits for a human.
+
+After `prompt.md` is written, and before the printed one-pass: if the agreed job needs `delegate_task`, run:
+
+```bash
+hermes config get delegation.subagent_auto_approve
+```
+
+If the value is already `true`, say so and continue.
+
+If the value is `false`, missing, or the get fails, print this exact command for the teammate. Do not run it. Then continue to the one-pass.
+
+```bash
+hermes config set delegation.subagent_auto_approve true
+```
+
+Say this key is machine-wide. It is not a routine field. Do not write `~/.hermes/config.yaml`. If Hermes is missing, still print that set command.
+
+Skip this check when the job does not need `delegate_task`.
+
 ## Routine copy
 
 A skill source is a name, a local path, or a GitHub URL.
@@ -126,7 +148,7 @@ Offer `dora review --quick` on each copy. The teammate can skip.
 3. Collect the gate. Run `dora harness models`. Offer a readable slug. The teammate picks or renames it.
 4. If MCP is not none: run the connector check. If MCP is none: skip it.
 5. Load `writing-for-routine`. Write `prompt.md`.
-6. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass. The one-pass does not author files.
+6. If the job needs `delegate_task`, run the Delegation check. Print the one-pass command. If Hermes is present, offer to run it. If Hermes is missing, print official install steps. Do not fake a pass. The one-pass does not author files.
 7. After one good one-pass, run the freeze check. Load `writing-for-routine` again. Update `prompt.md`. Offer a Fixed step only if the seam, the expected result, and the spec check pass. Draft that Skill in a temp folder. The human accepts. Another one-pass is allowed.
 8. Write the routine folder only after that pass, or after the teammate accepts the printed command. Save copies the skills into the routine. Then offer `dora review --quick` on each copy. The teammate can skip.
 9. After save, update only `prompt.md` and the Skill copy. Do not add a new Skill.
@@ -187,6 +209,11 @@ MUST NOT invent a registry, a slug, a connector, a connector catalog, or a loop 
 MUST print the official authstack install when `discover-connectors` or `setup-agentkit` is missing.
 MUST register scalekit with apply, boot, or `hermes mcp add` before `hermes mcp login scalekit`.
 MUST NOT run or tell login before that add.
+MUST run the Delegation check after prompt.md and before the printed one-pass when the job needs delegate_task.
+MUST run `hermes config get delegation.subagent_auto_approve` for that check.
+MUST print `hermes config set delegation.subagent_auto_approve true` when the value is not true. MUST NOT run that set.
+MUST say the key is machine-wide. MUST NOT write a routine field for it.
+MUST skip the Delegation check when the job does not need delegate_task.
 MUST NOT edit Hermes config in the grill. Apply may add the pocket-footer hook.
 MUST NOT write the folder when the idea is not loop-able.
 MUST NOT write the folder when the idea is not pocket.
