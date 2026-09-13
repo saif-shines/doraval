@@ -2,13 +2,27 @@
 
 ## Unreleased
 
+## 0.6.41
+
+### Fixes
+
+- Apply inits a git root on the routine folder if missing, and
+  attaches each skills-run name with `--skill`. Hermes
+  `skill_view` needs that git root.
+
+### Docs
+
+- Deletion test on `review-with-dora` and `ask-dora`. Side-path
+  verbs stay in `commands.md`. Harness verb list stays in the
+  Skill (lockstep).
+
+## 0.6.40
+
 ### Features
 
 - Local `skills-run` copies land in `.agents/skills` on the
   routine. One-pass trusts a staging folder and uses `--in`.
-  Apply trusts the routine folder, inits a git root if missing,
-  sets cron `--workdir`, and attaches each skills-run name with
-  `--skill`. Hermes `skill_view` needs that git root.
+  Apply trusts the routine folder and sets cron `--workdir`.
 - The grill checks Hermes `delegation.subagent_auto_approve`
   when a night job needs `delegate_task`. If the key is not
   `true`, it prints `hermes config set
