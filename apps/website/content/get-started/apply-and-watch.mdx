@@ -1,0 +1,94 @@
+---
+title: Apply and watch
+description: Push the folder onto Hermes. Log in. Watch the job. Pause is not sleep.
+sidebar:
+  label: Apply and watch
+  order: 6
+---
+
+After one good one-pass, apply the folder. Apply creates or edits the Runtime job. Then you log in. Then you watch.
+
+This page is the loop after [Run a pocket agent](/get-started/pocket-agents/). The model is [Pocket agent](/concepts/pocket-agent/).
+
+## Apply
+
+```bash
+dora harness apply <slug>
+```
+
+`dora harness boot <slug>` is the same command. First apply creates the job. Later apply edits that job.
+
+Apply also:
+
+- Trusts the routine folder and inits a git root if missing.
+- Sets cron `--workdir` and attaches each skills-run name with `--skill`.
+- Fetches kit skills from GitHub `main` unless you pass `--keep-copies`.
+- Installs the hook that stamps `Sent by pocket agent <slug>` on GitHub and Slack.
+
+A tick does not refresh. After a skillkit or authstack merge, run apply again. Pass `--keep-copies` to skip. A local origin stays on disk.
+
+Then Dora exits. You can close that terminal. Hermes keeps a background service on this Mac.
+
+## Log in
+
+Dora does not open the browser. Run this in a real terminal:
+
+```bash
+hermes mcp login scalekit
+```
+
+If a later run cannot reach Scalekit, run that login again.
+
+## Watch
+
+After `apply`, `boot`, `list`, `pause`, and `resume`, Dora prints Runtime watch commands:
+
+```bash
+hermes cron list
+hermes cron runs
+hermes logs
+hermes dashboard
+```
+
+`hermes logs` is the global Runtime agent log. For one job, use:
+
+```bash
+dora harness logs <slug>
+dora harness show <slug>
+```
+
+## Pause vs sleep
+
+```bash
+dora harness pause <slug>
+dora harness resume <slug>
+dora harness list
+```
+
+`pause` skips later runs of that routine only. Other routines keep going. A run that already started may finish. `resume` starts later runs again. `list` shows each slug as running, paused, or none.
+
+Close the laptop and the Mac sleeps. Jobs do not run while the Mac sleeps. That is not pause. Due jobs can fire on wake if the job is not paused.
+
+## Change interval or model
+
+Edit `interval`, `model`, `provider`, or `reasoning_effort` in `~/.dora/harness/<slug>/routine.yml`. Then apply again. You do not re-run the grill.
+
+```bash
+dora harness models
+```
+
+That command reads `~/.hermes`. It does not invent a catalog.
+
+To fire one pass now, say **run once**. Do not set a 1 minute interval during the grill.
+
+## Common mistakes
+
+- Applying before login.
+- Treating a quiet one-pass as a hang. Wait, or Ctrl+C and run `hermes mcp login scalekit`.
+- Using `hermes logs` for one routine. Use `dora harness logs <slug>`.
+- Treating laptop close as `dora harness pause`. Sleep stops the clock. It does not pause the job.
+- Expecting a tick to refresh kit skills. Run apply again after a merge.
+
+## Next
+
+[dora harness](/commands/harness/)

@@ -1,0 +1,68 @@
+---
+title: Pocket agent
+description: One job, one machine, one user. The folder is a Routine. The Runtime runs the Loop.
+sidebar:
+  label: Pocket agent
+  order: 3
+---
+
+A **pocket agent** is a small unattended loop: one job, one machine, one user. A chat is a session. A pocket agent is a saved loop that runs when you are not there.
+
+The saved folder is a **Routine** at `~/.dora/harness/<slug>/`. The **Runtime** runs the Loop. Today that Runtime is Hermes.
+
+## The model
+
+| Word | Meaning |
+| --- | --- |
+| Pocket agent | The product: one unattended loop |
+| Routine | The folder at `~/.dora/harness/<slug>/` |
+| Runtime | The host that runs the Loop. Today: Hermes |
+| Loop | The scheduled job on the Runtime |
+| One-pass | One test run. Not the hourly job |
+| Fixed step | Optional frozen Skill after a good one-pass |
+| Run handoff | `handoff.md` when the destination cannot tell |
+
+## What counts as pocket
+
+The job is **loop-able**: the same prompt on a timer. No human on that run.
+
+It is **pocket** when all three hold:
+
+1. One job.
+2. One machine (the Mac that runs Hermes).
+3. One user (you).
+
+It is not pocket when you babysit a chat, when many users share one job, or when the work needs a server that stays up.
+
+Default interval is 1 hour. Do not set 1 minute during the grill. Change it after a good run.
+
+## What lives in the folder
+
+| File | Job |
+| --- | --- |
+| `prompt.md` | Night steps. No secrets. No footer line. |
+| `routine.yml` | Interval, model, provider, reasoning |
+| `.env` | Secrets you add after save. Dora does not copy this. |
+
+A Run has no last chat. Prefer a search before a create. When the destination cannot tell, the night prompt reads `handoff.md` at the start and overwrites it at the end. Missing file means first Run. Dora does not write that file.
+
+Human-visible messages end with `Sent by pocket agent <slug>`. Do not put that line in `prompt.md`. Apply installs a Hermes hook that stamps it on the GitHub review and Slack post if the model skips it.
+
+A Fixed step is optional. A small loop-able job can ship with `prompt.md` only.
+
+## Lifecycle
+
+1. Grill a loop-able idea with `/ask-dora`.
+2. Run one-pass.
+3. Accept the folder.
+4. [Apply and watch](/get-started/apply-and-watch/).
+5. Log in with `hermes mcp login scalekit`. Dora does not run that login.
+
+Walkthrough: [Run a pocket agent](/get-started/pocket-agents/). CLI: [dora harness](/commands/harness/).
+
+## Related
+
+- [Run a pocket agent](/get-started/pocket-agents/)
+- [Apply and watch](/get-started/apply-and-watch/)
+- [dora harness](/commands/harness/)
+- [Skills](/get-started/skills/)

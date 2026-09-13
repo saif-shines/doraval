@@ -30,6 +30,7 @@ export default defineConfig({
         "/get-started/quickstart",
         "/get-started/skills",
         "/get-started/pocket-agents",
+        "/get-started/apply-and-watch",
         "/get-started/connect",
         {
           label: "Reference",
@@ -38,6 +39,7 @@ export default defineConfig({
             "/commands/harness",
             "/concepts/memory",
             "/concepts/review-tiers",
+            "/concepts/pocket-agent",
             "/reference/scenarios",
             "/reference/rules",
           ],

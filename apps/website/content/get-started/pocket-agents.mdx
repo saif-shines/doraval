@@ -112,7 +112,7 @@ dora harness apply slack-pr-approve
 hermes mcp login scalekit
 ```
 
-`dora harness boot slack-pr-approve` is the same command. Apply fetches kit skills from GitHub `main`. Pass `--keep-copies` to skip. After a skillkit or authstack merge, run apply again. A tick does not refresh. Apply also installs the hook that stamps the last line on GitHub and Slack.
+`dora harness boot slack-pr-approve` is the same command. Full apply, login, watch, and pause vs sleep: [Apply and watch](/get-started/apply-and-watch/).
 
 Dora prints Runtime watch commands:
 
@@ -153,4 +153,4 @@ Dora does not copy `.env` from the original skill.
 
 ## Next
 
-[dora harness](/commands/harness/)
+[Apply and watch](/get-started/apply-and-watch/)

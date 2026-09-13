@@ -7,6 +7,10 @@
 - Introduction, Quick Start, README, and Commands name both jobs:
   Review and pocket agent. Quick Start links the walkthrough and
   `dora review --run`.
+- Pocket agent now has three Reader pages: the model
+  (`/concepts/pocket-agent`), the walkthrough
+  (`/get-started/pocket-agents`), and apply / login / watch
+  (`/get-started/apply-and-watch`).
 
 ## 0.6.42
 

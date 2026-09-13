@@ -178,6 +178,28 @@ describe("dora harness docs lockstep", () => {
     }
   });
 
+  test("pocket agent model and apply-and-watch have their own Reader pages", () => {
+    const model = read("apps/website/content/concepts/pocket-agent.mdx");
+    const apply = read("apps/website/content/get-started/apply-and-watch.mdx");
+    const startMeta = read("apps/website/content/get-started/meta.ts");
+    const conceptMeta = read("apps/website/content/concepts/meta.ts");
+    const nav = read("apps/website/blume.config.ts");
+    expect(model).toMatch(/one job, one machine, one user/i);
+    expect(model).toMatch(/The saved folder is a \*\*Routine\*\*/);
+    expect(model).toMatch(/The \*\*Runtime\*\* runs the Loop/);
+    expect(model).toContain("Sent by pocket agent <slug>");
+    expect(model).toContain("handoff.md");
+    expect(apply).toContain("dora harness apply <slug>");
+    expect(apply).toContain("hermes mcp login scalekit");
+    expect(apply).toContain("hermes cron list");
+    expect(apply).toMatch(/Pause vs sleep/);
+    expect(apply).toMatch(/fire on wake/i);
+    expect(startMeta).toContain("apply-and-watch");
+    expect(conceptMeta).toContain("pocket-agent");
+    expect(nav).toContain("/get-started/apply-and-watch");
+    expect(nav).toContain("/concepts/pocket-agent");
+  });
+
   test("pocket agents walkthrough names the loop and hides private facts", () => {
     const page = read("apps/website/content/get-started/pocket-agents.mdx");
     expect(page).toMatch(/pocket agent/i);

@@ -33,7 +33,7 @@ That add installs four skills: `ask-dora`, `review-with-dora`, `grilling-for-rou
 /ask-dora turn this loop-able check into a routine
 ```
 
-That second line starts a **pocket agent**: one unattended loop, one machine, one user. Walkthrough: [Run a pocket agent](https://doraval.dev/get-started/pocket-agents/).
+That second line starts a **pocket agent**: one unattended loop, one machine, one user. Model: [Pocket agent](https://doraval.dev/concepts/pocket-agent/). Walkthrough: [Run a pocket agent](https://doraval.dev/get-started/pocket-agents/). Apply: [Apply and watch](https://doraval.dev/get-started/apply-and-watch/).
 
 `--quick` is structure and heuristics only. No Judge. No API key.
 
