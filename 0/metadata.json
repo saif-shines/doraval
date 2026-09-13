@@ -1,0 +1,44 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2DY0EVWF7MZKP4HWVT887Q4",
+  "session_id": "01a08ee0-2dff-71a2-bb37-7006ca3d4db8",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T17:46:01.336703Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "CHANGELOG.md",
+    "apps/website/content/index.mdx",
+    "apps/website/pages/index.astro",
+    "test/harness-docs.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "8064dfb92e21",
+  "checkpoint_transcript_start": 960,
+  "transcript_lines_at_start": 960,
+  "session_metrics": {
+    "turn_count": 14
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T17:46:01.120946Z",
+    "agent_lines": 17,
+    "agent_removed": 4,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 17,
+    "total_lines_changed": 21,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}

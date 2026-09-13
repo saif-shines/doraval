@@ -1,0 +1,1 @@
+the home page doesn't tell any of this, I think we shoudl make sure to call htis out on home page as well
