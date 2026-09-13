@@ -3,7 +3,9 @@ import { resolve as resolvePath, relative, basename } from "path";
 import { scanScriptSecurity, scanSkillSecurity, type ScriptFile } from "./static-skill-checks.js";
 import { checkSkill } from "./skill-check.js";
 import { buildLintPrompt, LintSchema, LINT_SYSTEM, type LintOutput } from "./skill-lint.js";
-import { judge, type JudgeOutcome, type JudgeRequest } from "./judge.js";
+import { decideJudgeMode, judge, type JudgeOutcome, type JudgeRequest } from "./judge.js";
+import { runLiveScenarios, type LiveRunDeps } from "./scenario-run.js";
+import { ConfigError, ValidationError } from "./errors.js";
 import { findSkillDirs, isSkillDir } from "./skill-discovery.js";
 import { pluginRoot, type SkillOrigin } from "./skill-classify.js";
 import { NetworkError, PrerequisiteError } from "./errors.js";
@@ -44,6 +46,7 @@ export interface ReviewResult {
     heuristics: TierResult;
     llm?: { available: boolean; method?: string; prompt?: string; findings: ReviewFinding[] };
     sessions?: { available: boolean; count?: number; findings: ReviewFinding[] };
+    run?: { available: boolean; findings: ReviewFinding[] };
   };
   scenarioCount?: number;
   summary: { passed: number; warnings: number; errors: number };
@@ -54,6 +57,7 @@ export interface ReviewResult {
 export interface ReviewOptions {
   quick?: boolean;
   deep?: boolean;
+  run?: boolean;
   sessions?: boolean;
   agent?: string;
   cwd?: string;
@@ -67,6 +71,8 @@ export interface ReviewOptions {
   onProgress?: (msg: string) => void;
   /** Test seam: Judge adapter. */
   judge?: (req: JudgeRequest<LintOutput>) => Promise<JudgeOutcome<LintOutput>>;
+  /** Test seam: live-run spawn + score. */
+  liveRun?: LiveRunDeps;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -339,11 +345,45 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
     }
   }
 
+  if (opts.run) {
+    const scenarios = scenarioResult.ok ? scenarioResult.scenarios : [];
+    if (scenarios.length === 0) {
+      tiers.run = { available: true, findings: [] };
+    } else {
+      const { evalCfg, agentCfg } = reviewEval(ruleCfg);
+      const live = await runLiveScenarios({
+        skillName: String(model.data.name ?? basename(dir)),
+        skillContent: model.content,
+        scenarios,
+        agent: agentCfg,
+        evalCfg,
+        ci: opts.ci,
+        deps: opts.liveRun,
+      });
+      const runFindings: ReviewFinding[] = [];
+      let rIdx = 1;
+      for (const item of live) {
+        const severity = item.verdict === "FAIL" ? "error" as const
+          : item.verdict === "PASS" ? "pass" as const
+          : "warning" as const;
+        runFindings.push({
+          id: `run-${pad(rIdx++)}`,
+          tier: "run",
+          severity,
+          message: `when "${item.when}": ${item.verdict}: ${item.detail}`,
+          fixable: false,
+        });
+      }
+      tiers.run = { available: true, findings: runFindings };
+    }
+  }
+
   const all = [
     ...structTier.findings,
     ...heurTier.findings,
     ...(tiers.llm?.findings ?? []),
     ...(tiers.sessions?.findings ?? []),
+    ...(tiers.run?.findings ?? []),
   ];
   const summary = tallyFindings(all);
 
@@ -378,6 +418,34 @@ export function listReviewTargets(path: string, cwd: string = process.cwd()): st
 /** Public Review interface: one path in, one list out. */
 export async function review(path: string, opts: ReviewOptions = {}): Promise<ReviewResult[]> {
   const cwd = opts.cwd ?? process.cwd();
+  if (opts.run && opts.quick) {
+    throw new ValidationError({
+      code: "E-VAL-001",
+      message: "Do not mix --quick and --run.",
+      suggestion: "dora review --run .",
+    });
+  }
+  if (opts.run) {
+    const { config } = await loadReviewContext(cwd);
+    const { agentCfg, evalCfg } = reviewEval(config);
+    if (!agentCfg.command) {
+      throw new ConfigError({
+        code: "E-CFG-001",
+        message: "Live-run needs a coding agent.",
+        suggestion: "dora config set agent.command <cli> --yes",
+      });
+    }
+    if (!opts.liveRun) {
+      const mode = decideJudgeMode(evalCfg, { ci: opts.ci });
+      if (mode === "fail" || mode === "delegate") {
+        throw new PrerequisiteError({
+          code: "E-PRE-004",
+          message: "Live-run requires an LLM judge",
+          suggestion: "dora config setup",
+        });
+      }
+    }
+  }
   let targets = listReviewTargets(path, cwd);
   if (opts.limit != null) targets = targets.slice(0, opts.limit);
 

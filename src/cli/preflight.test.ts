@@ -46,6 +46,11 @@ describe("message builders", () => {
     expect(m.toLowerCase()).toMatch(/llm|judge|require/);
   });
 
+  test("review --run names live-run", () => {
+    const m = reviewPreflightMessage({ run: true });
+    expect(m.toLowerCase()).toMatch(/live-run|live run/);
+  });
+
   test("reconcile dry-run is plan-only", () => {
     const m = reconcilePreflightMessage({ dryRun: true });
     expect(m.toLowerCase()).toMatch(/dry|no write|plan/);

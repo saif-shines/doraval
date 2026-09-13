@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Features
+
+- `dora review --run` feeds each `when` in `scenarios.yaml` to the
+  configured agent and scores `expect` / `must_not`. Isolated HOME
+  and cwd. Not `--quick`. Exit 2 if no agent or no API judge.
+
 ## 0.6.41
 
 ### Fixes

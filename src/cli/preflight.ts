@@ -23,9 +23,12 @@ export function scanPreflightMessage(dir?: string): string {
   return `Scanning agent context${where} — read-only, no writes, no LLM.`;
 }
 
-export function reviewPreflightMessage(opts: { quick?: boolean; deep?: boolean } = {}): string {
+export function reviewPreflightMessage(opts: { quick?: boolean; deep?: boolean; run?: boolean } = {}): string {
   if (opts.quick) {
     return "Reviewing artifacts — tiers: structure + heuristics; no LLM.";
+  }
+  if (opts.run) {
+    return "Reviewing artifacts — tiers: structure + heuristics + live-run; no --quick.";
   }
   if (opts.deep) {
     return "Reviewing artifacts — tiers: structure + heuristics + LLM (required); no writes.";

@@ -6,7 +6,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | Command | Job |
 | --- | --- |
 | `dora` | Short `--help`. First job is `dora review --quick`. |
-| `dora review [path]` | Gate: structure → heuristics → Judge → sessions. Full Review adds Session health. `--quick` skips Judge and Session health. |
+| `dora review [path]` | Gate: structure → heuristics → Judge → sessions. Full Review adds Session health. `--quick` skips Judge and Session health. `--run` feeds `scenarios.yaml` to the agent. Do not mix `--quick` and `--run`. |
 | `dora fix [path]` | Mechanical `--yes`. Judgment `--brief` / `--json` (`message`, `severity`, `hint`, optional `code` / `docUrl`). |
 | `dora scan` | Workspace map. Not the empty-argv default. |
 | `dora skill` | List Authored + Global Skills |

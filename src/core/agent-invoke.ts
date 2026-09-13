@@ -232,7 +232,7 @@ export async function invokeAgent(
 export async function runAgentSession(
   promptText: string,
   agentCfg: AgentConfig,
-  opts: { cwd?: string; alwaysApprove?: boolean; stream?: boolean } = {}
+  opts: { cwd?: string; alwaysApprove?: boolean; stream?: boolean; env?: Record<string, string> } = {}
 ): Promise<string> {
   const { cwd, alwaysApprove = true, stream = true } = opts;
   const resolved = resolveAgentConfig(agentCfg);
@@ -268,7 +268,7 @@ export async function runAgentSession(
   const proc = Bun.spawn([cmd, ...args], {
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env },
+    env: { ...process.env, ...(opts.env ?? {}) },
     cwd: cwd || process.cwd(),
   });
 

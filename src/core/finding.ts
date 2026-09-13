@@ -1,4 +1,4 @@
-export type FindingTier = "structure" | "heuristics" | "llm" | "sessions";
+export type FindingTier = "structure" | "heuristics" | "llm" | "sessions" | "run";
 
 export interface Finding {
   id: string;

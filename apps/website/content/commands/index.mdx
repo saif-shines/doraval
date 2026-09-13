@@ -43,6 +43,7 @@ dora review --quick .        # structure + heuristics; Findings first
 dora review --quick ./path/to/skill-dir
 dora review --all --quick --ci
 dora review --deep .         # require Judge; exit 2 if none
+dora review --run .          # spawn the agent on scenarios.yaml; exit 2 if no agent or Judge
 dora review --sessions .     # require session evidence
 dora review CLAUDE.md
 dora review --json           # includes sessionHealth (not --quick)

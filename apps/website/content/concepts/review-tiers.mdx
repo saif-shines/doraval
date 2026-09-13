@@ -6,7 +6,7 @@ sidebar:
   order: 2
 ---
 
-`dora review` runs every tier that can run. `--quick` is structure + heuristics. No Judge.
+`dora review` runs every tier that can run. `--quick` is structure + heuristics. No Judge. `--run` is opt-in. It is not part of `--quick`.
 
 ## Tier 1: Structure
 
@@ -29,6 +29,14 @@ A judge is either a **CLI you already have** (`claude` or `grok` on PATH, using 
 
 Mines real agent session logs for mechanical evidence a skill was actually invoked. Adapters ship for Claude, Grok, Cursor, Codex, and Copilot. `--sessions` requires this tier and exits `2` if no recent sessions exist.
 
+## Live-run (`--run`)
+
+`--run` feeds each `when` in [scenarios.yaml](/reference/scenarios/) to the configured coding agent. An LLM judge scores `expect` and `must_not`. FAIL is an error. Missing `scenarios.yaml` is fine.
+
+`--run` needs an agent (`dora config set agent.command`) and an API judge. Exit `2` if either is missing. Do not mix `--quick` and `--run`.
+
+The run uses an isolated HOME and cwd so host skills do not leak.
+
 ## Session health
 
 A full Review also prints **Session health**. It is not a Finding and not a fifth tier. It reports token pressure from Sessions in the Review window (default last 30 Sessions, 90 days): cache-read share ≥ 80%, call count ≥ 20, user turns ≥ 10. `--quick` omits it. Scan omits it.
@@ -41,6 +49,7 @@ JSON: `sessionHealth` on each Review result (`window`, `sessionCount`, `signals`
 dora review --all --quick --ci   # CI structural gate
 dora review --quick .            # local, no Judge
 dora review --deep <path>        # require LLM
+dora review --run <path>         # live-run scenarios.yaml
 ```
 
 ## Related

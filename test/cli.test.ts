@@ -28,6 +28,7 @@ describe("doraval CLI", () => {
       const { exitCode, stdout } = runDoraval(["review", "--help"]);
       expect(exitCode).toBe(0);
       expect(stdout).toContain("dora review --quick");
+      expect(stdout).toContain("dora review --run");
       expect(stdout).toMatch(/0.*clean/);
       expect(stdout).toMatch(/1.*issues/);
       expect(stdout).toMatch(/2.*could not run/);

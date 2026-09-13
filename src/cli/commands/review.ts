@@ -113,6 +113,16 @@ function renderSingle(r: ReviewResult): void {
   renderTierLine("Heuristics", h.passed, h.warnings, h.errors);
   renderFindings(h.findings);
 
+  if (r.tiers.run) {
+    const rf = r.tiers.run.findings;
+    renderTierLine(
+      "Live run",
+      rf.filter((f) => f.severity === "pass").length,
+      rf.filter((f) => f.severity === "warning").length,
+      rf.filter((f) => f.severity === "error").length,
+    );
+    renderFindings(rf);
+  }
   renderOptionalTier("LLM review", r.tiers.llm);
   if (r.tiers.llm?.method === "delegated" && r.tiers.llm.prompt) {
     ui.blank();
@@ -220,6 +230,7 @@ export default defineCommand({
       "  dora review --quick .",
       "  dora review --quick --json",
       "  dora review --deep .",
+      "  dora review --run .",
       "Exit: 0 clean · 1 issues · 2 could not run",
       "Map: dora --help --json",
     ].join("\n"),
@@ -228,6 +239,7 @@ export default defineCommand({
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
     quick: { type: "boolean", description: "Tiers 1–2 only (structure + heuristics, no LLM)", default: false },
     deep: { type: "boolean", description: "Require LLM tier; exit 2 if no judge", default: false },
+    run: { type: "boolean", description: "Spawn the agent on scenarios.yaml; exit 2 if no agent or judge", default: false },
     sessions: { type: "boolean", description: "Require the session-evidence tier (exit 2 if no recent sessions)", default: false },
     all: { type: "boolean", description: "Review every artifact (skip the 10-item question)", default: false },
     "fail-on": { type: "string", description: "Exit 1 trigger: error (default) | warning", default: "error" },
@@ -243,6 +255,7 @@ export default defineCommand({
       reviewPreflightMessage({
         quick: args.quick as boolean,
         deep: args.deep as boolean,
+        run: args.run as boolean,
       }),
     );
     // Resolve --cwd to an absolute path: it's hashed into the memory
@@ -285,6 +298,7 @@ export default defineCommand({
     const opts = {
       quick: args.quick as boolean,
       deep: args.deep as boolean,
+      run: args.run as boolean,
       sessions: args.sessions as boolean,
       cwd: root,
       ci: args.ci as boolean,

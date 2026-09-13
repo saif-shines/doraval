@@ -354,6 +354,68 @@ describe("review — workspace", () => {
   });
 });
 
+describe("review --run", () => {
+  test("rejects --quick --run", async () => {
+    try {
+      await reviewOne(resolve(FIXTURES, "skills/minimal-good"), { quick: true, run: true });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("E-VAL-001");
+    }
+  });
+
+  test("rejects --run when no agent is configured", async () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-norun-"));
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = home;
+    writeFileSync(join(home, "config.yml"), "journal:\n  repo: ''\n  projects: {}\n");
+    try {
+      await reviewOne(resolve(FIXTURES, "skills/minimal-good"), { run: true });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("E-CFG-001");
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+    }
+  });
+
+  test("FAIL live-run is an error finding", async () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-liverun-"));
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = home;
+    writeFileSync(join(home, "config.yml"), [
+      "journal:", "  repo: ''", "  projects: {}",
+      "agent:", "  command: grok", "",
+    ].join("\n"));
+    const dir = mkdtempSync(join(tmpdir(), "dora-scen-"));
+    writeFileSync(join(dir, "SKILL.md"), [
+      "---", "name: live", "description: Use when testing live-run.", "---",
+      "", "# live", "", "Refuse deploy without tests.", "",
+    ].join("\n"));
+    writeFileSync(join(dir, "scenarios.yaml"), [
+      "- when: deploy now",
+      "  expect: Refuse",
+      "  must_not: Deploy",
+      "",
+    ].join("\n"));
+    try {
+      const result = await reviewOne(dir, {
+        run: true,
+        liveRun: {
+          runSession: async () => "I deployed.",
+          score: async () => ({ verdict: "FAIL", detail: "Deployed" }),
+        },
+      });
+      expect(result.tiers.run?.findings.some((f) => f.severity === "error" && /deploy now/.test(f.message))).toBe(true);
+      expect(result.summary.errors).toBeGreaterThan(0);
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+    }
+  });
+});
+
 describe("review — R020 skill body", () => {
   test("injection in the body is R020 when scripts/ is absent", async () => {
     const dir = mkdtempSync(join(tmpdir(), "dora-r020-"));

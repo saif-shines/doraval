@@ -16,10 +16,13 @@ Optional file next to a skill. Missing is fine.
 
 `when` and `expect` are required. `must_not` is optional.
 
-LLM review (tier 3) checks each scenario. Uncovered items become Findings. Bad YAML is a structure Finding.
+LLM review (tier 3) checks each scenario as text coverage. Uncovered items become Findings. Bad YAML is a structure Finding.
+
+`dora review --run` feeds `when` to the coding agent and scores `expect` / `must_not`. That is a live run. It is not `--quick`. Write `expect` as a fact the judge can check.
 
 ```bash
 dora review --deep ./path/to/skill-dir
+dora review --run ./path/to/skill-dir
 ```
 
 [Review tiers](/concepts/review-tiers/) · [Commands](/commands/#review)
