@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2DXKQTTMMG3X6368Q1V425V",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "CHANGELOG.md",
+    "README.md",
+    "apps/website/blume.config.ts",
+    "apps/website/content/commands/harness.mdx",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/concepts/meta.ts",
+    "apps/website/content/concepts/pocket-agent.mdx",
+    "apps/website/content/get-started/apply-and-watch.mdx",
+    "apps/website/content/get-started/connect.mdx",
+    "apps/website/content/get-started/index.mdx",
+    "apps/website/content/get-started/meta.ts",
+    "apps/website/content/get-started/pocket-agents.mdx",
+    "apps/website/content/get-started/quickstart.mdx",
+    "apps/website/content/get-started/skills.mdx",
+    "test/harness-docs.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2DXKQTTMMG3X6368Q1V425V",
+  "session_id": "01a08ee0-2dff-71a2-bb37-7006ca3d4db8",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T17:39:04.719796Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "CHANGELOG.md",
+    "README.md",
+    "apps/website/blume.config.ts",
+    "apps/website/content/commands/harness.mdx",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/concepts/meta.ts",
+    "apps/website/content/concepts/pocket-agent.mdx",
+    "apps/website/content/get-started/apply-and-watch.mdx",
+    "apps/website/content/get-started/connect.mdx",
+    "apps/website/content/get-started/index.mdx",
+    "apps/website/content/get-started/meta.ts",
+    "apps/website/content/get-started/pocket-agents.mdx",
+    "apps/website/content/get-started/quickstart.mdx",
+    "apps/website/content/get-started/skills.mdx",
+    "test/harness-docs.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "daaf559b4c84",
+  "checkpoint_transcript_start": 776,
+  "transcript_lines_at_start": 776,
+  "session_metrics": {
+    "turn_count": 13
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T17:39:04.479204Z",
+    "agent_lines": 213,
+    "agent_removed": 11,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 213,
+    "total_lines_changed": 224,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
