@@ -55,8 +55,6 @@ If `dora` is not on `PATH`, use `npx @hacksmith/doraval`.
    Done: mechanical tiers clean and the rubric applied.
    Branch on JSON: [output.md](references/output.md).
 
-Add `--format json` when you will branch on fields. Add `--ci` in CI.
-
 ## Writes
 
 Pass `--yes` or `--dry-run` on `fix`, `conflicts`, `memory promote`, `skill remove`, `skill restore`, `probe`, `harness new --accept`, `harness apply`, `harness rm`, and `config set` of a secret.
@@ -65,14 +63,8 @@ Pass `--yes` or `--dry-run` on `fix`, `conflicts`, `memory promote`, `skill remo
 ## Side paths
 
 Verbs: [commands.md](references/commands.md). Exit codes and JSON: [output.md](references/output.md).
-Flags: `dora <command> --help`.
 
-- Durable rule → `dora memory add "<rule>" --weight <1-10>` (`≥ 7` is hard). Promote only when the user asks.
-- Conflict Finding → `dora conflicts --dry-run`, then ask the user.
-- Unused Authored Skill → `dora skill unused`, then `dora skill remove <name> --dry-run`. Home: `dora skill unused --global`.
-- Recurring use case → `dora harness new` (starts `ask-dora` / `grilling-for-routine`). Then `dora harness apply <slug>`. `dora harness boot <slug>` is the apply alias. Then `hermes mcp login scalekit`. Runtime watch after apply, boot, list, pause, and resume. Also `dora harness show <slug>`, `dora harness models`, `dora harness logs <slug>`, `dora harness rm <slug> --yes`, `dora harness pause`, `dora harness resume`, `dora harness list`, `dora harness open`.
-- Workspace map → `dora scan --yes`.
-- Prove doraval.dev → `dora config set identity.api_key <token> --yes`, then `dora probe --yes`. Never echo the token.
+Recurring use case → `dora harness new` (starts `ask-dora` / `grilling-for-routine`). Then `dora harness apply <slug>`. `dora harness boot <slug>` is the apply alias. Then `hermes mcp login scalekit`. Runtime watch after apply, boot, list, pause, and resume. Also `dora harness show <slug>`, `dora harness models`, `dora harness logs <slug>`, `dora harness rm <slug> --yes`, `dora harness pause`, `dora harness resume`, `dora harness list`, `dora harness open`.
 
 MUST report done only on **exit 0**.
 MUST NOT skip Brief for Judgment items.

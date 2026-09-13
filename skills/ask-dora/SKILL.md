@@ -8,7 +8,7 @@ description: >-
 
 # ask-dora
 
-Router for an internal teammate. One name. Use a primitive. Do not hold that primitive's craft here.
+Router for an internal teammate. Use a primitive. Do not hold that primitive's craft here.
 
 ## Empty
 
