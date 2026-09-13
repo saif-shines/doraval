@@ -1,6 +1,6 @@
 ---
 // Hallmark · genre: modern-minimal · macrostructure: Workbench · theme: Cobalt
-// Single fold: short pitch, then the first loop (skill add + review --quick)
+// Single fold: both jobs, then the first loop (skill add + review --quick)
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
 import data from "blume:data";
@@ -44,12 +44,15 @@ dora review --quick                   # Findings, no LLM`;
         </h2>
         <p class="hero__lede">
           Review skills, rules, and memory. <code>--quick</code> is structure
-          and heuristics. No Judge. You see Findings first.
+          and heuristics. No Judge. You see Findings first. A pocket agent is
+          one unattended loop: one job, one machine, one user. Start it with
+          {" "}<code>/ask-dora</code>.
         </p>
         <CodeBlock code={heroInstall} lang="bash" />
         <p class="hero__note">
           <a href="/get-started/installation/">Install</a> ·{" "}
-          <a href="/get-started/">Docs</a>
+          <a href="/get-started/">Docs</a> ·{" "}
+          <a href="/get-started/pocket-agents/">Pocket agents</a>
         </p>
       </div>
     </section>

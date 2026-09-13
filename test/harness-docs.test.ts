@@ -178,6 +178,13 @@ describe("dora harness docs lockstep", () => {
     }
   });
 
+  test("home page names the pocket-agent job", () => {
+    const home = read("apps/website/pages/index.astro");
+    expect(home).toMatch(/pocket agent/i);
+    expect(home).toContain("/ask-dora");
+    expect(home).toContain("/get-started/pocket-agents/");
+  });
+
   test("pocket agent model and apply-and-watch have their own Reader pages", () => {
     const model = read("apps/website/content/concepts/pocket-agent.mdx");
     const apply = read("apps/website/content/get-started/apply-and-watch.mdx");

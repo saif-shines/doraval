@@ -11,6 +11,7 @@
   (`/concepts/pocket-agent`), the walkthrough
   (`/get-started/pocket-agents`), and apply / login / watch
   (`/get-started/apply-and-watch`).
+- Home page names both jobs and links the pocket-agent walkthrough.
 
 ## 0.6.42
 
