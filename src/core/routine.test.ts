@@ -15,6 +15,7 @@ import {
   refreshRoutineSkills,
   deleteRoutine,
   ensureProjectSkillLayout,
+  ensureHermesProjectRoot,
 } from "./routine.js";
 
 function tmpHome(): string {
@@ -354,6 +355,24 @@ describe("routine copy", () => {
     writeFileSync(join(dir, "skills", "inbox", "SKILL.md"), "old\n");
     ensureProjectSkillLayout(dir);
     expect(readFileSync(join(dir, ".agents", "skills", "inbox", "SKILL.md"), "utf8")).toBe("old\n");
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  test("ensureHermesProjectRoot inits a git root so Hermes can load skills-run copies", () => {
+    const home = tmpHome();
+    const dir = writeRoutine(home, {
+      slug: "no-git",
+      prompt: "Ping.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    expect(existsSync(join(dir, ".git"))).toBe(false);
+    ensureHermesProjectRoot(dir);
+    expect(existsSync(join(dir, ".git"))).toBe(true);
+    expect(readFileSync(join(dir, ".gitignore"), "utf8")).toContain(".env");
+    ensureHermesProjectRoot(dir);
+    expect(existsSync(join(dir, ".git"))).toBe(true);
     rmSync(home, { recursive: true, force: true });
   });
 

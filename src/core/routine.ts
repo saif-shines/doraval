@@ -121,6 +121,18 @@ export function ensureProjectSkillLayout(dir: string): void {
   symlinkSync(old, neu);
 }
 
+/** Hermes skill_view only scans a trusted git root. A harness folder has none until apply. */
+export function ensureHermesProjectRoot(dir: string): void {
+  if (existsSync(join(dir, ".git"))) return;
+  const r = spawnSync(["git", "init", "-q"], { cwd: dir, stdout: "pipe", stderr: "pipe" });
+  if ((r.exitCode ?? 1) !== 0) {
+    const err = r.stderr.toString().trim() || "git init failed";
+    throw new Error(`Hermes cannot load skills-run copies without a git root in ${dir}: ${err}`);
+  }
+  const ignore = join(dir, ".gitignore");
+  if (!existsSync(ignore)) writeFileSync(ignore, ".env\n");
+}
+
 function routineDir(home: string, slug: string): string {
   return join(harnessRoot(home), slug);
 }

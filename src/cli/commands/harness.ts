@@ -13,6 +13,7 @@ import {
   usesMcp,
   copySkillsInto,
   ensureProjectSkillLayout,
+  ensureHermesProjectRoot,
   onePassRoot,
   writeRoutine,
   writeRoutineJobId,
@@ -499,7 +500,10 @@ async function runApply(
     await exit(1);
     return;
   }
-  if (!dryRun) ensureProjectSkillLayout(routine.dir);
+  if (!dryRun) {
+    ensureProjectSkillLayout(routine.dir);
+    ensureHermesProjectRoot(routine.dir);
+  }
   if (!dryRun) {
     try {
       const result = refreshRoutineSkills(home, slug, {

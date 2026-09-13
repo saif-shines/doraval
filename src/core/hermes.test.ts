@@ -33,8 +33,10 @@ describe("hermes command builders", () => {
       "xhigh",
       "--workdir",
       "/tmp/night-pass",
+      "--skill",
+      "run",
     ]);
-    expect(JSON.stringify(cmds)).not.toContain("--skill");
+    expect(JSON.stringify(cmds)).toContain("--skill");
     expect(JSON.stringify(cmds)).not.toContain("--timeout");
     expect(JSON.stringify(cmds)).not.toContain("--toolsets");
   });
@@ -63,11 +65,15 @@ describe("hermes command builders", () => {
       "Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass",
       "--reasoning-effort",
       "xhigh",
-      "--clear-skills",
+      "--skill",
+      "run",
       "--workdir",
       "/tmp/night-pass",
     ]);
     expect(editArgs({ ...routine, skillsRun: [], skillsRefer: [] }, "abcdef123456")).toContain("--clear-skills");
+    expect(JSON.stringify(editArgs({ ...routine, skillsRun: [], skillsRefer: [] }, "abcdef123456"))).not.toContain(
+      "--skill",
+    );
     expect(JSON.stringify(editArgs({ ...routine, skillsRun: [], skillsRefer: [] }, "abcdef123456"))).not.toContain(
       "--workdir",
     );

@@ -50,6 +50,19 @@ function hasProjectSkills(routine: { skillsRun?: string[]; skillsRefer?: string[
   return Boolean((routine.skillsRun?.length ?? 0) + (routine.skillsRefer?.length ?? 0));
 }
 
+function skillRunNames(routine: { skillsRun?: string[] }): string[] {
+  const names: string[] = [];
+  for (const dest of routine.skillsRun ?? []) {
+    const name = dest.replace(/\/+$/, "").split("/").pop();
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function pushRunSkills(args: string[], routine: { skillsRun?: string[] }): void {
+  for (const name of skillRunNames(routine)) args.push("--skill", name);
+}
+
 export function onePassArgs(
   routine: Pick<Routine, "prompt" | "slug"> &
     Partial<Pick<Routine, "maxTick" | "skillsRun" | "mcpUrl" | "skillsRefer">> &
@@ -107,6 +120,7 @@ export function bootArgs(routine: Routine): string[][] {
   ];
   pushPin(create, routine, "--model", false);
   if (hasProjectSkills(routine)) create.push("--workdir", routine.dir);
+  pushRunSkills(create, routine);
   const cmds: string[][] = [
     ["gateway", "install"],
     ["gateway", "start"],
@@ -136,7 +150,8 @@ export function editArgs(routine: Routine, jobId: string): string[] {
     routine.reasoningEffort ?? "xhigh",
   ];
   pushPin(args, routine, "--model", true);
-  args.push("--clear-skills");
+  if (skillRunNames(routine).length) pushRunSkills(args, routine);
+  else args.push("--clear-skills");
   if (hasProjectSkills(routine)) args.push("--workdir", routine.dir);
   return args;
 }
