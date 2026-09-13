@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2DPXEFRFQNH9KKJRTNHJTFJ",
+  "strategy": "manual-commit",
+  "branch": "live-run-scenarios",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "CHANGELOG.md",
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/concepts/review-tiers.mdx",
+    "apps/website/content/reference/scenarios.mdx",
+    "skills/review-with-dora/references/commands.md",
+    "src/cli/capabilities.ts",
+    "src/cli/commands/review.ts",
+    "src/cli/preflight.test.ts",
+    "src/cli/preflight.ts",
+    "src/core/agent-invoke.ts",
+    "src/core/finding.ts",
+    "src/core/review.test.ts",
+    "src/core/review.ts",
+    "src/core/scenario-run.test.ts",
+    "src/core/scenario-run.ts",
+    "test/cli.test.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ]
+}

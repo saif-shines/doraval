@@ -1,0 +1,57 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2DPXEFRFQNH9KKJRTNHJTFJ",
+  "session_id": "01a08ee0-2dff-71a2-bb37-7006ca3d4db8",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T15:42:01.971577Z",
+  "branch": "live-run-scenarios",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "CHANGELOG.md",
+    "README.md",
+    "apps/website/content/commands/index.mdx",
+    "apps/website/content/concepts/review-tiers.mdx",
+    "apps/website/content/reference/scenarios.mdx",
+    "skills/review-with-dora/references/commands.md",
+    "src/cli/capabilities.ts",
+    "src/cli/commands/review.ts",
+    "src/cli/preflight.test.ts",
+    "src/cli/preflight.ts",
+    "src/core/agent-invoke.ts",
+    "src/core/finding.ts",
+    "src/core/review.test.ts",
+    "src/core/review.ts",
+    "src/core/scenario-run.test.ts",
+    "src/core/scenario-run.ts",
+    "test/cli.test.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "570f707a0e95",
+  "checkpoint_transcript_start": 403,
+  "transcript_lines_at_start": 403,
+  "session_metrics": {
+    "turn_count": 8
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T15:42:01.821605Z",
+    "agent_lines": 345,
+    "agent_removed": 8,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 345,
+    "total_lines_changed": 353,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
