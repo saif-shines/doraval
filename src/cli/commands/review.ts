@@ -239,7 +239,7 @@ export default defineCommand({
     path: { type: "positional", description: "Skill dir or project root", required: false, default: "." },
     quick: { type: "boolean", description: "Tiers 1–2 only (structure + heuristics, no LLM)", default: false },
     deep: { type: "boolean", description: "Require LLM tier; exit 2 if no judge", default: false },
-    run: { type: "boolean", description: "Spawn the agent on scenarios.yaml; exit 2 if no agent or judge", default: false },
+    run: { type: "boolean", description: "No-skill then with-skill on scenarios.yaml; exit 2 if no agent or judge", default: false },
     sessions: { type: "boolean", description: "Require the session-evidence tier (exit 2 if no recent sessions)", default: false },
     all: { type: "boolean", description: "Review every artifact (skip the 10-item question)", default: false },
     "fail-on": { type: "string", description: "Exit 1 trigger: error (default) | warning", default: "error" },

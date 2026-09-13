@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, rmSync } from "fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { z } from "zod";
 import type { AgentConfig } from "./agent-invoke.js";
 import { runAgentSession } from "./agent-invoke.js";
 import { judge, type JudgeRequest } from "./judge.js";
+import { getEvalsDir } from "./journal-config.js";
 import type { EvalConfig } from "./journal-config.js";
 import type { Scenario } from "./scenarios.js";
 
@@ -15,15 +16,38 @@ export const LiveRunSchema = z.object({
 
 export type LiveRunVerdict = z.infer<typeof LiveRunSchema>;
 
+export type LiveVariant = "no-skill" | "with-skill";
+
 export interface LiveRunFinding {
   when: string;
+  variant: LiveVariant;
   verdict: LiveRunVerdict["verdict"];
   detail: string;
+  logPath?: string;
+}
+
+export type SkillDelta = "helped" | "hurt" | "none";
+
+export function skillDelta(
+  off: LiveRunVerdict["verdict"],
+  on: LiveRunVerdict["verdict"],
+): SkillDelta {
+  if (off !== "PASS" && on === "PASS") return "helped";
+  if (off === "PASS" && on === "FAIL") return "hurt";
+  return "none";
 }
 
 export interface LiveRunDeps {
   runSession?: (prompt: string, cwd: string, home: string) => Promise<string>;
   score?: (trace: string, scenario: Scenario) => Promise<LiveRunVerdict>;
+}
+
+function askPrompt(when: string): string {
+  return `Do the user ask. Stay in the working directory.
+
+ASK:
+${when}
+`;
 }
 
 function skillPrompt(skillName: string, skillContent: string, when: string): string {
@@ -36,6 +60,16 @@ ${skillContent}
 ASK:
 ${when}
 `;
+}
+
+function writeEvalLog(skillName: string, when: string, variant: LiveVariant, trace: string): string {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const dir = join(getEvalsDir(), skillName, stamp);
+  mkdirSync(dir, { recursive: true });
+  const safe = when.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 40) || "ask";
+  const file = join(dir, `${variant}-${safe}.txt`);
+  writeFileSync(file, trace);
+  return file;
 }
 
 export function buildLiveScorePrompt(trace: string, scenario: Scenario): string {
@@ -106,10 +140,21 @@ export async function runLiveScenarios(opts: {
   try {
     const out: LiveRunFinding[] = [];
     for (const scenario of opts.scenarios) {
-      const prompt = skillPrompt(opts.skillName, opts.skillContent, scenario.when);
-      const trace = await runSession(prompt, workspace, home);
-      const scored = await score(trace, scenario);
-      out.push({ when: scenario.when, verdict: scored.verdict, detail: scored.detail });
+      for (const variant of ["no-skill", "with-skill"] as const) {
+        const prompt = variant === "with-skill"
+          ? skillPrompt(opts.skillName, opts.skillContent, scenario.when)
+          : askPrompt(scenario.when);
+        const trace = await runSession(prompt, workspace, home);
+        const scored = await score(trace, scenario);
+        const logPath = writeEvalLog(opts.skillName, scenario.when, variant, trace);
+        out.push({
+          when: scenario.when,
+          variant,
+          verdict: scored.verdict,
+          detail: scored.detail,
+          logPath,
+        });
+      }
     }
     return out;
   } finally {

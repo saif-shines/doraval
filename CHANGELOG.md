@@ -5,8 +5,11 @@
 ### Features
 
 - `dora review --run` feeds each `when` in `scenarios.yaml` to the
-  configured agent and scores `expect` / `must_not`. Isolated HOME
-  and cwd. Not `--quick`. Exit 2 if no agent or no API judge.
+  configured agent twice (no skill, then with the skill) and scores
+  `expect` / `must_not`. Isolated HOME and cwd. Transcripts land in
+  `~/.doraval/evals/`. A clean PASS set becomes the verdict baseline.
+  The next run errors if a saved PASS is now FAIL. Not `--quick`.
+  Exit 2 if no agent or no API judge.
 
 ## 0.6.41
 

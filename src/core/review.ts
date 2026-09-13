@@ -4,7 +4,14 @@ import { scanScriptSecurity, scanSkillSecurity, type ScriptFile } from "./static
 import { checkSkill } from "./skill-check.js";
 import { buildLintPrompt, LintSchema, LINT_SYSTEM, type LintOutput } from "./skill-lint.js";
 import { decideJudgeMode, judge, type JudgeOutcome, type JudgeRequest } from "./judge.js";
-import { runLiveScenarios, type LiveRunDeps } from "./scenario-run.js";
+import { runLiveScenarios, skillDelta, type LiveRunDeps } from "./scenario-run.js";
+import {
+  compareBaseline,
+  readBaseline,
+  shouldSaveBaseline,
+  withSkillEntries,
+  writeBaseline,
+} from "./run-baseline.js";
 import { ConfigError, ValidationError } from "./errors.js";
 import { findSkillDirs, isSkillDir } from "./skill-discovery.js";
 import { pluginRoot, type SkillOrigin } from "./skill-classify.js";
@@ -351,8 +358,9 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
       tiers.run = { available: true, findings: [] };
     } else {
       const { evalCfg, agentCfg } = reviewEval(ruleCfg);
+      const skillName = String(model.data.name ?? basename(dir));
       const live = await runLiveScenarios({
-        skillName: String(model.data.name ?? basename(dir)),
+        skillName,
         skillContent: model.content,
         scenarios,
         agent: agentCfg,
@@ -362,18 +370,40 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
       });
       const runFindings: ReviewFinding[] = [];
       let rIdx = 1;
-      for (const item of live) {
-        const severity = item.verdict === "FAIL" ? "error" as const
-          : item.verdict === "PASS" ? "pass" as const
-          : "warning" as const;
+      const pushRun = (severity: ReviewFinding["severity"], message: string) => {
         runFindings.push({
           id: `run-${pad(rIdx++)}`,
           tier: "run",
           severity,
-          message: `when "${item.when}": ${item.verdict}: ${item.detail}`,
+          message,
           fixable: false,
         });
+      };
+      for (const item of live) {
+        const severity = item.variant === "with-skill" && item.verdict === "FAIL" ? "error" as const
+          : item.verdict === "PASS" ? "pass" as const
+          : "warning" as const;
+        const log = item.logPath ? ` log ${item.logPath}` : "";
+        pushRun(severity, `${item.variant} when "${item.when}": ${item.verdict}: ${item.detail}${log}`);
       }
+      for (const when of [...new Set(live.map((r) => r.when))]) {
+        const off = live.find((r) => r.when === when && r.variant === "no-skill");
+        const on = live.find((r) => r.when === when && r.variant === "with-skill");
+        if (!off || !on) continue;
+        const delta = skillDelta(off.verdict, on.verdict);
+        const severity = delta === "hurt" ? "error" as const
+          : delta === "helped" ? "pass" as const
+          : "info" as const;
+        pushRun(severity, `skill ${delta} when "${when}": no-skill ${off.verdict} to with-skill ${on.verdict}`);
+      }
+      const current = withSkillEntries(skillName, agentCfg.command, live);
+      for (const note of compareBaseline(readBaseline(), current)) {
+        pushRun(
+          note.kind === "regressed" ? "error" : "info",
+          `baseline when "${note.when}": ${note.detail}`,
+        );
+      }
+      if (shouldSaveBaseline(current)) writeBaseline(current);
       tiers.run = { available: true, findings: runFindings };
     }
   }

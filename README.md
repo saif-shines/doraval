@@ -47,7 +47,7 @@ Public board: [Roadmap](https://github.com/users/saif-shines/projects/1/views/4)
 dora                         # short --help
 dora review --quick .        # first job; Findings; no LLM
 dora review --quick --json
-dora review --run .          # spawn agent on scenarios.yaml; not --quick
+dora review --run .          # no-skill then with-skill; not --quick
 dora scan                    # workspace map
 dora fix . --yes             # mechanical; no TTY
 dora fix . --brief           # Judgment items; then replace

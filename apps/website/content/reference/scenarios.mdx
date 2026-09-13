@@ -18,7 +18,7 @@ Optional file next to a skill. Missing is fine.
 
 LLM review (tier 3) checks each scenario as text coverage. Uncovered items become Findings. Bad YAML is a structure Finding.
 
-`dora review --run` feeds `when` to the coding agent and scores `expect` / `must_not`. That is a live run. It is not `--quick`. Write `expect` as a fact the judge can check.
+`dora review --run` feeds `when` to the coding agent twice (no skill, then with the skill) and scores `expect` / `must_not`. That is a live run. It is not `--quick`. Write `expect` as a fact the judge can check. A later run errors if a saved PASS becomes FAIL.
 
 ```bash
 dora review --deep ./path/to/skill-dir

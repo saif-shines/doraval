@@ -31,11 +31,13 @@ Mines real agent session logs for mechanical evidence a skill was actually invok
 
 ## Live-run (`--run`)
 
-`--run` feeds each `when` in [scenarios.yaml](/reference/scenarios/) to the configured coding agent. An LLM judge scores `expect` and `must_not`. FAIL is an error. Missing `scenarios.yaml` is fine.
+`--run` feeds each `when` in [scenarios.yaml](/reference/scenarios/) to the configured coding agent twice: no skill, then with the skill. An LLM judge scores `expect` and `must_not`. A with-skill FAIL is an error. A skill that turns PASS into FAIL is an error. Missing `scenarios.yaml` is fine.
 
 `--run` needs an agent (`dora config set agent.command`) and an API judge. Exit `2` if either is missing. Do not mix `--quick` and `--run`.
 
-The run uses an isolated HOME and cwd so host skills do not leak.
+The run uses an isolated HOME and cwd so host skills do not leak. Each transcript is stored under `~/.doraval/evals/`. The Finding names that path.
+
+After a clean with-skill PASS on every case, Dora saves a verdict baseline. The next `--run` errors if a saved PASS is now FAIL. New cases are FYI.
 
 ## Session health
 

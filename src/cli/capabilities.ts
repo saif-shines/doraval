@@ -65,7 +65,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         ...COMMON_FLAGS,
         "--quick": { description: "Tiers 1–2 only (no LLM)" },
         "--deep": { description: "Require LLM tier; exit 2 if no judge" },
-        "--run": { description: "Spawn the agent on scenarios.yaml; exit 2 if no agent or judge" },
+        "--run": { description: "No-skill then with-skill on scenarios.yaml; exit 2 if no agent or judge" },
         "--all": { description: "Review every artifact" },
         "--fail-on": { description: "Exit 1 trigger: error | warning", values: ["error", "warning"], default: "error" },
       }, [{ name: "path", required: false, type: "string" }]),

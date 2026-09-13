@@ -407,8 +407,54 @@ describe("review --run", () => {
           score: async () => ({ verdict: "FAIL", detail: "Deployed" }),
         },
       });
-      expect(result.tiers.run?.findings.some((f) => f.severity === "error" && /deploy now/.test(f.message))).toBe(true);
+      expect(result.tiers.run?.findings.some((f) => f.severity === "error" && /with-skill/.test(f.message))).toBe(true);
+      expect(result.tiers.run?.findings.some((f) => /no-skill/.test(f.message))).toBe(true);
       expect(result.summary.errors).toBeGreaterThan(0);
+    } finally {
+      if (prev === undefined) delete process.env.DORAVAL_HOME;
+      else process.env.DORAVAL_HOME = prev;
+    }
+  });
+
+  test("skill-on PASS after no-skill FAIL is helped; later PASS to FAIL is a baseline error", async () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-pairbase-"));
+    const prev = process.env.DORAVAL_HOME;
+    process.env.DORAVAL_HOME = home;
+    writeFileSync(join(home, "config.yml"), [
+      "journal:", "  repo: ''", "  projects: {}",
+      "agent:", "  command: grok", "",
+    ].join("\n"));
+    const dir = mkdtempSync(join(tmpdir(), "dora-scen2-"));
+    writeFileSync(join(dir, "SKILL.md"), [
+      "---", "name: live", "description: Use when testing pair baseline.", "---",
+      "", "# live", "", "Refuse deploy without tests.", "",
+    ].join("\n"));
+    writeFileSync(join(dir, "scenarios.yaml"), [
+      "- when: deploy now",
+      "  expect: Refuse",
+      "",
+    ].join("\n"));
+    try {
+      const first = await reviewOne(dir, {
+        run: true,
+        liveRun: {
+          runSession: async (prompt) => prompt.includes("SKILL:") ? "Refused." : "Deployed.",
+          score: async (_trace, _s) =>
+            _trace.includes("Refused")
+              ? { verdict: "PASS", detail: "Refused" }
+              : { verdict: "FAIL", detail: "Deployed" },
+        },
+      });
+      expect(first.tiers.run?.findings.some((f) => /skill helped/.test(f.message))).toBe(true);
+
+      const second = await reviewOne(dir, {
+        run: true,
+        liveRun: {
+          runSession: async () => "Deployed.",
+          score: async () => ({ verdict: "FAIL", detail: "Deployed" }),
+        },
+      });
+      expect(second.tiers.run?.findings.some((f) => f.severity === "error" && /baseline/.test(f.message))).toBe(true);
     } finally {
       if (prev === undefined) delete process.env.DORAVAL_HOME;
       else process.env.DORAVAL_HOME = prev;
