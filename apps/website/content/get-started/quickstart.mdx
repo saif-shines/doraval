@@ -1,12 +1,12 @@
 ---
 title: Quick Start
-description: Install the four skills, run review --quick, then fix until exit 0.
+description: Review until exit 0. Then start a pocket agent if the job is a loop.
 sidebar:
   label: Quick Start
   order: 3
 ---
 
-Run this loop after you install `dora`. You get Findings first, then mechanical fixes, then a clean Review.
+Run this loop after you install `dora`. You get Findings first, then mechanical fixes, then a clean Review. A second job is a pocket agent: grill a loop, one-pass it, then apply.
 
 ## Core workflow
 
@@ -52,9 +52,20 @@ dora review --quick .
 dora review --quick ./path/to/skill-dir
 dora review --all --quick --ci     # CI gate, no LLM
 dora review --deep                 # require Judge
+dora review --run .                # live-run scenarios.yaml; not --quick
 ```
 
-Tiers: [Review tiers](/concepts/review-tiers/).
+`--run` feeds each `when` to the agent twice: no skill, then with the skill. It needs an agent and an API judge. Exit `2` if either is missing. Tiers: [Review tiers](/concepts/review-tiers/).
+
+## Pocket agent
+
+A pocket agent is one unattended loop. Type this in the agent:
+
+```text
+/ask-dora turn this loop-able check into a routine
+```
+
+That loads `grilling-for-routine`. After one good one-pass, apply the folder. Full walkthrough: [Run a pocket agent](/get-started/pocket-agents/). CLI: [dora harness](/commands/harness/).
 
 ## Fix
 
@@ -83,4 +94,4 @@ Weights: **8+** hard · **5** default · **1–3** soft. [Memory](/concepts/memo
 
 ## Next
 
-[Commands](/commands/)
+[Skills](/get-started/skills/) · [Run a pocket agent](/get-started/pocket-agents/)

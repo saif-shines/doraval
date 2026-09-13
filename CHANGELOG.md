@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Docs
+
+- Introduction, Quick Start, README, and Commands name both jobs:
+  Review and pocket agent. Quick Start links the walkthrough and
+  `dora review --run`.
+
 ## 0.6.42
 
 ### Features

@@ -33,9 +33,11 @@ That add installs four skills: `ask-dora`, `review-with-dora`, `grilling-for-rou
 /ask-dora turn this loop-able check into a routine
 ```
 
+That second line starts a **pocket agent**: one unattended loop, one machine, one user. Walkthrough: [Run a pocket agent](https://doraval.dev/get-started/pocket-agents/).
+
 `--quick` is structure and heuristics only. No Judge. No API key.
 
-You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run.
+You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run. `dora review --run` is the live pair (no skill, then with the skill). It is not `--quick`.
 
 ## Roadmap
 
