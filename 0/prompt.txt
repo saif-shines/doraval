@@ -1,0 +1,17 @@
+there is ravi's message about axis by netlify, can you expalnd on what it is and more closly on how it compares ot doraval
+
+---
+
+please use matt's research skill to deeploy reserach boht doraval and axis repos,a nd tell me how doraval can improve using that?
+
+---
+
+can we use matt's grill and docs and proceed to implementation on this
+
+---
+
+q1 -2 (but we will follow up with others, so that we dont' forget), q2 - oh if there is somethign that's alreayd specd and only implementation is pending maybe we shoud continue
+
+---
+
+see if that's easier to finish and switch to this?

@@ -1,0 +1,91 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M2DNE7SP2YS6PCVTYFB36T9Y",
+  "session_id": "01a08ee0-2dff-71a2-bb37-7006ca3d4db8",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-13T15:16:14.542653Z",
+  "branch": "main",
+  "checkpoints_count": 5,
+  "save_step_count": 4,
+  "files_touched": [
+    "CHANGELOG.md",
+    "apps/website/content/commands/harness.mdx",
+    "skills/grilling-for-routine/SKILL.md",
+    "src/cli/commands/harness.ts",
+    "src/core/hermes.test.ts",
+    "src/core/hermes.ts",
+    "src/core/routine.test.ts",
+    "src/core/routine.ts"
+  ],
+  "agent": "Grok CLI",
+  "model": "",
+  "turn_id": "36fc97497c87",
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-13T15:16:14.457798Z",
+    "agent_lines": 0,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 8,
+    "total_committed": 1,
+    "total_lines_changed": 9,
+    "agent_percentage": 11.11111111111111,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 64,
+      "user_lines_removed": 8,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "CHANGELOG.md": 3,
+        "skills/grilling-for-routine/SKILL.md": 1,
+        "src/cli/commands/harness.ts": 5,
+        "src/core/hermes.test.ts": 8,
+        "src/core/hermes.ts": 16,
+        "src/core/routine.test.ts": 19,
+        "src/core/routine.ts": 12
+      },
+      "user_removed_per_file": {
+        "CHANGELOG.md": 3,
+        "skills/grilling-for-routine/SKILL.md": 1,
+        "src/cli/commands/harness.ts": 1,
+        "src/core/hermes.test.ts": 2,
+        "src/core/hermes.ts": 1
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 64,
+      "agent_lines_removed": 8
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 64,
+      "agent_lines_removed": 8
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 64,
+      "agent_lines_removed": 8
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 65,
+      "agent_lines_removed": 9
+    }
+  ]
+}
