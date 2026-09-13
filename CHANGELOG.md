@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.42
+
 ### Features
 
 - `dora review --run` feeds each `when` in `scenarios.yaml` to the
