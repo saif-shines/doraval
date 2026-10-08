@@ -168,7 +168,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         "--from": { description: "Backfill origin and refresh skills that have none" },
         "--model": { description: "Hermes model id for this routine (omit or none = Hermes default)" },
         "--provider": { description: "Hermes provider paired with --model" },
-        "--reasoning-effort": { description: "Hermes reasoning level (default xhigh)" },
+        "--reasoning-effort": { description: "Hermes reasoning level (default medium)" },
       }),
       cmd("update", "writes", "Update doraval to the latest version.", ["dora update"]),
       cmd("probe", "writes", "Send hello to doraval.dev and wait for ack.", [

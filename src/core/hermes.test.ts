@@ -30,7 +30,7 @@ describe("hermes command builders", () => {
       "--name",
       "night-pass",
       "--reasoning-effort",
-      "xhigh",
+      "medium",
       "--workdir",
       "/tmp/night-pass",
       "--skill",
@@ -64,7 +64,7 @@ describe("hermes command builders", () => {
       "--prompt",
       "Check the inbox.\n\nHuman-visible messages end with: Sent by pocket agent night-pass",
       "--reasoning-effort",
-      "xhigh",
+      "medium",
       "--skill",
       "run",
       "--workdir",
@@ -129,7 +129,7 @@ describe("hermes command builders", () => {
   test("one-pass command uses the MCP toolset, skills, and run-budget", () => {
     const cmd = onePassCommand(routine, "/tmp/night-pass");
     expect(cmd).toContain("hermes skills trust /tmp/night-pass");
-    expect(cmd).toContain("hermes chat --oneshot --run-budget 600 --reasoning xhigh");
+    expect(cmd).toContain("hermes chat --oneshot --run-budget 600 --reasoning medium");
     expect(cmd).not.toContain("--toolsets");
     expect(cmd).not.toContain("--skills");
     expect(cmd).toContain("--in /tmp/night-pass");

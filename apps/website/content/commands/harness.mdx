@@ -41,7 +41,7 @@ Most jobs need a Scalekit Agent Gateway MCP URL. Pass `--mcp-url none` when the 
 The printed one-pass command looks like this:
 
 ```bash
-hermes chat --oneshot --run-budget 600 --reasoning xhigh -q "…"
+hermes chat --oneshot --run-budget 600 --reasoning medium -q "…"
 ```
 
 `--run-budget` is the one-pass time limit (default 10 minutes). Local skills are copied into `.agents/skills` in a trusted workdir. The one-pass uses `--in` on that folder. Apply trusts the routine folder, inits a git root if missing, sets cron `--workdir`, and attaches each skills-run name with `--skill`. Hermes `skill_view` needs that git root. Dora does not pass Hermes `--skills` names. A pinned model adds `-m` and `--provider`. Dora refuses to overwrite an existing slug.
@@ -140,14 +140,14 @@ Close the laptop and the Mac sleeps. Jobs do not run while the Mac sleeps. That 
 | --- | --- |
 | How often it runs | every 1 hour |
 | One-pass time limit | 10 minutes |
-| Reasoning effort | xhigh |
+| Reasoning effort | medium |
 | Model | Hermes default (`model.default`) |
 | Provider | Hermes default (`model.provider`) |
 | Night stop if the job sits idle | 10 minutes (Hermes default) |
 
 You can change the interval and the one-pass limit per routine. A busy night job can keep going past 10 minutes if it is still working.
 
-`apply` and `boot` pin `reasoning_effort` from `routine.yml` onto the Runtime job. Default is `xhigh`. Edit that field, then apply again, to change it. A missing field still pins `xhigh`, so an old folder does not fall back to medium.
+`apply` and `boot` pin `reasoning_effort` from `routine.yml` onto the Runtime job. Default is `medium`. Edit that field, then apply again, to change it. A folder that already stores `xhigh` keeps `xhigh`. A missing field reads as `medium`.
 
 `apply` and `boot` also pin `model` and `provider` when those fields are set. An empty `model` on apply clears the Hermes pin. A missing field leaves the Hermes job as it is. To change the pin later: run `dora harness models`, edit `routine.yml`, then apply again.
 

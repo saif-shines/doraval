@@ -89,7 +89,7 @@ Collect all six before you write the unattended prompt:
    Say **none** to follow the Hermes default printed there.
 5. Hermes **provider** paired with that model.
    Pick it from the same list. Say **none** when the model is none.
-6. **Reasoning** level from that same list (default `xhigh`).
+6. **Reasoning** level from that same list (default `medium`).
 
 A default shared MCP URL may already be saved. Reuse it. Ask before you override it for this routine.
 `--mcp-url none` writes a routine with no Agent Gateway.

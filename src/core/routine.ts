@@ -8,7 +8,7 @@ import { findSkillDirs, isSkillDir, normalizeSkillPath } from "./skill-discovery
 
 const DEFAULT_INTERVAL = "1h";
 const DEFAULT_MAX_TICK = "10m";
-const DEFAULT_REASONING_EFFORT = "xhigh";
+export const DEFAULT_REASONING_EFFORT = "medium";
 const HOME_SKILL_ROOTS = [".claude/skills", ".grok/skills", ".agents/skills"] as const;
 
 export type RoutineInput = {

@@ -1,7 +1,7 @@
 import { spawnSync, YAML } from "bun";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
-import { usesMcp, type Routine } from "./routine.js";
+import { DEFAULT_REASONING_EFFORT, usesMcp, type Routine } from "./routine.js";
 
 export const MCP_SERVER = "scalekit";
 
@@ -75,7 +75,7 @@ export function onePassArgs(
     "--run-budget",
     String(hermesTimeoutSec(routine.maxTick ?? "10m")),
     "--reasoning",
-    routine.reasoningEffort ?? "xhigh",
+    routine.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
   );
   pushPin(args, routine, "-m", false);
   if (workdir) args.push("--in", workdir);
@@ -116,7 +116,7 @@ export function bootArgs(routine: Routine): string[][] {
     "--name",
     routine.slug,
     "--reasoning-effort",
-    routine.reasoningEffort ?? "xhigh",
+    routine.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
   ];
   pushPin(create, routine, "--model", false);
   if (hasProjectSkills(routine)) create.push("--workdir", routine.dir);
@@ -147,7 +147,7 @@ export function editArgs(routine: Routine, jobId: string): string[] {
     "--prompt",
     hermesPrompt(routine.prompt, routine.slug),
     "--reasoning-effort",
-    routine.reasoningEffort ?? "xhigh",
+    routine.reasoningEffort ?? DEFAULT_REASONING_EFFORT,
   ];
   pushPin(args, routine, "--model", true);
   if (skillRunNames(routine).length) pushRunSkills(args, routine);

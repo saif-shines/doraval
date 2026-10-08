@@ -51,7 +51,7 @@ describe("writeRoutine", () => {
     expect(yaml).toContain('mcp_url: "https://gw.example/mcp"');
     expect(yaml).toContain('interval: "1h"');
     expect(yaml).toContain('max_tick: "10m"');
-    expect(yaml).toContain('reasoning_effort: "xhigh"');
+    expect(yaml).toContain('reasoning_effort: "medium"');
     expect(readdirSync(dir).sort()).toEqual(["prompt.md", "routine.yml"]);
 
     rmSync(home, { recursive: true, force: true });
@@ -86,13 +86,13 @@ describe("writeRoutine", () => {
     const yaml = readFileSync(join(dir, "routine.yml"), "utf8");
     expect(yaml).toContain('interval: "15m"');
     expect(yaml).toContain('max_tick: "2m"');
-    expect(yaml).toContain('reasoning_effort: "xhigh"');
+    expect(yaml).toContain('reasoning_effort: "medium"');
     expect(yaml).not.toContain('interval: "1h"');
     expect(yaml).not.toContain('max_tick: "10m"');
     rmSync(home, { recursive: true, force: true });
   });
 
-  test("missing reasoning_effort in yaml still reads as xhigh", () => {
+  test("missing reasoning_effort in yaml still reads as medium", () => {
     const home = tmpHome();
     const dir = writeRoutine(home, {
       slug: "old-yaml",
@@ -112,7 +112,7 @@ describe("writeRoutine", () => {
         "",
       ].join("\n"),
     );
-    expect(readRoutine(home, "old-yaml").reasoningEffort).toBe("xhigh");
+    expect(readRoutine(home, "old-yaml").reasoningEffort).toBe("medium");
     expect(readRoutine(home, "old-yaml").model).toBeUndefined();
     rmSync(home, { recursive: true, force: true });
   });
@@ -190,7 +190,7 @@ describe("readRoutine", () => {
     expect(r.mcpUrl).toBe("https://gw.example/mcp");
     expect(r.interval).toBe("1h");
     expect(r.maxTick).toBe("10m");
-    expect(r.reasoningEffort).toBe("xhigh");
+    expect(r.reasoningEffort).toBe("medium");
     expect(r.model).toBeUndefined();
     expect(r.provider).toBeUndefined();
     expect(r.jobId).toBeUndefined();

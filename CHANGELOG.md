@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Features
+
+- New pocket routines default to `reasoning_effort: medium`.
+  Existing folders that pin `xhigh` stay as they are.
+
 ### Docs
 
 - Introduction, Quick Start, README, and Commands name both jobs:
