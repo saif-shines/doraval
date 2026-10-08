@@ -2,6 +2,6 @@
   "name": "@hacksmith/doraval",
   "version": "0.6.44",
   "license": "MIT",
-  "description": "Review a skill before you share it. npx skills add saif-shines/doraval then dora review --quick.",
+  "description": "Assesses the agent setup in this project and shows what to fix. Ships and shares that work, including a pocket agent.",
   "exports": "./src/cli/index.ts"
 }

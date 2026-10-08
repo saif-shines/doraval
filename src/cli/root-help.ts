@@ -21,10 +21,12 @@ export const ROOT_VERBS: [string, string][] = [
 
 export function printRootHelp(): void {
   const lines = [
-    "Reads your repo and tells you what's broken in agent context.",
+    "Assesses the agent setup in this project and shows what to fix.",
+    "Ships and shares that work, including a pocket agent.",
     "",
     "Start here:",
     "  npx skills add saif-shines/doraval",
+    "  dora scan",
     "  dora review --quick",
     "",
     "Usage: dora <command> [args] [options]",

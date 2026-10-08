@@ -59,10 +59,12 @@ const main = defineCommand({
     version: pkg.version,
     // Multi-line: citty prints this as the help banner (version appended on last line).
     description: [
-      "Reads your repo and tells you what's broken in agent context.",
+      "Assesses the agent setup in this project and shows what to fix.",
+      "Ships and shares that work, including a pocket agent.",
       "",
       "Start here:",
       "  npx skills add saif-shines/doraval",
+      "  dora scan",
       "  dora review --quick",
       "",
       "Map: dora --help --json    Docs: https://doraval.dev",

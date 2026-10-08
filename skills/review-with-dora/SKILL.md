@@ -9,7 +9,7 @@ description: >-
 
 # review-with-dora
 
-You run `dora`. **Review** is the gate. Done means **exit 0**.
+You run `dora`. Assess the agent setup in this project and show what to fix. **Review** is the gate. Done means **exit 0**. Ship a repeating job as a pocket agent.
 
 If `dora` is not on `PATH`, use `npx @hacksmith/doraval`.
 

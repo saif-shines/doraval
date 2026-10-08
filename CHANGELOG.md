@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Docs
+
+- The lead names two jobs. Dora assesses the agent setup in this project
+  and shows what to fix. Dora helps you ship and share that work,
+  including a pocket agent.
+
 ## 0.6.44
 
 ### Fixes

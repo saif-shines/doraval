@@ -1,6 +1,6 @@
 # doraval
 
-Review a skill before you share it. `dora` checks skills, rules, and memory for Claude, Cursor, Codex, Copilot, and Grok.
+Dora assesses the agent setup in this project and shows what to fix. Dora helps you ship and share that work, including a pocket agent.
 
 `dora` is the command. The package name is `@hacksmith/doraval`.
 
@@ -40,7 +40,7 @@ Pass `skills`, or the folder that holds the skills you ship. A check of the whol
 
 ## Pocket agent
 
-A pocket agent is the next job. Type `/ask-dora` and a loop-able idea. Walkthrough: [Run a pocket agent](https://doraval.dev/get-started/pocket-agents/).
+A pocket agent is one job, on one machine, for one user. Type `/ask-dora` and a loop-able idea. Walkthrough: [Run a pocket agent](https://doraval.dev/get-started/pocket-agents/).
 
 ## Install the CLI
 

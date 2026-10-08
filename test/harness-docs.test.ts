@@ -197,12 +197,24 @@ describe("dora harness docs lockstep", () => {
     }
   });
 
-  test("home page leads with review and links the pocket agent", () => {
+  test("home page names both jobs and links the pocket agent", () => {
     const home = read("apps/website/pages/index.astro");
+    const lead =
+      "Dora assesses the agent setup in this project and shows what to fix. Dora helps you ship and share that work, including a pocket agent.";
+    expect(home).toContain("Assess the agent setup. Ship the work.");
+    expect(home).toContain("including a pocket agent");
+    expect(home).toContain("dora scan");
     expect(home).toContain("dora review --quick");
     expect(home).toContain("Pocket agents");
     expect(home).toContain("/get-started/pocket-agents/");
     expect(home).not.toContain("/ask-dora");
+    for (const rel of ["README.md", "apps/website/content/index.mdx", "apps/website/content/get-started/index.mdx"]) {
+      expect(read(rel)).toContain(lead);
+    }
+    const help = runDoraval(["--help"]);
+    expect(help.stdout).toContain("Assesses the agent setup in this project and shows what to fix.");
+    expect(help.stdout).toContain("including a pocket agent");
+    expect(help.stdout).toContain("dora scan");
   });
 
   test("pocket agent model and apply-and-watch have their own Reader pages", () => {

@@ -12,7 +12,7 @@ function redirs(pairs: Array<[string, string]>) {
 export default defineConfig({
   title: "doraval",
   description:
-    "Review a skill before you share it. dora checks skills, rules, and memory for Claude, Cursor, Codex, Copilot, and Grok.",
+    "Dora assesses the agent setup in this project and shows what to fix. Dora helps you ship and share that work, including a pocket agent.",
   content: {
     root: "content",
   },

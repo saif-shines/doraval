@@ -15,6 +15,7 @@ Router for an internal teammate. Use a primitive. Do not hold that primitive's c
 Print this map. Then stop.
 
 ```
+Two jobs: assess this project's agent setup and show what to fix; ship and share that work, including a pocket agent.
 Dora jobs: review, fix, unused, scan. Load review-with-dora.
 Routine flow: a routine, a loop, recurring, a routine idea, a pocket job, or harness new.
   Load grilling-for-routine. Night prompt: writing-for-routine.
