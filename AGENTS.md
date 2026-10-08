@@ -1,5 +1,13 @@
 # Doraval — agent conditions
 
+## Reader
+
+Load `i-have-adhd`. Follow it on every reply. Keep it on until the user explicitly says to stop (`stop adhd mode` or `normal mode`).
+
+## Parallel work
+
+When a task splits into independent parts, run those parts in multiple subagents at the same time.
+
 ## Before you write code (ponytail ladder)
 
 Stop at the first rung that holds:
