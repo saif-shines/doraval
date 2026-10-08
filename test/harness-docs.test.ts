@@ -208,6 +208,15 @@ describe("dora harness docs lockstep", () => {
     expect(home).toContain("Pocket agents");
     expect(home).toContain("/get-started/pocket-agents/");
     expect(home).not.toContain("/ask-dora");
+    const jobs =
+      "`dora scan` lists the gaps in this project. `dora fix` applies the safe fixes. `dora review --run` runs the skill off, then on. A pocket agent ships the work that repeats.";
+    expect(read("README.md")).toContain(jobs);
+    expect(read("apps/website/content/get-started/installation.mdx")).toContain(jobs);
+    expect(home).toContain("dora fix");
+    expect(home).toContain("dora review --run");
+    expect(home).not.toContain("agnix");
+    expect(read("README.md")).not.toContain("agnix");
+    expect(read("apps/website/content/get-started/installation.mdx")).not.toContain("agnix");
     for (const rel of ["README.md", "apps/website/content/index.mdx", "apps/website/content/get-started/index.mdx"]) {
       expect(read(rel)).toContain(lead);
     }

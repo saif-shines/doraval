@@ -17,7 +17,7 @@ Pass the folder that holds the skills you ship. A check of `.` also scores test 
 
 `--quick` checks structure. No API key. Exit `0` clean · `1` issues · `2` could not run.
 
-[agnix](https://github.com/agent-sh/agnix) lints files in the editor. [Promptfoo](https://www.promptfoo.dev/docs/guides/test-agent-skills/) A/B tests a skill with a model. [`skills-ref validate`](https://agentskills.io/specification) only checks the spec. `dora review --quick` reviews the workspace. `dora review --run` runs the skill off, then on.
+`dora scan` lists the gaps in this project. `dora fix` applies the safe fixes. `dora review --run` runs the skill off, then on. A pocket agent ships the work that repeats.
 
 Run the same check on a pull request:
 

@@ -7,6 +7,9 @@
 - The lead names two jobs. Dora assesses the agent setup in this project
   and shows what to fix. Dora helps you ship and share that work,
   including a pocket agent.
+- The home page, README, and Installation name `dora scan`, `dora fix`,
+  `dora review --run`, and a pocket agent. They no longer name agnix,
+  Promptfoo, or `skills-ref validate`.
 
 ## 0.6.44
 
