@@ -38,6 +38,7 @@ import {
   resumeArgs,
   runsArgs,
   watchCommands,
+  resolveHermesBin,
   type CronJob,
 } from "../../core/hermes.js";
 import { installPocketFooterHook } from "../../core/pocket-footer.js";
@@ -46,7 +47,7 @@ import { exit } from "../render/exit.js";
 import { promptSelect } from "../prompt.js";
 
 function hermesInstalled(): boolean {
-  return Bun.which("hermes") !== null;
+  return resolveHermesBin() !== undefined;
 }
 
 function grillSkillDir(): string {

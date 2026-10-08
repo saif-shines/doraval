@@ -7,8 +7,22 @@ export const MCP_SERVER = "scalekit";
 
 export type HermesRun = (args: string[]) => { exitCode: number; stdout: string; stderr: string };
 
+export function resolveHermesBin(): string | undefined {
+  const found = Bun.which("hermes");
+  if (found) return found;
+  if (process.platform !== "win32") return undefined;
+  for (const dir of (process.env.PATH ?? "").split(";")) {
+    if (!dir) continue;
+    for (const name of ["hermes.exe", "hermes.cmd", "hermes.bat"]) {
+      const p = join(dir, name);
+      if (existsSync(p)) return p;
+    }
+  }
+  return undefined;
+}
+
 function hermesArgv(args: string[]): string[] | undefined {
-  const bin = Bun.which("hermes");
+  const bin = resolveHermesBin();
   if (!bin) return undefined;
   if (process.platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
     const quote = (s: string) => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
