@@ -7,18 +7,32 @@ export const MCP_SERVER = "scalekit";
 
 export type HermesRun = (args: string[]) => { exitCode: number; stdout: string; stderr: string };
 
-export function resolveHermesBin(): string | undefined {
-  const found = Bun.which("hermes");
-  if (found) return found;
-  if (process.platform !== "win32") return undefined;
-  for (const dir of (process.env.PATH ?? "").split(";")) {
-    if (!dir) continue;
-    for (const name of ["hermes.exe", "hermes.cmd", "hermes.bat"]) {
-      const p = join(dir, name);
-      if (existsSync(p)) return p;
+function pathDirs(): string[] {
+  const sep = process.platform === "win32" ? ";" : ":";
+  const seen = new Set<string>();
+  const dirs: string[] = [];
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.toLowerCase() !== "path" || !value) continue;
+    for (const dir of value.split(sep)) {
+      if (!dir || seen.has(dir)) continue;
+      seen.add(dir);
+      dirs.push(dir);
     }
   }
-  return undefined;
+  return dirs;
+}
+
+export function resolveHermesBin(): string | undefined {
+  if (process.platform === "win32") {
+    for (const dir of pathDirs()) {
+      for (const name of ["hermes.cmd", "hermes.exe", "hermes.bat", "hermes"]) {
+        const p = join(dir, name);
+        if (existsSync(p)) return p;
+      }
+    }
+    return undefined;
+  }
+  return Bun.which("hermes") ?? undefined;
 }
 
 function hermesArgv(args: string[]): string[] | undefined {

@@ -1055,7 +1055,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, "");
     const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass", "--dry-run"], {
-      env: { HOME: home, PATH: `${hermesPath(bin)}`, CLAUDECODE: "1" },
+      env: { HOME: home, PATH: `${hermesPath(bin)}`, GEMINI_CLI: "1" },
     });
     expect(exitCode).toBe(0);
     const out = stdout + stderr;
@@ -1066,6 +1066,26 @@ describe("dora harness", () => {
     expect(existsSync(join(home, ".dora", "hooks", "stamp-pocket-footer.py"))).toBe(false);
     rmSync(home, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
+  });
+
+  test("apply --dry-run prints the plan when Hermes is missing", () => {
+    const home = mkdtempSync(join(tmpdir(), "dora-harness-dry-missing-"));
+    writeRoutine(home, {
+      slug: "night-pass",
+      prompt: "Check.",
+      skillsRun: [],
+      skillsRefer: [],
+      mcpUrl: "https://gw.example/mcp",
+    });
+    const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass", "--dry-run"], {
+      env: { HOME: home, PATH: pathWithoutHermes(), GEMINI_CLI: "1" },
+    });
+    expect(exitCode).toBe(0);
+    const out = stdout + stderr;
+    expect(out).toContain("hermes gateway install");
+    expect(out).toContain("hermes cron create");
+    expect(existsSync(join(home, ".dora", "hooks", "stamp-pocket-footer.py"))).toBe(false);
+    rmSync(home, { recursive: true, force: true });
   });
 
   test("apply refreshes an upstream copy and keep-copies skips it", () => {
@@ -1156,7 +1176,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, "");
     const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass"], {
-      env: { HOME: home, PATH: `${hermesPath(bin)}`, CLAUDECODE: "1", CI: "1" },
+      env: { HOME: home, PATH: `${hermesPath(bin)}`, GEMINI_CLI: "1", CI: "1" },
     });
     expect(exitCode).toBe(2);
     expect(stdout + stderr).toMatch(/--yes|--dry-run/);
@@ -1316,7 +1336,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode, stdout, stderr } = runDoraval(["harness", "rm", "night-pass", "--dry-run"], {
-      env: { HOME: home, PATH: `${hermesPath(bin)}`, CLAUDECODE: "1" },
+      env: { HOME: home, PATH: `${hermesPath(bin)}`, GEMINI_CLI: "1" },
     });
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toContain("hermes cron remove abcdef123456");
@@ -1430,6 +1450,27 @@ describe("dora harness", () => {
 });
 
 function writeFakeGit(bin: string, fixtureRepo: string): void {
+  if (process.platform === "win32") {
+    // A shell script named git is not git.exe. cmd finds git.cmd. Paths stay Windows paths.
+    const js = `const fs = require("fs");
+const path = require("path");
+const args = process.argv.slice(2);
+function copyInto(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const name of fs.readdirSync(src)) {
+    const from = path.join(src, name);
+    const to = path.join(dest, name);
+    if (fs.statSync(from).isDirectory()) copyInto(from, to);
+    else fs.copyFileSync(from, to);
+  }
+}
+if (args[0] === "clone") copyInto(${JSON.stringify(fixtureRepo)}, args[args.length - 1]);
+process.exit(0);
+`;
+    writeFileSync(join(bin, "git.js"), js);
+    writeFileSync(join(bin, "git.cmd"), `@echo off\r\nbun "%~dp0git.js" %*\r\n`);
+    return;
+  }
   writeFileSync(
     join(bin, "git"),
     `#!/bin/sh

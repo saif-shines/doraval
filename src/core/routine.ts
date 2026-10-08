@@ -45,14 +45,28 @@ function kitNameFromRemote(remote: string): string | undefined {
   return m?.[1]?.toLowerCase();
 }
 
+function gitArgv(args: string[]): string[] {
+  if (process.platform !== "win32") return ["git", ...args];
+  const bin = Bun.which("git");
+  if (!bin || !/\.(cmd|bat)$/i.test(bin)) return ["git", ...args];
+  const quote = (s: string) => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+  return ["cmd.exe", "/d", "/s", "/c", [quote(bin), ...args.map(quote)].join(" ")];
+}
+
+function gitSpawn(args: string[], opts: { cwd?: string; timeout?: number } = {}) {
+  return spawnSync(gitArgv(args), {
+    cwd: opts.cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: opts.timeout,
+  });
+}
+
 function gitRootAndRemote(dir: string): { root: string; remote: string } | undefined {
   let cur = resolve(dir);
   for (let i = 0; i < 16; i++) {
     if (existsSync(join(cur, ".git"))) {
-      const r = spawnSync(["git", "-C", cur, "remote", "get-url", "origin"], {
-        stdout: "pipe",
-        stderr: "pipe",
-      });
+      const r = gitSpawn(["-C", cur, "remote", "get-url", "origin"]);
       if ((r.exitCode ?? 1) !== 0) return undefined;
       const remote = String(r.stdout ?? "").trim();
       if (!remote) return undefined;
@@ -124,7 +138,7 @@ export function ensureProjectSkillLayout(dir: string): void {
 /** Hermes skill_view only scans a trusted git root. A harness folder has none until apply. */
 export function ensureHermesProjectRoot(dir: string): void {
   if (existsSync(join(dir, ".git"))) return;
-  const r = spawnSync(["git", "init", "-q"], { cwd: dir, stdout: "pipe", stderr: "pipe" });
+  const r = gitSpawn(["init", "-q"], { cwd: dir });
   if ((r.exitCode ?? 1) !== 0) {
     const err = r.stderr.toString().trim() || "git init failed";
     throw new Error(`Hermes cannot load skills-run copies without a git root in ${dir}: ${err}`);
@@ -261,7 +275,7 @@ function fetchRemoteDir(url: string): { dir: string; cleanup: () => void } {
   const args = ["clone", "--depth", "1"];
   if (parsed.ref) args.push("--branch", parsed.ref);
   args.push(parsed.gitUrl, tmp);
-  const r = spawnSync(["git", ...args], { stdout: "pipe", stderr: "pipe", timeout: 60_000 });
+  const r = gitSpawn(args, { timeout: 60_000 });
   if ((r.exitCode ?? 1) !== 0) {
     cleanup();
     throw new Error(`Could not fetch ${url}`);

@@ -6,6 +6,8 @@
 
 - A missing `hermes` command no longer crashes `dora harness` on Windows.
   Windows tests use `USERPROFILE` when they set `HOME`.
+- `dora harness apply --dry-run` and `dora harness rm --dry-run` print the plan
+  when Hermes is not installed.
 
 ### Docs
 

@@ -474,13 +474,13 @@ async function runApply(
     from?: string;
   },
 ): Promise<void> {
-  if (!hermesInstalled()) {
+  const dryRun = Boolean(args["dry-run"]);
+  const yes = Boolean(args.yes);
+  if (!dryRun && !hermesInstalled()) {
     printHermesInstall();
     await exit(2);
     return;
   }
-  const dryRun = Boolean(args["dry-run"]);
-  const yes = Boolean(args.yes);
   if (shouldBlockAgentWrite({ agent: isAgentCaller(), yes, dryRun })) {
     refuseAgentWrite("dora harness apply <slug> --yes");
     await exit(2);
@@ -889,6 +889,15 @@ async function runRm(slug: string, args: { yes?: boolean; "dry-run"?: boolean; f
   const live = routine.jobId && jobs?.some((j) => j.id === routine.jobId) ? routine.jobId : undefined;
   const named = jobs?.find((j) => j.name === slug);
   const jobId = live ?? named?.id ?? (routine.jobId && jobs === null ? routine.jobId : undefined);
+  if (dryRun) {
+    if (jobId) ui.info(`  ${formatHermesCmd(removeArgs(jobId))}`);
+    ui.info(`  delete ${routine.dir}`);
+    if (mode.format === "json") outJson({ slug, dryRun: true, job: jobId ? "remove" : "gone" });
+    nextAction(`dora harness rm ${slug} --yes`);
+    ui.blank();
+    await exit(0);
+    return;
+  }
   if (hermesInstalled() && jobs === null && !jobId) {
     ui.fail("Could not list Runtime jobs.");
     nextAction("dora harness list");
@@ -898,15 +907,6 @@ async function runRm(slug: string, args: { yes?: boolean; "dry-run"?: boolean; f
   if (jobId && !hermesInstalled()) {
     printHermesInstall();
     await exit(2);
-    return;
-  }
-  if (dryRun) {
-    if (jobId) ui.info(`  ${formatHermesCmd(removeArgs(jobId))}`);
-    ui.info(`  delete ${routine.dir}`);
-    if (mode.format === "json") outJson({ slug, dryRun: true, job: jobId ? "remove" : "gone" });
-    nextAction(`dora harness rm ${slug} --yes`);
-    ui.blank();
-    await exit(0);
     return;
   }
   let job: "removed" | "gone" = "gone";

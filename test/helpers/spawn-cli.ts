@@ -16,17 +16,33 @@ export interface RunOptions {
   env?: Record<string, string | undefined>;
 }
 
-export function runDoraval(args: string[], options: RunOptions = {}): DoravalRunResult {
-  const extra = { ...(options.env || {}) };
+function childEnv(extraIn: Record<string, string | undefined>): Record<string, string | undefined> {
+  const extra = { ...extraIn };
   // Windows os.homedir() reads USERPROFILE, not HOME.
   if (process.platform === "win32" && extra.HOME && extra.USERPROFILE === undefined) {
     extra.USERPROFILE = extra.HOME;
   }
+  const env: Record<string, string | undefined> = { ...process.env, NO_COLOR: "1" };
+  const pathOverride = extra.PATH ?? extra.Path;
+  if (process.platform === "win32" && pathOverride !== undefined) {
+    // Windows keeps one path value. A second Path key hides the test shim.
+    for (const key of Object.keys(env)) {
+      if (key.toLowerCase() === "path") delete env[key];
+    }
+    delete extra.PATH;
+    delete extra.Path;
+    env.Path = pathOverride;
+    env.PATH = pathOverride;
+  }
+  return { ...env, ...extra };
+}
+
+export function runDoraval(args: string[], options: RunOptions = {}): DoravalRunResult {
   const result = spawnSync(["bun", "run", cliEntry, "--", ...args], {
     cwd: options.cwd ?? repoRoot,
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env, NO_COLOR: "1", ...extra },
+    env: childEnv(options.env || {}),
   });
 
   return {
