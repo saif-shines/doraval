@@ -1,27 +1,21 @@
 # doraval
 
-Context-effectiveness CLI for coding agents. It reviews skills, rules, and memory so Claude, Cursor, Codex, Copilot, and Grok work from context you can trust.
+Review a skill before you share it. `dora` checks skills, rules, and memory for Claude, Cursor, Codex, Copilot, and Grok.
 
-`dora` and `doraval` are the same binary. Pronunciation: *dor-uh-val* (Doraemon + eval).
+`dora` is the command. The package name is `@hacksmith/doraval`.
 
 ## Quick start
 
 ```sh
 npx skills add saif-shines/doraval
-dora review --quick
+dora review --quick skills
 ```
 
-That add installs four skills: `ask-dora`, `review-with-dora`, `grilling-for-routine`, and `writing-for-routine`. Type `/ask-dora` for a Dora job or a routine idea.
+That add installs four skills: `ask-dora`, `review-with-dora`, `grilling-for-routine`, and `writing-for-routine`.
 
-```text
-/ask-dora turn this loop-able check into a routine
-```
+Pass the folder that holds the skills you ship. A check of `.` also scores test fixtures and can exit 1.
 
-That second line starts a **pocket agent**: one unattended loop, one machine, one user. Model: [Pocket agent](https://doraval.dev/concepts/pocket-agent/). Walkthrough: [Run a pocket agent](https://doraval.dev/get-started/pocket-agents/). Apply: [Apply and watch](https://doraval.dev/get-started/apply-and-watch/).
-
-`--quick` is structure and heuristics only. No Judge. No API key.
-
-You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run. `dora review --run` is the live pair (no skill, then with the skill). It is not `--quick`.
+`--quick` checks structure. No API key. Exit `0` clean · `1` issues · `2` could not run.
 
 [agnix](https://github.com/agent-sh/agnix) lints files in the editor. [Promptfoo](https://www.promptfoo.dev/docs/guides/test-agent-skills/) A/B tests a skill with a model. [`skills-ref validate`](https://agentskills.io/specification) only checks the spec. `dora review --quick` reviews the workspace. `dora review --run` runs the skill off, then on.
 
@@ -43,6 +37,10 @@ jobs:
 ```
 
 Pass `skills`, or the folder that holds the skills you ship. A check of the whole repo also scores test fixtures and can exit 1.
+
+## Pocket agent
+
+A pocket agent is the next job. Type `/ask-dora` and a loop-able idea. Walkthrough: [Run a pocket agent](https://doraval.dev/get-started/pocket-agents/).
 
 ## Install the CLI
 

@@ -12,7 +12,7 @@ function redirs(pairs: Array<[string, string]>) {
 export default defineConfig({
   title: "doraval",
   description:
-    "Make agent context work on every try. Context effectiveness toolkit for coding agents: scan, review, fix, and remember skills, plugins, and decisions across Claude, Cursor, Codex, Copilot, and Grok.",
+    "Review a skill before you share it. dora checks skills, rules, and memory for Claude, Cursor, Codex, Copilot, and Grok.",
   content: {
     root: "content",
   },

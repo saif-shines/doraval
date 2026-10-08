@@ -16,6 +16,9 @@
   `dora review --quick --ci skills`.
 - CI runs that check on the shipped `skills/` folder. A repo-root
   check also scores test fixtures and can exit 1.
+- The home page and Introduction lead with `dora review --quick`.
+  The pocket agent is the next link. The sidebar says
+  Pocket agent commands. The concepts group is no longer named Reference.
 
 ## 0.6.43
 

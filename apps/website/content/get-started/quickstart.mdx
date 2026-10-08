@@ -1,12 +1,12 @@
 ---
-title: Quick Start
-description: Review until exit 0. Then start a pocket agent if the job is a loop.
+title: Quick start
+description: Review a skill folder until exit 0.
 sidebar:
-  label: Quick Start
+  label: Quick start
   order: 3
 ---
 
-Run this loop after you install `dora`. You get Findings first, then mechanical fixes, then a clean Review. A second job is a pocket agent: grill a loop, one-pass it, then apply.
+Review the skill folder until exit 0. A pocket agent is a later page.
 
 ## Core workflow
 
@@ -14,18 +14,20 @@ Run this loop after you install `dora`. You get Findings first, then mechanical 
 # 1. Install ask-dora, review-with-dora, grilling-for-routine, writing-for-routine
 npx skills add saif-shines/doraval
 
-# 2. Review: structure + heuristics, no Judge
-dora review --quick
+# 2. Review the skill folder. No API key.
+dora review --quick skills
 
-# 3. Mechanical fix
-dora fix . --yes
+# 3. Apply safe fixes
+dora fix skills --yes
 
-# 4. Judgment: read Brief, replace Authored SKILL.md
-dora fix . --brief
+# 4. Read the brief, then edit the skill
+dora fix skills --brief
 
-# 5. Re-review until exit 0
-dora review --quick
+# 5. Review again until exit 0
+dora review --quick skills
 ```
+
+Pass the folder that holds the skills you ship. A check of `.` also scores test fixtures and can exit 1.
 
 Exit `0` clean · `1` issues · `2` could not run.
 
@@ -35,7 +37,7 @@ If `dora` is not on `PATH`, use `npx @hacksmith/doraval` in place of `dora`.
 
 ```bash
 dora                         # short --help
-dora review --quick          # Findings first, no LLM
+dora review --quick skills  # structure only, no API key
 dora review --quick --format json
 dora scan                    # workspace map
 dora fix . --yes             # mechanical only; no TTY
@@ -50,7 +52,7 @@ dora conflicts --dry-run
 ```bash
 dora review --quick .
 dora review --quick ./path/to/skill-dir
-dora review --all --quick --ci     # CI gate, no LLM
+dora review --quick --ci skills # CI gate, no API key
 dora review --deep                 # require Judge
 dora review --run .                # live-run scenarios.yaml; not --quick
 ```
