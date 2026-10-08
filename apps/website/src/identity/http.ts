@@ -26,9 +26,33 @@ export function envReady(env: ScalekitEnv): env is Required<ScalekitEnv> {
   return Boolean(env.environmentUrl && env.clientId && env.clientSecret && env.redirectUri);
 }
 
-function html(status: number, body: string, headers: HeadersInit = {}): Response {
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;",
+  );
+}
+
+const PAGE_CSS = `
+:root{--bg:#fff;--fg:#171717;--muted:#737373;--line:#e5e5e5;--code:#fafafa}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:inherit}
+.top{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line)}
+.top a{font-weight:600;letter-spacing:-.02em;text-decoration:none}
+main{max-width:36rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1{margin:0 0 .75rem;font-size:1.75rem;line-height:1.15;letter-spacing:-.02em;font-weight:600}
+p{margin:0 0 1rem;color:var(--muted)}
+pre{margin:0 0 1.25rem;padding:.85rem 1rem;background:var(--code);border:1px solid var(--line);border-radius:.75rem;overflow:auto}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.9rem;color:var(--fg)}
+button{appearance:none;background:var(--fg);color:var(--bg);border:0;border-radius:.75rem;padding:.6rem 1rem;font:inherit;font-weight:600;cursor:pointer}
+form{margin:0 0 1.25rem}
+.hello{margin:0 0 1rem;padding:1rem;border:1px solid var(--line);border-radius:.75rem}
+.hello p{margin:0 0 .75rem;color:var(--fg)}
+`;
+
+function page(status: number, title: string, body: string, headers: HeadersInit = {}): Response {
   return new Response(
-    `<!doctype html><meta charset="utf-8"><title>doraval</title>${body}`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · doraval</title><style>${PAGE_CSS}</style></head><body><header class="top"><a href="/">doraval</a><a href="/get-started/connect/">Connect the CLI</a></header><main><h1>${esc(title)}</h1>${body}</main></body></html>`,
     { status, headers: { "content-type": "text/html; charset=utf-8", ...headers } },
   );
 }
@@ -66,7 +90,11 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
 
   if (path === "/auth/login" || path === "/auth/signup") {
     if (!envReady(deps.env)) {
-      return html(503, `<p>Scalekit is not configured. Set SCALEKIT_ENVIRONMENT_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET, and SCALEKIT_REDIRECT_URI.</p>`);
+      return page(
+        503,
+        "Sign-in is not configured",
+        `<p>Set SCALEKIT_ENVIRONMENT_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET, and SCALEKIT_REDIRECT_URI.</p><p><a href="/">Back to the docs</a></p>`,
+      );
     }
     const location = deps.authorize({
       prompt: path.endsWith("signup") ? "create" : undefined,
@@ -76,17 +104,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
   }
 
   if (path === "/auth/callback") {
-    if (!envReady(deps.env)) {
-      return html(503, `<p>Scalekit is not configured.</p>`);
-    }
-    const code = url.searchParams.get("code") ?? "";
-    if (!code) return html(400, `<p>Missing authorization code.</p>`);
-    const tokens = await deps.exchangeCode(code, deps.env.redirectUri);
-    const res = redirect(req, "/account");
-    return withCookies(res, [
-      cookie(ACCESS, tokens.accessToken),
-      cookie(ID, tokens.idToken),
-    ]);
+    return finishLogin(req, deps, url.searchParams.get("code") ?? "");
   }
 
   if (path === "/auth/logout") {
@@ -103,6 +121,11 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
   if (path === "/account" && req.method === "GET") {
     const access = readCookie(req, ACCESS);
     const who = access ? deps.readAccess(access) : null;
+    const code = url.searchParams.get("code");
+    if (code) {
+      if (who) return redirect(req, "/account");
+      return finishLogin(req, deps, code);
+    }
     if (!who) {
       return redirect(req, "/auth/login");
     }
@@ -110,15 +133,13 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const probes = pending
       .map(
         (p) =>
-          `<p>hello</p><form method="post" action="/probe/${p.id}/ack"><button type="submit">ack</button></form>`,
+          `<section class="hello"><p>hello</p><form method="post" action="/probe/${esc(p.id)}/ack"><button type="submit">ack</button></form></section>`,
       )
       .join("");
-    return html(
+    return page(
       200,
-      `${probes}
-       <p>Mint an API key for the CLI. Copy it once. Then: <code>dora config set identity.api_key &lt;token&gt; --yes</code></p>
-       <form method="post" action="/account/key"><button type="submit">Mint API key</button></form>
-       <p><a href="/auth/logout">Log out</a></p>`,
+      "Mint an API key",
+      `${probes}<p>Copy it once. Then run this command.</p><pre><code>dora config set identity.api_key &lt;token&gt; --yes</code></pre><form method="post" action="/account/key"><button type="submit">Mint API key</button></form><p><a href="/auth/logout">Log out</a></p>`,
     );
   }
 
@@ -127,12 +148,11 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const claims = access ? deps.readAccess(access) : null;
     if (!claims) return redirect(req, "/auth/login");
     const minted = await deps.mintToken(claims.organizationId);
-    return html(
+    const token = esc(minted.token);
+    return page(
       200,
-      `<p>Copy this API key now. It will not be shown again.</p>
-       <p><code>${minted.token}</code></p>
-       <p><code>dora config set identity.api_key ${minted.token} --yes</code></p>
-       <p><a href="/account">Back</a> · <a href="/auth/logout">Log out</a></p>`,
+      "Copy this API key",
+      `<p>It will not be shown again.</p><pre><code>${token}</code></pre><p>Then run this command.</p><pre><code>dora config set identity.api_key ${token} --yes</code></pre><p><a href="/account">Back</a> · <a href="/auth/logout">Log out</a></p>`,
     );
   }
 
@@ -160,11 +180,29 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const who = access ? deps.readAccess(access) : null;
     if (!who) return redirect(req, "/auth/login");
     const row = await deps.store?.ack(ackId, who.organizationId);
-    if (!row) return html(404, `<p>No such hello.</p>`);
-    return html(200, `<p>ack</p><p><a href="/account">Back</a></p>`);
+    if (!row) return page(404, "No such hello", `<p><a href="/account">Back</a></p>`);
+    return page(200, "Ack sent", `<p><a href="/account">Back</a></p>`);
   }
 
-  return html(404, `<p>Not found.</p>`);
+  return page(404, "Not found", `<p><a href="/">Back to the docs</a></p>`);
+}
+
+async function finishLogin(req: Request, deps: IdentityDeps, code: string): Promise<Response> {
+  if (!envReady(deps.env)) {
+    return page(
+      503,
+      "Sign-in is not configured",
+      `<p>Set SCALEKIT_ENVIRONMENT_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET, and SCALEKIT_REDIRECT_URI.</p><p><a href="/">Back to the docs</a></p>`,
+    );
+  }
+  if (!code) {
+    return page(400, "Sign-in did not finish", `<p>Missing authorization code.</p><p><a href="/auth/login">Try again</a></p>`);
+  }
+  const tokens = await deps.exchangeCode(code, deps.env.redirectUri);
+  return withCookies(redirect(req, "/account"), [
+    cookie(ACCESS, tokens.accessToken),
+    cookie(ID, tokens.idToken),
+  ]);
 }
 
 function json(status: number, body: unknown): Response {

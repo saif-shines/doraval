@@ -87,12 +87,43 @@ describe("identity HTTP (#77)", () => {
     expect(res.headers.get("location")).toBe("https://doraval.dev/auth/login");
   });
 
+  test("a leftover code on account is dropped when already logged in", async () => {
+    let exchanged = false;
+    const access = jwt({ oid: "org_1" });
+    const d = deps({
+      exchangeCode: async () => {
+        exchanged = true;
+        return { idToken: jwt({ sub: "usr_1" }), accessToken: access };
+      },
+    });
+    const res = await call("/account?code=abc", { headers: { cookie: `sk_access=${access}` } }, d);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("https://doraval.dev/account");
+    expect(exchanged).toBe(false);
+  });
+
+  test("account with a code and no cookie finishes login", async () => {
+    let saw = "";
+    const d = deps({
+      exchangeCode: async (code) => {
+        saw = code;
+        return { idToken: jwt({ sub: "usr_1" }), accessToken: jwt({ oid: "org_1" }) };
+      },
+    });
+    const res = await call("/account?code=from-login", {}, d);
+    expect(saw).toBe("from-login");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("https://doraval.dev/account");
+  });
+
   test("account with a cookie shows mint, not Config, and never says session", async () => {
     const access = jwt({ oid: "org_1" });
     const res = await call("/account", { headers: { cookie: `sk_access=${access}` } });
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toMatch(/API key/i);
+    expect(body).toContain("<style");
+    expect(body).toContain('href="/"');
     expect(body).toMatch(/[Ll]og out/);
     expect(body).not.toMatch(/session/i);
     expect(body).not.toMatch(/config\.yml/i);

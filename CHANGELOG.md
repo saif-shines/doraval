@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The account page, the API key page, and the sign-in errors use the site
+  type. A login code left on `/account` is removed from the address bar.
+
 ## 0.6.45
 
 ### Docs
