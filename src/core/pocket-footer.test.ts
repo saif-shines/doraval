@@ -151,7 +151,7 @@ describe("python hook", () => {
       })),
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...process.env, HOME: home },
+      env: { ...process.env, HOME: home, ...(process.platform === "win32" ? { USERPROFILE: home } : {}) },
     });
     expect(r.exitCode).toBe(0);
     const out = JSON.parse(r.stdout.toString() || "{}");
@@ -173,7 +173,7 @@ describe("python hook", () => {
       })),
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...process.env, HOME: home },
+      env: { ...process.env, HOME: home, ...(process.platform === "win32" ? { USERPROFILE: home } : {}) },
     });
     expect(r.exitCode).toBe(0);
     const out = JSON.parse(r.stdout.toString() || "{}");
@@ -190,7 +190,7 @@ describe("python hook", () => {
       stdin: new TextEncoder().encode("not-json"),
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...process.env, HOME: home },
+      env: { ...process.env, HOME: home, ...(process.platform === "win32" ? { USERPROFILE: home } : {}) },
     });
     expect(r.exitCode).toBe(0);
     expect(r.stdout.toString()).toBe("");

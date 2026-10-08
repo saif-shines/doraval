@@ -17,11 +17,16 @@ export interface RunOptions {
 }
 
 export function runDoraval(args: string[], options: RunOptions = {}): DoravalRunResult {
+  const extra = { ...(options.env || {}) };
+  // Windows os.homedir() reads USERPROFILE, not HOME.
+  if (process.platform === "win32" && extra.HOME && extra.USERPROFILE === undefined) {
+    extra.USERPROFILE = extra.HOME;
+  }
   const result = spawnSync(["bun", "run", cliEntry, "--", ...args], {
     cwd: options.cwd ?? repoRoot,
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env, NO_COLOR: "1", ...(options.env || {}) },
+    env: { ...process.env, NO_COLOR: "1", ...extra },
   });
 
   return {

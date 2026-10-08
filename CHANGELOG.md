@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixes
+
+- A missing `hermes` command no longer crashes `dora harness` on Windows.
+  Windows tests use `USERPROFILE` when they set `HOME`.
+
 ### Docs
 
 - The first install command is `npx skills add saif-shines/doraval`.

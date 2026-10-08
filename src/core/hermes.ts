@@ -8,8 +8,16 @@ export const MCP_SERVER = "scalekit";
 export type HermesRun = (args: string[]) => { exitCode: number; stdout: string; stderr: string };
 
 export function defaultHermesRun(args: string[]): { exitCode: number; stdout: string; stderr: string } {
-  const r = spawnSync(["hermes", ...args], { stdout: "pipe", stderr: "pipe" });
-  return { exitCode: r.exitCode ?? 1, stdout: r.stdout.toString(), stderr: r.stderr.toString() };
+  try {
+    const r = spawnSync(["hermes", ...args], { stdout: "pipe", stderr: "pipe" });
+    return {
+      exitCode: r.exitCode ?? 1,
+      stdout: r.stdout?.toString() ?? "",
+      stderr: r.stderr?.toString() ?? "",
+    };
+  } catch (e) {
+    return { exitCode: 127, stdout: "", stderr: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 export function hermesSchedule(interval: string): string {

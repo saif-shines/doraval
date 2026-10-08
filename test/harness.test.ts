@@ -1,19 +1,28 @@
-import { dirname, join } from "path";
+import { delimiter, dirname, join } from "path";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { spawnSync } from "bun";
 import { describe, expect, test } from "bun:test";
 import { runDoraval } from "./helpers/spawn-cli.js";
 import { writeRoutine } from "../src/core/routine.js";
 
 /** PATH that can run bun but has no `hermes` binary. */
 function pathWithoutHermes(): string {
-  const bun = spawnSync(["which", "bun"], { stdout: "pipe", stderr: "pipe" }).stdout.toString().trim();
+  const bun = Bun.which("bun") ?? "";
   const keep = new Set([dirname(bun), "/usr/bin", "/bin", "/usr/sbin", "/sbin"]);
   return (process.env.PATH ?? "")
-    .split(":")
-    .filter((dir) => keep.has(dir) || (dir && !existsSync(join(dir, "hermes"))))
-    .join(":");
+    .split(delimiter)
+    .filter((dir) => {
+      if (keep.has(dir)) return true;
+      if (!dir) return false;
+      return !existsSync(join(dir, "hermes"))
+        && !existsSync(join(dir, "hermes.cmd"))
+        && !existsSync(join(dir, "hermes.exe"));
+    })
+    .join(delimiter);
+}
+
+function hermesPath(bin: string): string {
+  return [bin, pathWithoutHermes()].join(delimiter);
 }
 
 describe("dora harness", () => {
@@ -126,7 +135,7 @@ describe("dora harness", () => {
       chmodSync(join(bin, name), 0o755);
     }
     const { exitCode, stdout, stderr } = runDoraval(["harness", "open", "ooo-calendar"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toContain(dir);
@@ -387,7 +396,7 @@ describe("dora harness", () => {
         "--mcp-url",
         "https://gw.example/mcp",
       ],
-      { env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` } },
+      { env: { HOME: home, PATH: `${hermesPath(bin)}` } },
     );
     const out = stdout + stderr;
     expect(exitCode).not.toBe(0);
@@ -411,7 +420,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, "");
     const { exitCode, stdout, stderr } = runDoraval(["harness", "boot", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     const logText = readFileSync(log, "utf8");
@@ -445,7 +454,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, "", { failMcp: true });
     const { exitCode, stdout, stderr } = runDoraval(["harness", "boot", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).not.toBe(0);
     const out = stdout + stderr;
@@ -502,10 +511,10 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home);
     const pause = runDoraval(["harness", "pause", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     const resume = runDoraval(["harness", "resume", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(pause.exitCode).toBe(0);
     expect(resume.exitCode).toBe(0);
@@ -536,7 +545,7 @@ describe("dora harness", () => {
     });
     const { bin } = fakeHermes(home, cronListBlock("abcdef123456", "night-pass", "paused", "2026-09-04T21:30:19+05:30"));
     const { exitCode, stdout, stderr } = runDoraval(["harness", "list"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     const out = stdout + stderr;
@@ -569,7 +578,7 @@ describe("dora harness", () => {
     });
     const { bin } = fakeHermes(home, cronListBlock("abcdef123456", "night-pass", "active", "2026-09-04T21:30:19+05:30"));
     const { exitCode, stdout, stderr } = runDoraval(["harness", "show", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     const out = stdout + stderr;
@@ -598,10 +607,10 @@ describe("dora harness", () => {
     });
     const { bin } = fakeHermes(home);
     const show = runDoraval(["harness", "show", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     const listed = runDoraval(["harness", "list", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(show.exitCode).toBe(0);
     expect(listed.exitCode).toBe(0);
@@ -632,7 +641,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode, stdout, stderr } = runDoraval(["harness", "pause", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(1);
     expect(stdout + stderr).toMatch(/gone/i);
@@ -661,7 +670,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home, "", { failList: true });
     const { exitCode } = runDoraval(["harness", "pause", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(readFileSync(log, "utf8")).toContain("cron pause abcdef123456");
@@ -700,7 +709,7 @@ describe("dora harness", () => {
     });
     const { bin } = fakeHermes(home);
     const list = runDoraval(["harness", "list", "--json"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(list.exitCode).toBe(0);
     const rows = JSON.parse(list.stdout) as Array<Record<string, unknown>>;
@@ -713,7 +722,7 @@ describe("dora harness", () => {
       },
     ]);
     const show = runDoraval(["harness", "show", "night-pass", "--json"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(show.exitCode).toBe(0);
     const card = JSON.parse(show.stdout) as Record<string, unknown>;
@@ -766,7 +775,7 @@ describe("dora harness", () => {
       "9a1dbe9fc3d84b048233ee05388db4d4  completed  job=abcdef123456  source=builtin  2026-09-04T23:22:14+05:30\n";
     const { bin, log } = fakeHermes(home, cronListBlock("abcdef123456", "night-pass", "active"), { runsOut });
     const { exitCode, stdout, stderr } = runDoraval(["harness", "logs", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     const logText = readFileSync(log, "utf8");
@@ -800,7 +809,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode, stdout, stderr } = runDoraval(["harness", "logs", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(1);
     expect(stdout + stderr).toMatch(/gone/i);
@@ -833,7 +842,7 @@ describe("dora harness", () => {
       "9a1dbe9fc3d84b048233ee05388db4d4  completed  job=abcdef123456  source=builtin  2026-09-04T23:22:14+05:30\n";
     const { bin } = fakeHermes(home, cronListBlock("abcdef123456", "night-pass", "active"), { runsOut });
     const { exitCode, stdout } = runDoraval(["harness", "logs", "night-pass", "--json"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(JSON.parse(stdout)).toEqual({
@@ -874,7 +883,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, "");
     const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     const logText = readFileSync(log, "utf8");
@@ -912,7 +921,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     const logText = readFileSync(log, "utf8");
@@ -937,7 +946,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home);
     const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(readFileSync(log, "utf8")).toContain("cron edit abcdef123456");
@@ -969,7 +978,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     const logText = readFileSync(log, "utf8");
@@ -1002,7 +1011,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home, "");
     const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(readFileSync(log, "utf8")).toContain("cron create");
@@ -1026,7 +1035,7 @@ describe("dora harness", () => {
     writeFileSync(join(home, ".hermes", "config.yaml"), "{\n");
     const { bin } = fakeHermes(home, "");
     const { exitCode } = runDoraval(["harness", "apply", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(readFileSync(join(home, ".hermes", "config.yaml"), "utf8")).toBe("{\n");
@@ -1046,7 +1055,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, "");
     const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass", "--dry-run"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}`, CLAUDECODE: "1" },
+      env: { HOME: home, PATH: `${hermesPath(bin)}`, CLAUDECODE: "1" },
     });
     expect(exitCode).toBe(0);
     const out = stdout + stderr;
@@ -1085,13 +1094,13 @@ describe("dora harness", () => {
     const { bin, log } = fakeHermes(home, "");
     writeFakeGit(bin, join(cwd, "fetched-kit"));
     const keep = runDoraval(["harness", "apply", "docs-job", "--keep-copies", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
       cwd,
     });
     expect(keep.exitCode).toBe(0);
     expect(readFileSync(copy, "utf8")).toBe("stale\n");
     const applied = runDoraval(["harness", "apply", "docs-job", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
       cwd,
     });
     expect(applied.exitCode).toBe(0);
@@ -1126,7 +1135,7 @@ describe("dora harness", () => {
     );
     const { bin } = fakeHermes(home, "");
     const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "local-job", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
       cwd,
     });
     expect(exitCode).toBe(0);
@@ -1147,7 +1156,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, "");
     const { exitCode, stdout, stderr } = runDoraval(["harness", "apply", "night-pass"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}`, CLAUDECODE: "1", CI: "1" },
+      env: { HOME: home, PATH: `${hermesPath(bin)}`, CLAUDECODE: "1", CI: "1" },
     });
     expect(exitCode).toBe(2);
     expect(stdout + stderr).toMatch(/--yes|--dry-run/);
@@ -1190,7 +1199,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode, stdout, stderr } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(readFileSync(log, "utf8")).toContain("cron remove abcdef123456");
@@ -1220,7 +1229,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode, stdout } = runDoraval(["harness", "rm", "night-pass", "--yes", "--json"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(readFileSync(log, "utf8")).toContain("cron remove abcdef123456");
@@ -1250,7 +1259,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home, "");
     const { exitCode } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(0);
     expect(readFileSync(log, "utf8")).not.toContain("cron remove");
@@ -1279,7 +1288,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin } = fakeHermes(home, undefined, { failRemove: true });
     const { exitCode } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(1);
     expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
@@ -1307,7 +1316,7 @@ describe("dora harness", () => {
     ].join("\n"));
     const { bin, log } = fakeHermes(home);
     const { exitCode, stdout, stderr } = runDoraval(["harness", "rm", "night-pass", "--dry-run"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}`, CLAUDECODE: "1" },
+      env: { HOME: home, PATH: `${hermesPath(bin)}`, CLAUDECODE: "1" },
     });
     expect(exitCode).toBe(0);
     expect(stdout + stderr).toContain("hermes cron remove abcdef123456");
@@ -1393,7 +1402,7 @@ describe("dora harness", () => {
     });
     const { bin, log } = fakeHermes(home, undefined, { failList: true });
     const { exitCode } = runDoraval(["harness", "rm", "night-pass", "--yes"], {
-      env: { HOME: home, PATH: `${bin}:${pathWithoutHermes()}` },
+      env: { HOME: home, PATH: `${hermesPath(bin)}` },
     });
     expect(exitCode).toBe(2);
     expect(existsSync(join(home, ".dora", "harness", "night-pass", "prompt.md"))).toBe(true);
@@ -1473,9 +1482,7 @@ if [ "$1" = cron ] && [ "$2" = remove ]; then
 fi
 `
     : "";
-  writeFileSync(
-    join(bin, "hermes"),
-    `#!/bin/sh
+  const sh = `#!/bin/sh
 echo "$@" >> "${log}"
 ${failList}
 if [ "$1" = cron ] && [ "$2" = list ]; then
@@ -1490,8 +1497,33 @@ fi
 ${failRemove}
 ${failMcp}
 exit 0
-`,
-  );
+`;
+  writeFileSync(join(bin, "hermes"), sh);
   chmodSync(join(bin, "hermes"), 0o755);
+  if (process.platform === "win32") {
+    const js = `const fs = require("fs");
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(log)}, args.join(" ") + "\\n");
+const listOut = ${JSON.stringify(listOut)};
+const runsOut = ${JSON.stringify(opts.runsOut ?? "")};
+if (${opts.failList ? "true" : "false"} && args[0] === "cron" && args[1] === "list") {
+  console.error("list failed");
+  process.exit(1);
+}
+if (args[0] === "cron" && args[1] === "list") process.stdout.write(listOut);
+if (args[0] === "cron" && args[1] === "create") console.log("Created job: fedcba654321");
+if (args[0] === "cron" && args[1] === "runs") process.stdout.write(runsOut);
+if (${opts.failRemove ? "true" : "false"} && args[0] === "cron" && args[1] === "remove") {
+  console.error("remove failed");
+  process.exit(1);
+}
+if (${opts.failMcp ? "true" : "false"} && args[0] === "mcp") {
+  console.error("mcp failed");
+  process.exit(1);
+}
+`;
+    writeFileSync(join(bin, "hermes.js"), js);
+    writeFileSync(join(bin, "hermes.cmd"), `@echo off\r\nbun "%~dp0hermes.js" %*\r\n`);
+  }
   return { bin, log };
 }

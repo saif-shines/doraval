@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from "fs";
-import { spawnSync } from "bun";
 import { homedir } from "os";
 import { join } from "path";
 import { defineCommand } from "citty";
@@ -47,11 +46,7 @@ import { exit } from "../render/exit.js";
 import { promptSelect } from "../prompt.js";
 
 function hermesInstalled(): boolean {
-  try {
-    return spawnSync(["which", "hermes"], { stdout: "pipe", stderr: "pipe" }).exitCode === 0;
-  } catch {
-    return false;
-  }
+  return Bun.which("hermes") !== null;
 }
 
 function grillSkillDir(): string {
