@@ -39,8 +39,10 @@ jobs:
         with:
           node-version: 22
       - run: npm install @hacksmith/doraval
-      - run: ./node_modules/.bin/dora review --quick --ci
+      - run: ./node_modules/.bin/dora review --quick --ci skills
 ```
+
+Pass `skills`, or the folder that holds the skills you ship. A check of the whole repo also scores test fixtures and can exit 1.
 
 ## Install the CLI
 

@@ -92,8 +92,10 @@ jobs:
         with:
           node-version: 22
       - run: npm install @hacksmith/doraval
-      - run: ./node_modules/.bin/dora review --quick --ci
+      - run: ./node_modules/.bin/dora review --quick --ci skills
 ```
+
+Pass the folder that holds the skills you ship. A check of the whole repo also scores test fixtures and can exit 1.
 
 `--ci` prints JSON and does not prompt. Exit `1` fails the check.
 

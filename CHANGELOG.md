@@ -8,7 +8,9 @@
   The global npm install stays below that.
 - README and Installation name agnix, Promptfoo, and
   `skills-ref validate`, and show a pull-request check for
-  `dora review --quick --ci`.
+  `dora review --quick --ci skills`.
+- CI runs that check on the shipped `skills/` folder. A repo-root
+  check also scores test fixtures and can exit 1.
 
 ## 0.6.43
 
