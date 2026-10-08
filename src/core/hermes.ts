@@ -7,9 +7,21 @@ export const MCP_SERVER = "scalekit";
 
 export type HermesRun = (args: string[]) => { exitCode: number; stdout: string; stderr: string };
 
+function hermesArgv(args: string[]): string[] | undefined {
+  const bin = Bun.which("hermes");
+  if (!bin) return undefined;
+  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
+    const quote = (s: string) => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+    return ["cmd.exe", "/d", "/s", "/c", [quote(bin), ...args.map(quote)].join(" ")];
+  }
+  return [bin, ...args];
+}
+
 export function defaultHermesRun(args: string[]): { exitCode: number; stdout: string; stderr: string } {
+  const argv = hermesArgv(args);
+  if (!argv) return { exitCode: 127, stdout: "", stderr: "Executable not found: hermes" };
   try {
-    const r = spawnSync(["hermes", ...args], { stdout: "pipe", stderr: "pipe" });
+    const r = spawnSync(argv, { stdout: "pipe", stderr: "pipe" });
     return {
       exitCode: r.exitCode ?? 1,
       stdout: r.stdout?.toString() ?? "",

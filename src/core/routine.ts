@@ -386,8 +386,14 @@ export function listRoutineSlugs(home: string): string[] {
 
 function defaultOpenDir(dir: string): void {
   const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer" : "xdg-open";
-  const r = spawnSync([cmd, dir], { stdout: "ignore", stderr: "pipe" });
-  if (r.exitCode !== 0) throw new Error(`Could not open ${dir}`);
+  try {
+    const r = spawnSync([cmd, dir], { stdout: "ignore", stderr: "pipe" });
+    // explorer.exe returns 1 even when the folder opens.
+    if (process.platform !== "win32" && (r.exitCode ?? 1) !== 0) throw new Error(`Could not open ${dir}`);
+  } catch (e) {
+    if (process.platform === "win32") return;
+    throw e instanceof Error ? e : new Error(`Could not open ${dir}`);
+  }
 }
 
 export function deleteRoutine(home: string, slug: string): string {
