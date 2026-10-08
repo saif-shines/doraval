@@ -122,10 +122,8 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const access = readCookie(req, ACCESS);
     const who = access ? deps.readAccess(access) : null;
     const code = url.searchParams.get("code");
-    if (code) {
-      if (who) return redirect(req, "/account");
-      return finishLogin(req, deps, code);
-    }
+    // A 302 to /account loops. Netlify copies ?code= onto a Location that has no query.
+    if (code && !who) return finishLogin(req, deps, code);
     if (!who) {
       return redirect(req, "/auth/login");
     }
@@ -139,7 +137,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     return page(
       200,
       "Mint an API key",
-      `${probes}<p>Copy it once. Then run this command.</p><pre><code>dora config set identity.api_key &lt;token&gt; --yes</code></pre><form method="post" action="/account/key"><button type="submit">Mint API key</button></form><p><a href="/auth/logout">Log out</a></p>`,
+      `<script>if(location.search)history.replaceState(null,"",location.pathname)</script>${probes}<p>Copy it once. Then run this command.</p><pre><code>dora config set identity.api_key &lt;token&gt; --yes</code></pre><form method="post" action="/account/key"><button type="submit">Mint API key</button></form><p><a href="/auth/logout">Log out</a></p>`,
     );
   }
 
@@ -199,7 +197,10 @@ async function finishLogin(req: Request, deps: IdentityDeps, code: string): Prom
     return page(400, "Sign-in did not finish", `<p>Missing authorization code.</p><p><a href="/auth/login">Try again</a></p>`);
   }
   const tokens = await deps.exchangeCode(code, deps.env.redirectUri);
-  return withCookies(redirect(req, "/account"), [
+  // ?ok=1 keeps Netlify from copying ?code= onto this Location.
+  const next = new URL("/account", req.url);
+  next.search = "ok=1";
+  return withCookies(redirect(req, next.href), [
     cookie(ACCESS, tokens.accessToken),
     cookie(ID, tokens.idToken),
   ]);

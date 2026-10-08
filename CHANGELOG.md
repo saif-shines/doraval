@@ -5,7 +5,9 @@
 ### Fixes
 
 - The account page, the API key page, and the sign-in errors use the site
-  type. A login code left on `/account` is removed from the address bar.
+  type.
+- A login code on `/account` loads the page. It does not redirect.
+  The address bar then drops the code. The old redirect looped.
 
 ## 0.6.45
 
