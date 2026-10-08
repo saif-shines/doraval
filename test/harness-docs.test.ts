@@ -181,6 +181,22 @@ describe("dora harness docs lockstep", () => {
     expect(readme).not.toMatch(/Discord|Webflow|OOO calendar/);
   });
 
+  test("the package name is explained once, on the README", () => {
+    expect(read("README.md")).toContain(
+      "`dora` is the command. The package name is `@hacksmith/doraval`.",
+    );
+    for (const rel of [
+      "apps/website/content/get-started/installation.mdx",
+      "apps/website/content/get-started/quickstart.mdx",
+      "apps/website/content/get-started/skills.mdx",
+      "apps/website/content/commands/index.mdx",
+    ]) {
+      const text = read(rel);
+      expect(text).not.toContain("same binary");
+      expect(text).not.toContain("The package name is");
+    }
+  });
+
   test("home page leads with review and links the pocket agent", () => {
     const home = read("apps/website/pages/index.astro");
     expect(home).toContain("dora review --quick");

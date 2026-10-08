@@ -21,6 +21,8 @@
 - The home page and Introduction lead with `dora review --quick`.
   The pocket agent is the next link. The sidebar says
   Pocket agent commands. The concepts group is no longer named Reference.
+- Later pages say `dora`. The package name stays on the README
+  and on the install commands.
 
 ## 0.6.43
 
