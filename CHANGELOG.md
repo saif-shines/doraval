@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.43
+
 ### Features
 
 - New pocket routines default to `reasoning_effort: medium`.
