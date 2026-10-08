@@ -9,11 +9,11 @@ import Footer from "./_home/Footer.astro";
 const { config } = data;
 
 /** Same shape as agent-browser’s home install block. */
-const heroInstall = `npm install -g @hacksmith/doraval     # all platforms
-brew install saif-shines/tap/doraval  # macOS
+const heroInstall = `npx skills add saif-shines/doraval    # four skills
+dora review --quick                   # Findings, no LLM
 
-npx skills add saif-shines/doraval    # agent skill
-dora review --quick                   # Findings, no LLM`;
+npm install -g @hacksmith/doraval     # CLI, all platforms
+brew install saif-shines/tap/doraval  # macOS`;
 ---
 
 <PageLayout
@@ -49,6 +49,12 @@ dora review --quick                   # Findings, no LLM`;
           {" "}<code>/ask-dora</code>.
         </p>
         <CodeBlock code={heroInstall} lang="bash" />
+        <p class="hero__lede">
+          agnix lints files in the editor. Promptfoo A/B tests a skill with a
+          model. <code>skills-ref validate</code> only checks the spec.{" "}
+          <code>dora review --quick</code> reviews the workspace.{" "}
+          <code>dora review --run</code> runs the skill off, then on.
+        </p>
         <p class="hero__note">
           <a href="/get-started/installation/">Install</a> ·{" "}
           <a href="/get-started/">Docs</a> ·{" "}

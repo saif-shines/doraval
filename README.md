@@ -4,22 +4,6 @@ Context-effectiveness CLI for coding agents. It reviews skills, rules, and memor
 
 `dora` and `doraval` are the same binary. Pronunciation: *dor-uh-val* (Doraemon + eval).
 
-## Installation
-
-```sh
-npm install -g @hacksmith/doraval
-```
-
-```sh
-# macOS
-brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
-
-# Bun
-bun add -g @hacksmith/doraval
-```
-
-Node ≥ 14.18. Alpine/musl: use Bun. See the [installation guide](https://doraval.dev/get-started/installation/).
-
 ## Quick start
 
 ```sh
@@ -38,6 +22,41 @@ That second line starts a **pocket agent**: one unattended loop, one machine, on
 `--quick` is structure and heuristics only. No Judge. No API key.
 
 You get a Review with Findings. Exit `0` clean · `1` issues · `2` could not run. `dora review --run` is the live pair (no skill, then with the skill). It is not `--quick`.
+
+[agnix](https://github.com/agent-sh/agnix) lints files in the editor. [Promptfoo](https://www.promptfoo.dev/docs/guides/test-agent-skills/) A/B tests a skill with a model. [`skills-ref validate`](https://agentskills.io/specification) only checks the spec. `dora review --quick` reviews the workspace. `dora review --run` runs the skill off, then on.
+
+Run the same check on a pull request:
+
+```yaml
+name: dora
+on: [pull_request]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install @hacksmith/doraval
+      - run: ./node_modules/.bin/dora review --quick --ci
+```
+
+## Install the CLI
+
+```sh
+npm install -g @hacksmith/doraval
+```
+
+```sh
+# macOS
+brew tap saif-shines/tap && brew trust saif-shines/tap && brew install doraval
+
+# Bun
+bun add -g @hacksmith/doraval
+```
+
+Node ≥ 14.18. Alpine/musl: use Bun. See the [installation guide](https://doraval.dev/get-started/installation/).
 
 ## Roadmap
 

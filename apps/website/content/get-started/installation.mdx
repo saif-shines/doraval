@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install the dora CLI, then add the four skills.
+description: Add the four skills, then install the dora CLI.
 sidebar:
   label: Installation
   order: 2
@@ -9,19 +9,21 @@ sidebar:
 `dora` and `doraval` are the same binary.
 
 ```bash
+npx skills add saif-shines/doraval    # four skills
+dora review --quick                   # Findings, no LLM
+```
+
+agnix lints files in the editor. Promptfoo A/B tests a skill with a model. `skills-ref validate` only checks the spec. `dora review --quick` reviews the workspace. `dora review --run` runs the skill off, then on.
+
+Install the CLI when you want `dora` on `PATH`:
+
+```bash
 npm install -g @hacksmith/doraval     # all platforms
 brew install saif-shines/tap/doraval  # macOS
 bun add -g @hacksmith/doraval         # Bun
 
 # or try without installing
 npx @hacksmith/doraval --version
-```
-
-Then:
-
-```bash
-npx skills add saif-shines/doraval    # four skills
-dora review --quick                   # Findings, no LLM
 ```
 
 ## Homebrew
@@ -75,6 +77,25 @@ npx skills list
 - Alpine/musl: use Bun, not the glibc binary.
 - `npx skills add` fails: need network and a current Node. Retry the same command.
 - Empty `dora` prints `--help`, not a Scan. Run `dora scan` for the workspace map.
+
+## Pull request check
+
+```yaml
+name: dora
+on: [pull_request]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install @hacksmith/doraval
+      - run: ./node_modules/.bin/dora review --quick --ci
+```
+
+`--ci` prints JSON and does not prompt. Exit `1` fails the check.
 
 ## Next
 

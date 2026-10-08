@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Docs
+
+- The first install command is `npx skills add saif-shines/doraval`.
+  The global npm install stays below that.
+- README and Installation name agnix, Promptfoo, and
+  `skills-ref validate`, and show a pull-request check for
+  `dora review --quick --ci`.
+
 ## 0.6.43
 
 ### Features
