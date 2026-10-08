@@ -8,6 +8,10 @@ Load `i-have-adhd`. Follow it on every reply. Keep it on until the user explicit
 
 When a task splits into independent parts, run those parts in multiple subagents at the same time.
 
+## Status
+
+End each task with two lists. Done: what is finished, one line each. Next: what is still open, one line each. Put the item to pick up first.
+
 ## Before you write code (ponytail ladder)
 
 Stop at the first rung that holds:
