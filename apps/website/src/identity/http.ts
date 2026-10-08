@@ -33,26 +33,53 @@ function esc(s: string): string {
 }
 
 const PAGE_CSS = `
-:root{--bg:#fff;--fg:#171717;--muted:#737373;--line:#e5e5e5;--code:#fafafa}
+@font-face{font-family:DoravalGrotesk;src:url(/fonts/space-grotesk.woff2) format("woff2");font-weight:400 700;font-display:swap}
+@font-face{font-family:DoravalSans;src:url(/fonts/inter.woff2) format("woff2");font-weight:400 700;font-display:swap}
+@font-face{font-family:DoravalMono;src:url(/fonts/jetbrains-mono.woff2) format("woff2");font-weight:400 700;font-display:swap}
+:root{--bg:oklch(100% 0 0);--fg:oklch(14.5% 0 0);--muted:oklch(54% 0 0);--line:oklch(88% .006 260 / .72);--code:oklch(99% 0 0);--cobalt:oklch(58% .2 256);--on:oklch(100% 0 0);--rule:oklch(55% .16 255 / .55);--radius:.25rem;color-scheme:light}
+:root[data-theme=dark]{--bg:oklch(8.5% 0 0);--fg:oklch(96% 0 0);--muted:oklch(68% 0 0);--line:oklch(24% 0 0 / .8);--code:oklch(12% 0 0);--on:oklch(100% 0 0);--rule:oklch(70% .14 255 / .6);color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 DoravalSans,Inter,ui-sans-serif,system-ui,sans-serif}
 a{color:inherit}
-.top{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--line)}
-.top a{font-weight:600;letter-spacing:-.02em;text-decoration:none}
-main{max-width:36rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
-h1{margin:0 0 .75rem;font-size:1.75rem;line-height:1.15;letter-spacing:-.02em;font-weight:600}
-p{margin:0 0 1rem;color:var(--muted)}
-pre{margin:0 0 1.25rem;padding:.85rem 1rem;background:var(--code);border:1px solid var(--line);border-radius:.75rem;overflow:auto}
-code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.9rem;color:var(--fg)}
-button{appearance:none;background:var(--fg);color:var(--bg);border:0;border-radius:.75rem;padding:.6rem 1rem;font:inherit;font-weight:600;cursor:pointer}
-form{margin:0 0 1.25rem}
-.hello{margin:0 0 1rem;padding:1rem;border:1px solid var(--line);border-radius:.75rem}
-.hello p{margin:0 0 .75rem;color:var(--fg)}
+.bar{position:sticky;top:0;z-index:2;background:color-mix(in oklab,var(--bg) 90%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.bar-in{display:flex;align-items:center;justify-content:space-between;gap:1rem;height:4rem;width:min(40rem,100%);margin:0 auto;padding:0 1.5rem}
+.mark{font-family:DoravalGrotesk,"Space Grotesk",ui-sans-serif,sans-serif;font-weight:600;letter-spacing:-.02em;text-decoration:none}
+.docs{color:var(--muted);text-decoration:none;font-size:.95rem}
+.docs:hover{color:var(--fg)}
+main{width:min(40rem,100%);margin:0 auto;padding:2.75rem 1.5rem 4.5rem}
+h1{margin:0 0 .75rem;font-family:DoravalGrotesk,"Space Grotesk",ui-sans-serif,sans-serif;font-weight:600;letter-spacing:-.03em;line-height:1.05;font-size:clamp(2rem,4vw,2.6rem)}
+p{margin:0 0 1rem;color:var(--muted);max-width:42ch}
+.lead{color:var(--fg);font-size:1.125rem;line-height:1.5}
+.block{margin:0 0 1.25rem}
+pre{margin:0 0 .6rem;padding:1rem 1.1rem;background:var(--code);border:1px solid var(--line);border-left:3px solid var(--rule);border-radius:var(--radius);overflow:auto}
+pre.token{padding:1.15rem 1.2rem}
+pre.token code{font-size:1.05rem}
+code{font-family:DoravalMono,"JetBrains Mono",ui-monospace,monospace;font-size:.92rem;color:var(--fg);white-space:pre-wrap;overflow-wrap:anywhere}
+button{appearance:none;background:var(--cobalt);color:var(--on);border:0;border-radius:var(--radius);padding:.7rem 1rem;font:inherit;font-weight:600;cursor:pointer}
+button:hover{background:color-mix(in oklab,var(--cobalt) 86%,black)}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+button.ghost:hover{background:transparent;border-color:var(--fg)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--cobalt);outline-offset:3px}
+form{margin:0}
+.row{display:flex;align-items:center;gap:1.25rem;margin:0 0 1.5rem;flex-wrap:wrap}
+.quiet{color:var(--muted);text-decoration:none}
+.quiet:hover{color:var(--fg)}
+.hello{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 .75rem;padding:.85rem 1rem;border:1px solid var(--line);border-radius:var(--radius)}
+.hello p{margin:0;color:var(--fg);font-family:DoravalMono,"JetBrains Mono",ui-monospace,monospace}
+.links{display:flex;gap:1.25rem;margin-top:1.5rem}
+.links a{color:var(--cobalt);text-decoration:none}
+.links a:hover{text-decoration:underline}
+@media (max-width:640px){.bar-in,main{padding-left:1rem;padding-right:1rem}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 `;
+
+const THEME_BOOT = `(()=>{try{const s=localStorage.getItem("blume-theme");const sys=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=s==="light"||s==="dark"?s:sys;}catch(e){document.documentElement.dataset.theme=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}})();`;
+
+const COPY_BOOT = `document.querySelectorAll("[data-copy]").forEach((btn)=>{btn.addEventListener("click",async()=>{const el=document.getElementById(btn.getAttribute("data-copy")||"");if(!el)return;try{await navigator.clipboard.writeText(el.textContent||"")}catch(e){return}const old=btn.textContent;btn.textContent="Copied";setTimeout(()=>{btn.textContent=old},1600);});});`;
 
 function page(status: number, title: string, body: string, headers: HeadersInit = {}): Response {
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · doraval</title><style>${PAGE_CSS}</style></head><body><header class="top"><a href="/">doraval</a><a href="/get-started/connect/">Connect the CLI</a></header><main><h1>${esc(title)}</h1>${body}</main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>${esc(title)} · doraval</title><script>${THEME_BOOT}</script><style>${PAGE_CSS}</style></head><body><header class="bar"><div class="bar-in"><a class="mark" href="/">doraval</a><a class="docs" href="/get-started/connect/">Connect the CLI</a></div></header><main><h1>${esc(title)}</h1>${body}</main><script>${COPY_BOOT}</script></body></html>`,
     { status, headers: { "content-type": "text/html; charset=utf-8", ...headers } },
   );
 }
@@ -93,7 +120,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
       return page(
         503,
         "Sign-in is not configured",
-        `<p>Set SCALEKIT_ENVIRONMENT_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET, and SCALEKIT_REDIRECT_URI.</p><p><a href="/">Back to the docs</a></p>`,
+        `<p class="lead">Set SCALEKIT_ENVIRONMENT_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET, and SCALEKIT_REDIRECT_URI.</p><nav class="links"><a href="/">Back to the docs</a></nav>`,
       );
     }
     const location = deps.authorize({
@@ -131,13 +158,13 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const probes = pending
       .map(
         (p) =>
-          `<section class="hello"><p>hello</p><form method="post" action="/probe/${esc(p.id)}/ack"><button type="submit">ack</button></form></section>`,
+          `<section class="hello"><p>Pending hello</p><form method="post" action="/probe/${esc(p.id)}/ack"><button type="submit">ack</button></form></section>`,
       )
       .join("");
     return page(
       200,
       "Mint an API key",
-      `<script>if(location.search)history.replaceState(null,"",location.pathname)</script>${probes}<p>Copy it once. Then run this command.</p><pre><code>dora config set identity.api_key &lt;token&gt; --yes</code></pre><form method="post" action="/account/key"><button type="submit">Mint API key</button></form><p><a href="/auth/logout">Log out</a></p>`,
+      `<script>if(location.search)history.replaceState(null,"",location.pathname)</script>${probes}<p class="lead">Mint a key. The site shows it once.</p><div class="row"><form method="post" action="/account/key"><button type="submit">Mint API key</button></form><a class="quiet" href="/auth/logout">Log out</a></div><p>Then run this command.</p><pre><code>dora config set identity.api_key &lt;token&gt; --yes</code></pre>`,
     );
   }
 
@@ -150,7 +177,7 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     return page(
       200,
       "Copy this API key",
-      `<p>It will not be shown again.</p><pre><code>${token}</code></pre><p>Then run this command.</p><pre><code>dora config set identity.api_key ${token} --yes</code></pre><p><a href="/account">Back</a> · <a href="/auth/logout">Log out</a></p>`,
+      `<p class="lead">It will not be shown again.</p><div class="block"><pre class="token"><code id="key">${token}</code></pre><button type="button" data-copy="key">Copy key</button></div><p>Then run this command.</p><div class="block"><pre><code id="cmd">dora config set identity.api_key ${token} --yes</code></pre><button type="button" class="ghost" data-copy="cmd">Copy command</button></div><nav class="links"><a href="/account">Back</a><a href="/auth/logout">Log out</a></nav>`,
     );
   }
 
@@ -178,11 +205,11 @@ export async function handleIdentity(req: Request, deps: IdentityDeps): Promise<
     const who = access ? deps.readAccess(access) : null;
     if (!who) return redirect(req, "/auth/login");
     const row = await deps.store?.ack(ackId, who.organizationId);
-    if (!row) return page(404, "No such hello", `<p><a href="/account">Back</a></p>`);
-    return page(200, "Ack sent", `<p><a href="/account">Back</a></p>`);
+    if (!row) return page(404, "No such hello", `<nav class="links"><a href="/account">Back</a></nav>`);
+    return page(200, "Ack sent", `<nav class="links"><a href="/account">Back</a></nav>`);
   }
 
-  return page(404, "Not found", `<p><a href="/">Back to the docs</a></p>`);
+  return page(404, "Not found", `<nav class="links"><a href="/">Back to the docs</a></nav>`);
 }
 
 async function finishLogin(req: Request, deps: IdentityDeps, code: string): Promise<Response> {
@@ -190,11 +217,11 @@ async function finishLogin(req: Request, deps: IdentityDeps, code: string): Prom
     return page(
       503,
       "Sign-in is not configured",
-      `<p>Set SCALEKIT_ENVIRONMENT_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET, and SCALEKIT_REDIRECT_URI.</p><p><a href="/">Back to the docs</a></p>`,
+      `<p class="lead">Set SCALEKIT_ENVIRONMENT_URL, SCALEKIT_CLIENT_ID, SCALEKIT_CLIENT_SECRET, and SCALEKIT_REDIRECT_URI.</p><nav class="links"><a href="/">Back to the docs</a></nav>`,
     );
   }
   if (!code) {
-    return page(400, "Sign-in did not finish", `<p>Missing authorization code.</p><p><a href="/auth/login">Try again</a></p>`);
+    return page(400, "Sign-in did not finish", `<p class="lead">Missing authorization code.</p><nav class="links"><a href="/auth/login">Try again</a></nav>`);
   }
   const tokens = await deps.exchangeCode(code, deps.env.redirectUri);
   // ?ok=1 keeps Netlify from copying ?code= onto this Location.

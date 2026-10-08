@@ -4,8 +4,8 @@
 
 ### Fixes
 
-- The account page, the API key page, and the sign-in errors use the site
-  type.
+- The account page, the API key page, and the sign-in errors use the docs
+  fonts, the cobalt accent, and the same light or dark theme as the site.
 - A login code on `/account` loads the page. It does not redirect.
   The address bar then drops the code. The old redirect looped.
 

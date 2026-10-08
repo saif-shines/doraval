@@ -127,6 +127,9 @@ describe("identity HTTP (#77)", () => {
     expect(body).toMatch(/API key/i);
     expect(body).toContain("<style");
     expect(body).toContain('href="/"');
+    expect(body).toContain("/fonts/space-grotesk.woff2");
+    expect(body).toContain("oklch(58% .2 256)");
+    expect(body).toContain("blume-theme");
     expect(body).toMatch(/[Ll]og out/);
     expect(body).not.toMatch(/session/i);
     expect(body).not.toMatch(/config\.yml/i);
