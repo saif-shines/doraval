@@ -19,7 +19,7 @@ import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
 import { loadRecentSessions, collectSessionEvidence, type LoadResult } from "./session-evidence.js";
-import { promptInvokesSkill, readCheckpoint, type EntireCheckpoint } from "./entire.js";
+import { entireEnabled, promptInvokesSkill, readCheckpoint, type EntireCheckpoint } from "./entire.js";
 import { collectSessionHealth, type SessionHealth } from "./session-health.js";
 import type { EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
@@ -82,6 +82,8 @@ export interface ReviewOptions {
   judge?: (req: JudgeRequest<LintOutput>) => Promise<JudgeOutcome<LintOutput>>;
   /** Test seam: live-run spawn + score. */
   liveRun?: LiveRunDeps;
+  /** When false, Review does not read Entire. Default: `entire status`. */
+  entireEnabled?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -329,7 +331,9 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
   if (!opts.quick) {
     const loadedSess = opts.loadedSessions ?? loadRecentSessions(opts.cwd ?? process.cwd());
     const skillName = String(model.data.name ?? basename(dir));
-    const checkpointInvoked = promptInvokesSkill(readCheckpoint(opts.cwd ?? process.cwd(), dir)?.prompt ?? null, skillName);
+    const repo = opts.cwd ?? process.cwd();
+    const checkpointInvoked = opts.entireEnabled === true
+      && promptInvokesSkill(readCheckpoint(repo, dir)?.prompt ?? null, skillName);
     if (opts.sessions && loadedSess.sessions.length === 0 && !checkpointInvoked) {
       throw new PrerequisiteError({
         code: "E-PRE-003",
@@ -484,12 +488,13 @@ export async function review(path: string, opts: ReviewOptions = {}): Promise<Re
   if (opts.limit != null) targets = targets.slice(0, opts.limit);
 
   const loadedSessions = opts.quick ? undefined : (opts.loadedSessions ?? loadRecentSessions(cwd));
-  const per = { ...opts, cwd, ...(loadedSessions ? { loadedSessions } : {}) };
+  const useEntire = opts.entireEnabled ?? entireEnabled(cwd);
+  const per = { ...opts, cwd, entireEnabled: useEntire, ...(loadedSessions ? { loadedSessions } : {}) };
   const one = (target: string) =>
     isSkillDir(target) ? reviewSkill(target, per) : reviewMemoryFile(target, per);
 
   const stamp = (r: ReviewResult): ReviewResult => {
-    const checkpoint = readCheckpoint(cwd, r.path);
+    const checkpoint = useEntire ? readCheckpoint(cwd, r.path) : null;
     const withCheckpoint = checkpoint ? { ...r, checkpoint } : r;
     if (!isSkillDir(r.path)) return withCheckpoint;
     const root = pluginRoot(r.path, cwd);

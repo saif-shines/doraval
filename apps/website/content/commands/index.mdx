@@ -34,7 +34,7 @@ dora scan --ci
 dora scan --cwd "$GITHUB_WORKSPACE"
 ```
 
-Read-only. No LLM. No API key.
+Read-only. No LLM. No API key. When Entire is already enabled, Dora prints: "Entire is enabled. Dora will use it while it checks this repo." Details: [Entire](/integrations/entire/).
 
 ## Review
 
@@ -49,7 +49,7 @@ dora review CLAUDE.md
 dora review --json           # includes sessionHealth (not --quick)
 ```
 
-`--quick` is the first Review. It does not include Session health. A full Review adds a Session health block (token pressure). That block is not a Finding.
+`--quick` is the first Review. It does not include Session health. A full Review adds a Session health block (token pressure). That block is not a Finding. When Entire is already enabled, Review prints: "Entire is enabled. Dora will use it while it checks this repo."
 
 JSON comes after:
 

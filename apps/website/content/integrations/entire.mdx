@@ -1,0 +1,29 @@
+---
+title: Entire
+description: Dora reads Entire when this repo already has it enabled.
+sidebar:
+  label: Entire
+  order: 1
+---
+
+Entire is on when `entire status` says enabled. Dora does not turn it on. Dora does not turn it off.
+
+When Entire is on, Scan, Review, and `dora search` print this line:
+
+```text
+Entire is enabled. Dora will use it while it checks this repo.
+```
+
+JSON and CI stay silent.
+
+## What Dora reads
+
+Review shows the checkpoint id and the stored prompt for a file. `--quick` includes them.
+
+A full Review counts a slash command, or a `SKILL.md` path, in that prompt as an invoke. A missing local log does not mark that Skill Never invoked.
+
+`dora search "add login"` prints Entire's search text. Exit `2` when Entire is not enabled, or when the `entire` command is missing.
+
+## What Dora does not do
+
+Dora does not run `entire enable`. Dora does not run `entire agent add`. Those commands belong to Entire.

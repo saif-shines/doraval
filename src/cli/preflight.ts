@@ -1,3 +1,4 @@
+import { ENTIRE_ENABLED_NOTICE, entireEnabled } from "../core/entire.js";
 import { ui } from "./out.js";
 
 export type ProgressMode = { format: string };
@@ -10,6 +11,13 @@ export function shouldEmitProgress(mode: ProgressMode): boolean {
 export function preflight(mode: ProgressMode, message: string): void {
   if (!shouldEmitProgress(mode)) return;
   ui.dim(`  ${message}`);
+}
+
+/** One human line when Entire is already enabled. JSON and CI stay silent. */
+export function acknowledgeEntire(mode: ProgressMode, repo: string): void {
+  if (!shouldEmitProgress(mode)) return;
+  if (!entireEnabled(repo)) return;
+  ui.info(`  ${ENTIRE_ENABLED_NOTICE}`);
 }
 
 /** Stage heartbeat for multi-second work. Same gate as preflight. */

@@ -7,7 +7,7 @@ import { pluginNextCommands } from "../../core/skill-classify.js";
 
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction, summaryLine } from "../out.js";
 import { isAgentCaller } from "../agent-detect.js";
-import { preflight, reviewPreflightMessage } from "../preflight.js";
+import { acknowledgeEntire, preflight, reviewPreflightMessage } from "../preflight.js";
 import { exit } from "../render/exit.js";
 import { getFindingDocUrl } from "../../core/doc-registry.js";
 
@@ -269,6 +269,7 @@ export default defineCommand({
         run: args.run as boolean,
       }),
     );
+    acknowledgeEntire(mode, args.cwd ? resolve(args.cwd as string) : process.cwd());
     // Resolve --cwd to an absolute path: it's hashed into the memory
     // project slug (getProjectSlug), so a relative string here would give
     // the same physical project two different slugs depending on how the

@@ -18,6 +18,35 @@ export type SearchHit =
 
 const TRAILER = /^Entire-Checkpoint:[ \t]*(\S+)[ \t]*$/gm;
 
+/** Human line when Entire is already enabled in this repo. */
+export const ENTIRE_ENABLED_NOTICE =
+  "Entire is enabled. Dora will use it while it checks this repo.";
+
+function runStatus(cmd: string, args: string[], cwd: string): CommandResult {
+  const result = spawnSync(cmd, args, { cwd, encoding: "utf8", timeout: 5000 });
+  const error = result.error as NodeJS.ErrnoException | undefined;
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    code: error?.code,
+  };
+}
+
+/** True only when `entire status --json` reports enabled. Missing command means false. */
+export function entireEnabled(
+  repo: string,
+  run: (cmd: string, args: string[], cwd: string) => CommandResult = runStatus,
+): boolean {
+  const result = run("entire", ["status", "--json"], repo);
+  if (result.code === "ENOENT") return false;
+  try {
+    return (JSON.parse(result.stdout) as { enabled?: boolean }).enabled === true;
+  } catch {
+    return false;
+  }
+}
+
 type GitRun = (repo: string, args: string[]) => string | null;
 
 function git(repo: string, args: string[]): string | null {

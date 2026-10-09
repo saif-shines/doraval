@@ -4,7 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { spawnSync } from "child_process";
 import { review } from "./review.js";
-import { promptInvokesSkill, readCheckpoint, searchPastWork } from "./entire.js";
+import { entireEnabled, ENTIRE_ENABLED_NOTICE, promptInvokesSkill, readCheckpoint, searchPastWork } from "./entire.js";
 
 function git(repo: string, args: string[], input?: string): string {
   const result = spawnSync("git", ["-C", repo, ...args], {
@@ -46,9 +46,16 @@ describe("readCheckpoint", () => {
     const { repo, skill } = repoWithCheckpoint(id, "Add the settings page\n");
     const hit = readCheckpoint(repo, "my-skill");
     expect(hit).toEqual({ id, prompt: "Add the settings page" });
-    const results = await review(skill, { cwd: repo, quick: true });
+    const results = await review(skill, { cwd: repo, quick: true, entireEnabled: true });
     const row = results.find((item) => item.path === skill);
     expect(row?.checkpoint).toEqual({ id, prompt: "Add the settings page" });
+  });
+
+  test("review skips the prompt when Entire is not enabled", async () => {
+    const { repo, skill } = repoWithCheckpoint("01KVBJCWYA4YW6J5M9GP655HZN", "Add the settings page\n");
+    const results = await review(skill, { cwd: repo, quick: true, entireEnabled: false });
+    const row = results.find((item) => item.path === skill);
+    expect(row?.checkpoint).toBeUndefined();
   });
 
   test("a commit with no trailer has no checkpoint", () => {
@@ -76,6 +83,22 @@ describe("promptInvokesSkill", () => {
 
   test("a different skill name does not count", () => {
     expect(promptInvokesSkill("please run /review-pr", "review")).toBe(false);
+  });
+});
+
+describe("entireEnabled", () => {
+  test("true when Entire reports enabled", () => {
+    const on = entireEnabled("/tmp", () => ({ status: 0, stdout: "{\"enabled\":true}\n", stderr: "" }));
+    expect(on).toBe(true);
+  });
+
+  test("false when Entire is off or missing", () => {
+    expect(entireEnabled("/tmp", () => ({ status: 0, stdout: "{\"enabled\":false}", stderr: "" }))).toBe(false);
+    expect(entireEnabled("/tmp", () => ({ status: null, stdout: "", stderr: "", code: "ENOENT" }))).toBe(false);
+  });
+
+  test("the notice names Entire and the check", () => {
+    expect(ENTIRE_ENABLED_NOTICE).toBe("Entire is enabled. Dora will use it while it checks this repo.");
   });
 });
 

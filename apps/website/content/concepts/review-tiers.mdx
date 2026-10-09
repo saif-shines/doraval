@@ -41,6 +41,8 @@ After a clean with-skill PASS on every case, Dora saves a verdict baseline. The 
 
 ## Checkpoint
 
+When Entire is already enabled, Review prints: "Entire is enabled. Dora will use it while it checks this repo." JSON and CI stay silent.
+
 Review reads the latest commit that touched the file. When that commit has an `Entire-Checkpoint` trailer, Review prints the id and the stored prompt. `--quick` includes this. JSON puts it on `checkpoint`.
 
 A full Review uses that prompt as invoke evidence. A slash command, or a `SKILL.md` path, in the prompt counts as an invoke. A missing local log does not mark that Skill Never invoked.

@@ -1,6 +1,7 @@
 import { defineCommand } from "citty";
-import { searchPastWork } from "../../core/entire.js";
+import { entireEnabled, searchPastWork } from "../../core/entire.js";
 import { resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
+import { acknowledgeEntire } from "../preflight.js";
 import { exit } from "../render/exit.js";
 
 export default defineCommand({
@@ -37,6 +38,13 @@ export default defineCommand({
       await exit(2);
       return;
     }
+    if (!entireEnabled(cwd)) {
+      emitError("Entire is not enabled in this repo.");
+      nextAction("entire status");
+      await exit(2);
+      return;
+    }
+    acknowledgeEntire(mode, cwd);
     const result = searchPastWork(query, cwd);
     if (!result.ok) {
       emitError(result.message);

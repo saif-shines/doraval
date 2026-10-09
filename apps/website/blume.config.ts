@@ -33,6 +33,10 @@ export default defineConfig({
         "/get-started/apply-and-watch",
         "/get-started/connect",
         {
+          label: "Integrations",
+          items: ["/integrations/entire"],
+        },
+        {
           label: "Reference",
           items: [
             "/commands",
