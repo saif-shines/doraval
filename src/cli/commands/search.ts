@@ -1,8 +1,16 @@
 import { defineCommand } from "citty";
-import { entireEnabled, searchPastWork } from "../../core/entire.js";
-import { resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
+import { entireState, searchPastWork } from "../../core/entire.js";
+import { resolveOutputMode, outJson, guidedError, type OutputMode } from "../out.js";
 import { acknowledgeEntire } from "../preflight.js";
 import { exit } from "../render/exit.js";
+
+function failSearch(mode: OutputMode, problem: string, suggestion: string): void {
+  if (mode.format === "json") {
+    process.stderr.write(JSON.stringify({ error: { message: problem, suggestion } }) + "\n");
+    return;
+  }
+  guidedError({ context: "dora search", problem, solutions: [suggestion], next: suggestion });
+}
 
 export default defineCommand({
   meta: {
@@ -14,11 +22,11 @@ export default defineCommand({
       "",
       "Examples:",
       "  dora search \"add login\"",
-      "Exit: 0 hits · 2 could not run",
+      "Exit: 0 hits, or Entire is not enabled · 2 entire is missing, empty query, or the search failed",
     ].join("\n"),
   },
   args: {
-    query: { type: "positional", description: "What past work to find", required: true },
+    query: { type: "positional", description: "What past work to find", required: false },
     format: { type: "string", description: "Output format: table | json", default: "table" },
     json: { type: "boolean", description: "Alias for --format json", default: false },
     ci: { type: "boolean", description: "Machine mode (implies --format json)", default: false },
@@ -33,22 +41,25 @@ export default defineCommand({
       json: args.json as boolean,
     });
     if (!query) {
-      emitError("Pass the words to search for.");
-      nextAction("dora search \"add login\"");
+      failSearch(mode, "Pass the words to search for.", "dora search \"add login\"");
       await exit(2);
       return;
     }
-    if (!entireEnabled(cwd)) {
-      emitError("Entire is not enabled in this repo.");
-      nextAction("entire status");
+    const state = entireState(cwd);
+    if (state === "missing") {
+      failSearch(mode, "entire is not installed", "Install Entire, then run dora search again");
       await exit(2);
       return;
     }
-    acknowledgeEntire(mode, cwd);
+    if (state === "disabled") {
+      if (mode.format === "json") outJson({ enabled: false, query, text: "" });
+      await exit(0);
+      return;
+    }
+    acknowledgeEntire(mode, true);
     const result = searchPastWork(query, cwd);
     if (!result.ok) {
-      emitError(result.message);
-      nextAction(result.suggestion);
+      failSearch(mode, result.message, result.suggestion);
       await exit(2);
       return;
     }

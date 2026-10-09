@@ -4,7 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { spawnSync } from "child_process";
 import { review } from "./review.js";
-import { entireEnabled, ENTIRE_ENABLED_NOTICE, promptInvokesSkill, readCheckpoint, searchPastWork } from "./entire.js";
+import { entireEnabled, entireState, ENTIRE_ENABLED_NOTICE, promptInvokesSkill, readCheckpoint, searchPastWork } from "./entire.js";
 
 function git(repo: string, args: string[], input?: string): string {
   const result = spawnSync("git", ["-C", repo, ...args], {
@@ -32,10 +32,17 @@ function repoWithCheckpoint(id: string, prompt: string | null): { repo: string; 
   git(repo, ["commit", "-m", `add skill\n\nEntire-Checkpoint: ${id}`]);
   if (prompt != null) {
     const blob = git(repo, ["hash-object", "-w", "--stdin"], prompt);
-    const tree = git(repo, ["mktree"], `100644 blob ${blob}\tprompt.txt\n`);
-    const root = git(repo, ["mktree"], `040000 tree ${tree}\t1\n`);
-    const commit = git(repo, ["commit-tree", root, "-m", "checkpoint"]);
-    git(repo, ["update-ref", `refs/entire/checkpoints/${id.slice(-2)}/${id}`, commit]);
+    const fileTree = git(repo, ["mktree"], `100644 blob ${blob}\tprompt.txt\n`);
+    const sessionTree = git(repo, ["mktree"], `040000 tree ${fileTree}\t1\n`);
+    if (/^[0-9a-f]{12}$/i.test(id)) {
+      const tail = git(repo, ["mktree"], `040000 tree ${sessionTree}\t${id.slice(2)}\n`);
+      const root = git(repo, ["mktree"], `040000 tree ${tail}\t${id.slice(0, 2)}\n`);
+      const commit = git(repo, ["commit-tree", root, "-m", "checkpoint"]);
+      git(repo, ["update-ref", "refs/heads/entire/checkpoints/v1", commit]);
+    } else {
+      const commit = git(repo, ["commit-tree", sessionTree, "-m", "checkpoint"]);
+      git(repo, ["update-ref", `refs/entire/checkpoints/${id.slice(-2)}/${id}`, commit]);
+    }
   }
   return { repo, skill };
 }
@@ -67,6 +74,14 @@ describe("readCheckpoint", () => {
     expect(readCheckpoint(repo, "note.txt")).toBeNull();
   });
 
+  test("a 12-character id reads the branch checkpoint prompt", () => {
+    const { repo } = repoWithCheckpoint("abcdef123456", "Ship the hex layout\n");
+    expect(readCheckpoint(repo, "my-skill")).toEqual({
+      id: "abcdef123456",
+      prompt: "Ship the hex layout",
+    });
+  });
+
   test("a trailer with no stored prompt still returns the id", () => {
     const { repo } = repoWithCheckpoint("01KVBJCWYA4YW6J5M9GP655HZN", null);
     expect(readCheckpoint(repo, "my-skill")).toEqual({
@@ -84,6 +99,10 @@ describe("promptInvokesSkill", () => {
   test("a different skill name does not count", () => {
     expect(promptInvokesSkill("please run /review-pr", "review")).toBe(false);
   });
+
+  test("a SKILL.md path in the prompt counts", () => {
+    expect(promptInvokesSkill("edit my-skill/SKILL.md", "my-skill")).toBe(true);
+  });
 });
 
 describe("entireEnabled", () => {
@@ -95,6 +114,13 @@ describe("entireEnabled", () => {
   test("false when Entire is off or missing", () => {
     expect(entireEnabled("/tmp", () => ({ status: 0, stdout: "{\"enabled\":false}", stderr: "" }))).toBe(false);
     expect(entireEnabled("/tmp", () => ({ status: null, stdout: "", stderr: "", code: "ENOENT" }))).toBe(false);
+  });
+
+  test("a missing binary is not the same as Entire off", () => {
+    const missing = () => ({ status: null, stdout: "", stderr: "", code: "ENOENT" as const });
+    const off = () => ({ status: 0, stdout: "{\"enabled\":false}", stderr: "" });
+    expect(entireState("/tmp", missing)).toBe("missing");
+    expect(entireState("/tmp", off)).toBe("disabled");
   });
 
   test("the notice names Entire and the check", () => {

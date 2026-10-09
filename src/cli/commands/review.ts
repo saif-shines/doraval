@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { resolve } from "path";
 import pc from "picocolors";
 import { isCancel, select, spinner } from "@clack/prompts";
+import { entireEnabled } from "../../core/entire.js";
 import { listReviewTargets, review, type ReviewResult, type ReviewFinding } from "../../core/review.js";
 import { pluginNextCommands } from "../../core/skill-classify.js";
 
@@ -86,8 +87,7 @@ function renderCheckpoint(r: ReviewResult): void {
   ui.blank();
   ui.write(`  Checkpoint  ${r.checkpoint.id}`);
   if (!r.checkpoint.prompt) return;
-  const line = r.checkpoint.prompt.replace(/\s+/g, " ").trim();
-  ui.write(`  Prompt      ${line.length > 160 ? `${line.slice(0, 157)}...` : line}`);
+  for (const line of r.checkpoint.prompt.split("\n")) ui.write(`  Prompt      ${line}`);
 }
 
 function renderSessionHealth(r: ReviewResult): void {
@@ -206,6 +206,11 @@ function renderAggregate(results: ReviewResult[]): void {
     const status = r.summary.errors > 0 ? "fail" as const : r.summary.warnings > 0 ? "warn" as const : "pass" as const;
     const mark = r.pluginOwned ? pc.dim("  Plugin-owned") : "";
     renderCheck(status, `${r.path.padEnd(24)} ${countParts(r.summary.passed, r.summary.warnings, r.summary.errors)}${mark}`);
+    if (!r.checkpoint) continue;
+    ui.write(`    Checkpoint  ${r.checkpoint.id}`);
+    if (r.checkpoint.prompt) {
+      for (const line of r.checkpoint.prompt.split("\n")) ui.write(`    Prompt      ${line}`);
+    }
   }
 
   const totals = results.reduce(
@@ -269,12 +274,13 @@ export default defineCommand({
         run: args.run as boolean,
       }),
     );
-    acknowledgeEntire(mode, args.cwd ? resolve(args.cwd as string) : process.cwd());
     // Resolve --cwd to an absolute path: it's hashed into the memory
     // project slug (getProjectSlug), so a relative string here would give
     // the same physical project two different slugs depending on how the
     // caller happened to spell --cwd.
     const root = args.cwd ? resolve(args.cwd as string) : process.cwd();
+    const enabled = entireEnabled(root);
+    acknowledgeEntire(mode, enabled);
     const target = resolve(root, (args.path as string) || ".");
     const useAll = args.all as boolean;
     const targets = listReviewTargets(target, root);
@@ -314,6 +320,7 @@ export default defineCommand({
       sessions: args.sessions as boolean,
       cwd: root,
       ci: args.ci as boolean,
+      entireEnabled: enabled,
       ...(limit != null ? { limit } : {}),
       onProgress: spin ? (msg: string) => spin.message(msg) : undefined,
     };

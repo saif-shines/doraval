@@ -32,13 +32,15 @@ Top-level value is always an array, even for one artifact.
 
 A Finding has `tier`, `severity` (`error` | `warning` | `info` | `pass`), `message`, `fixable`, and optional `code` / `docUrl`.
 
+When Entire is enabled, each result may set `checkpoint`: `{ id, prompt }`. `prompt` is the stored text, or `null`. `--quick` includes `checkpoint`. It still omits `sessionHealth`.
+
 A Review **without** `--quick` also sets `sessionHealth` on each result: `{ window, sessionCount, signals }`. `signals[].code` is `cache-read` | `call-count` | `turn-count`. Session health is not a Finding. `--quick` omits the key.
 
 ### How to branch (Review)
 
 - Any `.summary.errors > 0` → hard failures. Fix before done.
 - `tiers.llm.method === "delegated"` → evaluate the emitted `JUDGE THIS` block. `--quick` does not run this tier.
-- A clean `--quick` result is structure + heuristics only. No `sessionHealth`.
+- A clean `--quick` result is structure + heuristics. No `sessionHealth`. It may include `checkpoint` when Entire is enabled.
 - On a full Review, read `sessionHealth.signals`. Do not treat those codes as Skill Findings.
 
 ## `dora scan --json`

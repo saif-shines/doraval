@@ -22,8 +22,14 @@ const TRAILER = /^Entire-Checkpoint:[ \t]*(\S+)[ \t]*$/gm;
 export const ENTIRE_ENABLED_NOTICE =
   "Entire is enabled. Dora will use it while it checks this repo.";
 
-function runStatus(cmd: string, args: string[], cwd: string): CommandResult {
-  const result = spawnSync(cmd, args, { cwd, encoding: "utf8", timeout: 5000 });
+export type EntireState = "enabled" | "disabled" | "missing";
+
+function runCommand(cmd: string, args: string[], cwd: string, timeout?: number): CommandResult {
+  const result = spawnSync(cmd, args, {
+    cwd,
+    encoding: "utf8",
+    ...(timeout ? { timeout } : {}),
+  });
   const error = result.error as NodeJS.ErrnoException | undefined;
   return {
     status: result.status,
@@ -33,18 +39,26 @@ function runStatus(cmd: string, args: string[], cwd: string): CommandResult {
   };
 }
 
-/** True only when `entire status --json` reports enabled. Missing command means false. */
+/** `missing` when the binary is absent. `disabled` when status is off or unreadable. */
+export function entireState(
+  repo: string,
+  run: (cmd: string, args: string[], cwd: string) => CommandResult = (cmd, args, cwd) => runCommand(cmd, args, cwd, 5000),
+): EntireState {
+  const result = run("entire", ["status", "--json"], repo);
+  if (result.code === "ENOENT") return "missing";
+  try {
+    return (JSON.parse(result.stdout) as { enabled?: boolean }).enabled === true ? "enabled" : "disabled";
+  } catch {
+    return "disabled";
+  }
+}
+
+/** True only when `entire status --json` reports enabled. A missing command is false. */
 export function entireEnabled(
   repo: string,
-  run: (cmd: string, args: string[], cwd: string) => CommandResult = runStatus,
+  run: (cmd: string, args: string[], cwd: string) => CommandResult = (cmd, args, cwd) => runCommand(cmd, args, cwd, 5000),
 ): boolean {
-  const result = run("entire", ["status", "--json"], repo);
-  if (result.code === "ENOENT") return false;
-  try {
-    return (JSON.parse(result.stdout) as { enabled?: boolean }).enabled === true;
-  } catch {
-    return false;
-  }
+  return entireState(repo, run) === "enabled";
 }
 
 type GitRun = (repo: string, args: string[]) => string | null;
@@ -85,22 +99,11 @@ export function promptInvokesSkill(prompt: string | null, skillName: string): bo
   return prompt.includes(`${skillName}/SKILL.md`);
 }
 
-function runEntire(cmd: string, args: string[], cwd: string): CommandResult {
-  const result = spawnSync(cmd, args, { cwd, encoding: "utf8" });
-  const error = result.error as NodeJS.ErrnoException | undefined;
-  return {
-    status: result.status,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-    code: error?.code,
-  };
-}
-
 /** Pass Entire's search text through. Does not parse Entire's JSON. */
 export function searchPastWork(
   query: string,
   cwd: string,
-  run: (cmd: string, args: string[], cwd: string) => CommandResult = runEntire,
+  run: (cmd: string, args: string[], cwd: string) => CommandResult = (cmd, args, cwd) => runCommand(cmd, args, cwd),
 ): SearchHit {
   const result = run("entire", ["search", query], cwd);
   if (result.code === "ENOENT") {

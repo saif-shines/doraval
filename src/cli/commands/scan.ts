@@ -4,6 +4,7 @@ import { confirm, isCancel } from "@clack/prompts";
 import { runScan, type ScanResult } from "../../core/scan.js";
 import { ui, renderCheck, resolveOutputMode, outJson, emitError, nextAction } from "../out.js";
 import { isAgentCaller } from "../agent-detect.js";
+import { entireEnabled } from "../../core/entire.js";
 import { acknowledgeEntire } from "../preflight.js";
 import { exit } from "../render/exit.js";
 import { getFindingDocUrl } from "../../core/doc-registry.js";
@@ -223,7 +224,7 @@ export default defineCommand({
       if (!go) await exit(0);
     }
 
-    acknowledgeEntire(mode, dir);
+    acknowledgeEntire(mode, entireEnabled(dir));
     try {
       const result = await runScan(dir);
       if (mode.format === "json") outJson(result);

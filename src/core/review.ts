@@ -327,13 +327,14 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
     }
   }
 
+  const repo = opts.cwd ?? process.cwd();
+  const checkpoint = opts.entireEnabled === true ? readCheckpoint(repo, dir) : null;
+
   // Tier 4: sessions — mechanical usage evidence (see plan B20–B22)
   if (!opts.quick) {
-    const loadedSess = opts.loadedSessions ?? loadRecentSessions(opts.cwd ?? process.cwd());
+    const loadedSess = opts.loadedSessions ?? loadRecentSessions(repo);
     const skillName = String(model.data.name ?? basename(dir));
-    const repo = opts.cwd ?? process.cwd();
-    const checkpointInvoked = opts.entireEnabled === true
-      && promptInvokesSkill(readCheckpoint(repo, dir)?.prompt ?? null, skillName);
+    const checkpointInvoked = promptInvokesSkill(checkpoint?.prompt ?? null, skillName);
     if (opts.sessions && loadedSess.sessions.length === 0 && !checkpointInvoked) {
       throw new PrerequisiteError({
         code: "E-PRE-003",
@@ -432,6 +433,7 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
     ...(scenarioCount > 0 ? { scenarioCount } : {}),
     summary: { passed: summary.passed, warnings: summary.warnings, errors: summary.errors },
     ...(ruleWarnings.length ? { ruleWarnings } : {}),
+    ...(checkpoint ? { checkpoint } : {}),
   };
 }
 
@@ -494,7 +496,7 @@ export async function review(path: string, opts: ReviewOptions = {}): Promise<Re
     isSkillDir(target) ? reviewSkill(target, per) : reviewMemoryFile(target, per);
 
   const stamp = (r: ReviewResult): ReviewResult => {
-    const checkpoint = useEntire ? readCheckpoint(cwd, r.path) : null;
+    const checkpoint = r.checkpoint ?? (useEntire && !isSkillDir(r.path) ? readCheckpoint(cwd, r.path) : null);
     const withCheckpoint = checkpoint ? { ...r, checkpoint } : r;
     if (!isSkillDir(r.path)) return withCheckpoint;
     const root = pluginRoot(r.path, cwd);

@@ -112,7 +112,7 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora session",
         "dora session show <id>",
       ], COMMON_FLAGS),
-      cmd("search", "read-only", "Search past Entire sessions and commits. Needs the entire command.", [
+      cmd("search", "read-only", "Search past Entire sessions. Exit 0 when Entire is off. Exit 2 when entire is missing.", [
         "dora search \"add login\"",
       ], COMMON_FLAGS, [{ name: "query", required: true, type: "string" }]),
       cmd("memory", "writes", "Capture principles; promote to AGENTS.md.", [

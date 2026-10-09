@@ -6,9 +6,9 @@ sidebar:
   order: 1
 ---
 
-Entire is on when `entire status` says enabled. Dora does not turn it on. Dora does not turn it off.
+Entire is on when `entire status` says enabled. Dora reads that record while it checks the repo. Dora does not turn Entire on. Dora does not turn Entire off.
 
-When Entire is on, Scan, Review, and `dora search` print this line:
+Each run of Scan, Review, and `dora search` prints this line once when Entire is on:
 
 ```text
 Entire is enabled. Dora will use it while it checks this repo.
@@ -18,12 +18,26 @@ JSON and CI stay silent.
 
 ## What Dora reads
 
-Review shows the checkpoint id and the stored prompt for a file. `--quick` includes them.
+| Piece | Where Dora reads it |
+| --- | --- |
+| Checkpoint id | `Entire-Checkpoint` trailer on the file's latest commit |
+| Prompt | `1/prompt.txt` inside that checkpoint |
+| Past work | `entire search` text, unchanged |
 
-A full Review counts a slash command, or a `SKILL.md` path, in that prompt as an invoke. A missing local log does not mark that Skill Never invoked.
+Review prints the id and the full prompt on one file and under each row of a list. `--quick` includes them. A full Review counts a slash command, or a `SKILL.md` path, in that prompt as an invoke.
 
-`dora search "add login"` prints Entire's search text. Exit `2` when Entire is not enabled, or when the `entire` command is missing.
+## Exit codes for search
+
+| Exit | When |
+| --- | --- |
+| 0 | Entire returns text, or Entire is not enabled. Not enabled prints nothing. |
+| 2 | `entire` is missing, the query is empty, or the search fails. A missing binary says `entire is not installed`. |
 
 ## What Dora does not do
 
 Dora does not run `entire enable`. Dora does not run `entire agent add`. Those commands belong to Entire.
+
+## Related
+
+- [Review tiers](/concepts/review-tiers/)
+- [Commands](/commands/)

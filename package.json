@@ -15,8 +15,7 @@
   },
   "bin": {
     "doraval": "bin/doraval.cjs",
-    "dora": "bin/doraval.cjs",
-    "entire-agent-hermes": "bin/entire-agent-hermes.cjs"
+    "dora": "bin/doraval.cjs"
   },
   "description": "Assesses the agent setup in this project and shows what to fix. Ships and shares that work, including a pocket agent.",
   "engines": {
@@ -25,7 +24,6 @@
   },
   "files": [
     "bin/doraval.cjs",
-    "bin/entire-agent-hermes.cjs",
     "README.md"
   ],
   "keywords": [
