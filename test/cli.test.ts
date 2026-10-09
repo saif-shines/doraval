@@ -81,10 +81,11 @@ describe("doraval CLI", () => {
       expect(out).toContain("dora review --quick");
       expect(out).toContain("npx skills add saif-shines/doraval");
       expect(out).not.toContain("No agent context found");
-      const reviewAt = out.indexOf("review");
-      const scanAt = out.indexOf("scan");
-      expect(reviewAt).toBeGreaterThan(-1);
-      expect(scanAt).toBeGreaterThan(reviewAt);
+      expect(out).not.toContain("Scanning agent context");
+      const scanAt = out.indexOf("dora scan");
+      const reviewAt = out.indexOf("dora review --quick");
+      expect(scanAt).toBeGreaterThan(-1);
+      expect(reviewAt).toBeGreaterThan(scanAt);
       expect(out).not.toContain("skill = reusable SKILL.md");
       rmSync(dir, { recursive: true, force: true });
     });

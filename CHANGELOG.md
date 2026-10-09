@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.6.46
+
+### Features
+
+- When Entire is already enabled, Scan, Review, and `dora search` print one line.
+  Dora uses Entire while it checks the repo. Dora does not turn Entire on.
+- Review prints the checkpoint id and the stored prompt. A full Review counts
+  a slash command, or a `SKILL.md` path, in that prompt as an invoke.
+- `dora search` prints Entire's search text. Exit 0 when Entire is off.
+  Exit 2 when the `entire` command is missing.
+
+### Docs
+
+- The sidebar has an Integrations group. Entire is the page.
+
 ### Fixes
 
 - The account page, the API key page, and the sign-in errors use the docs
