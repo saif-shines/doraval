@@ -1,6 +1,6 @@
 {
   "name": "@hacksmith/doraval",
-  "version": "0.6.45",
+  "version": "0.6.46",
   "license": "MIT",
   "description": "Assesses the agent setup in this project and shows what to fix. Ships and shares that work, including a pocket agent.",
   "exports": "./src/cli/index.ts"
