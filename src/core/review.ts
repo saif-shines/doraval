@@ -19,6 +19,7 @@ import { NetworkError, PrerequisiteError } from "./errors.js";
 import { loadPrinciples, checkPrinciplesAgainstContent, buildPrincipleRubric } from "./memory-rubric.js";
 import { loadScenarios, buildScenarioPrompt, type Scenario } from "./scenarios.js";
 import { loadRecentSessions, collectSessionEvidence, type LoadResult } from "./session-evidence.js";
+import { promptInvokesSkill, readCheckpoint, type EntireCheckpoint } from "./entire.js";
 import { collectSessionHealth, type SessionHealth } from "./session-health.js";
 import type { EffectiveRule } from "./rules/resolve.js";
 import { stampRule } from "./rules/apply.js";
@@ -59,6 +60,7 @@ export interface ReviewResult {
   summary: { passed: number; warnings: number; errors: number };
   ruleWarnings?: string[];
   sessionHealth?: SessionHealth;
+  checkpoint?: EntireCheckpoint;
 }
 
 export interface ReviewOptions {
@@ -326,25 +328,27 @@ async function reviewSkill(dir: string, opts: ReviewOptions = {}): Promise<Revie
   // Tier 4: sessions — mechanical usage evidence (see plan B20–B22)
   if (!opts.quick) {
     const loadedSess = opts.loadedSessions ?? loadRecentSessions(opts.cwd ?? process.cwd());
-    if (opts.sessions && loadedSess.sessions.length === 0) {
+    const skillName = String(model.data.name ?? basename(dir));
+    const checkpointInvoked = promptInvokesSkill(readCheckpoint(opts.cwd ?? process.cwd(), dir)?.prompt ?? null, skillName);
+    if (opts.sessions && loadedSess.sessions.length === 0 && !checkpointInvoked) {
       throw new PrerequisiteError({
         code: "E-PRE-003",
         message: "No sessions found. Use your agent, then re-run.",
       });
     }
-    if (loadedSess.adaptersDetected.length === 0) {
+    if (loadedSess.adaptersDetected.length === 0 && !checkpointInvoked) {
       tiers.sessions = { available: false, findings: [] };
     } else {
-      const skillName = String(model.data.name ?? basename(dir));
       let mtimeMs: number | undefined;
       try { mtimeMs = statSync(resolvePath(dir, "SKILL.md")).mtimeMs; } catch { /* keep undefined */ }
       const required = opts.sessions === true;
-      const rawSess = collectSessionEvidence(skillName, dir, loadedSess, { required, origin, mtimeMs });
+      const evidenceOpts = { required, origin, mtimeMs, checkpointInvoked };
+      const rawSess = collectSessionEvidence(skillName, dir, loadedSess, evidenceOpts);
       let sessFindings = rawSess
         .map((finding) => stampRule(finding, finding.code!, effective))
         .filter((finding): finding is ReviewFinding => finding !== null);
       if (sessFindings.length === 0 && rawSess[0]?.id === "sess-007") {
-        sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required })
+        sessFindings = collectSessionEvidence(skillName, dir, loadedSess, { required, checkpointInvoked })
           .map((finding) => stampRule(finding, finding.code!, effective))
           .filter((finding): finding is ReviewFinding => finding !== null);
       }
@@ -485,9 +489,11 @@ export async function review(path: string, opts: ReviewOptions = {}): Promise<Re
     isSkillDir(target) ? reviewSkill(target, per) : reviewMemoryFile(target, per);
 
   const stamp = (r: ReviewResult): ReviewResult => {
-    if (!isSkillDir(r.path)) return r;
+    const checkpoint = readCheckpoint(cwd, r.path);
+    const withCheckpoint = checkpoint ? { ...r, checkpoint } : r;
+    if (!isSkillDir(r.path)) return withCheckpoint;
     const root = pluginRoot(r.path, cwd);
-    return root ? { ...r, pluginOwned: true, pluginRoot: root } : r;
+    return root ? { ...withCheckpoint, pluginOwned: true, pluginRoot: root } : withCheckpoint;
   };
 
   const health = loadedSessions ? collectSessionHealth(loadedSessions) : undefined;

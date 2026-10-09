@@ -81,6 +81,15 @@ function renderOptionalTier(
   for (const f of tier.findings ?? []) renderOneFinding(f);
 }
 
+function renderCheckpoint(r: ReviewResult): void {
+  if (!r.checkpoint) return;
+  ui.blank();
+  ui.write(`  Checkpoint  ${r.checkpoint.id}`);
+  if (!r.checkpoint.prompt) return;
+  const line = r.checkpoint.prompt.replace(/\s+/g, " ").trim();
+  ui.write(`  Prompt      ${line.length > 160 ? `${line.slice(0, 157)}...` : line}`);
+}
+
 function renderSessionHealth(r: ReviewResult): void {
   const h = r.sessionHealth;
   if (!h) return;
@@ -132,6 +141,7 @@ function renderSingle(r: ReviewResult): void {
     ui.write("  " + "─".repeat(60));
   }
   renderOptionalTier("Sessions", r.tiers.sessions);
+  renderCheckpoint(r);
   renderSessionHealth(r);
 
   ui.blank();
@@ -224,6 +234,7 @@ export default defineCommand({
     name: "review",
     description: [
       "Multi-tier skill review (structure → heuristics → LLM → sessions). Includes Session health.",
+      "Prints the Entire checkpoint prompt when the file's commit has one.",
       "",
       "Start here: dora review --quick",
       "Examples:",

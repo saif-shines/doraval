@@ -113,11 +113,17 @@ export function collectSessionEvidence(
   skillName: string,
   skillDir: string,
   loaded: LoadResult,
-  opts: { required: boolean; origin?: SkillOrigin; mtimeMs?: number; nowMs?: number }
+  opts: { required: boolean; origin?: SkillOrigin; mtimeMs?: number; nowMs?: number; checkpointInvoked?: boolean }
 ): ReviewFinding[] {
   const total = loaded.sessions.length;
+  const fromCheckpoint = (): ReviewFinding[] => [finding({
+    id: "sess-001", tier: "sessions", severity: "pass",
+    message: "Invoked in an Entire checkpoint for this file",
+    fixable: false,
+  })];
 
   if (total === 0) {
+    if (opts.checkpointInvoked) return fromCheckpoint();
     return [finding({
       id: "sess-003", tier: "sessions", severity: "info",
       message: "No sessions found for this project. Use your agent, then re-run.",
@@ -147,6 +153,8 @@ export function collectSessionEvidence(
       fixable: false,
     })];
   }
+
+  if (opts.checkpointInvoked) return fromCheckpoint();
 
   const agents = [...new Set(loaded.sessions.map((s) => s.agent))].join(", ");
   const removeCandidate = opts.origin !== undefined && opts.mtimeMs !== undefined && isRemoveCandidate({

@@ -80,6 +80,7 @@ dora memory add "Never use default exports" --weight 8
 dora conflicts --dry-run
 dora session
 dora session show <id>       # short table id is enough if unique
+dora search "add login"      # past Entire sessions and commits
 dora harness                 # list routines
 dora harness new             # start ask-dora / grilling-for-routine; optional Fixed step
 dora harness apply <slug>    # refresh copies, stamp footer, push; Runtime watch

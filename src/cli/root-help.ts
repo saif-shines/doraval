@@ -9,6 +9,7 @@ export const ROOT_VERBS: [string, string][] = [
   ["skill", "List Skills; unused, remove, restore, new"],
   ["rule", "List and configure review rules; new"],
   ["session", "List coding-agent sessions"],
+  ["search", "Search past Entire sessions and commits"],
   ["memory", "Capture principles; promote to AGENTS.md"],
   ["conflicts", "Settle cross-agent contradictions"],
   ["config", "List, get, or set config"],

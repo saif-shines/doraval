@@ -24,6 +24,13 @@ describe("doraval CLI", () => {
       expect(stdout).not.toContain("common: eval.model");
     });
 
+    test("search --help names Entire and the example", () => {
+      const { exitCode, stdout } = runDoraval(["search", "--help"]);
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("dora search \"add login\"");
+      expect(stdout).toContain("entire");
+    });
+
     test("review --help shows examples and exit codes", () => {
       const { exitCode, stdout } = runDoraval(["review", "--help"]);
       expect(exitCode).toBe(0);

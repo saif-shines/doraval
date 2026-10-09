@@ -117,6 +117,7 @@ export const topLevelSubCommands = {
   skill: () => Promise.resolve(skill),
   rule,
   session: () => import("./commands/sessions.js").then((m) => m.default),
+  search: () => import("./commands/search.js").then((m) => m.default),
   memory: () => Promise.resolve(memory),
   conflicts: () => import("./commands/reconcile.js").then((m) => m.default),
   config,

@@ -19,6 +19,24 @@ function loadResult(sessions: LoadedSession[], agents = ["claude-code"]): LoadRe
 }
 
 describe("collectSessionEvidence", () => {
+  test("an Entire checkpoint prompt counts as invoked when local logs do not", () => {
+    const lr = loadResult([sess("cursor", { userMessages: ["hello"] })]);
+    const findings = collectSessionEvidence("my-skill", "/repo/.claude/skills/my-skill", lr, {
+      required: false,
+      checkpointInvoked: true,
+    });
+    expect(findings[0]!.severity).toBe("pass");
+    expect(findings[0]!.message).toBe("Invoked in an Entire checkpoint for this file");
+  });
+
+  test("an Entire checkpoint prompt counts when no local session exists", () => {
+    const findings = collectSessionEvidence("my-skill", "/repo/.claude/skills/my-skill", loadResult([]), {
+      required: false,
+      checkpointInvoked: true,
+    });
+    expect(findings[0]!.message).toBe("Invoked in an Entire checkpoint for this file");
+  });
+
   test("Skill invoke record counts as invoked", () => {
     const lr = loadResult([sess("claude-code", {
       skillInvokes: [{ name: "my-skill", signal: "skill_tool_use", eventIds: ["t1"] }],
