@@ -1,6 +1,6 @@
 /** One Grok turn: chunks up to `turn_completed`, not one row per chunk. */
 
-import { extractSkillsFromUpdate } from "../session-adapters/grok.ts";
+import { extractSkillsFromUpdate } from "../session-adapters/grok-skills.ts";
 
 export type ToolRow = {
   name: string;
@@ -652,6 +652,25 @@ export function readSessionLog(text: string): { turns: Turn[]; facts: SessionFac
 
 export function groupUpdates(text: string): Turn[] {
   return readSessionLog(text).turns;
+}
+
+/** Sum added and removed by path. Keep the longer diff. */
+export function rollupFiles(turns: readonly { files?: readonly FileChange[] }[]): FileChange[] {
+  const byPath = new Map<string, FileChange>();
+  for (const turn of turns) {
+    if (!turn.files) continue;
+    for (const file of turn.files) {
+      const prev = byPath.get(file.path);
+      if (prev) {
+        prev.added += file.added;
+        prev.removed += file.removed;
+        if ((file.diff?.length ?? 0) > (prev.diff?.length ?? 0)) prev.diff = file.diff;
+      } else {
+        byPath.set(file.path, { ...file });
+      }
+    }
+  }
+  return [...byPath.values()];
 }
 
 export function extractSessionFacts(text: string): SessionFacts {

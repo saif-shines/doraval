@@ -3,6 +3,9 @@ import { homedir } from "os";
 import { basename, dirname, join } from "path";
 import { asSession, safeJsonParse, type Event, type Session, type SkillInvokeRecord, type ToolCall } from "../session-parse.js";
 import type { SessionAdapter, SessionListItem } from "./types.js";
+import { extractSkillsFromUpdate } from "./grok-skills.js";
+
+export { extractSkillsFromUpdate };
 
 export interface GrokAdapterOptions {
   /** Absolute path to Grok home (replaces ~/.grok). Defaults to GROK_HOME env or `<homeDir>/.grok`. */
@@ -91,32 +94,6 @@ export function sessionIdFromPath(path: string): string {
 }
 
 const SKILL_TITLE_RE = /^Skill\s+(\S+)/i;
-const SKILL_PATH_RE = /[/\\]skills[/\\]([^/\\]+)[/\\]SKILL\.md/i;
-
-/** Extract skill names from ACP tool titles, paths, and raw inputs. */
-export function extractSkillsFromUpdate(u: Record<string, unknown>): string[] {
-  const out: string[] = [];
-  const title = typeof u.title === "string" ? u.title : "";
-  const m = title.match(SKILL_TITLE_RE);
-  if (m?.[1]) out.push(m[1]);
-
-  const blobs: string[] = [title];
-  for (const key of ["rawInput", "input", "args"] as const) {
-    const v = u[key];
-    if (v && typeof v === "object") blobs.push(JSON.stringify(v));
-    else if (typeof v === "string") blobs.push(v);
-  }
-  if (Array.isArray(u.locations)) blobs.push(JSON.stringify(u.locations));
-
-  for (const blob of blobs) {
-    let match: RegExpExecArray | null;
-    const re = new RegExp(SKILL_PATH_RE.source, "gi");
-    while ((match = re.exec(blob)) !== null) {
-      if (match[1]) out.push(match[1]);
-    }
-  }
-  return out;
-}
 
 function toolNameFromUpdate(u: Record<string, unknown>): string | null {
   if (typeof u.title === "string" && u.title && !SKILL_TITLE_RE.test(u.title)) {

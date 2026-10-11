@@ -1,0 +1,28 @@
+---
+import PageLayout from "blume/components/layout/PageLayout.astro";
+import data from "blume:data";
+import Sessions from "../islands/Sessions.tsx";
+
+const { config } = data;
+---
+
+<PageLayout
+  site={{ title: config.title, description: config.description }}
+  logo={config.logo}
+  favicon={config.favicon}
+  banner={config.banner}
+  analytics={config.analytics}
+  navigation={data.navigation}
+  fontCssVars={data.fontCssVars}
+  themeMode={config.theme.mode}
+  searchEnabled={config.search.enabled}
+  siteUrl={config.site}
+  ogEnabled={config.og.enabled}
+  page={{
+    title: "Sessions",
+    description: "Read Grok sessions from a folder on this computer. Nothing is uploaded.",
+    route: "/sessions",
+  }}
+>
+  <Sessions client:only="react" />
+</PageLayout>

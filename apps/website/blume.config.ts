@@ -32,6 +32,7 @@ export default defineConfig({
         "/get-started/pocket-agents",
         "/get-started/apply-and-watch",
         "/get-started/connect",
+        { label: "Sessions", href: "/sessions" },
         {
           label: "Integrations",
           items: ["/integrations/entire"],

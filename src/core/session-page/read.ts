@@ -1,7 +1,10 @@
 import { access, open, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { readSessionLog, type FileChange, type Turn } from "./group.ts";
+import { readSessionLog, rollupFiles, type FileChange, type Turn } from "./group.ts";
+import { isHiddenCwd, isHiddenSession } from "./hide.ts";
+
+export { isHiddenCwd, isHiddenSession };
 
 const updatesById = new Map<string, string>();
 
@@ -26,20 +29,6 @@ export type SessionRow = {
 const TURN_NEEDLE = Buffer.from('"turn_completed"');
 /** Turn counts touch `updates.jsonl`. Only the newest visible rows, not the whole 4.7GB tree. */
 const TURN_COUNT_LIMIT = 30;
-
-export function isHiddenCwd(cwd: string): boolean {
-  if (cwd.includes("subagent-")) return true;
-  if (cwd === "/tmp" || cwd.startsWith("/tmp/")) return true;
-  if (cwd === "/private/tmp" || cwd.startsWith("/private/tmp/")) return true;
-  if (cwd.includes("/var/folders/") && cwd.includes("/T/")) return true;
-  return false;
-}
-
-export function isHiddenSession(summary: unknown): boolean {
-  if (!summary || typeof summary !== "object") return false;
-  const kind = (summary as { session_kind?: unknown }).session_kind;
-  return kind === "subagent" || kind === "subagent_resume";
-}
 
 export function defaultGrokHome(): string {
   return join(homedir(), ".grok");
@@ -103,25 +92,6 @@ export type SessionFacts = Pick<ExtractedFacts, "subagents" | "recaps" | "skills
   sandbox: string | null;
   compactionCount: number | null;
 };
-
-/** Sum added/removed by path. Skip a turn that has no `files` array yet. */
-function rollupFiles(turns: readonly { files?: readonly FileChange[] }[]): FileChange[] {
-  const byPath = new Map<string, FileChange>();
-  for (const turn of turns) {
-    if (!turn.files) continue;
-    for (const file of turn.files) {
-      const prev = byPath.get(file.path);
-      if (prev) {
-        prev.added += file.added;
-        prev.removed += file.removed;
-        if ((file.diff?.length ?? 0) > (prev.diff?.length ?? 0)) prev.diff = file.diff;
-      } else {
-        byPath.set(file.path, { ...file });
-      }
-    }
-  }
-  return [...byPath.values()];
-}
 
 export async function listSessions(root: string): Promise<SessionRow[]> {
   const sessionsRoot = join(root, "sessions");
