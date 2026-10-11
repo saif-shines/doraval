@@ -9,6 +9,7 @@ description: >-
 # writing-for-routine
 
 Use this craft with an internal teammate. Write `prompt.md` and, when the grill freezes a step, the Fixed-step Skill. This file is the single home for that craft.
+The local Grok session page is `dora session open`. It is not a night prompt.
 
 ## Shape
 

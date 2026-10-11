@@ -31,7 +31,7 @@ function renderTable(entries: ReturnType<typeof listSessions>): void {
 }
 
 export default defineCommand({
-  meta: { name: "session", description: "List coding-agent sessions for this project" },
+  meta: { name: "session", description: "List coding-agent sessions for this project. dora session open serves the local page" },
   args: {
     agent: { type: "string", description: "Filter by agent (claude, grok, cursor, codex, copilot)" },
     limit: { type: "string", description: "Max sessions per agent (default: Review window last)" },
@@ -42,6 +42,7 @@ export default defineCommand({
   },
   subCommands: {
     show: () => import("./sessions/show.js").then((m) => m.default),
+    open: () => import("./sessions/open.js").then((m) => m.default),
   },
   async run({ args }) {
     // citty calls this command's own run() even after dispatching to a
@@ -49,7 +50,7 @@ export default defineCommand({
     // out if "show" was the subcommand actually invoked, matching the
     // guard style already used by defineGroup() in command-tree.ts.
     const cliArgs = process.argv.slice(2);
-    if (cliArgs[0] === "session" && cliArgs[1] === "show") return;
+    if (cliArgs[0] === "session" && (cliArgs[1] === "show" || cliArgs[1] === "open")) return;
 
     const mode = resolveOutputMode({ format: args.format as string, ci: args.ci as boolean, json: args.json as boolean });
     const agent = args.agent as string | undefined;

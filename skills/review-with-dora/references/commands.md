@@ -15,7 +15,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora skill new` | Scaffold a Skill |
 | `dora rule` | List review rules |
 | `dora rule new` | Scaffold a Rule |
-| `dora session` | List Sessions. `show <id>` (short id is enough if unique) |
+| `dora session` | List Sessions. `show <id>` (short id is enough if unique). `open` serves the local Grok page. |
 | `dora search` | Search past Entire sessions. Exit 0 with no text when Entire is off. Exit 2 when `entire` is missing, the query is empty, or the search fails. |
 | `dora memory` | List principles. `add` / `promote` (`promote` writes `AGENTS.md`) |
 | `dora conflicts` | Cross-agent contradictions (`--dry-run`, then `--yes`) |

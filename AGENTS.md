@@ -39,7 +39,7 @@ Look up project/system skills when deciding. Mention 1–2 options to the user w
 
 ## Search
 
-Prefer Exa (`search`, `exa-agent`) over generic web search. Use the generic search only if Exa is down or cannot answer.
+Use Exa for search and for research. Tools: `web_search_exa`, `web_fetch_exa` for a known URL, and `agent_run` for a question that needs more than one search. Use generic web search only when Exa is down or cannot answer, and say that you did.
 
 ## Feature release = docs lockstep
 

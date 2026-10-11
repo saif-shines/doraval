@@ -108,9 +108,10 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora rule",
         "dora rule new --for cursor --yes",
       ], COMMON_FLAGS),
-      cmd("session", "read-only", "List coding-agent sessions for this project.", [
+      cmd("session", "read-only", "List coding-agent sessions for this project. dora session open serves the local page.", [
         "dora session",
         "dora session show <id>",
+        "dora session open",
       ], COMMON_FLAGS),
       cmd("search", "read-only", "Search past Entire sessions. Exit 0 when Entire is off. Exit 2 when entire is missing.", [
         "dora search \"add login\"",

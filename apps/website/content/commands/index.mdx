@@ -140,10 +140,11 @@ Settles Claude-vs-Cursor contradictions into `AGENTS.md`.
 dora session
 dora session --agent claude --limit 20
 dora session show <sessionId>
+dora session open
 dora session --json
 ```
 
-Read-only. Adapters: Claude, Grok, Cursor, Codex, Copilot.
+Read-only. Adapters: Claude, Grok, Cursor, Codex, Copilot. `dora session open` serves a local page for `~/.grok` and opens it in the browser. Leave that process running. Ctrl+C stops it.
 
 The table shortens the id. `show` accepts that short id when it is unique. `--json` has the full `sessionId`. `show` prints token totals when the log has them. It says `unavailable` when it does not.
 

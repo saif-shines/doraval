@@ -8,7 +8,7 @@ export const ROOT_VERBS: [string, string][] = [
   ["scan", "Fast workspace map"],
   ["skill", "List Skills; unused, remove, restore, new"],
   ["rule", "List and configure review rules; new"],
-  ["session", "List coding-agent sessions"],
+  ["session", "List coding-agent sessions, or dora session open"],
   ["search", "Search past Entire sessions and commits"],
   ["memory", "Capture principles; promote to AGENTS.md"],
   ["conflicts", "Settle cross-agent contradictions"],

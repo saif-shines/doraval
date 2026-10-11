@@ -1,4 +1,5 @@
 import { spawnSync } from "bun";
+import { platformOpenCommand } from "./platform-open.js";
 import { YAML } from "bun";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
@@ -399,10 +400,10 @@ export function listRoutineSlugs(home: string): string[] {
 }
 
 function defaultOpenDir(dir: string): void {
-  const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer" : "xdg-open";
+  const [cmd, args] = platformOpenCommand(dir);
   try {
-    const r = spawnSync([cmd, dir], { stdout: "ignore", stderr: "pipe" });
-    // explorer.exe returns 1 even when the folder opens.
+    const r = spawnSync([cmd, ...args], { stdout: "ignore", stderr: "pipe" });
+    // Windows start can return 1 even when the folder opens.
     if (process.platform !== "win32" && (r.exitCode ?? 1) !== 0) throw new Error(`Could not open ${dir}`);
   } catch (e) {
     if (process.platform === "win32") return;
