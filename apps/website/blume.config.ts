@@ -120,7 +120,6 @@ export default defineConfig({
     ["/commands/memory-restore", "/commands/"],
     ["/commands/memory-sync", "/commands/"],
     ["/concepts/three-tier-verification", "/concepts/review-tiers/"],
-    ["/sessions", "/inspect-traces/"],
   ]),
 
 });

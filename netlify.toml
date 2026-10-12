@@ -33,19 +33,6 @@
   to = "/.netlify/functions/identity"
   status = 200
 
-# The old Sessions page. Blume's _redirects file is not what Netlify serves.
-[[redirects]]
-  from = "/sessions"
-  to = "/inspect-traces/"
-  status = 301
-  force = true
-
-[[redirects]]
-  from = "/sessions/"
-  to = "/inspect-traces/"
-  status = 301
-  force = true
-
 # Canonical: doraval.dev. Old hosts + www → apex.
 [[redirects]]
   from = "https://doraval.thehacksmith.dev/*"
