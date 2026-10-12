@@ -216,6 +216,11 @@ describe("dora harness docs lockstep", () => {
     expect(home).toContain("Run dora scan. List the gaps.");
     expect(home).toContain("Ship the work");
     expect(home).toContain("/inspect-traces/");
+    expect(home).toContain('href="/get-started/"');
+    expect(home).toContain('href="/get-started/pocket-agents/"');
+    expect(home).toContain('href="/inspect-traces/"');
+    expect(home).toContain("Browse the docs");
+    expect(home).toContain("Inspect traces");
     const agent = read("apps/website/content/index.mdx");
     expect(agent).toContain("## Paste into your coding agent");
     expect(agent).toContain("```text");
@@ -228,6 +233,11 @@ describe("dora harness docs lockstep", () => {
     expect(home.slice(promptStart + "const agentPrompt = `".length, promptEnd)).toBe(
       agent.slice(fenceStart + "```text\n".length, fenceEnd),
     );
+    const afterFence = agent.slice(fenceEnd);
+    expect(afterFence).toContain("[Browse the docs](/get-started/)");
+    expect(afterFence).toContain("[Pocket agents](/get-started/pocket-agents/)");
+    expect(afterFence).toContain("[Inspect traces](/inspect-traces/)");
+    expect(agent.slice(0, fenceStart)).not.toContain("[docs](/get-started/)");
     expect(home).not.toContain("/ask-dora");
     const jobs =
       "`dora scan` lists the gaps in this project. `dora fix` applies the safe fixes. `dora review --run` runs the skill off, then on. A pocket agent ships the work that repeats.";
