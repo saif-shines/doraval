@@ -11,6 +11,8 @@ description: >-
 Use this craft with an internal teammate. Write `prompt.md` and, when the grill freezes a step, the Fixed-step Skill. This file is the single home for that craft.
 The local session page is `dora session open`. It reads Claude, Grok, Cursor, Codex, Copilot, and Gemini CLI logs. The site shows two example traces until a folder is chosen. It is not a night prompt.
 
+`dora wire --for claude --run` records the request the model received. It is not a night prompt. Logs stay in `~/.doraval/wire/`.
+
 ## Shape
 
 Write numbered steps. Each step has a done-when. The night agent can tell finished from not finished.

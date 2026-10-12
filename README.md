@@ -81,6 +81,9 @@ dora conflicts --dry-run
 dora session
 dora session show <id>       # short table id is enough if unique
 dora session open            # local page for Claude, Grok, Cursor, Codex, Copilot, Gemini CLI. Same reader: https://doraval.dev/inspect-traces
+dora wire --for claude --run # proxy, then claude. Logs stay in ~/.doraval/wire/
+dora wire --for codex --run --chatgpt
+dora wire --for codex --run --api-key
 dora search "add login"      # past Entire sessions and commits
 dora harness                 # list routines
 dora harness new             # start ask-dora / grilling-for-routine; optional Fixed step

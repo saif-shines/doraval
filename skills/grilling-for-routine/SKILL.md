@@ -14,6 +14,8 @@ Use this grill with an internal teammate. Turn a routine idea into a routine.
 The Runtime runs the Loop. Today the Runtime is Hermes. Do not pick a sample product.
 The local session page is `dora session open`. It reads Claude, Grok, Cursor, Codex, Copilot, and Gemini CLI logs. The site shows two example traces until a folder is chosen. It is not a routine.
 
+`dora wire --for claude --run` records the request the model received. It is not a routine. Logs stay in `~/.doraval/wire/`.
+
 ## Loop-able
 
 First check: can the same prompt run on an interval?

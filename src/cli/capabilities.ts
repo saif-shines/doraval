@@ -113,6 +113,16 @@ export function buildCapabilities(): CapabilitiesManifest {
         "dora session show <id>",
         "dora session open",
       ], COMMON_FLAGS),
+      cmd("wire", "writes", "Record the request the model received, then start the agent. Logs stay in ~/.doraval/wire/.", [
+        "dora wire --for claude --run",
+        "dora wire --for codex --run --chatgpt",
+        "dora wire --for codex --run --api-key",
+      ], {
+        "--for": { description: "Agent to start", values: ["claude", "codex", "cursor"] },
+        "--run": { description: "Start the agent in this terminal" },
+        "--chatgpt": { description: "Codex ChatGPT sign-in" },
+        "--api-key": { description: "Codex API key" },
+      }),
       cmd("search", "read-only", "Search past Entire sessions. Exit 0 when Entire is off. Exit 2 when entire is missing.", [
         "dora search \"add login\"",
       ], COMMON_FLAGS, [{ name: "query", required: true, type: "string" }]),

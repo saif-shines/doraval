@@ -18,6 +18,7 @@ Print this map. Then stop.
 Two jobs: assess this project's agent setup and show what to fix; ship and share that work, including a pocket agent.
 Dora jobs: review, fix, unused, scan. Load review-with-dora.
 Sessions: dora session, dora session show <id>, dora session open.
+Wire: dora wire --for claude --run. Codex adds --chatgpt or --api-key. Logs stay in ~/.doraval/wire/. For Cursor, dora wire exits 2. dora session open still reads Cursor logs.
 Routine flow: a routine, a loop, recurring, a routine idea, a pocket job, or harness new.
   Load grilling-for-routine. Night prompt: writing-for-routine.
 After a routine exists: dora harness apply, show, logs, models, rm, pause, resume, list, open. boot is the apply alias.
@@ -43,7 +44,8 @@ If a Scalekit AgentKit skill is missing: install scalekit-inc/authstack, then re
 7. If the ask is a **connected account**, OAuth link, or calling Slack/GitHub as that account:
    If `integrate-agentkit` is on disk: load it. Done.
    If missing: print official install. Stop.
-8. Else: name the matching `dora` verb from `dora --help --json`. Done: the teammate has the next command.
+8. If the ask is the request the model received, or `dora wire`: name `dora wire --for claude --run`, or Codex with `--chatgpt` or `--api-key`. Logs stay in `~/.doraval/wire/`. For Cursor, name `dora session open`. Done: the teammate has the command.
+9. Else: name the matching `dora` verb from `dora --help --json`. Done: the teammate has the next command.
 
 Look up facts (skill on disk, Hermes present, AgentKit skills present). Leave slug, connector, and interval to the human.
 If Hermes is missing and the ask needs a run or apply: print official install steps. Do not fake a pass.

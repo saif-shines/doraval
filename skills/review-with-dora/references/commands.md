@@ -16,6 +16,7 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora rule` | List review rules |
 | `dora rule new` | Scaffold a Rule |
 | `dora session` | List Sessions. `show <id>` (short id is enough if unique). `open` serves the local Grok page. |
+| `dora wire` | `--for claude --run`, or `--for codex --run --chatgpt`, or `--for codex --run --api-key`. Proxy on 8787, then the agent. Logs stay in `~/.doraval/wire/`. Not a Finding. Cursor exits. |
 | `dora search` | Search past Entire sessions. Exit 0 with no text when Entire is off. Exit 2 when `entire` is missing, the query is empty, or the search fails. |
 | `dora memory` | List principles. `add` / `promote` (`promote` writes `AGENTS.md`) |
 | `dora conflicts` | Cross-agent contradictions (`--dry-run`, then `--yes`) |
@@ -40,6 +41,6 @@ Bare noun groups **list**. Create sits on the noun (`… new`).
 | `dora update` | Update doraval |
 | `dora probe` | POST hello; poll until ack or 60s timeout. Needs `identity.api_key`. Human clicks ack on `/account`. `--json` is `{status,id}`. |
 
-Writes take `--yes` or `--dry-run`. Missing flag is **exit 2**.
+Writes take `--yes` or `--dry-run`. Missing flag is **exit 2**. `dora wire` takes `--run` instead. Missing `--run` is **exit 2**.
 Add `--format json` after Findings when you will branch on fields.
 

@@ -64,6 +64,8 @@ Pass `--yes` or `--dry-run` on `fix`, `conflicts`, `memory promote`, `skill remo
 
 Verbs: [commands.md](references/commands.md). Exit codes and JSON: [output.md](references/output.md).
 
+`dora wire --for claude --run` records the request the model received. It is not a Finding. Logs stay in `~/.doraval/wire/`.
+
 Recurring use case → `dora harness new` (starts `ask-dora` / `grilling-for-routine`). Then `dora harness apply <slug>`. `dora harness boot <slug>` is the apply alias. Then `hermes mcp login scalekit`. Runtime watch after apply, boot, list, pause, and resume. Also `dora harness show <slug>`, `dora harness models`, `dora harness logs <slug>`, `dora harness rm <slug> --yes`, `dora harness pause`, `dora harness resume`, `dora harness list`, `dora harness open`.
 
 MUST report done only on **exit 0**.

@@ -150,6 +150,29 @@ The same reader is at [/inspect-traces](/inspect-traces). That page opens with t
 
 The table shortens the id. `show` accepts that short id when it is unique. `--json` has the full `sessionId`. `show` prints token totals when the log has them. It says `unavailable` when it does not.
 
+## Wire
+
+```bash
+dora wire --for claude --run
+dora wire --for codex --run --chatgpt
+dora wire --for codex --run --api-key
+```
+
+Starts a proxy on port 8787, then starts that agent in this terminal. Ctrl+C stops both. Dora waits until the agent has exited.
+
+Claude starts with `ANTHROPIC_BASE_URL` and `ENABLE_TOOL_SEARCH=true`. Codex gets one `-c openai_base_url=...` for that run. Dora does not edit `~/.codex/config.toml`. ChatGPT uses `/backend-api/codex`. An API key uses `/v1`.
+
+Each POST, except a token-count call, writes three files under `~/.doraval/wire/`: a readable `.md`, the raw `.request.txt`, and the raw `.response.txt`. A second turn in the same millisecond gets its own files. The same call more than 20 times in 2 seconds stops new files. The `.md` redacts `authorization`, `x-api-key`, `api-key`, and `cookie`. The text files keep the raw body. Token-count calls are forwarded and not saved. The logs stay on this computer.
+
+`dora wire --for cursor` exits 2. Cursor builds the system prompt on its servers. `dora session open` still reads those logs.
+
+| Exit | When |
+| --- | --- |
+| 0 | The agent exits 0. |
+| 2 | The flags are wrong, port 8787 is taken, or the agent binary is missing. |
+| 130 | Ctrl+C. |
+| other | The agent exited with that code. |
+
 ## Search
 
 ```bash
