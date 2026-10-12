@@ -74,13 +74,15 @@ const agentPrompt = `Assess the agent setup in this project and show what to fix
     --home-space-xl: 2rem;
     --home-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
+    width: 100%;
     max-width: 46rem;
     margin-inline: auto;
+    margin-block: auto;
     padding-inline: var(--home-space-md);
     padding-block: var(--home-space-xl);
   }
 
-  /* Pin the thin footer to the window edge so it is not a mid-page band. */
+  /* Pin the thin footer to the window edge. Center the fold in the space above it. */
   :global(body:has(.home)) {
     min-height: 100dvh;
     display: flex;
@@ -89,6 +91,8 @@ const agentPrompt = `Assess the agent setup in this project and show what to fix
 
   :global(body:has(.home) #blume-content) {
     flex: 1;
+    display: flex;
+    flex-direction: column;
   }
 
   .home-eyebrow {
