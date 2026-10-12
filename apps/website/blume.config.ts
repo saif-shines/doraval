@@ -32,7 +32,7 @@ export default defineConfig({
         "/get-started/pocket-agents",
         "/get-started/apply-and-watch",
         "/get-started/connect",
-        { label: "Sessions", href: "/sessions" },
+        { label: "Inspect traces", href: "/inspect-traces" },
         {
           label: "Integrations",
           items: ["/integrations/entire"],
@@ -120,6 +120,7 @@ export default defineConfig({
     ["/commands/memory-restore", "/commands/"],
     ["/commands/memory-sync", "/commands/"],
     ["/concepts/three-tier-verification", "/concepts/review-tiers/"],
+    ["/sessions", "/inspect-traces/"],
   ]),
 
 });

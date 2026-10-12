@@ -21,7 +21,7 @@ export interface SessionPrimitives {
   assistantText: string[];
 }
 
-export type EventType = "user" | "assistant" | "tool_call" | "tool_result" | "system" | "error";
+export type EventType = "user" | "assistant" | "tool_call" | "tool_result" | "system" | "error" | "thinking";
 
 export interface Event {
   sessionId: string;
@@ -59,6 +59,8 @@ export interface Session extends SessionPrimitives {
   outputTokens?: number;
   cacheReadTokens?: number;
   costUsd?: number;
+  /** Claude `permissionDecision` joined to the tool name. Omitted when the log has none. */
+  permissions?: { tool: string; decision: string }[];
 }
 
 /** Build a Session from a blob + Events. Token totals sum Events, then optional fallback. Never writes 0 for a missing field. */
@@ -165,6 +167,8 @@ export function parseSession(jsonlText: string): Session {
   const toolCalls: ToolCall[] = [];
   const userMessages: string[] = [];
   const assistantText: string[] = [];
+  const permissions: { tool: string; decision: string }[] = [];
+  const toolNames = new Map<string, string>();
   let toolIndex = 0;
 
   // Collect skill names from modern client-driven invocations
@@ -271,6 +275,7 @@ export function parseSession(jsonlText: string): Session {
             index: toolIndex++,
           });
           const toolId = typeof b.id === "string" ? b.id : undefined;
+          if (toolId) toolNames.set(toolId, b.name);
           pushEvent(events, {
             sessionId,
             type: "tool_call",
@@ -309,24 +314,42 @@ export function parseSession(jsonlText: string): Session {
             });
             usagePlaced = true;
           }
+        } else if (b.type === "thinking" && typeof b.thinking === "string" && b.thinking.trim()) {
+          pushEvent(events, {
+            sessionId,
+            type: "thinking",
+            ...(lineId ? { id: lineId } : {}),
+            ...(parentId ? { parentId } : {}),
+            ...(ts ? { timestamp: ts } : {}),
+            text: b.thinking.trim(),
+            ...(!usagePlaced ? usageFields : {}),
+          });
+          usagePlaced = true;
         }
       }
     }
 
     if (msg.type === "user") {
-      // Skip attachment-injected messages (hook content, skill content)
+      // Skip attachment-injected messages (hook content, skill content).
+      // isMeta is hidden in Claude's own transcript. Keep tool results on that line.
       const isAttachment = typeof msg.attachment !== "undefined";
       if (isAttachment) continue;
+      const meta = msg.isMeta === true;
 
       const message = msg.message as Record<string, unknown> | undefined;
       if (!message) continue;
-      const text = extractUserText(message.content);
+      const text = meta ? null : extractUserText(message.content);
       if (text) userMessages.push(text);
       const parentId = typeof msg.parentUuid === "string" ? msg.parentUuid : undefined;
       const ts = typeof msg.timestamp === "string" ? msg.timestamp : undefined;
       const lineId = typeof msg.uuid === "string" ? msg.uuid : undefined;
 
       const blocks = Array.isArray(message.content) ? message.content : [];
+      const decisionRecord = msg.permissionDecision;
+      const decision = decisionRecord && typeof decisionRecord === "object"
+        ? (decisionRecord as Record<string, unknown>).decision
+        : undefined;
+      const decisionWord = typeof decision === "string" ? decision.trim() : "";
       let emittedResult = false;
       for (const block of blocks) {
         if (!block || typeof block !== "object") continue;
@@ -334,6 +357,8 @@ export function parseSession(jsonlText: string): Session {
         if (b.type !== "tool_result") continue;
         emittedResult = true;
         const toolCallId = typeof b.tool_use_id === "string" ? b.tool_use_id : undefined;
+        const tool = toolCallId ? toolNames.get(toolCallId) : undefined;
+        if (decisionWord && tool) permissions.push({ tool, decision: decisionWord });
         const out = toolResultText(b.content);
         pushEvent(events, {
           sessionId,
@@ -394,10 +419,12 @@ export function parseSession(jsonlText: string): Session {
       if (!e.sessionId) e.sessionId = sessionId;
     }
   }
-  return asSession(primitives, events, {
+  const session = asSession(primitives, events, {
     ...(costUsd != null ? { costUsd } : {}),
     skillInvokes,
   });
+  if (permissions.length > 0) session.permissions = permissions;
+  return session;
 }
 
 /**

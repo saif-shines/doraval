@@ -13,9 +13,12 @@ const EVENTS = [
     context: { cwd: CWD, branch: "main" } }, timestamp: "2026-07-15T10:00:00Z" }),
   JSON.stringify({ type: "user.message", data: { content: "hello", transformedContent: "NOISE do not use" },
     timestamp: "2026-07-15T10:00:01Z" }),
+  JSON.stringify({ type: "session.model_change", data: { newModel: "gpt-5-mini" }, timestamp: "2026-07-15T10:00:01Z" }),
   JSON.stringify({ type: "tool.execution_start", data: { toolCallId: "t1", toolName: "bash",
     arguments: { cmd: "ls .claude/skills/foo" }, turnId: "0" }, timestamp: "2026-07-15T10:00:02Z" }),
-  JSON.stringify({ type: "assistant.message", data: { content: "done" }, timestamp: "2026-07-15T10:00:03Z" }),
+  JSON.stringify({ type: "tool.execution_complete", data: { toolCallId: "t1", success: true,
+    result: { content: "ok", detailedContent: "listed files" } }, timestamp: "2026-07-15T10:00:02Z" }),
+  JSON.stringify({ type: "assistant.message", data: { content: "done", model: "gpt-5-mini" }, timestamp: "2026-07-15T10:00:03Z" }),
   // real-data finding: assistant.message events with empty content are common (tool-only turns) —
   // must not pollute assistantText with blank entries
   JSON.stringify({ type: "assistant.message", data: { content: "" }, timestamp: "2026-07-15T10:00:04Z" }),
@@ -58,5 +61,7 @@ describe("copilotAdapter", () => {
     expect(p.toolCalls[0]!.name).toBe("bash");
     expect(p.userMessages).toEqual(["hello"]);
     expect(p.assistantText).toEqual(["done"]);
+    expect(p.model).toBe("gpt-5-mini");
+    expect(p.events.find((event) => event.type === "tool_result")?.output).toBe("listed files");
   });
 });

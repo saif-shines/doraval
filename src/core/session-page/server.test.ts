@@ -7,7 +7,7 @@ describe("startSessionPage", () => {
     try {
       const page = await fetch(`http://127.0.0.1:${server.port}/`);
       expect(page.status).toBe(200);
-      expect(await page.text()).toContain("Grok sessions");
+      expect(await page.text()).toContain("Inspect traces");
       const missing = await fetch(`http://127.0.0.1:${server.port}/api/sessions?root=/no/such/doraval-folder`);
       expect(missing.status).toBe(404);
     } finally {

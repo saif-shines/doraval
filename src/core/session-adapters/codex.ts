@@ -2,7 +2,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { Database } from "bun:sqlite";
-import { asSession, safeJsonParse, type Event, type Session, type ToolCall } from "../session-parse.js";
+import { safeJsonParse, type Session } from "../session-parse.js";
+import { parseCodexRollout } from "./codex-parse.js";
 import type { SessionAdapter, SessionListItem } from "./types.js";
 
 interface ThreadRow {
@@ -70,64 +71,6 @@ function listViaWalk(homeDir: string, cwd: string | null, limit: number): Sessio
   return out;
 }
 
-function parseRollout(text: string): Session {
-  const toolCalls: ToolCall[] = [];
-  const userMessages: string[] = [];
-  const assistantText: string[] = [];
-  const events: Event[] = [];
-  let sessionId = "", cwd = "", model = "unknown";
-  let idx = 0;
-  for (const line of text.split("\n")) {
-    if (!line.trim()) continue;
-    const j = safeJsonParse<{ timestamp?: string; type?: string; payload?: any }>(line);
-    if (!j?.payload) continue;
-    const p = j.payload;
-    const ts = j.timestamp;
-    if (j.type === "session_meta") {
-      sessionId = p.session_id ?? p.id ?? "";
-      cwd = p.cwd ?? "";
-      model = p.model_provider ?? "unknown";
-    } else if (j.type === "response_item" && p.type === "function_call" && typeof p.name === "string") {
-      // arguments is a JSON *string*; on parse failure keep {} — raw name still counts
-      const input = typeof p.arguments === "string" ? (safeJsonParse<Record<string, unknown>>(p.arguments) ?? {}) : (p.arguments ?? {});
-      toolCalls.push({ name: p.name, input, timestamp: j.timestamp ?? "", index: idx++ });
-      const toolCallId = typeof p.id === "string" ? p.id : typeof p.call_id === "string" ? p.call_id : undefined;
-      events.push({
-        sessionId, seq: events.length, type: "tool_call",
-        ...(ts ? { timestamp: ts } : {}),
-        toolName: p.name,
-        ...(toolCallId ? { toolCallId, id: toolCallId } : {}),
-        input,
-      });
-    } else if (j.type === "response_item" && p.type === "message" && p.role === "user" && Array.isArray(p.content)) {
-      for (const b of p.content) {
-        if (b?.type === "input_text" && typeof b.text === "string") {
-          userMessages.push(b.text);
-          events.push({ sessionId, seq: events.length, type: "user", ...(ts ? { timestamp: ts } : {}), text: b.text });
-        }
-      }
-    } else if (p.type === "agent_message" && typeof p.message === "string") {
-      // Real Codex rollouts wrap this as top-level type "event_msg" (not "response_item" as
-      // the plan's synthetic fixture assumed) — match on payload.type regardless of wrapper
-      // so both the fixture and real dogfood data parse correctly.
-      assistantText.push(p.message);
-      events.push({ sessionId, seq: events.length, type: "assistant", ...(ts ? { timestamp: ts } : {}), text: p.message, model });
-    }
-  }
-  const counts: Record<string, number> = {};
-  for (const t of toolCalls) counts[t.name] = (counts[t.name] ?? 0) + 1;
-  if (sessionId) {
-    for (const e of events) {
-      if (!e.sessionId) e.sessionId = sessionId;
-    }
-  }
-  return asSession({
-    sessionId, model, agent: "codex", cwd,
-    toolCalls, toolCallCounts: counts, skillsInvoked: [],
-    userMessages, userTurnCount: userMessages.length, assistantText,
-  }, events);
-}
-
 export function createCodexAdapter(homeDir: string = homedir()): SessionAdapter {
   return {
     agent: "codex",
@@ -144,7 +87,7 @@ export function createCodexAdapter(homeDir: string = homedir()): SessionAdapter 
       return listViaSqlite(homeDir, null, limit) ?? listViaWalk(homeDir, null, limit);
     },
     parse(path: string): Session {
-      return parseRollout(readFileSync(path, "utf8"));
+      return parseCodexRollout(readFileSync(path, "utf8"));
     },
   };
 }

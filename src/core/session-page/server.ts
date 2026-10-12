@@ -3,12 +3,11 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pageHtml from "./index.html" with { type: "text" };
-import { defaultGrokHome, listSessions, loadTurns } from "./read.ts";
+import { listSessions, loadTurns } from "./read.ts";
 
 function resolveRoot(raw: string | null): string {
   const trimmed = (raw ?? "").trim();
-  if (!trimmed) return defaultGrokHome();
-  if (trimmed === "~") return homedir();
+  if (!trimmed || trimmed === "~") return homedir();
   if (trimmed.startsWith("~/")) return join(homedir(), trimmed.slice(2));
   return trimmed;
 }

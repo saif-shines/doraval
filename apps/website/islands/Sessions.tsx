@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { listGrokFolder, loadGrokSession, type GrokFolder } from "../../../src/core/session-page/browser.ts";
+import { CHOOSE_HOME, HOME_FOLDERS, agentLabel, agentsIn, rowWho } from "../../../src/core/session-page/agents.ts";
+import { EXAMPLES, exampleTrace } from "../../../src/core/session-page/examples.ts";
+import { listTraceFolder, loadTraceSession, type GrokFolder } from "../../../src/core/session-page/browser.ts";
 import type { SessionFacts, SessionRow } from "../../../src/core/session-page/read.ts";
 import type { Turn } from "../../../src/core/session-page/group.ts";
 
@@ -194,12 +196,17 @@ export default function Sessions() {
   const [folder, setFolder] = useState<GrokFolder | null>(null);
   const [rows, setRows] = useState<SessionRow[]>([]);
   const [showHidden, setShowHidden] = useState(false);
-  const [selected, setSelected] = useState("");
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [agent, setAgent] = useState("all");
+  const [selected, setSelected] = useState(EXAMPLES[0].row.id);
+  const [loaded, setLoaded] = useState<Loaded | null>(EXAMPLES[0]);
   const [status, setStatus] = useState("");
   const [openDiff, setOpenDiff] = useState<string | null>(null);
 
-  const visible = rows.filter((row) => showHidden || !row.hidden);
+  const listed = folder ? rows : EXAMPLES.map((item) => item.row);
+  const pool = listed.filter((row) => showHidden || !row.hidden);
+  const agents = agentsIn(pool);
+  const active = agents.includes(agent) ? agent : "all";
+  const visible = active === "all" ? pool : pool.filter((row) => row.agent === active);
 
   async function chooseFolder() {
     const picker = (window as PickerWindow).showDirectoryPicker;
@@ -208,37 +215,48 @@ export default function Sessions() {
       return;
     }
     try {
-      const next = await picker({ id: "doraval-grok", mode: "read" });
+      const next = await picker({ id: "doraval-traces", mode: "read" });
       setStatus("Reading summaries.");
-      const listed = await listGrokFolder(next);
+      const listed = await listTraceFolder(next);
       setFolder(next);
       setRows(listed);
+      setAgent("all");
       setSelected("");
       setLoaded(null);
       setStatus(listed.length === 0 ? "No sessions in that folder." : "");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setStatus("Could not read that folder. Choose the .grok folder, not the sessions folder inside it.");
+      const message = error instanceof Error ? error.message : "";
+      setStatus(message.startsWith("Choose your home") ? message : `Could not read that folder. ${CHOOSE_HOME}`);
     }
   }
 
   async function openSession(id: string) {
+    const sample = exampleTrace(id);
+    if (sample && !folder) {
+      setSelected(id);
+      setLoaded(sample);
+      setStatus("");
+      setOpenDiff(null);
+      return;
+    }
     if (!folder) return;
     setSelected(id);
     setStatus("");
     setOpenDiff(null);
-    const next = await loadGrokSession(folder, id);
+    const next = await loadTraceSession(folder, id);
     setLoaded(next);
     if (!next) setStatus("Session not found.");
   }
 
   return (
     <article className="flex h-[calc(100dvh-4rem)] flex-col px-3 py-3 text-left text-foreground">
-      <p className="mb-1 font-mono text-xs font-medium uppercase tracking-wide text-accent">Sessions</p>
-      <h1 className="text-3xl font-semibold tracking-tight">Grok sessions</h1>
+      <p className="mb-1 font-mono text-xs font-medium uppercase tracking-wide text-accent">Inspect traces</p>
+      <h1 className="text-3xl font-semibold tracking-tight">Sessions</h1>
       <p className="mt-2 text-sm leading-snug text-muted-foreground">
-        Choose the .grok folder on this computer. The list and the turns stay in the browser. Nothing is uploaded.
+        Choose your home folder, or one of {HOME_FOLDERS}. The list and the turns stay in the browser. Nothing is uploaded.
         On this machine, dora session open is the same page.
+        {!folder ? " Two example traces are open below. Choosing a folder replaces them." : ""}
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
@@ -247,7 +265,7 @@ export default function Sessions() {
           onClick={() => void chooseFolder()}
         >
           <Icon name="down" />
-          Choose .grok folder
+          Choose folder
         </button>
         <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
           <input type="checkbox" checked={showHidden} onChange={(event) => setShowHidden(event.target.checked)} />
@@ -256,11 +274,30 @@ export default function Sessions() {
         </label>
       </div>
       {status ? <p className="mt-3 text-sm text-muted-foreground">{status}</p> : null}
+      {agents.length > 1 ? (
+        <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Filter by agent">
+          {[["all", "All"], ...agents.map((id) => [id, agentLabel(id)])].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={active === id}
+              className={`rounded-sm border px-2 py-1 text-xs ${
+                active === id ? "border-accent bg-muted text-foreground" : "border-border text-muted-foreground"
+              }`}
+              onClick={() => setAgent(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
-      {rows.length > 0 ? (
+      {listed.length > 0 ? (
         <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 items-start gap-3 md:grid-cols-[18rem_minmax(0,1fr)]">
           <aside className="h-full overflow-auto border-r border-border pr-2">
-            {visible.length === 0 ? <p className="text-sm text-muted-foreground">No sessions in that folder.</p> : null}
+            {visible.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{active === "all" ? "No sessions in that folder." : "No sessions for that agent."}</p>
+            ) : null}
             {visible.map((row) => (
               <button
                 key={row.id}
@@ -278,7 +315,7 @@ export default function Sessions() {
                   </span>
                 ) : null}
                 <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span>{[row.model, row.branch].filter(Boolean).join(" · ")}</span>
+                  <span>{rowWho(row)}</span>
                   {row.contextPct != null ? <span>{row.contextPct}% context</span> : null}
                   {row.turns != null ? <span>{row.turns} turns</span> : null}
                   {row.errors ? (
@@ -436,8 +473,8 @@ export default function Sessions() {
                 {loaded.facts.permissions.length > 0 ? (
                   <section className="border-t border-border py-2">
                     <Kicker icon="alert">Permissions</Kicker>
-                    {loaded.facts.permissions.map((item) => (
-                      <div key={`${item.tool}-${item.decision}`} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2 font-mono text-xs">
+                    {loaded.facts.permissions.map((item, index) => (
+                      <div key={`${index}-${item.tool}-${item.decision}`} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-2 font-mono text-xs">
                         <span>{item.tool}</span>
                         <span className="text-muted-foreground">{item.decision}</span>
                       </div>

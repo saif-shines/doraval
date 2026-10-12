@@ -47,6 +47,18 @@ describe("groupUpdates", () => {
     expect(turns[1]!.tools[0]!.failed).toBe(true);
   });
 
+  test("keeps a hook that arrives after the last completed turn", () => {
+    const text = [
+      line({ sessionUpdate: "user_message_chunk", content: { text: "hi" } }),
+      line({ sessionUpdate: "hook_execution" }),
+      line({ sessionUpdate: "turn_completed" }),
+      line({ sessionUpdate: "hook_execution" }),
+    ].join("\n");
+    const turns = groupUpdates(text);
+    expect(turns).toHaveLength(1);
+    expect(turns[0]!.hooks).toBe(2);
+  });
+
   test("keeps command, output, tokens, thinking, skills, and file counts", () => {
     const huge = "z".repeat(5000);
     const text = [

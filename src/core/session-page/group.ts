@@ -463,7 +463,11 @@ function updateOf(line: string): Record<string, unknown> | null {
 function finishTurn(turns: Turn[], buf: OpenTurn, closed: boolean) {
   const prompt = buf.prompts.join("\n\n");
   const reply = buf.replies.join("\n\n");
-  if (!prompt && !reply && buf.tools.length === 0) return;
+  if (!prompt && !reply && buf.tools.length === 0) {
+    const last = turns[turns.length - 1];
+    if (last && buf.hooks > 0) last.hooks += buf.hooks;
+    return;
+  }
   const thinking = buf.thinking.join("\n\n").trim();
   const turn: Turn = {
     n: turns.length + 1,

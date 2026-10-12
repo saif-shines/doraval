@@ -134,6 +134,8 @@
         color: var(--muted-fg);
       }
       .ghost.on { color: var(--fg); border-color: var(--accent); }
+      .filters { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.15rem 0.35rem 0.55rem; }
+      .filters .ghost { padding: 0.15rem 0.5rem; font-size: 0.75rem; }
       .check {
         display: flex;
         align-items: center;
@@ -400,14 +402,14 @@
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">Sessions</p>
-        <h1 class="brand">Grok sessions</h1>
-        <p class="lede">This page lists sessions in <code>~/.grok</code>. Pick one to read the turns. Nothing is uploaded.</p>
+        <p class="eyebrow">Inspect traces</p>
+        <h1 class="brand">Sessions</h1>
+        <p class="lede">This page lists Claude, Grok, Cursor, Codex, Copilot, and Gemini CLI sessions in your home folder. Nothing is uploaded.</p>
       </div>
       <form id="pick">
         <label class="field">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-          <input id="root" class="paper with-icon" type="text" name="root" value="~/.grok" aria-label="Grok home" />
+          <input id="root" class="paper with-icon" type="text" name="root" value="~" aria-label="Home or agent folder" />
         </label>
         <button class="key" type="submit">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -432,6 +434,14 @@
       let rows = [];
       let selected = location.hash.replace(/^#/, "");
       let showHidden = false;
+      let agentFilter = "all";
+      const AGENT_LABEL = { grok: "Grok", "claude-code": "Claude", cursor: "Cursor", codex: "Codex", copilot: "Copilot", gemini: "Gemini" };
+
+      function rowWho(row) {
+        const label = AGENT_LABEL[row.agent] || "";
+        const model = row.model && row.model !== "unknown" && row.model !== row.agent && row.model !== label ? row.model : "";
+        return [label, model, row.branch].filter(Boolean).join(" · ");
+      }
 
       function text(tag, value, className) {
         const node = document.createElement(tag);
@@ -486,11 +496,40 @@
         return "file";
       }
 
+      function agentsIn(list) {
+        const present = new Set(list.map((row) => row.agent).filter(Boolean));
+        const ordered = Object.keys(AGENT_LABEL).filter((name) => present.has(name));
+        for (const name of present) if (!ordered.includes(name)) ordered.push(name);
+        return ordered;
+      }
+
       function renderList() {
         listEl.replaceChildren();
-        const visible = rows.filter((row) => showHidden || !row.hidden);
+        const pool = rows.filter((row) => showHidden || !row.hidden);
+        const agents = agentsIn(pool);
+        const active = agents.includes(agentFilter) ? agentFilter : "all";
+        if (agents.length > 1) {
+          const bar = document.createElement("div");
+          bar.className = "filters";
+          bar.setAttribute("role", "group");
+          bar.setAttribute("aria-label", "Filter by agent");
+          for (const [id, label] of [["all", "All"], ...agents.map((name) => [name, AGENT_LABEL[name] || name])]) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "ghost" + (active === id ? " on" : "");
+            button.textContent = label;
+            button.setAttribute("aria-pressed", active === id ? "true" : "false");
+            button.addEventListener("click", () => {
+              agentFilter = id;
+              renderList();
+            });
+            bar.append(button);
+          }
+          listEl.append(bar);
+        }
+        const visible = active === "all" ? pool : pool.filter((row) => row.agent === active);
         if (visible.length === 0) {
-          listEl.append(text("p", "No sessions in that folder.", "empty"));
+          listEl.append(text("p", active === "all" ? "No sessions in that folder." : "No sessions for that agent.", "empty"));
           return;
         }
         for (const row of visible) {
@@ -508,7 +547,7 @@
           }
           const meta = document.createElement("div");
           meta.className = "meta";
-          const who = [row.model, row.branch].filter(Boolean).join(" · ");
+          const who = rowWho(row);
           if (who) meta.append(text("div", who));
           const facts = document.createElement("div");
           facts.className = "meta-facts";
@@ -897,6 +936,7 @@
       document.querySelector("#pick").addEventListener("submit", (event) => {
         event.preventDefault();
         selected = "";
+        agentFilter = "all";
         history.replaceState(null, "", location.pathname);
         loadList();
       });

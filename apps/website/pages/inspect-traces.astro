@@ -19,9 +19,9 @@ const { config } = data;
   siteUrl={config.site}
   ogEnabled={config.og.enabled}
   page={{
-    title: "Sessions",
-    description: "Read Grok sessions from a folder on this computer. Nothing is uploaded.",
-    route: "/sessions",
+    title: "Inspect traces",
+    description: "Read Claude, Grok, Cursor, Codex, Copilot, and Gemini CLI sessions from a folder on this computer. Two example traces are shown until you choose a folder. Nothing is uploaded.",
+    route: "/inspect-traces",
   }}
 >
   <Sessions client:only="react" />

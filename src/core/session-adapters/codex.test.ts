@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, renameSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { createCodexAdapter } from "./codex.js";
+import { parseCodexRollout } from "./codex-parse.js";
 
 let home: string;
 const CWD = "/Users/test/myproj";
@@ -74,6 +75,26 @@ describe("codexAdapter", () => {
     expect(JSON.stringify(p.toolCalls[0]!.input)).toContain("SKILL.md");
     expect(p.userMessages[0]).toBe("do the thing");
     expect(p.assistantText[0]).toBe("done");
+  });
+
+  test("reads output_text, custom exec calls, and turn_context model", () => {
+    const text = [
+      JSON.stringify({ type: "session_meta", payload: { id: "s", cwd: CWD, model_provider: "openai" } }),
+      JSON.stringify({ type: "turn_context", payload: { model: "gpt-test" } }),
+      JSON.stringify({ type: "response_item", payload: { type: "message", role: "developer", content: [{ type: "input_text", text: "system prompt" }] } }),
+      JSON.stringify({ type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "do the thing" }] } }),
+      JSON.stringify({ type: "response_item", payload: { type: "message", role: "assistant", content: [{ type: "output_text", text: "shipped" }] } }),
+      JSON.stringify({ type: "response_item", payload: { type: "custom_tool_call", name: "exec", call_id: "e1", input: "pwd" } }),
+      JSON.stringify({ type: "response_item", payload: { type: "custom_tool_call_output", call_id: "e1", output: [{ type: "output_text", text: "/tmp" }] } }),
+      JSON.stringify({ type: "response_item", payload: { type: "agent_message", author: "child", recipient: "parent", content: [{ type: "input_text", text: "inter-agent" }] } }),
+    ].join("\n");
+    const parsed = parseCodexRollout(text);
+    expect(parsed.model).toBe("gpt-test");
+    expect(parsed.userMessages).toEqual(["do the thing"]);
+    expect(parsed.assistantText).toEqual(["shipped"]);
+    expect(parsed.toolCalls.map((tool) => tool.name)).toEqual(["exec"]);
+    expect(parsed.toolCalls[0]?.input).toEqual({ command: "pwd" });
+    expect(parsed.events.find((event) => event.type === "tool_result")?.output).toBe("/tmp");
   });
 
   test("sqlite missing → rollout-walk fallback still finds the session", () => {

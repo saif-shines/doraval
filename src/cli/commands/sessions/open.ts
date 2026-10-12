@@ -5,14 +5,14 @@ import { ui, emitError } from "../../out.js";
 import { exit } from "../../render/exit.js";
 
 export default defineCommand({
-  meta: { name: "open", description: "Open the local Grok session page in the browser" },
+  meta: { name: "open", description: "Open the local page for Claude, Grok, Cursor, Codex, Copilot, and Gemini CLI" },
   async run() {
     try {
       const server = startSessionPage(0);
       const url = `http://127.0.0.1:${server.port}/`;
       ui.blank();
       ui.write(`  Session page: ${url}`);
-      ui.write("  Reading ~/.grok. Leave this running. Ctrl+C stops it.");
+      ui.write("  Reading your home folder. Leave this running. Ctrl+C stops it.");
       ui.blank();
       openDetached(url);
       await new Promise(() => {});

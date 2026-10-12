@@ -1,57 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, join } from "path";
-import { asSession, safeJsonParse, type Event, type Session, type ToolCall } from "../session-parse.js";
+import type { Session } from "../session-parse.js";
 import type { SessionAdapter, SessionListItem } from "./types.js";
+import { parseCursorTranscript } from "./cursor-parse.js";
 
 /** Cursor encodes cwd with NO leading dash: /Users/x/p -> Users-x-p */
 function cwdToCursorDir(cwd: string): string {
   return cwd.replace(/\//g, "-").replace(/^-/, "");
-}
-
-/** Reverse of cwdToCursorDir is lossy; keep the original cwd from the caller instead. */
-
-interface CursorLine {
-  role?: string;
-  message?: { content?: Array<{ type?: string; text?: string; name?: string; input?: Record<string, unknown> }> };
-}
-
-function stripUserQuery(text: string): string {
-  const m = text.match(/<user_query>\s*([\s\S]*?)\s*<\/user_query>/);
-  return (m ? m[1]! : text).trim();
-}
-
-function parseCursorTranscript(text: string, sessionId: string, cwd: string): Session {
-  const toolCalls: ToolCall[] = [];
-  const userMessages: string[] = [];
-  const assistantText: string[] = [];
-  const events: Event[] = [];
-  let idx = 0;
-  for (const line of text.split("\n")) {
-    if (!line.trim()) continue;
-    const j = safeJsonParse<CursorLine>(line);
-    if (!j?.message?.content) continue;
-    for (const block of j.message.content) {
-      if (j.role === "user" && block.type === "text" && block.text) {
-        const text = stripUserQuery(block.text);
-        userMessages.push(text);
-        events.push({ sessionId, seq: events.length, type: "user", text });
-      } else if (j.role === "assistant" && block.type === "text" && block.text) {
-        assistantText.push(block.text);
-        events.push({ sessionId, seq: events.length, type: "assistant", text: block.text });
-      } else if (j.role === "assistant" && block.type === "tool_use" && block.name) {
-        toolCalls.push({ name: block.name, input: block.input ?? {}, timestamp: "", index: idx++ });
-        events.push({ sessionId, seq: events.length, type: "tool_call", toolName: block.name, input: block.input ?? {} });
-      }
-    }
-  }
-  const counts: Record<string, number> = {};
-  for (const t of toolCalls) counts[t.name] = (counts[t.name] ?? 0) + 1;
-  return asSession({
-    sessionId, model: "unknown", agent: "cursor", cwd,
-    toolCalls, toolCallCounts: counts, skillsInvoked: [],
-    userMessages, userTurnCount: userMessages.length, assistantText,
-  }, events);
 }
 
 export function createCursorAdapter(homeDir: string = homedir()): SessionAdapter {

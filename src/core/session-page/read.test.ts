@@ -138,6 +138,83 @@ describe("listSessions", () => {
   });
 });
 
+describe("listSessions agents", () => {
+  test("lists claude, cursor, codex, and copilot beside grok from a home folder", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dora-home-"));
+    const claudeId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const cursorId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+    try {
+      await seed(join(root, ".grok"), "11111111111111111111", "/proj/app", '"turn_completed"\n', { title: "grok one" });
+      const claudeDir = join(root, ".claude", "projects", "-Users-saif-proj");
+      await mkdir(claudeDir, { recursive: true });
+      await writeFile(join(claudeDir, `${claudeId}.jsonl`), [
+        JSON.stringify({ type: "user", sessionId: claudeId, cwd: "/Users/saif/proj", message: { content: "hello from claude" } }),
+        JSON.stringify({ type: "assistant", message: { model: "claude-sonnet", content: [{ type: "text", text: "hi" }] } }),
+        JSON.stringify({
+          type: "assistant",
+          message: { content: [{ type: "tool_use", name: "Edit", id: "t1", input: { file_path: "/Users/saif/proj/a.ts", old_string: "a", new_string: "b" } }] },
+        }),
+        JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", tool_use_id: "t1", content: "edited" }] } }),
+      ].join("\n"));
+      const cursorDir = join(root, ".cursor", "projects", "Users-saif-proj", "agent-transcripts", cursorId);
+      await mkdir(cursorDir, { recursive: true });
+      await writeFile(join(cursorDir, `${cursorId}.jsonl`), [
+        JSON.stringify({ role: "user", message: { content: [{ type: "text", text: "<user_query>cursor please</user_query>" }] } }),
+        JSON.stringify({ role: "assistant", message: { content: [{ type: "text", text: "on it" }] } }),
+      ].join("\n"));
+      const codexDir = join(root, ".codex", "sessions", "2026", "07", "15");
+      await mkdir(codexDir, { recursive: true });
+      await writeFile(join(codexDir, "rollout-codex-1.jsonl"), [
+        JSON.stringify({ type: "session_meta", payload: { id: "codex-1", cwd: "/proj/codex", model_provider: "openai" } }),
+        JSON.stringify({ type: "turn_context", payload: { model: "gpt-test" } }),
+        JSON.stringify({ type: "response_item", payload: { type: "message", role: "user", content: [{ type: "input_text", text: "codex please" }] } }),
+        JSON.stringify({ type: "event_msg", payload: { type: "agent_message", message: "codex done" } }),
+      ].join("\n"));
+      const copilotDir = join(root, ".copilot", "session-state", "cp-1");
+      await mkdir(copilotDir, { recursive: true });
+      await writeFile(join(copilotDir, "events.jsonl"), [
+        JSON.stringify({ type: "session.start", data: { sessionId: "cp-1", context: { cwd: "/proj/cp", branch: "main" } } }),
+        JSON.stringify({ type: "user.message", data: { content: "copilot please" } }),
+        JSON.stringify({ type: "assistant.message", data: { content: "copilot done" } }),
+      ].join("\n"));
+      const gemDir = join(root, ".gemini", "tmp", "hash", "chats");
+      await mkdir(gemDir, { recursive: true });
+      await writeFile(join(gemDir, "session-gem-1.json"), JSON.stringify({ sessionId: "old", messages: [{ type: "user", id: "u", content: "legacy title" }] }));
+      await writeFile(join(gemDir, "session-gem-1.jsonl"), [
+        JSON.stringify({ sessionId: "g1", summary: "fix auth", directories: ["/proj/gem"] }),
+        JSON.stringify({ type: "user", id: "u1", content: [{ text: "gemini please" }] }),
+        JSON.stringify({ type: "gemini", id: "a1", model: "gemini-2.5-pro", content: [{ text: "looking" }] }),
+      ].join("\n"));
+      await mkdir(join(gemDir, "parent"), { recursive: true });
+      await writeFile(join(gemDir, "parent", "child.jsonl"), JSON.stringify({ type: "user", id: "h", content: "hidden child" }));
+
+      const rows = await listSessions(root);
+      const byAgent = new Map(rows.map((row) => [row.agent, row]));
+      expect(byAgent.get("grok")?.title).toBe("grok one");
+      expect(byAgent.get("grok")?.turns).toBe(1);
+      expect(byAgent.get("claude-code")).toMatchObject({ title: "hello from claude", model: "claude-sonnet", folder: "/Users/saif/proj", turns: 1 });
+      expect(byAgent.get("cursor")).toMatchObject({ title: "cursor please", folder: "Users-saif-proj", turns: 1 });
+      expect(byAgent.get("codex")).toMatchObject({ title: "codex please", model: "gpt-test", folder: "/proj/codex", turns: 1 });
+      expect(byAgent.get("copilot")).toMatchObject({ title: "copilot please", folder: "/proj/cp", branch: "main", turns: 1 });
+      expect(rows.filter((row) => row.agent === "gemini")).toHaveLength(1);
+      expect(byAgent.get("gemini")).toMatchObject({ title: "fix auth", model: "gemini-2.5-pro", folder: "/proj/gem", turns: 1 });
+
+      const loaded = await loadTurns(root, `claude-code:${claudeId}`);
+      expect(loaded?.turns[0]?.prompt).toBe("hello from claude");
+      expect(loaded?.turns[0]?.reply).toBe("hi");
+      expect(loaded?.turns[0]?.tools[0]).toMatchObject({ name: "Edit", output: "edited" });
+      expect(loaded?.facts.files[0]).toMatchObject({ path: "/Users/saif/proj/a.ts", added: 1, removed: 1 });
+      expect(await loadTurns(root, "claude-code:../secret")).toBeNull();
+      expect((await loadTurns(root, `cursor:${cursorId}`))?.turns[0]?.reply).toBe("on it");
+      expect((await loadTurns(root, "codex:rollout-codex-1"))?.turns[0]?.prompt).toBe("codex please");
+      expect((await loadTurns(root, "copilot:cp-1"))?.turns[0]?.reply).toBe("copilot done");
+      expect((await loadTurns(root, "gemini:session-gem-1"))?.turns[0]?.prompt).toBe("gemini please");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("loadTurns", () => {
   test("rolls file diffs up by path and leaves cost unset", async () => {
     const root = await mkdtemp(join(tmpdir(), "dora-files-"));
