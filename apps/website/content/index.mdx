@@ -8,3 +8,23 @@ sidebar:
 Dora assesses the agent setup in this project and shows what to fix. Dora helps you ship and share that work, including a pocket agent.
 
 See [Introduction](/get-started/). Start a pocket agent at [Run a pocket agent](/get-started/pocket-agents/).
+
+## Paste into your coding agent
+
+```text
+Assess the agent setup in this project and show what to fix. Ship the work that repeats.
+
+1. Assess. Run dora scan. List the gaps. Run dora review --quick on the skill folder. No API key.
+   Done when Findings are listed and the exit code is reported. Exit 0 is clean.
+   When dora is missing from PATH, run npx skills add saif-shines/doraval, then npm install -g @hacksmith/doraval, and rerun this step.
+
+2. Apply the safe fixes. Run dora fix skills --yes. Then run dora review --run.
+   Done when both passes have run and the exit code is reported.
+
+3. Ship the work that repeats as a pocket agent. One job, one machine, one user.
+   Read Pocket agents at https://doraval.dev/get-started/pocket-agents/. Grill a small loop, test one pass, then apply it.
+   Done when a Routine is watching, or nothing in this project repeats.
+
+4. When asked to read a session on this computer: Run dora session open. Or open https://doraval.dev/inspect-traces/.
+   Done when the session is on screen. The logs stay on this machine.
+```

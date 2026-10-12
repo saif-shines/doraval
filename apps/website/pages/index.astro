@@ -1,6 +1,6 @@
 ---
 // Hallmark · genre: modern-minimal · macrostructure: Workbench · theme: Cobalt
-// Single fold: both jobs, then the first loop (skill add + review --quick)
+// Single fold: both jobs, then one prompt a person pastes into a coding agent.
 import PageLayout from "blume/components/layout/PageLayout.astro";
 import CodeBlock from "blume/components/content/CodeBlock.astro";
 import data from "blume:data";
@@ -8,12 +8,25 @@ import Footer from "./_home/Footer.astro";
 
 const { config } = data;
 
-/** Same shape as agent-browser’s home install block. */
-const heroInstall = `npx skills add saif-shines/doraval    # four skills
-dora review --quick                   # Findings, no LLM
+/**
+ * Full prompt copied to the clipboard. The page clips this block with CSS.
+ * Steps end on a check. Pocket agents and inspect-traces stay behind links.
+ */
+const agentPrompt = `Assess the agent setup in this project and show what to fix. Ship the work that repeats.
 
-npm install -g @hacksmith/doraval     # CLI, all platforms
-brew install saif-shines/tap/doraval  # macOS`;
+1. Assess. Run dora scan. List the gaps. Run dora review --quick on the skill folder. No API key.
+   Done when Findings are listed and the exit code is reported. Exit 0 is clean.
+   When dora is missing from PATH, run npx skills add saif-shines/doraval, then npm install -g @hacksmith/doraval, and rerun this step.
+
+2. Apply the safe fixes. Run dora fix skills --yes. Then run dora review --run.
+   Done when both passes have run and the exit code is reported.
+
+3. Ship the work that repeats as a pocket agent. One job, one machine, one user.
+   Read Pocket agents at https://doraval.dev/get-started/pocket-agents/. Grill a small loop, test one pass, then apply it.
+   Done when a Routine is watching, or nothing in this project repeats.
+
+4. When asked to read a session on this computer: Run dora session open. Or open https://doraval.dev/inspect-traces/.
+   Done when the session is on screen. The logs stay on this machine.`;
 ---
 
 <PageLayout
@@ -40,22 +53,13 @@ brew install saif-shines/tap/doraval  # macOS`;
         <p class="home-eyebrow">FOR CODING AGENTS</p>
         <h1 class="hero__title">Assess the agent setup. Ship the work.</h1>
         <h2 class="hero__subtitle">Show what to fix. Share it, including a pocket agent.</h2>
-        <p class="hero__lede">
-          <code>dora scan</code> lists the gaps in this project.{" "}
-          <code>dora review --quick</code> checks the skill folder. No API key.
-        </p>
-        <CodeBlock code={heroInstall} lang="bash" />
-        <p class="hero__lede">
-          <code>dora scan</code> lists the gaps in this project.{" "}
-          <code>dora fix</code> applies the safe fixes.{" "}
-          <code>dora review --run</code> runs the skill off, then on. A pocket
-          agent ships the work that repeats.
-        </p>
-        <p class="hero__note">
-          <a href="/get-started/installation/">Install</a> ·{" "}
-          <a href="/get-started/">Docs</a> ·{" "}
-          <a href="/get-started/pocket-agents/">Pocket agents</a>
-        </p>
+        <nav class="paths" aria-label="Prompt to paste into your coding agent">
+          <p class="paths__for">Paste into your coding agent.</p>
+          <div class="paths__block">
+            <CodeBlock code={agentPrompt} lang="txt" />
+            <button class="paths__copy" type="button" data-copy={agentPrompt} aria-label="Copy the full prompt">Copy</button>
+          </div>
+        </nav>
       </div>
     </section>
   </div>
@@ -123,40 +127,69 @@ brew install saif-shines/tap/doraval  # macOS`;
     max-width: 40ch;
   }
 
-  .hero__lede {
-    font-size: 1.125rem;
-    line-height: 1.55;
-    color: var(--blume-muted-foreground);
-    margin: 0 0 1.25rem;
-    max-width: 46ch;
-  }
-
   .hero :global(pre),
   .hero :global(code) {
     font-size: 0.95rem;
   }
 
-  .hero__note {
-    margin: 1rem 0 0;
-    font-family: var(--blume-font-mono);
-    font-size: 0.85rem;
-    letter-spacing: 0.02em;
+  .paths {
+    margin-top: 0.35rem;
+  }
+
+  .paths__for {
+    margin: 0 0 0.55rem;
     color: var(--blume-muted-foreground);
+    font-size: 0.92rem;
   }
 
-  .hero__note a {
-    color: var(--blume-accent);
-    text-decoration: none;
+  .paths__copy:focus-visible {
+    outline: 2px solid var(--blume-accent);
+    outline-offset: 2px;
   }
 
-  .hero__note a:hover {
-    text-decoration: underline;
+  .paths__block {
+    position: relative;
+    margin: 0;
   }
 
-  .hero__lede code,
-  .hero__note code {
+  .paths__block :global(.prose),
+  .paths__block :global(pre) {
+    margin: 0;
+  }
+
+  .paths__block :global(pre),
+  .paths__block :global(code) {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  .paths__block :global(pre) {
+    max-height: 10.5rem;
+    overflow: hidden;
+    padding-right: 4.75rem;
+    mask-image: linear-gradient(to bottom, #000 58%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent);
+  }
+
+  .paths__copy {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.45rem;
+    z-index: 1;
+    border: 0;
+    border-radius: var(--blume-radius);
+    background: var(--blume-muted);
+    padding: 0.28rem 0.55rem;
     font-family: var(--blume-font-mono);
-    font-size: 0.85em;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--blume-foreground);
+    cursor: pointer;
+    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .paths__copy:active {
+    transform: scale(0.97);
   }
 
   .reveal {
@@ -178,6 +211,43 @@ brew install saif-shines/tap/doraval  # macOS`;
     .reveal {
       animation: none;
     }
+
+    .paths__copy {
+      transition: none;
+    }
+
+    .paths__copy:active {
+      transform: none;
+    }
   }
 
 </style>
+
+<script>
+  const timers = new WeakMap();
+  for (const button of document.querySelectorAll(".paths__copy")) {
+    if (!(button instanceof HTMLButtonElement)) continue;
+    button.addEventListener("click", () => {
+      const text = (button.dataset.copy ?? "").replace(/\n+$/u, "");
+      const pending = timers.get(button);
+      if (pending) clearTimeout(pending);
+      const show = (label: string) => {
+        button.textContent = label;
+        timers.set(
+          button,
+          setTimeout(() => {
+            button.textContent = "Copy";
+          }, 1200),
+        );
+      };
+      if (!text) {
+        show("Copy failed");
+        return;
+      }
+      navigator.clipboard.writeText(text).then(
+        () => show("Copied"),
+        () => show("Copy failed"),
+      );
+    });
+  }
+</script>

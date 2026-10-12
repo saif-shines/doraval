@@ -207,6 +207,27 @@ describe("dora harness docs lockstep", () => {
     expect(home).toContain("dora review --quick");
     expect(home).toContain("Pocket agents");
     expect(home).toContain("/get-started/pocket-agents/");
+    expect(home).not.toContain('name="home-path"');
+    expect(home).toContain("Paste into your coding agent.");
+    expect(home).toContain("data-copy={agentPrompt}");
+    expect(home).toContain("max-height: 10.5rem");
+    expect(home).toContain("Grill a small loop, test one pass, then apply it.");
+    expect(home).toContain("Assess the agent setup in this project and show what to fix.");
+    expect(home).toContain("Run dora scan. List the gaps.");
+    expect(home).toContain("Ship the work");
+    expect(home).toContain("/inspect-traces/");
+    const agent = read("apps/website/content/index.mdx");
+    expect(agent).toContain("## Paste into your coding agent");
+    expect(agent).toContain("```text");
+    expect(agent).toContain("Run dora scan. List the gaps.");
+    expect(agent).toContain("Run dora session open.");
+    const fenceStart = agent.indexOf("```text\n");
+    const fenceEnd = agent.indexOf("\n```", fenceStart + 8);
+    const promptStart = home.indexOf("const agentPrompt = `");
+    const promptEnd = home.indexOf("`;", promptStart);
+    expect(home.slice(promptStart + "const agentPrompt = `".length, promptEnd)).toBe(
+      agent.slice(fenceStart + "```text\n".length, fenceEnd),
+    );
     expect(home).not.toContain("/ask-dora");
     const jobs =
       "`dora scan` lists the gaps in this project. `dora fix` applies the safe fixes. `dora review --run` runs the skill off, then on. A pocket agent ships the work that repeats.";
